@@ -2,17 +2,17 @@
 
 This page defines Agentic Workspace's public maturity vocabulary and promotion rule. It is not a manually maintained status dashboard.
 
-The exact maturity of a source revision or published distribution is owned by coordinated release metadata and the package/release artifacts for that subject. In source, `.github/release-ownership.json` names the coordinated `maturity_classifier`; package metadata must agree. For published bytes, use the selected immutable release and its receipts rather than inferring maturity from a newer source checkout.
+The exact maturity of a source revision or published distribution is owned by coordinated release metadata and the package/release artefacts for that subject. In source, `.github/release-ownership.json` names the coordinated `maturity_classifier`; package metadata must agree. For published bytes, use the selected immutable release and its receipts rather than inferring maturity from a newer source checkout.
 
 ## Labels
 
 ### Alpha
 
-The product/capability is real, tested, and dogfooded, but ordinary behavior, naming, schema shape, compatibility boundaries, or guidance may still change materially. Early adopters should expect change and rely on versioned release contracts rather than broad stability assumptions.
+The product/capability is real, tested, and dogfooded, but ordinary behaviour, naming, schema shape, compatibility boundaries, or guidance may still change materially. Early adopters should expect change and rely on versioned release contracts rather than broad stability assumptions.
 
 ### Beta
 
-The public contract is broadly usable for early adopters, the supported compatibility boundary is explicit, selective adoption works, and expected changes are mostly additive or refining rather than architectural. Moving to Beta requires package metadata, release checks, and representative behavioral evidence; documentation wording alone cannot promote it.
+The public contract is broadly usable for early adopters, the supported compatibility boundary is explicit, selective adoption works, and expected changes are mostly additive or refining rather than architectural. Moving to Beta requires package metadata, release checks, and representative behavioural evidence; documentation wording alone cannot promote it.
 
 ### Stable
 
@@ -30,7 +30,7 @@ For a source revision, read the coordinated release authority:
 
 For installed or published bytes, use the exact immutable release subject. A source checkout can contain newer evidence or a proposed promotion without changing an older published release's maturity.
 
-Release class and product maturity are related but not interchangeable. A preview or release candidate is explicitly non-support-bearing even when it exercises near-final behavior. A stable support-bearing release must satisfy the project's promotion and compatibility requirements for its exact subject; neither a branch name nor a green source checkout supplies that claim.
+Release class and product maturity are related but not interchangeable. A preview or release candidate is explicitly non-support-bearing even when it exercises near-final behaviour. A stable support-bearing release must satisfy the project's promotion and compatibility requirements for its exact subject; neither a branch name nor a green source checkout supplies that claim.
 
 ## Promotion rule
 
@@ -40,7 +40,7 @@ Promote a public surface only when all relevant owners agree:
 2. the public compatibility and support boundary is explicit;
 3. deterministic release/conformance evidence covers the promised contract;
 4. representative ordinary-agent evidence does not reveal a known architectural blocker to the claimed maturity;
-5. installation, security, removal, and failure behavior are documented at the same support level;
+5. installation, security, removal, and failure behaviour are documented at the same support level;
 6. exact release identity and support evidence are immutable/source-bound rather than asserted only by prose;
 7. generated/reference surfaces that project maturity or release identity agree with their source owner.
 
@@ -50,14 +50,14 @@ Do not create a second informal maturity scale for individual capabilities merel
 
 Maturity is a compatibility/support claim, not a feature-count score.
 
-- Live-agent results are behavioral evidence, not deterministic compatibility proof.
+- Live-agent results are behavioural evidence, not deterministic compatibility proof.
 - Deterministic contracts/tests are not proof that real agents discover or use the product cheaply or correctly.
-- Exact artifact admission is not publication.
+- Exact artefact admission is not publication.
 - Publication of a prerelease is not stable support.
 - A stable release does not widen platform/provider support beyond its evidence.
 
-Public maturity decisions should consider both deterministic and representative behavioral evidence while keeping weak, unavailable, and negative evidence visible.
+Public maturity decisions should consider both deterministic and representative behavioural evidence while keeping weak, unavailable, and negative evidence visible.
 
 Historical candidate dispositions and migration-era maturity decisions belong in maintainer/review evidence, not in this current vocabulary page.
 
-See [Evidence and support](evidence-and-support.md), [Installation and adoption](agentic-workspace-install.md), [Documentation status](documentation-status.md), and the [Threat model](security/threat-model.md).
+See [Evidence and support](evidence-and-support.md), [Installation and adoption](agentic-workspace-install.md), [Documentation style guide](documentation-style-guide.md), and the [Threat model](security/threat-model.md).

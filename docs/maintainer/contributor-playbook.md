@@ -17,7 +17,7 @@ make setup
 cargo build --locked --workspace --bins
 ```
 
-`make setup` synchronizes the shared environment and installs this checkout's Git
+`make setup` synchronises the shared environment and installs this checkout's Git
 hooks. The Cargo command builds both native executables; keep them together.
 Rebuild after changing Rust code or bundled contracts/resources. Imports must not
 silently build Cargo or fall back to the former Python command host.
@@ -28,11 +28,11 @@ rather than refreshing dependencies as a side effect of unrelated work.
 
 ## Find the right implementation
 
-Start with the behavior being changed, then locate its responsible component:
+Start with the behaviour being changed, then locate its responsible component:
 
 | Change | Start here |
 | --- | --- |
-| Current context, authorization, state or effects | `crates/agentic-workspace-core/` |
+| Current context, authorisation, state or effects | `crates/agentic-workspace-core/` |
 | CLI options or forwarding | `crates/agentic-workspace-cli/` and the native CLI contract |
 | Python / TypeScript transport | `bindings/python/` / `bindings/node/` |
 | Human instructions and examples | The relevant user, reference or contributor page |
@@ -55,9 +55,8 @@ Describe the problem and expected result before choosing a mechanism. Keep the
 patch independently understandable: the relevant implementation, documentation
 and present-tense evidence should agree on what it establishes.
 
-For documentation, [write for the reader's next question](../documentation-status.md).
-Introduce purpose and subject before specialized terms; separate examples from
-general behavior. For runtime work, preserve the agent's judgment and the current
+For documentation, follow the canonical [documentation style guide](../documentation-style-guide.md).
+For runtime work, preserve the agent's judgement and the current
 source ownership rather than adding a competing control path.
 
 If the work uses Planning, update its progress through Planning's owner. Do not
@@ -66,23 +65,23 @@ continuation before stopping; one-off narration can stay in the PR or Git histor
 
 ## Validate the claim
 
-Read the [testing strategy](testing-strategy.md) before changing behavior, tests or
+Read the [testing strategy](testing-strategy.md) before changing behaviour, tests or
 CI. Name the failure classes the patch could introduce, reuse current evidence,
 and choose the lowest sufficient stable contract to test. An incident does not
 automatically justify another permanent regression.
 
-Typical starting points are focused Cargo tests for shared behavior, focused
+Typical starting points are focused Cargo tests for shared behaviour, focused
 Python or Node tests for transport, and links/examples/freshness checks for docs.
 Use [Maintainer commands](maintainer-commands.md) for exact commands. Changes to
 contracts or bundled resources also require the applicable generated/payload
 refresh and validation.
 
-The ordinary hosted job is **Merge sufficiency**. Broad artifact, runtime-matrix
+The ordinary hosted job is **Merge sufficiency**. Broad artefact, runtime-matrix
 and support-promotion proof is a separate explicit escalation; do not call skipped
 jobs passing. Record the commands, subject and limits of your actual evidence.
 State why proof can stop or the named remaining risk that needs more checking.
 
-For behavior, test or CI changes, include the testing strategy's compact delta
+For behaviour, test or CI changes, include the testing strategy's compact delta
 disposition: retained claim, evidence level, duplication removed or justified, and
 recurring CI cost. Documentation cleanup must not silently weaken those floors.
 
@@ -90,7 +89,7 @@ recurring CI cost. Documentation cleanup must not silently weaken those floors.
 
 Use the [PR template](../../.github/PULL_REQUEST_TEMPLATE.md). State what changed,
 why it serves the intended outcome, what was validated and what remains unresolved.
-Choose the required semver classification when package behavior or shipped content
+Choose the required semver classification when package behaviour or shipped content
 changes; a documentation change is not a release or support promotion.
 
 Keep stacked PRs independently truthful at their own base and head. A downstream
@@ -100,7 +99,7 @@ An agent that implemented or materially changed the patch must not approve or
 independently review it, nor direct a child agent to supply that approval. Mark it
 **ready for independent review** and leave review to an externally initiated
 reviewer using the [review skill](../../tools/skills/pr-review-recheck/SKILL.md).
-The implementer can continue other authorized work; review is not automatically
+The implementer can continue other authorised work; review is not automatically
 a gate on implementing the next stack layer.
 
 Use the [issue-shaping skill](../../tools/skills/github-issue-shaping/SKILL.md) and
