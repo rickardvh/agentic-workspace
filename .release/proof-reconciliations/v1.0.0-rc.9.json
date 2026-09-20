@@ -1,0 +1,16 @@
+{
+  "kind": "agentic-workspace/rc-proof-reconciliation/v1",
+  "rc_tag": "v1.0.0-rc.9",
+  "rc_artifact_commit": "154fb30d93839c21eb92048e608cd62e4c3b4f33",
+  "product_source_commit": "df8deed7e1910afdaac1ee061f56883fd48e00ba",
+  "reconciliation_commit": "ee1117616b48d41eb53b64440c81faf075c31970",
+  "release_tooling_commit": "55a7640bbad3c8801af7e9e7008d30789e3c875c",
+  "reconciliation_paths": [
+    ".release/changes/rc9-transport-proof-reconciliation.toml",
+    "tests/test_shared_core.py"
+  ],
+  "release_tooling_paths": [
+    ".release/changes/rc9-proof-admission.toml"
+  ],
+  "acceptance_reference": "https://github.com/rickardvh/agentic-workspace/pull/3490"
+}
