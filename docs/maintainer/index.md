@@ -12,6 +12,7 @@ to the [user guide](../index.md).
 | Update generated references | [Contracts and reference maintenance](../package/contracts.md) |
 | Write human documentation | [Documentation maintenance](../documentation-status.md) |
 | Prepare a release | [Release and versioning](../release-and-versioning.md) and [native distribution topology](native-release-topology.md) |
+| Configure recurring research or monitoring | [Scheduled maintainer tasks](scheduled-tasks/README.md) |
 
 [System intent](../../SYSTEM_INTENT.md) and [design principles](../design-principles.md)
 explain the product's constraints. [Dogfooding feedback](dogfooding-feedback.md)
