@@ -265,10 +265,8 @@ jobs:
         run: python scripts/check/check_rust_dependencies.py --install
 
       - name: Generate checksums and release manifest
-        env:
-          SECURITY_READINESS_COMMAND: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity ${{ github.sha }} --artifact-dir dist --output dist/security-supply-chain-readiness.json
         run: |
-          $SECURITY_READINESS_COMMAND
+          uv run python scripts/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
           python scripts/release/support_bearing_promotion.py compose \
             --commit "$(git rev-parse HEAD)" \
             --artifact-dir dist \

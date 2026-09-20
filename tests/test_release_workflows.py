@@ -315,6 +315,9 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "softprops/action-gh-release@" in workflow
     assert "uv sync --locked" in workflow
     assert "security-supply-chain-readiness.json" in workflow
+    manifest_step = _step_run_block(workflow, "Generate checksums and release manifest")
+    assert '--source-identity "$(git rev-parse HEAD)"' in manifest_step
+    assert "github.sha" not in manifest_step
     assert "distribution-install-readiness.json" in workflow
     assert "redistributable-package-readiness.json" in workflow
     assert "scripts/check/check_package_identity.py" in workflow
