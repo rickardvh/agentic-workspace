@@ -62,7 +62,7 @@ Planning helps with interrupted or delegated work. Memory helps retain expensive
 
 Ask the agent to enable the relevant capability and identify any configuration it still needs. Selecting Verification, for example, does not invent the project's test commands or prove the code correct. [Modules](package/modules.md) explains these choices.
 
-A new project rule or method usually needs no module. A separately reusable capability with its own facts or operations may justify one; that is the [module-authoring](module-authoring.md) path.
+A new project rule or method usually needs no module. A separately reusable capability with its own facts or operations may justify one; that is the [module-authoring](module-capability-contract.md) path.
 
 ## Change or undo a customization
 
