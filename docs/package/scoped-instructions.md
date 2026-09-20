@@ -194,8 +194,12 @@ It satisfies only the source-reconciliation obligation; other completion checks
 remain pending. No source body is copied into a documentation store.
 
 Currentness binds the selected Planning subject when present,
-canonical sources, declared context dependencies, applicable instruction
-admission, relevant work files, policy and capability revisions. Every entry
+canonical sources, declared context dependencies, admitted instruction content,
+relevant work files, the matching decision delegation and producer semantics.
+Admission is checked afresh; changing its Git pointer to identical instruction
+content preserves accepted coverage. Unrelated configuration and other owners'
+capability changes also preserve coverage. Fresh publication requests and actions
+still require their current capability envelope and exact authority. Every entry
 reobserves the declared file set, including additions made outside AW. An incomplete
 caller change list or a quiet event stream cannot prove freshness. Discovery is
 bounded; an unsafe or incompletely observed scope remains unresolved for completion.

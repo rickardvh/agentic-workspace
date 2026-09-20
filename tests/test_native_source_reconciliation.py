@@ -135,16 +135,81 @@ def test_exact_answer_stales_before_publication(tmp_path, shared_core_binary, na
     path = tmp_path / paths[drift]
     path.write_text(path.read_text() + "\n# changed\n")
     if drift == "policy":
-        # Shared policy currentness binds interpreted configuration, so a
-        # comment alone preserves the answer. Change an actual policy value.
+        # Comments preserve the answer; a matching delegation changes the
+        # semantic authority and requires a fresh request.
         assert call({"request": answer})["decision_packet"]["primary_action"] is not None
-        path.write_text(path.read_text() + '\n[workspace]\ncli_invoke="aw-current"\n')
+        path.write_text(
+            path.read_text() + '\ndecision_delegations=[{owner="verification",scope=["path:docs/guide.md","path:src/feature.txt"]}]\n'
+        )
     if drift == "instruction":
         assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
     else:
         with pytest.raises(AssertionError):
             call({"request": answer})
     assert not (tmp_path / ".agentic-workspace/proof/receipts").exists()
+
+
+@pytest.mark.parametrize("delegated", [False, True])
+def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_path, shared_core_binary, native_cli, delegated):
+    context = repository(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    grant = 'decision_delegations=[{owner="verification",scope=["path:docs/guide.md","path:src/feature.txt"]}]\n'
+    if delegated:
+        config.write_text(config.read_text() + grant)
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    if delegated:
+        answer = call()["verification"]["source_reconciliation"]["requests"][0]
+        answer["arguments"]["judgments"] = {"docs/guide.md": {"disposition": "reviewed-current", "reason": "Checked exact behavior."}}
+    else:
+        answer = answer_for(call)
+    action = call({"request": answer})["decision_packet"]["primary_action"]
+    assert call({"invocation": action})["status"] == "applied"
+    before = call()
+    evidence = before["verification"]["source_reconciliation"]["evidence"]
+    receipts = sorted((tmp_path / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json"))
+
+    # An unrelated interpreted policy value must not stale accepted semantics.
+    config.write_text(config.read_text() + '\n[workspace]\ncli_invoke="aw-current"\n')
+    assert call()["verification"]["source_reconciliation"]["evidence"] == evidence
+
+    # A different owner's restriction changes the aggregate action contract.
+    unrelated = tmp_path / ".agentic-workspace/instructions/unrelated.md"
+    unrelated.write_text("---\npaths: [other/**]\nprotect: [other/**]\n---\nUnrelated restriction.\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", str(unrelated)], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(tmp_path),
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "unrelated owner",
+        ],
+        check=True,
+        capture_output=True,
+    )
+    pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
+    old_pin = config.read_text().split('instruction_revision="')[1].split('"')[0]
+    config.write_text(config.read_text().replace(old_pin, pin))
+    current = call()["verification"]["source_reconciliation"]
+    assert current["status"] == "current"
+    assert current["evidence"] == evidence
+    assert sorted((tmp_path / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json")) == receipts
+    # Coverage is reusable, but an old publication envelope is not new authority.
+    with pytest.raises(AssertionError):
+        call({"request": answer})
+
+    # Adding/removing the applicable grant changes semantic authority.
+    text = config.read_text()
+    config.write_text(text.replace(grant, "") if delegated else text.replace("[assurance]\n", "[assurance]\n" + grant))
+    assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
 
 
 @pytest.mark.parametrize("stage", ["receipt", "temporary"])

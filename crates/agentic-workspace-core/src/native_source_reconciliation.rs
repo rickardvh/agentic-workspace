@@ -255,7 +255,10 @@ pub(crate) fn view(
         for dependency in strings(&row["read"]) {
             dependencies.insert(dependency.clone(), observe(&root, &dependency)?);
         }
-        declarations.push(json!({"source":row["source"],"admission":row["binding_admission"],"sources":refs,"paths":row["metadata"]["paths"]}));
+        // Admission is checked afresh; its transport (for example a Git
+        // commit pointer) is not semantic evidence. The exact declaration
+        // content below binds its requirements and authority.
+        declarations.push(json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"sources":refs,"paths":row["metadata"]["paths"]}));
         let patterns = strings(&row["metadata"]["paths"]);
         let global = ["**".to_owned()];
         let observed = scope_files(
@@ -302,7 +305,7 @@ pub(crate) fn view(
         postimages.insert(path.clone(), observe(&root, &path)?);
     }
     let binding = json!({"semantics":SEMANTICS,"subject":subject,"declarations":declarations,
-        "sources":sources,"dependencies":dependencies,"work_postimages":postimages,"policy_revision":configuration["revision"],"capability_revision":contract["revision"]});
+        "sources":sources,"dependencies":dependencies,"work_postimages":postimages});
     // Retained semantic judgment is valid only under its actual producer as
     // well as current sources. No old receipt can survive an implementation
     // change merely because its repository dependencies stayed unchanged.
@@ -311,7 +314,8 @@ pub(crate) fn view(
         digest(&json!([
             include_str!("native_source_reconciliation.rs"),
             include_str!("dependency_binding.rs"),
-            include_str!("current_projection.rs")
+            include_str!("current_projection.rs"),
+            include_str!("native_decision_authority.rs")
         ]))
         .unwrap()
     });
@@ -320,9 +324,12 @@ pub(crate) fn view(
     judgment_paths.extend(postimages.keys().cloned());
     judgment_paths.sort();
     judgment_paths.dedup();
-    if let Some(authority) =
+    if let Some(mut authority) =
         crate::native_decision_authority::delegated(configuration, "verification", &judgment_paths)
     {
+        // Only the matching grant determines retained judgment authority.
+        // Fresh requests/actions still bind the aggregate capability contract.
+        authority.as_object_mut().unwrap().remove("policy_revision");
         binding["decision_authority"] = authority;
     }
     grouped_view(
