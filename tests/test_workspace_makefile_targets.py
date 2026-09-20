@@ -1,12 +1,43 @@
 from __future__ import annotations
 
+import json
 import os
 import re
+import runpy
 import subprocess
 from collections import Counter
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_workspace_markdown_gate_rejects_source_and_payload_blank_lines(tmp_path: Path, capfd) -> None:
+    main = runpy.run_path(str(WORKSPACE_ROOT / "scripts/check/check_workspace_markdown.py"))["main"]
+    reference = ".agentic-workspace/skills/example/references/claim.md"
+    manifest = tmp_path / "src/agentic_workspace/contracts/workspace_surfaces.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"surfaces": [{"path": reference, "materialization": {"source": reference}}]}), encoding="utf-8")
+    paths = [tmp_path / reference, tmp_path / "src/agentic_workspace/_payload" / reference]
+    valid = "# Claim\n\nFirst paragraph.\n\nSecond paragraph.\n"
+    for path in paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(valid, encoding="utf-8")
+    assert main(tmp_path) == 0
+    for path in paths:
+        path.write_text(valid.replace("\n\nSecond", "\n\n\n\nSecond"), encoding="utf-8")
+        assert main(tmp_path) != 0
+        assert "MD012" in capfd.readouterr().out
+        path.write_text(valid, encoding="utf-8")
+    assert main(tmp_path) == 0
+
+
+def test_workspace_markdown_is_in_normal_lint_and_ci() -> None:
+    text = _makefile_text()
+    assert "lint-workspace: markdownlint-workspace" in text
+    assert "markdownlint: sync-all markdownlint-workspace markdownlint-memory" in text
+    assert "scripts/check/check_workspace_markdown.py" in text
+    assert "make lint-workspace" in (WORKSPACE_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
 
 SPLIT_TARGETS = {
     "test-workspace-cli": "WORKSPACE_TEST_CLI",
