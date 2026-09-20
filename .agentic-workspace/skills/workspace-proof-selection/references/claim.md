@@ -17,8 +17,6 @@ Required source reconciliation and independent reviewer custody stay separate.
 `strict_closeout` still requires a task claim judgment with no matching protocol.
 A method's availability, skill identity or completion never grants proof or claims.
 
-
-
 Run the lowest sufficient current proof selected for the changed behavior and
 requested outcome. Broaden only for a named unresolved risk. Distinguish validation,
 issue completion, intent satisfaction and total operating cost. Reconcile actionable

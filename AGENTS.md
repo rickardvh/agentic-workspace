@@ -37,3 +37,10 @@ required by a dependency or the user. Stop when the authorized implementation
 work is complete, leaving review and approval to an externally initiated reviewer
 using `tools/skills/pr-review-recheck/SKILL.md`. Issue shaping and ordinary review
 feedback do not constitute implementation custody.
+
+During shaping, you may delegate a bounded advisory second opinion to challenge
+assumptions, omissions, alternatives, or proposed work boundaries when its expected
+value justifies the added cost. This is optional, not a required actor-critic step.
+Such a critic supplies advice, not PR review, approval, or independent acceptance;
+it cannot satisfy an explicit acceptance gate or be used to relabel review of your
+own implementation. The acting agent remains responsible for the resulting plan.

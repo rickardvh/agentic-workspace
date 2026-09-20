@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Fix packaged proof claim Markdown and lint all declared Workspace Markdown sources and payload mirrors in normal pre-commit and CI checks."

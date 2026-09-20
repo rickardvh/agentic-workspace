@@ -209,7 +209,7 @@ WORKSPACE_TEST_INTEGRATION = \
 .PHONY: help sync-all sync-memory sync-planning sync-verification \
 	setup install-hooks pre-commit \
 	test test-nosync test-rust-core test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-contracts-measurement test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
-	lint lint-nosync lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
+	lint lint-nosync lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-workspace markdownlint-memory \
 	typecheck typecheck-nosync typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
 	format format-nosync format-workspace format-memory format-planning format-verification \
 	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
@@ -241,7 +241,7 @@ help:
 	@echo "  test-workspace-integration  Run external, lifecycle, launcher, and cost tests."
 	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
 	@echo "  lint-nosync          Run lint checks after caller-provided dependency sync."
-	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
+	@echo "  markdownlint         Lint shipped Workspace Markdown and Memory package surfaces."
 	@echo "  typecheck            Run ty type checks across workspace and packages."
 	@echo "  typecheck-nosync     Run type checks after caller-provided dependency sync."
 	@echo "  packed-artifact-conformance  Replay CI's exact npm-artifact semantic lane locally."
@@ -345,7 +345,7 @@ test-nosync: test-workspace test-memory test-planning test-verification
 
 test: sync-all test-nosync
 
-lint-workspace:
+lint-workspace: markdownlint-workspace
 	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
 	@$(COMPACT_RUN) --label "prompt semantic markers" -- uv run python scripts/check/check_prompt_semantic_markers.py
 	@cargo fmt --all -- --check
@@ -368,7 +368,10 @@ lint: sync-all lint-nosync
 markdownlint-memory:
 	@$(COMPACT_RUN) --label "memory markdownlint" --cwd packages/memory -- uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
 
-markdownlint: sync-all markdownlint-memory
+markdownlint-workspace:
+	@$(COMPACT_RUN) --label "workspace markdownlint" -- uv run python scripts/check/check_workspace_markdown.py
+
+markdownlint: sync-all markdownlint-workspace markdownlint-memory
 
 typecheck-workspace:
 	@$(COMPACT_RUN) --label "workspace typecheck" -- uv run ty check src
