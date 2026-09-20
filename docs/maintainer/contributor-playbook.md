@@ -12,7 +12,7 @@ Node is needed for the TypeScript binding and cross-language checks. The
 
 ```bash
 git clone https://github.com/rickardvh/agentic-workspace.git
-cd agentic-workspace
+cd agentic-workspace/
 make setup
 cargo build --locked --workspace --bins
 ```
