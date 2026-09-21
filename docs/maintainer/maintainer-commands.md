@@ -29,6 +29,7 @@ These are available commands, not a checklist to run in full on every patch.
 | `make lint` | Run workspace lint. |
 | `make typecheck` | Run workspace type checks. |
 | `make check` | Run the broader root validation composition when the claim warrants it. |
+| `uv run python scripts/check/check_generated_command_packages.py --python-conformance` | Check retained source-only Python command conformance; this does not certify the installed native package. |
 
 For a caller that has already synchronised dependencies, use the corresponding
 available `*-nosync` target rather than repeating setup. Test execution is serial

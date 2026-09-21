@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:9165b6c4a4020e14660b799344cd017df8c163b177b96d11eb5a3293c944170f`
+- Contract digest: `sha256:62068a52c1b26cf03837d6a39f178331fef1cd60da609be4f0d2d431bd28995d`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
