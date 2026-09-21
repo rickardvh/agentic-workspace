@@ -38,6 +38,7 @@ def stack(tmp_path, monkeypatch):
     paths = {}
     prs = []
     for number, bump in enumerate(("patch", "minor"), 1):
+        source_base = git("rev-parse", "HEAD")
         path = f".release/changes/{number}.toml"
         destination = tmp_path / path
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +52,7 @@ def stack(tmp_path, monkeypatch):
                 "number": number,
                 "merged_at": "2026-09-19T16:00:00Z",
                 "head": {"sha": sha, "repo": {"full_name": "owner/repo"}},
-                "base": {"repo": {"full_name": "owner/repo"}},
+                "base": {"sha": source_base, "repo": {"full_name": "owner/repo"}},
             }
         )
     # Same accepted tree with a distinct aggregate commit, as in stack integration.
@@ -79,6 +80,11 @@ def stack(tmp_path, monkeypatch):
                         "head_sha": sha,
                         "head_repository": {"full_name": "owner/repo"},
                         "updated_at": "2026-09-19T15:00:00Z",
+                        "pull_requests": [
+                            {"number": pr["number"], "head": {"sha": sha}, "base": {"sha": pr["base"]["sha"]}}
+                            for pr in prs
+                            if pr["head"]["sha"] == sha
+                        ],
                     }
                 ]
             }
@@ -111,6 +117,12 @@ def test_exact_tree_mixed_changesets_need_real_prior_admission(stack):
         "new-delta",
         "merge-delta",
         "changed-changeset",
+        "different-pr",
+        "different-base",
+        "different-head",
+        "missing-pr-association",
+        "empty-pr-associations",
+        "split-pr-association",
     ],
 )
 def test_integration_exception_fails_closed(stack, defect):
@@ -140,6 +152,23 @@ def test_integration_exception_fails_closed(stack, defect):
                 run["updated_at"] = "2026-09-20T00:00:00Z"
             elif defect == "foreign-repo":
                 run["head_repository"]["full_name"] = "untrusted/repo"
+            elif defect == "different-pr":
+                # Same successful head, but the admitted diff belongs to a
+                # different PR. It cannot authorize this candidate's files.
+                run["pull_requests"][0]["number"] = 999
+            elif defect == "different-base":
+                run["pull_requests"][0]["base"]["sha"] = "0" * 40
+            elif defect == "different-head":
+                run["pull_requests"][0]["head"]["sha"] = "0" * 40
+            elif defect == "missing-pr-association":
+                del run["pull_requests"]
+            elif defect == "empty-pr-associations":
+                run["pull_requests"] = []
+            elif defect == "split-pr-association":
+                other = copy.deepcopy(run["pull_requests"][0])
+                other["number"] = 999
+                run["pull_requests"][0]["base"]["sha"] = "0" * 40
+                run["pull_requests"].append(other)
         return result
 
     with pytest.raises(ValueError):

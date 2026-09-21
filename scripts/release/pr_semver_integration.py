@@ -68,14 +68,16 @@ def admit_exact_tree_integration(
                 or candidate["base"]["repo"]["full_name"] != repository
                 or (candidate["head"].get("repo") or {}).get("full_name") != repository
                 or not re.fullmatch(r"[0-9a-f]{40}", sha)
+                or not re.fullmatch(r"[0-9a-f]{40}", candidate["base"].get("sha", ""))
                 or not ancestor(root, sha, head)
                 or ancestor(root, sha, base)
             ):
                 continue
             runs = api(f"{prefix}/actions/workflows/pr-semver-label.yml/runs?head_sha={sha}&event=pull_request&per_page=100")
             # A label today is not proof that the original changeset was admitted.
-            # Require a successful repository-owned workflow for that exact head
-            # before its recorded merge; this also works for deleted stack refs.
+            # A head can participate in several PRs with different diffs. Bind
+            # admission to the merged PR and its exact head/base pair in one
+            # workflow association. Missing associations cannot supply authority.
             if not any(
                 run.get("conclusion") == "success"
                 and run.get("event") == "pull_request"
@@ -83,6 +85,12 @@ def admit_exact_tree_integration(
                 and run.get("head_sha") == sha
                 and (run.get("head_repository") or {}).get("full_name") == repository
                 and run.get("updated_at", "~") <= candidate["merged_at"]
+                and any(
+                    association.get("number") == candidate["number"]
+                    and association.get("head", {}).get("sha") == sha
+                    and association.get("base", {}).get("sha") == candidate["base"]["sha"]
+                    for association in (run.get("pull_requests") or [])
+                )
                 for run in runs["workflow_runs"]
             ):
                 continue

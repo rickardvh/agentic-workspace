@@ -309,11 +309,14 @@ An exact-tree integration of a merged stack may retain mixed changeset bumps.
 Its label must be at least the highest retained bump. The checker requires the
 integration head and merge result to have the same tree as a previously merged
 source head. Each retained changeset must also match its admitted Git object in
-a merged PR with a successful semver check on that exact head before merge.
+a merged PR with a successful semver check before merge. The workflow run must
+identify that PR number and its exact head and base commits in the same PR
+association. A successful check on the same head in another PR is insufficient.
 Labels, branch names and PR descriptions cannot establish this exception.
 
 Admission searches the 500 most recently updated closed PRs in the same repository.
-Missing prior admission or any extra tree change fails the check; do not rewrite
+Missing PR associations, missing prior admission or any extra tree change fails
+the check; do not rewrite
 accepted changesets to work around it. Release preparation still consumes every
 pending changeset and applies the highest bump once.
 
