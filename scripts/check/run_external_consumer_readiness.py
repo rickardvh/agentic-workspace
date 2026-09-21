@@ -11,6 +11,7 @@ import sys
 import tarfile
 import tempfile
 import tomllib
+import traceback
 import zipfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -551,10 +552,14 @@ def main() -> int:
     try:
         report = run(dist_dir=args.dist_dir, require_node=args.require_node)
     except (ReadinessCheckError, AssertionError) as error:
+        message = str(error)
+        if isinstance(error, AssertionError):
+            frame = traceback.extract_tb(error.__traceback__)[-1]
+            message = f"{frame.name} ({Path(frame.filename).name}:{frame.lineno}): {message or frame.line or 'assertion failed'}"
         if args.format == "json":
-            print(json.dumps({"kind": "agentic-workspace/external-consumer-readiness/v2", "status": "failed", "message": str(error)}))
+            print(json.dumps({"kind": "agentic-workspace/external-consumer-readiness/v2", "status": "failed", "message": message}))
         else:
-            print(f"External consumer readiness: failed\n{error}")
+            print(f"External consumer readiness: failed\n{message}")
         return 1
     if args.format == "json":
         print(json.dumps(report, sort_keys=True))

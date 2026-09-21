@@ -368,6 +368,9 @@ jobs:
         run: uv lock --check
       - name: Sync the package once
         run: make sync-${{ matrix.package }}
+      - name: Build native pair for Planning maintainer surfaces
+        if: matrix.package == 'planning'
+        run: cargo build --locked --workspace --bins
       - name: Run package checks
         run: make check-${{ matrix.package }}-nosync
 
