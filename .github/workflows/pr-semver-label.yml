@@ -11,6 +11,7 @@ on:
       - ready_for_review
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
 
@@ -30,6 +31,7 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           EVENT_PATH: ${{ github.event_path }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
           import json
@@ -40,6 +42,7 @@ jobs:
           from pathlib import Path
 
           from scripts.release.release_ownership import classify_changed_paths
+          from scripts.release.pr_semver_integration import admit_exact_tree_integration
 
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           semver_labels = set(ownership["semver_labels"])
@@ -109,12 +112,23 @@ jobs:
               raise SystemExit(1)
 
           expected_bump = semver_to_bump[selected[0]]
+          payloads = {path.as_posix(): tomllib.loads(path.read_text(encoding="utf-8")) for path in changesets}
+          integration = None
+          if any(payload.get("bump") != expected_bump for payload in payloads.values()):
+              try:
+                  integration = admit_exact_tree_integration(
+                      root=Path.cwd(), event=event, expected_bump=expected_bump,
+                      changesets={path: payload.get("bump") for path, payload in payloads.items()},
+                  )
+              except (ValueError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+                  print(f"Exact-tree integration not admitted: {error}", file=sys.stderr)
+                  raise SystemExit(1)
           for changeset in changesets:
-              payload = tomllib.loads(changeset.read_text(encoding="utf-8"))
+              payload = payloads[changeset.as_posix()]
               if payload.get("schema_version") != "agentic-workspace/release-change/v1":
                   print(f"{changeset} has an invalid release changeset schema.", file=sys.stderr)
                   raise SystemExit(1)
-              if payload.get("bump") != expected_bump:
+              if payload.get("bump") != expected_bump and integration is None:
                   print(
                       f"{changeset} declares bump={payload.get('bump')!r}, "
                       f"but the PR label requires bump={expected_bump!r}.",
@@ -125,5 +139,7 @@ jobs:
                   print(f"{changeset} must include a non-empty summary.", file=sys.stderr)
                   raise SystemExit(1)
 
+          if integration is not None:
+              print("Exact-tree integration admitted: " + json.dumps(integration, sort_keys=True))
           print(f"Semver label accepted: {selected[0]}")
           PY

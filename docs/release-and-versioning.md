@@ -299,11 +299,23 @@ bump = "patch"
 summary = "Describe the user-visible release note."
 ```
 
-The semver label is the maintainer-owned compatibility decision, and every
-changeset in the PR must declare the same bump as that label. Docs-only or
+The semver label is the maintainer-owned compatibility decision. In an ordinary
+PR, every changeset must declare the same bump as that label. Docs-only or
 planning-only changes can skip a semver label and changeset unless they affect
 packaged behaviour, compatibility, release policy, generated outputs, shipped
 payloads, or release workflow behaviour.
+
+An exact-tree integration of a merged stack may retain mixed changeset bumps.
+Its label must be at least the highest retained bump. The checker requires the
+integration head and merge result to have the same tree as a previously merged
+source head. Each retained changeset must also match its admitted Git object in
+a merged PR with a successful semver check on that exact head before merge.
+Labels, branch names and PR descriptions cannot establish this exception.
+
+Admission searches the 500 most recently updated closed PRs in the same repository.
+Missing prior admission or any extra tree change fails the check; do not rewrite
+accepted changesets to work around it. Release preparation still consumes every
+pending changeset and applies the highest bump once.
 
 ## Release PR
 
