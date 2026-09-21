@@ -309,16 +309,22 @@ An exact-tree integration of a merged stack may retain mixed changeset bumps.
 Its label must be at least the highest retained bump. The checker requires the
 integration head and merge result to have the same tree as a previously merged
 source head. Each retained changeset must also match its admitted Git object in
-a merged PR with a successful semver check before merge. The workflow run must
-identify that PR number and its exact head and base commits in the same PR
-association. A successful check on the same head in another PR is insufficient.
+a merged PR with a successful semver check before merge. After validation, the
+semver workflow uploads an immutable admission artifact containing the PR number,
+exact head and base commits, merge base, label, changeset Git objects and producer
+run/attempt. Validation uses the event's exact commits, not a moving base branch.
+A successful check on the same head in another PR is insufficient.
 Labels, branch names and PR descriptions cannot establish this exception.
 
 Admission searches the 500 most recently updated closed PRs in the same repository.
-Missing PR associations, missing prior admission or any extra tree change fails
-the check; do not rewrite
-accepted changesets to work around it. Release preparation still consumes every
-pending changeset and applies the highest bump once.
+The consumer retrieves the artifact from its successful semver run and verifies
+its SHA-256 digest, producer identity, exact PR state and Git objects. It does not
+depend on GitHub's workflow PR associations, which can disappear after merge.
+Artifacts are retained for 90 days. Missing, expired, altered or mismatched
+artifacts fail admission; historical runs without an artifact are not backfilled
+from mutable labels or prose. Any extra tree change also fails the check. Do not
+rewrite accepted changesets to work around missing evidence. Release preparation
+still consumes every pending changeset and applies the highest bump once.
 
 ## Release PR
 

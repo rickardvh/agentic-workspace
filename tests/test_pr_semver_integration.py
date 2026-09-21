@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
+import io
 import json
 import re
 import sys
 import textwrap
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -66,39 +69,88 @@ def stack(tmp_path, monkeypatch):
         }
     }
 
+    records, runs, artifacts, archives = {}, {}, {}, {}
+
+    def package(number):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(checker.ADMISSION_FILE, json.dumps(records[number]))
+        archives[number] = buffer.getvalue()
+        artifacts[number] = {
+            "id": number,
+            "name": f"semver-admission-{number}-1",
+            "expired": False,
+            "size_in_bytes": len(archives[number]),
+            "digest": "sha256:" + hashlib.sha256(archives[number]).hexdigest(),
+            "created_at": "2026-09-19T15:00:00Z",
+        }
+
+    for pr in prs:
+        number = pr["number"]
+        records[number] = checker.make_admission(
+            root=tmp_path,
+            event={"pull_request": pr},
+            payloads={f".release/changes/{number}.toml": {"bump": paths[f".release/changes/{number}.toml"]}},
+            label=f"semver:{paths[f'.release/changes/{number}.toml']}",
+            mode="ordinary",
+            run_id=number,
+            attempt=1,
+        )
+        runs[number] = {
+            "id": number,
+            "run_attempt": 1,
+            "conclusion": "success",
+            "event": "pull_request",
+            "path": checker.WORKFLOW,
+            "head_sha": pr["head"]["sha"],
+            "head_repository": {"full_name": "owner/repo"},
+            "updated_at": "2026-09-19T15:00:00Z",
+            "pull_requests": [],
+        }
+        package(number)
+
     def api(endpoint):
         if "/pulls?" in endpoint:
             return copy.deepcopy(prs)
         if "/runs?" in endpoint:
             sha = endpoint.split("head_sha=")[1].split("&")[0]
-            return {
-                "workflow_runs": [
-                    {
-                        "conclusion": "success",
-                        "event": "pull_request",
-                        "path": checker.WORKFLOW,
-                        "head_sha": sha,
-                        "head_repository": {"full_name": "owner/repo"},
-                        "updated_at": "2026-09-19T15:00:00Z",
-                        "pull_requests": [
-                            {"number": pr["number"], "head": {"sha": sha}, "base": {"sha": pr["base"]["sha"]}}
-                            for pr in prs
-                            if pr["head"]["sha"] == sha
-                        ],
-                    }
-                ]
-            }
-        number = int(re.search(r"/pulls/(\d+)/files", endpoint)[1])
-        return [{"filename": f".release/changes/{number}.toml", "status": "added"}]
+            return {"workflow_runs": copy.deepcopy([run for run in runs.values() if run["head_sha"] == sha])}
+        number = int(re.search(r"/runs/(\d+)/artifacts", endpoint)[1])
+        return {"artifacts": [copy.deepcopy(artifacts[number])] if number in artifacts else []}
+
+    def download(endpoint):
+        return archives[int(re.search(r"/artifacts/(\d+)/zip", endpoint)[1])]
 
     monkeypatch.chdir(tmp_path)
-    return tmp_path, git, event, paths, prs, api
+    return (
+        tmp_path,
+        git,
+        event,
+        paths,
+        prs,
+        {
+            "api": api,
+            "download": download,
+            "records": records,
+            "runs": runs,
+            "artifacts": artifacts,
+            "archives": archives,
+            "package": package,
+        },
+    )
 
 
-def test_exact_tree_mixed_changesets_need_real_prior_admission(stack):
-    root, git, event, paths, _, api = stack
+@pytest.mark.parametrize("associations", ["empty", "missing"])
+def test_exact_tree_mixed_changesets_reuse_admission_after_merge(stack, associations):
+    root, git, event, paths, _, provider = stack
+    # Reproduce GitHub's observed lifetime: merged PRs no longer have run links.
+    if associations == "missing":
+        for run in provider["runs"].values():
+            del run["pull_requests"]
     before = git("status", "--porcelain")
-    result = checker.admit_exact_tree_integration(root=root, event=event, changesets=paths, expected_bump="minor", api=api)
+    result = checker.admit_exact_tree_integration(
+        root=root, event=event, changesets=paths, expected_bump="minor", api=provider["api"], download=provider["download"]
+    )
     assert result["source_pr"] == 2
     assert result["highest_bump"] == "minor"
     assert result["changeset_admissions"] == {".release/changes/1.toml": 1, ".release/changes/2.toml": 2}
@@ -120,13 +172,19 @@ def test_exact_tree_mixed_changesets_need_real_prior_admission(stack):
         "different-pr",
         "different-base",
         "different-head",
-        "missing-pr-association",
-        "empty-pr-associations",
-        "split-pr-association",
+        "missing-artifact",
+        "expired-artifact",
+        "late-artifact",
+        "wrong-producer-run",
+        "wrong-producer-attempt",
+        "wrong-artifact-digest",
+        "wrong-tree",
+        "unadmitted-changeset",
+        "wrong-git-object",
     ],
 )
 def test_integration_exception_fails_closed(stack, defect):
-    root, git, event, paths, prs, api = stack
+    root, git, event, paths, prs, provider = stack
     expected = "minor"
     if defect == "unmerged":
         prs[1]["merged_at"] = None
@@ -140,50 +198,69 @@ def test_integration_exception_fails_closed(stack, defect):
         if defect != "merge-delta":
             event["pull_request"]["head"]["sha"] = git("rev-parse", "HEAD")
 
-    def altered(endpoint):
-        result = api(endpoint)
-        if "/runs?" in endpoint:
-            run = result["workflow_runs"][0]
-            if defect == "missing-admission":
-                run["conclusion"] = "failure"
-            elif defect == "wrong-workflow":
-                run["path"] = ".github/workflows/unrelated.yml"
-            elif defect == "after-merge":
-                run["updated_at"] = "2026-09-20T00:00:00Z"
-            elif defect == "foreign-repo":
-                run["head_repository"]["full_name"] = "untrusted/repo"
-            elif defect == "different-pr":
-                # Same successful head, but the admitted diff belongs to a
-                # different PR. It cannot authorize this candidate's files.
-                run["pull_requests"][0]["number"] = 999
-            elif defect == "different-base":
-                run["pull_requests"][0]["base"]["sha"] = "0" * 40
-            elif defect == "different-head":
-                run["pull_requests"][0]["head"]["sha"] = "0" * 40
-            elif defect == "missing-pr-association":
-                del run["pull_requests"]
-            elif defect == "empty-pr-associations":
-                run["pull_requests"] = []
-            elif defect == "split-pr-association":
-                other = copy.deepcopy(run["pull_requests"][0])
-                other["number"] = 999
-                run["pull_requests"][0]["base"]["sha"] = "0" * 40
-                run["pull_requests"].append(other)
-        return result
+    for number in (1, 2):
+        run = provider["runs"][number]
+        if defect == "missing-admission":
+            run["conclusion"] = "failure"
+        elif defect == "wrong-workflow":
+            run["path"] = ".github/workflows/unrelated.yml"
+        elif defect == "after-merge":
+            run["updated_at"] = "2026-09-20T00:00:00Z"
+        elif defect == "foreign-repo":
+            run["head_repository"]["full_name"] = "untrusted/repo"
+        elif defect == "different-pr":
+            # Same successful head, but the admitted diff belongs to a
+            # different PR. It cannot authorize this candidate's files.
+            provider["records"][number]["pull_request"]["number"] = 999
+        elif defect == "different-base":
+            provider["records"][number]["pull_request"]["base_sha"] = "0" * 40
+        elif defect == "different-head":
+            provider["records"][number]["pull_request"]["head_sha"] = "0" * 40
+        elif defect == "wrong-producer-run":
+            provider["records"][number]["producer"]["run_id"] = 999
+        elif defect == "wrong-producer-attempt":
+            provider["records"][number]["producer"]["attempt"] = 2
+        elif defect == "wrong-tree":
+            provider["records"][number]["head_tree"] = "0" * 40
+        elif defect == "unadmitted-changeset":
+            provider["records"][number]["changesets"] = {}
+        elif defect == "wrong-git-object":
+            provider["records"][number]["changesets"][f".release/changes/{number}.toml"]["git_entry"] = "forged"
+        provider["package"](number)
+        if defect == "missing-artifact":
+            del provider["artifacts"][number]
+        elif defect == "expired-artifact":
+            provider["artifacts"][number]["expired"] = True
+        elif defect == "late-artifact":
+            provider["artifacts"][number]["created_at"] = "2026-09-20T00:00:00Z"
+        elif defect == "wrong-artifact-digest":
+            provider["artifacts"][number]["digest"] = "sha256:" + "0" * 64
 
     with pytest.raises(ValueError):
-        checker.admit_exact_tree_integration(root=root, event=event, changesets=paths, expected_bump=expected, api=altered)
+        checker.admit_exact_tree_integration(
+            root=root, event=event, changesets=paths, expected_bump=expected, api=provider["api"], download=provider["download"]
+        )
 
 
-@pytest.mark.parametrize("mode", ["ordinary", "mixed-ordinary", "integration", "missing-label", "multiple-labels"])
+@pytest.mark.parametrize(
+    "mode", ["ordinary", "base-advanced", "non-package", "mixed-ordinary", "integration", "missing-label", "multiple-labels"]
+)
 def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode):
     monkeypatch.syspath_prepend(str(ROOT))
     monkeypatch.setitem(sys.modules, "scripts.release.pr_semver_integration", checker)
-    root, git, event, _, prs, api = stack
-    if mode == "ordinary":
+    root, git, event, _, prs, provider = stack
+    if mode in {"ordinary", "base-advanced"}:
         git("checkout", "--detach", prs[0]["head"]["sha"])
         event["pull_request"]["head"]["sha"] = git("rev-parse", "HEAD")
         event["pull_request"]["labels"] = [{"name": "semver:patch"}]
+        if mode == "base-advanced":
+            git("update-ref", "refs/heads/master", event["pull_request"]["head"]["sha"])
+    elif mode == "non-package":
+        event["pull_request"]["base"]["sha"] = git("rev-parse", "HEAD")
+        (root / "note.md").write_text("Documentation only.")
+        git("add", "note.md")
+        git("commit", "-qm", "documentation")
+        event["pull_request"]["head"]["sha"] = git("rev-parse", "HEAD")
     elif mode == "missing-label":
         event["pull_request"]["labels"] = []
     elif mode == "multiple-labels":
@@ -193,17 +270,45 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
     monkeypatch.setenv("EVENT_PATH", str(event_path))
     monkeypatch.setenv("BASE_REF", "master")
     monkeypatch.setenv("HEAD_REF", "claimed-integration")
+    monkeypatch.setenv("SEMVER_ADMISSION_PATH", str(root / "semver-admission.json"))
+    monkeypatch.setenv("GITHUB_RUN_ID", "3")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
 
     def observed(endpoint):
-        assert mode not in {"ordinary", "missing-label", "multiple-labels"}, "Ordinary admission must remain local."
-        return api(endpoint) if mode == "integration" else []
+        assert mode not in {"ordinary", "base-advanced", "non-package", "missing-label", "multiple-labels"}, (
+            "Ordinary admission must remain local."
+        )
+        return provider["api"](endpoint) if mode == "integration" else []
 
     monkeypatch.setattr(checker, "github", observed)
+    monkeypatch.setattr(checker, "github_bytes", provider["download"])
     workflow = (ROOT / ".github/workflows/pr-semver-label.yml").read_text()
-    code = textwrap.dedent(workflow.split("python - <<'PY'\n", 1)[1].rsplit("          PY", 1)[0])
-    if mode in {"ordinary", "integration"}:
+    code = textwrap.dedent(workflow.split("python - <<'PY'\n", 1)[1].split("          PY", 1)[0])
+    assert "if-no-files-found: error" in workflow
+    assert "retention-days: 90" in workflow
+    assert "overwrite: false" in workflow
+    assert "semver-admission-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
+    if mode in {"ordinary", "integration", "base-advanced"}:
         exec(compile(code, "pr-semver-label", "exec"), {})
+        admission = json.loads((root / "semver-admission.json").read_text())
+        assert admission["pull_request"] == {
+            "number": 3,
+            "head_sha": event["pull_request"]["head"]["sha"],
+            "base_sha": event["pull_request"]["base"]["sha"],
+        }
+        assert admission["mode"] == ("ordinary" if mode == "base-advanced" else mode)
+        assert admission["producer"] == {"workflow": checker.WORKFLOW, "run_id": 3, "attempt": 1}
+        assert admission["changesets"]
+    elif mode == "non-package":
+        with pytest.raises(SystemExit) as error:
+            exec(compile(code, "pr-semver-label", "exec"), {})
+        assert error.value.code == 0
+        admission = json.loads((root / "semver-admission.json").read_text())
+        assert admission["mode"] == "not-required"
+        assert admission["changesets"] == {}
+        assert admission["pull_request"]["head_sha"] == event["pull_request"]["head"]["sha"]
     else:
         with pytest.raises(SystemExit) as error:
             exec(compile(code, "pr-semver-label", "exec"), {})
         assert error.value.code == 1
+        assert not (root / "semver-admission.json").exists()

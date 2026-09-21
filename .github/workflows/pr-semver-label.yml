@@ -32,6 +32,7 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           EVENT_PATH: ${{ github.event_path }}
           GH_TOKEN: ${{ github.token }}
+          SEMVER_ADMISSION_PATH: ${{ runner.temp }}/semver-admission.json
         run: |
           python - <<'PY'
           import json
@@ -42,7 +43,21 @@ jobs:
           from pathlib import Path
 
           from scripts.release.release_ownership import classify_changed_paths
-          from scripts.release.pr_semver_integration import admit_exact_tree_integration
+          from scripts.release.pr_semver_integration import admit_exact_tree_integration, make_admission, MAX_ARTIFACT_BYTES
+
+          with open(os.environ["EVENT_PATH"], encoding="utf-8") as handle:
+              event = json.load(handle)
+          pr = event["pull_request"]
+
+          def record_admission(payloads, label, mode):
+              record = make_admission(
+                  root=Path.cwd(), event=event, payloads=payloads, label=label, mode=mode,
+                  run_id=int(os.environ["GITHUB_RUN_ID"]), attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]),
+              )
+              encoded = json.dumps(record, sort_keys=True).encode("utf-8")
+              if len(encoded) > MAX_ARTIFACT_BYTES:
+                  raise SystemExit("Semver admission exceeds the bounded artifact size.")
+              Path(os.environ["SEMVER_ADMISSION_PATH"]).write_bytes(encoded)
 
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           semver_labels = set(ownership["semver_labels"])
@@ -59,13 +74,13 @@ jobs:
               check=True,
           )
           base = subprocess.run(
-              ["git", "merge-base", "HEAD", f"origin/{os.environ['BASE_REF']}"],
+              ["git", "merge-base", pr["base"]["sha"], pr["head"]["sha"]],
               check=True,
               capture_output=True,
               text=True,
           ).stdout.strip()
           changed = subprocess.run(
-              ["git", "diff", "--name-only", f"{base}...HEAD"],
+              ["git", "diff", "--name-only", f"{base}...{pr['head']['sha']}"],
               check=True,
               capture_output=True,
               text=True,
@@ -74,16 +89,16 @@ jobs:
           package_changed = path_classification["package_affecting"]
 
           if not package_changed:
+              record_admission({}, None, "not-required")
               print("No package-affecting changes detected; semver label not required.")
               raise SystemExit(0)
 
           if os.environ["HEAD_REF"] == release_pr_branch:
               subprocess.run(["python", "scripts/release/coordinated_release.py", "verify"], check=True)
+              record_admission({}, None, "release")
               print("Release PR version state accepted.")
               raise SystemExit(0)
 
-          with open(os.environ["EVENT_PATH"], encoding="utf-8") as handle:
-              event = json.load(handle)
           labels = {label["name"] for label in event["pull_request"].get("labels", [])}
           selected = sorted(labels & semver_labels)
 
@@ -112,7 +127,12 @@ jobs:
               raise SystemExit(1)
 
           expected_bump = semver_to_bump[selected[0]]
-          payloads = {path.as_posix(): tomllib.loads(path.read_text(encoding="utf-8")) for path in changesets}
+          payloads = {
+              path.as_posix(): tomllib.loads(subprocess.run(
+                  ["git", "show", f"{pr['head']['sha']}:{path.as_posix()}"],
+                  check=True, capture_output=True, encoding="utf-8",
+              ).stdout) for path in changesets
+          }
           integration = None
           if any(payload.get("bump") != expected_bump for payload in payloads.values()):
               try:
@@ -141,5 +161,15 @@ jobs:
 
           if integration is not None:
               print("Exact-tree integration admitted: " + json.dumps(integration, sort_keys=True))
+          record_admission(payloads, selected[0], "integration" if integration is not None else "ordinary")
           print(f"Semver label accepted: {selected[0]}")
           PY
+
+      - name: Retain exact semver admission
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: semver-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/semver-admission.json
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false
