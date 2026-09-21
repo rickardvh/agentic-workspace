@@ -22,6 +22,11 @@
     "retirement"
   ],
   "properties": {
+    "procedure_resource": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional ordinary agentic-procedure resource relative to a candidate skill's SKILL.md; the existing procedure contract owns its syntax and currentness."
+    },
     "kind": {
       "const": "agentic-workspace/agent-aid/v1",
       "description": "Discriminator for agent aid manifest files."

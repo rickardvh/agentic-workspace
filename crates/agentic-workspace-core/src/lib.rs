@@ -13,6 +13,7 @@ pub mod instruction_applicability;
 pub mod instruction_source;
 pub mod maintainer_logging;
 mod native_adoption;
+mod native_candidate_skill;
 mod native_claim_review;
 mod native_config;
 mod native_config_write;

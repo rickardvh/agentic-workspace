@@ -281,9 +281,10 @@ fn resolve_selected(
             .filter(|routes| routes.len() == 1)
             .and_then(|routes| routes[0].as_str())
             .or_else(|| view["discovery"]["parent"].as_str())
-        && route_catalogue["routes"]
-            .as_array()
-            .is_some_and(|leaves| leaves.iter().any(|leaf| leaf == parent))
+        && (parent.starts_with(crate::native_candidate_skill::PREFIX)
+            || route_catalogue["routes"]
+                .as_array()
+                .is_some_and(|leaves| leaves.iter().any(|leaf| leaf == parent)))
     {
         // A known selected leaf already establishes relevance: include its
         // exact procedure references without a redundant discovery request.

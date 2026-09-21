@@ -48,6 +48,38 @@ Run `python scripts/check/check_agent_aids.py` or `make agent-aids` to validate 
 
 Use the current startup skill and semantic route references to select relevant agent aids. Read their declared source and scope; discovery does not grant effect authority.
 
+#### Candidate standard Agent Skills
+
+Create `.agentic-workspace/agent-aids/skills/<name>/SKILL.md` with standard YAML
+`name` and `description` frontmatter and relative bundle resources. The directory,
+frontmatter name and manifest `id` must match; `entrypoint` is the repository-relative
+`SKILL.md` path. Keep lifecycle, provenance and safety in the adjacent manifest,
+and procedure in the skill. Prefer improving an existing skill or a stronger
+code/check/documentation owner before creating another candidate.
+
+For deliberate evaluation, use the current `semantic-routes/discover/v1` request
+from `start`, setting `arguments.parent` to `candidate-skills/<name>`. This exact
+lookup reads only that bundle. It adds no ordinary catalogue entry or host-native
+exposure. A plain skill returns its source reference. A branching skill may set
+`procedure_resource` in the manifest to its bundle-relative ordinary
+`agentic-procedure` resource, then use the returned procedure selection and answer
+requests. No separate candidate procedure syntax is needed.
+
+Selection is passive: it validates standard frontmatter and the manifest, observes
+bundle material, and never executes helpers. Bundles are bounded to 128 files,
+256 directory entries, eight nested directory levels and 4 MiB in total, with no
+links. Changing the skill,
+helper, resource or lifecycle invalidates dependent selected procedure answers;
+unrelated files do not. Resource links remain relative to the canonical bundle.
+Missing, malformed, oversized or retired bundles remain unavailable explicitly.
+
+Create, revise and retire through ordinary authorised repository changes and
+review. A running skill cannot rewrite or approve its replacement. Changing
+`status` to `retired` withdraws evaluation while preserving retained material;
+delete it only under its ordinary retention authority. Technical validation does
+not establish later-use value, promotion, proof sufficiency or permission. Candidate
+promotion and automatic nomination remain subject to the repository's evidence gate.
+
 Executable aid types are `script` and `check`. They must declare nonblank validation commands that reference the aid entrypoint, not only an absent-reason. Runtime-specific or platform-specific checked-in aids must include `portability_justification`; platform-specific repo-shared or module-owned aids also need `checked_in_scope_justification` explaining why they are checked in instead of local-only. Repo-general validation should prefer cross-platform wrappers. Aids that write to the repo, use the network, or perform destructive actions must set `requires_review = true`, and `hidden_required_workflow` must be false. Candidate and advisory aids are not canonical proof routes or required workflow entrypoints; `proof_role = "canonical-proof"` is reserved for promoted aids.
 
 ### Promoted Repo-Native

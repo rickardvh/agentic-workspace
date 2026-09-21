@@ -12,6 +12,7 @@ Manifest for a checked-in agent aid such as a script, runbook, prompt, template,
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Manifest for a checked-in agent aid such as a script, runbook, prompt, template, check, or skill. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| `procedure_resource` | string | no |  | Optional ordinary agentic-procedure resource relative to a candidate skill's SKILL.md; the existing procedure contract owns its syntax and currentness. |  |  |
 | `kind` | const `"agentic-workspace/agent-aid/v1"` | yes |  | Discriminator for agent aid manifest files. |  |  |
 | `id` | string | yes |  | Stable aid identifier used for inventory and review. |  |  |
 | `type` | enum `"script"`, `"skill"`, `"runbook"`, `"prompt"`, `"check"`, `"template"`, `"module-component"` | yes |  | Kind of reusable aid described by this manifest. |  |  |

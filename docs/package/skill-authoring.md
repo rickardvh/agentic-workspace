@@ -44,6 +44,12 @@ context. Keep the entry short and move large alternatives into separate files.
 
 ## Add a semantic question without custom code
 
+For a provisional skill that needs evaluation before normal discovery, use the
+existing [candidate aid bundle](../../.agentic-workspace/docs/agent-aids-storage.md#candidate-standard-agent-skills).
+The exact `candidate-skills/<name>` lookup uses its standard `SKILL.md` and adjacent
+aid manifest without registering it in ordinary host discovery. A candidate can
+use the same optional procedure resource below; selection grants no promotion.
+
 Use the same maintained Markdown for AW and direct reading. Replace the entry's
 body with:
 
@@ -220,6 +226,34 @@ is unknown and executable status unavailable. Establish runtime availability at
 invocation. Do not label a present script an admitted effect or turn its output
 into constructed owner actions. Missing dependencies require repair or the same
 manual method, with unavailable runtime guarantees left unavailable.
+
+## Compose delegation with current owners
+
+The repository-owned [delegation/handoff method](../../tools/skills/delegation-handoff/SKILL.md)
+is a working example of local/delegate/unresolved judgement followed by current
+Assignment and Planning operations. Copy or adapt its bundle into your repository
+and declare your own route; it is an example, not an installed delegation policy.
+
+The method captures the selected procedure, useful still-current judgments,
+constraints, exact evidence references and return expectations as a bounded worker
+frontier. It then uses the owner's sealed inputs, `worker` entry/expand/return and
+current return admission. Capturing upstream references alongside the summary
+lets source drift invalidate a late return. Local work creates no handoff;
+selection cannot make an ineligible target eligible or waive proof and review.
+
+## Compose review with proof owners
+
+The repository-owned [review/recheck method](../../tools/skills/pr-review-recheck/SKILL.md)
+demonstrates progressive scope, compatibility, proof, recheck and closure questions.
+Its independence and trusted-baseline rules remain in front of procedure selection.
+The selected proof reference resolves the existing Verification request; the method
+cannot declare evidence sufficient or turn its own answer into independent approval.
+
+Adapt the method to your repository's policy and route. Current prior findings can
+be carried with their relied-upon source references; changed evidence requires
+reconsideration, while unrelated changes need not replay the whole method. Read
+only selected branches from the trusted baseline. Without native observation, the
+same Markdown remains usable and missing owner evidence remains explicitly unknown.
 
 ## Customise and repair
 

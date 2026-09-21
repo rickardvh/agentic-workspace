@@ -86,6 +86,100 @@ def test_valid_agent_aid_manifest_passes(tmp_path: Path) -> None:
     assert check_agent_aids.agent_aid_findings([manifest, entrypoint], root=tmp_path) == []
 
 
+def test_candidate_bundle_uses_passive_selected_procedure_currentness(tmp_path, shared_core_binary):
+    from agentic_workspace.decision import route_discovery, start
+
+    _prepare_schema(tmp_path)
+    base = ".agentic-workspace/agent-aids/skills/change-note"
+    manifest, skill = f"{base}/manifest.json", f"{base}/SKILL.md"
+    aid = _valid_manifest(id="change-note", type="skill", entrypoint=skill, procedure_resource="procedure.md")
+    _write(tmp_path / manifest, json.dumps(aid))
+    _write(tmp_path / skill, "---\nname: change-note\ndescription: Draft a bounded change note.\n---\nRead [helper](scripts/helper.py).\n")
+    _write(tmp_path / base / "scripts/helper.py", "raise RuntimeError('discovery must not execute helpers')\n")
+    form = {
+        "kind": "agentic-workspace/procedure/v1",
+        "id": "note",
+        "question": "Does the change affect users?",
+        "branches": [{"id": "yes", "description": "User impact", "next": "user.md"}],
+    }
+    _write(tmp_path / base / "procedure.md", "```agentic-procedure\n" + json.dumps(form) + "\n```\n")
+    _write(tmp_path / base / "user.md", "Selected user guidance")
+    tracked = [p.relative_to(tmp_path).as_posix() for p in (tmp_path / base).rglob("*") if p.is_file()]
+    assert check_agent_aids.agent_aid_findings(tracked, root=tmp_path) == []
+    context = {"target": str(tmp_path), "task": "Evaluate a named candidate", "projection": "full"}
+    ordinary = start(context)
+    assert "change-note" not in json.dumps(ordinary)
+    request = next(r for r in ordinary["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/discover/v1")
+    request["arguments"]["parent"] = "candidate-skills/change-note"
+    selected = start({**context, "request": request})
+    assert "Selected user guidance" not in json.dumps(selected)
+    selection = selected["procedure"]["requests"][0]
+    unresolved = start({**context, "request": selection})
+    answer = unresolved["procedure"]["requests"][0]
+    answer["arguments"]["answer"] = {"disposition": "answered", "branches": ["yes"], "material": "The evaluated change affects users."}
+    current = start({**context, "request": answer})
+    assert current["procedure"]["status"] == "current"
+    assert current["procedure"]["authority_effect"] == "none"
+    _write(tmp_path / "unrelated.txt", "unrelated")
+    assert start({**context, "request": answer})["procedure"]["status"] == "current"
+    for path in ["scripts/helper.py", "SKILL.md", "user.md"]:
+        source = tmp_path / base / path
+        before = source.read_text()
+        source.write_text(before + "\nChanged material\n")
+        assert start({**context, "request": answer})["procedure"]["status"] == "stale"
+        source.write_text(before)
+    roots = route_discovery({"target": str(tmp_path)})
+    assert roots["routes"] == [] and "change-note" not in json.dumps(roots)
+    assert not (tmp_path / ".agents").exists()
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    # Retirement preserves bytes while making retained procedure answers unusable.
+    aid["status"] = "retired"
+    _write(tmp_path / manifest, json.dumps(aid))
+    assert start({**context, "request": answer})["procedure"]["status"] == "unavailable"
+    aid["status"] = "candidate"
+    # Plain skills use the same identity without acquiring procedural machinery.
+    aid.pop("procedure_resource")
+    _write(tmp_path / manifest, json.dumps(aid))
+    plain = route_discovery({"target": str(tmp_path), "exact": "candidate-skills/change-note"})
+    assert plain["routes"][0]["sources"][0]["procedure"]["status"] == "available"
+    assert "resource" not in plain["routes"][0]["sources"][0]["procedure"]
+    # Standard optional fields retain YAML types; limits count Unicode characters.
+    frontmatter = {
+        "name": "change-note",
+        "description": "é" * 1024,
+        "license": "Apache-2.0",
+        "compatibility": "界" * 500,
+        "metadata": {"version": "1.0"},
+        "allowed-tools": "Read Bash(git:*)",
+    }
+    _write(tmp_path / skill, "---\n" + json.dumps(frontmatter, ensure_ascii=False) + "\n---\nInstructions.\n")
+    assert check_agent_aids.agent_aid_findings(tracked, root=tmp_path) == []
+    for field, invalid in [
+        ("description", "é" * 1025),
+        ("compatibility", "界" * 501),
+        ("compatibility", ""),
+        ("compatibility", 123),
+        ("compatibility", None),
+        ("metadata", []),
+        ("metadata", {"version": 1}),
+        ("metadata", None),
+        ("allowed-tools", ["Read"]),
+        ("allowed-tools", None),
+        ("license", 123),
+    ]:
+        _write(tmp_path / skill, "---\n" + json.dumps({**frontmatter, field: invalid}) + "\n---\nInstructions.\n")
+        assert field in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
+    _write(tmp_path / skill, "---\nname: change-note\ndescription: Valid\nmetadata: {123: value}\n---\nInstructions.\n")
+    assert "metadata" in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
+    _write(tmp_path / skill, "# Arbitrary prose is not a standard skill\n")
+    assert "frontmatter" in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
+    (tmp_path / skill).unlink()
+    assert (
+        start({**context, "request": request})["semantic_routes"]["discovery"]["detail"]["sources"][0]["procedure"]["status"]
+        == "unavailable"
+    )
+
+
 def test_agent_aid_file_requires_nearby_manifest(tmp_path: Path) -> None:
     _prepare_schema(tmp_path)
     entrypoint = ".agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"

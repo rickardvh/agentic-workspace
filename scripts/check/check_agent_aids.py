@@ -253,6 +253,18 @@ def agent_aid_findings(paths: list[str] | None = None, root: Path = REPO_ROOT) -
             findings.append(Finding(path=path, message=f"manifest type must be {expected_type!r} for {path}"))
         findings.extend(_entrypoint_findings(path, payload, tracked_set))
         findings.extend(_safety_policy_findings(path, payload, root=root, tracked=tracked_set))
+        if payload.get("type") == "skill" and payload.get("status") in {"candidate", "shared"}:
+            from agentic_workspace.decision import route_discovery
+
+            try:
+                result = route_discovery({"target": str(root), "exact": f"candidate-skills/{PurePosixPath(path).parent.name}"})
+                procedure = result["routes"][0]["sources"][0]["procedure"]
+                if procedure["status"] != "available":
+                    findings.append(Finding(path, procedure["reason"]))
+                elif procedure.get("resource", {}).get("status", "current") != "current":
+                    findings.append(Finding(path, procedure["resource"]["reason"]))
+            except (ValueError, RuntimeError) as exc:
+                findings.append(Finding(path, f"native candidate validation unavailable: {exc}"))
 
     return findings
 

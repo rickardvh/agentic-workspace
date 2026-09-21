@@ -53,6 +53,7 @@
     {
       "id": "pr-review-recheck",
       "path": "pr-review-recheck/SKILL.md",
+      "procedure_resource": "procedure.md",
       "executable": {
         "entrypoint": {
           "kind": "file",
@@ -153,6 +154,17 @@
         "phrases": ["create github issue", "file an issue", "open tracker issue", "issue template", "create issues"],
         "when": ["creating external tracker items", "turning findings into GitHub issues", "filing dogfooding friction"]
       }
+    },
+    {
+      "id": "delegation-handoff",
+      "path": "delegation-handoff/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "Judge useful delegation and carry a bounded semantic frontier through current Assignment and Planning owners.",
+      "semantic_routes": [
+        "workspace/delegation/method"
+      ],
+      "procedure_resource": "procedure.md"
     }
   ]
 }
