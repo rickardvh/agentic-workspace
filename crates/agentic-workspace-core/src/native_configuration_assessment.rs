@@ -77,14 +77,10 @@ fn read(root: &Dir, source: &str) -> Result<Option<Value>, CoreError> {
         .map(|b| serde_json::from_slice(&b).unwrap_or(json!({"kind":"unrecognized-preserved"}))))
 }
 fn references(root: &Dir, scope: &str, extra: &[String]) -> Result<Vec<String>, CoreError> {
-    let mut paths: Vec<String> = [
-        ".agentic-workspace/config.toml",
-        "AGENTS.md",
-        "SYSTEM_INTENT.md",
-        "README.md",
-    ]
-    .map(str::to_owned)
-    .to_vec();
+    // Configuration and explicitly declared governing sources are mechanical
+    // dependencies. Other repository sources belong here only when the agent
+    // selected them as inputs to its judgment, not merely because they exist.
+    let mut paths = vec![".agentic-workspace/config.toml".to_owned()];
     if scope == "machine-local" {
         paths.push(".agentic-workspace/config.local.toml".into());
     }

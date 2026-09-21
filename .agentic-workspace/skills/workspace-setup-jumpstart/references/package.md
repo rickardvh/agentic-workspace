@@ -69,8 +69,9 @@ irreducible new human choice, never merely because the package changed.
 
 After changes, obtain a fresh assessment request. Include additional relevant
 repository source paths in its `dependencies` argument; Configuration also binds
-config, intent and selected instructions. Include scoped sources that actually
-govern the decision; ordinary entry does not scan instruction directories. Select
+Configuration sources and explicitly declared intent/instruction sources. Add
+README, AGENTS or other repository sources only when they informed the judgment;
+their filenames alone create no dependency. Ordinary entry does not scan directories. Select
 `machine-local` for local readiness. Shared assessment never certifies another
 machine. Fill the returned record's coverage rationale and grounded dispositions.
 Use the consumer's `configuration_behavior.setup_witness` for supported effective

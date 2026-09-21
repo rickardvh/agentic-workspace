@@ -83,6 +83,11 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     (tmp_path / "unrelated.txt").write_text("Unrelated repository change")
     assert assessment()["status"] == "settled"
     assert (workspace / "configuration-assessment.json").read_bytes() == saved
+    # Common repository filenames alone do not make their edits setup changes.
+    for name in ("README.md", "AGENTS.md", "SYSTEM_INTENT.md"):
+        (tmp_path / name).write_text("Unrelated documentation edit.\n")
+        assert assessment()["status"] == "settled"
+        assert (workspace / "configuration-assessment.json").read_bytes() == saved
     # Managed-only identity changes request bounded refresh, not semantic review.
     provenance = workspace / "payload-provenance.json"
     provenance.write_text(json.dumps({"release_identity": {"version": "1.1.0"}, "managed_revision": "prior-managed-bytes"}))
@@ -168,9 +173,15 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
     with pytest.raises(AssertionError, match="consumer effectiveness"):
         call(request=invalid)
 
+    # The same filename is relevant when deliberately selected for a judgment.
+    selected = call()["configuration_write"]["setup_assessment"]["request"]
+    selected["arguments"]["dependencies"] = ["README.md"]
+    relevant = call(request=selected)["configuration_write"]["setup_assessment"]["record_request"]
+    assert call(invocation=call(request=relevant)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
     stale = assessment()["record_request"]
-    stale["arguments"]["value"].update(copy.deepcopy(record["arguments"]["value"]))
     (tmp_path / "README.md").write_text("Changed standing intent")
+    assert assessment()["assessment_due"] is True
+    assert "README.md" in assessment()["changed_dependencies"]
     with pytest.raises(AssertionError, match="basis changed"):
         call(request=stale)
 
