@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve composed dependencies when restricting scoped-instruction writes so unchanged exact actions remain executable."

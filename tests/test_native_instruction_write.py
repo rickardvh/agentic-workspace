@@ -158,6 +158,56 @@ def test_instruction_correction_exact_publication_and_fresh_delivery(tmp_path, s
     assert call()["instructions"]["sources"][0]["binding_admission"]["status"] != "current"
 
 
+def test_sequential_instruction_write_preserves_composed_dependencies(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_planning_create import material
+
+    repo(tmp_path)
+    context = {"target": str(tmp_path), "task": "Maintain unrelated planned work", "changed": []}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    creation = call()["planning"]["creation_requests"][0]
+    creation["arguments"] = {"material": material()}
+    created = call(invocation=call(request=creation)["decision_packet"]["primary_action"])
+    context = created["value"]["selection_context"]
+    call(invocation=call(request=created["value"]["selection_request"])["decision_packet"]["primary_action"])
+    plan = tmp_path / created["value"]["owner_path"]
+    before = plan.read_bytes()
+    context["task"] = "Publish independent repository instructions"
+
+    def direct(**extra):
+        relation = call()["planning"]["requests"][0]
+        relation["arguments"].update(answer="independent", task_posture="direct")
+        if "invocation" in extra:
+            return call(**extra)
+        request = extra.pop("request", None)
+        return call(request=[relation, *([request] if request else [])], **extra)
+
+    guard = ".agentic-workspace/instructions/guard.md"
+    content = "---\nprotect: [.agentic-workspace/local/instructions/**]\n---\nPreserve local instructions.\n"
+    _, _, action = instruction(direct, guard, content)
+    assert direct(invocation=action)["status"] == "applied"
+    assert direct()["instructions"]["sources"][0]["binding_admission"]["status"] == "current"
+
+    source = ".agentic-workspace/instructions/second.md"
+    _, answer, action = instruction(direct, source, "Use the current repository owner.\n")
+    assert action["operation_id"] == "instructions.write"
+    assert any(r["owner"] == "planning" for r in action["source_requests"])
+    assert call(request=action["source_requests"])["decision_packet"]["primary_action"] == action
+    assert direct(request=answer)["decision_packet"]["primary_action"] == action
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(invocation=action, task="A genuinely different task")
+    assert direct(invocation=action)["status"] == "applied"
+    assert (tmp_path / source).read_text() == "Use the current repository owner.\n"
+    assert (tmp_path / guard).read_text() == content
+    assert plan.read_bytes() == before
+
+    _, _, protected = instruction(direct, ".agentic-workspace/local/instructions/blocked.md", "A protected write.\n")
+    assert protected is None
+    assert not (tmp_path / ".agentic-workspace/local/instructions/blocked.md").exists()
+
+
 def test_instruction_recovery_preserves_drift_and_unknown_files(tmp_path, shared_core_binary, native_cli):
     repo(tmp_path)
     context = {"target": str(tmp_path), "task": "Retain exact correction", "changed": ["src/a.txt"]}
