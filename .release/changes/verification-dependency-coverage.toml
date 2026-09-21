@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Resume bounded source-consistency groups and reuse current command observations across proof-strategy changes."
