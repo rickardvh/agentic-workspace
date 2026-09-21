@@ -72,6 +72,8 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
         assert result["effect_outcome"]["status"] == "committed"
         assert (tmp_path / row["source"]).read_bytes() == proposal["configuration_write"]["proposal"]["postimage"].encode()
     assert all(row["status"] == "current" for row in choices())
+    # Byte/provenance convergence without semantic setup judgment stays unassessed.
+    assert call()["configuration_write"]["setup_assessment"]["status"] == "assessment-required"
     assert {path: path.read_bytes() for path in preserved} == preserved
     # A second pass issues no writes, even though the discovery stays available.
     current = choices()[0]["request"]

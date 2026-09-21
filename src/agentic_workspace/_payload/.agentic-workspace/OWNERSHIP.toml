@@ -86,6 +86,20 @@ uninstall_policy = "preserve-current-owner-state"
 
 [[managed_surfaces]]
 module = "workspace"
+path = ".agentic-workspace/configuration-assessment.json"
+kind = "current-configuration-assessment"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/configuration-assessment.json"
+kind = "current-local-configuration-assessment"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
 path = ".agentic-workspace/local/effects/"
 kind = "structured-local-owner"
 ownership = "module_managed"

@@ -8,6 +8,10 @@ description: Help configure Agentic Workspace through current source-owned decis
 Start with the desired human behavior. Select only the relevant concern; a setup
 request does not authorize every module, provider, proof floor or policy change.
 
+An ordinary entry may require post-update assessment. Follow
+[current setup assessment](references/package.md#assess-current-setup-after-an-update) even when the immediate task
+does not mention setup. Package refresh alone cannot settle that obligation.
+
 Use [the selection question](procedure.md), or follow the same source directly:
 
 - [Select the affected behavior](references/selection.md).

@@ -47,11 +47,18 @@ Review diagnostic output before sharing it; it may contain sensitive project det
 
 ## Update AW
 
-First install the new runtime using its [installation instructions](../agentic-workspace-install.md). Then update the repository integration separately:
+Update the repository's development dependency using its normal package manager,
+then continue ordinary work. At runtime-capable entry the agent checks the resolved
+AW artefact. Changed setup material or an absent assessment routes it through
+Configuration to refresh managed files and assess useful optional capabilities
+against your repository's purpose. No refresh-specific prompt or target-version
+bookkeeping is required for a compatible update.
 
-> Inspect this repository's AW integration against the installed release. Show the proposed refresh, preserve project configuration and retained work, and apply only the authorized package changes.
-
-The agent follows the current Configuration adoption/refresh requests. Expect package skills and metadata to converge to the installed version while project declarations and independent work remain preserved. Review and commit the shared diff.
+The agent applies authorised integrations and checks the affected behaviour.
+Explicit exclusions remain binding; a genuinely new policy choice can need your
+answer. Unfinished setup remains visible without blocking unrelated work. Review
+and commit the shared diff. A settled assessment stays quiet until relevant
+sources change; it does not certify machine-local readiness elsewhere.
 
 An edited package file or conflicting declaration should block replacement until its useful changes are preserved in the proper project source. Repeating a completed refresh should not keep changing the same files. Detailed client handling is in the [lifecycle reference](lifecycle.md).
 

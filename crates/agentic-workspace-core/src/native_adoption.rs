@@ -508,6 +508,14 @@ pub(crate) fn view(
 ) -> Result<(), CoreError> {
     let args = &request["arguments"];
     let mode = args["mode"].as_str().unwrap_or("adopt");
+    if request["request_kind"] == EDIT
+        && matches!(mode, "adopt" | "reconcile-payload")
+        && let Err(error) = crate::native_configuration_assessment::admit_maintenance(target)
+    {
+        result["status"] = json!("preserved-blocked");
+        result["migration_gap"] = json!(error.to_string());
+        return Ok(());
+    }
     if request["request_kind"] == EDIT && mode == "remove" {
         let mut exposure = json!({});
         crate::native_skill_exposure::view(

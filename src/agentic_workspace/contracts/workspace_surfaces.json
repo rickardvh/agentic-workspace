@@ -757,6 +757,12 @@
         "lifetime": "adopted-host"
       },
       {
+        "path": ".agentic-workspace/configuration-assessment.json",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "repository"
+      },
+      {
         "path": ".agentic-workspace/instructions",
         "scope": "subtree",
         "class": "customization",

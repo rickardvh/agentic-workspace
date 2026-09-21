@@ -99,6 +99,15 @@ fn sources(target: &Path) -> Result<Value, CoreError> {
 }
 fn bound_sources(target: &Path, source: Option<&str>) -> Result<Value, CoreError> {
     let mut values = sources(target)?;
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    for path in [
+        crate::native_configuration_assessment::SHARED,
+        crate::native_configuration_assessment::LOCAL,
+    ] {
+        values[path] = crate::native_planning::read(&root, path)?
+            .map(|b| json!(crate::native_intent::hash(&b)))
+            .unwrap_or(Value::Null);
+    }
     if let Some(source) = source.filter(|source| crate::native_payload::paths().contains(source)) {
         let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
         values[source] = crate::native_planning::read(&root, source)?
@@ -114,7 +123,11 @@ fn bound_sources(target: &Path, source: Option<&str>) -> Result<Value, CoreError
     Ok(values)
 }
 fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec<u8>, CoreError> {
+    if key == crate::native_configuration_assessment::KEY {
+        return crate::native_configuration_assessment::proposed(target, source, value);
+    }
     if key == PAYLOAD_KEY {
+        crate::native_configuration_assessment::admit_maintenance(target)?;
         let bytes = crate::native_payload::desired(target, source)?;
         if *value != crate::native_intent::hash(&bytes) {
             return Err(err("payload choice differs from the current artifact"));
@@ -241,6 +254,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     // their exact ownership before publication; do not repeat the roster in
     // every ordinary capability schema.
     alternatives.push(json!({"properties":{"source":{"type":"string"},"key":{"const":PAYLOAD_KEY},"value":{"type":"string"}}}));
+    alternatives.push(json!({"properties":{"source":{"enum":[crate::native_configuration_assessment::SHARED,crate::native_configuration_assessment::LOCAL]},"key":{"const":crate::native_configuration_assessment::KEY},"value":{"type":"object"}}}));
     let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
     args["properties"]["nomination"] = crate::native_owner_change::schema();
     args["properties"]["source"] = json!({"type":"string"});
@@ -256,8 +270,12 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
         .push(crate::native_configuration_procedure::declaration());
     crate::native_skill_exposure::declarations(&mut owner);
     crate::native_adoption::declarations(&mut owner);
+    owner["requests"]
+        .as_array_mut()
+        .unwrap()
+        .push(crate::native_configuration_assessment::declaration());
     owner["revision"] = json!(digest(&owner)?);
-    let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
+    let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source","claim:configuration-integration-complete"]}]});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
 }
@@ -393,6 +411,7 @@ pub(crate) fn view_selected(
             .map(|key| template(READ, json!({"source":SHARED,"key":key})))
             .collect::<Vec<_>>()
     );
+    crate::native_configuration_assessment::view(target, config, request, &template, &mut result)?;
     if [SHARED, LOCAL]
         .iter()
         .any(|source| current[source].is_null())
@@ -492,6 +511,42 @@ pub(crate) fn view_selected(
         .as_array_mut()
         .unwrap()
         .sort_by_key(|r| r["arguments"]["key"] != "workspace.cli_invoke");
+    for source in [
+        crate::native_configuration_assessment::SHARED,
+        crate::native_configuration_assessment::LOCAL,
+    ] {
+        if let Some(post) = current[source].as_str()
+            && let Some(record) = retained(target, source, post)?
+        {
+            let prepared = crate::attempt_store::prepare_commit(
+                target.to_str().unwrap(),
+                record["custody"].clone(),
+                record["outcome"].clone(),
+            )?;
+            if crate::native_planning::read(
+                &root,
+                prepared["custody"]["committed"]["path"].as_str().unwrap(),
+            )?
+            .is_none()
+            {
+                result["recovery_requests"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(template(
+                        RECOVER,
+                        json!({"source":source,"record_revision":digest(&record)?}),
+                    ));
+                let field = if source == crate::native_configuration_assessment::LOCAL {
+                    "local_setup_assessment"
+                } else {
+                    "setup_assessment"
+                };
+                result[field]["status"] = json!("publication-recovery-required");
+                result[field]["integration_complete"] = json!(false);
+                crate::native_configuration_assessment::restrict(&mut result);
+            }
+        }
+    }
     result["deferred_choices"] = json!([]);
     for (source, key) in CHOICES {
         if let Some(record) = deferred(target, source, key)? {
@@ -532,6 +587,9 @@ pub(crate) fn view_selected(
     if request["request_kind"] == crate::native_configuration_procedure::READ {
         result["status"] = json!("behavior-requested");
         result["requested_behavior"] = request["arguments"]["concern"].clone();
+        return Ok(result);
+    }
+    if request["request_kind"] == crate::native_configuration_assessment::READ {
         return Ok(result);
     }
     if request["request_kind"] == READ_PAYLOAD {
@@ -688,9 +746,14 @@ pub(crate) fn view_selected(
             ));
         }
         let bytes = proposed(target, source, key, value)?;
+        if key == crate::native_configuration_assessment::KEY {
+            result["assessment_proposal"] = value.clone();
+        }
         post = crate::native_intent::hash(&bytes);
         let before = crate::native_planning::read(&root, source)?.unwrap_or_default();
-        let before_value = if key == PAYLOAD_KEY {
+        let before_value = if key == crate::native_configuration_assessment::KEY {
+            serde_json::from_slice(&before).unwrap_or(Value::Null)
+        } else if key == PAYLOAD_KEY {
             if args["nomination"].is_object() {
                 return Err(err(
                     "payload refresh requires its exact package-source proposal",
@@ -723,6 +786,14 @@ pub(crate) fn view_selected(
             &json!({"binding":binding,"source":source,"key":args["key"],"value":value,"post_revision":post,"nomination":args["nomination"]}),
         )?;
         if args["answer"].is_null() {
+            if key == crate::native_configuration_assessment::KEY {
+                // Persisting the supplied agent judgment grants no new policy.
+                // Capability integrations still use their own source authority.
+                let mut authorized = request.clone();
+                authorized["arguments"]["answer"] = json!("authorize-write");
+                authorized["arguments"]["proposal_revision"] = json!(proposal);
+                return self::view(target, work, config, contract, Some(&authorized));
+            }
             if !matches!(
                 key,
                 "assurance.decision_delegations"
@@ -964,7 +1035,9 @@ fn execute_checked(
         f.sync_all().map_err(err)?;
     }
     observe("prepared")?;
-    if args["request"]["arguments"]["key"] == PAYLOAD_KEY {
+    if args["request"]["arguments"]["key"] == PAYLOAD_KEY
+        || args["request"]["arguments"]["key"] == crate::native_configuration_assessment::KEY
+    {
         let parent = Path::new(source)
             .parent()
             .ok_or_else(|| err("payload parent missing"))?;
@@ -1079,6 +1152,11 @@ mod tests {
     }
     #[test]
     fn interrupted_source_creation_recovers_publication_without_rewriting() {
+        for assessment in [false, true] {
+            interrupted_creation(assessment);
+        }
+    }
+    fn interrupted_creation(assessment: bool) {
         let target = std::env::temp_dir().join(format!(
             "aw-config-create-{}-{}",
             std::process::id(),
@@ -1105,6 +1183,20 @@ mod tests {
         request["arguments"]["value"] = json!("fixture-native");
         let mut answer = resolve(&target,Some(request))["decision_packet"]["decision_request"]["response_request"].clone();
         answer["arguments"]["answer"] = json!("authorize-write");
+        let (answer, source) = if assessment {
+            std::fs::create_dir(target.join(".agentic-workspace")).unwrap();
+            std::fs::write(target.join(SHARED), "[workspace]\nenabled=true\n").unwrap();
+            let discovery =
+                resolve(&target, None)["configuration_write"]["setup_assessment"]["request"]
+                    .clone();
+            let mut request=resolve(&target,Some(discovery))["configuration_write"]["setup_assessment"]["record_request"].clone();
+            request["arguments"]["value"]["coverage"] =
+                json!("Current optional setup assessed against bounded fixture intent.");
+            request["arguments"]["value"]["dispositions"] = json!([{"subject":"Optional integrations","status":"irrelevant","reason":"This fixture has no further repository integration requirement."}]);
+            (request, crate::native_configuration_assessment::SHARED)
+        } else {
+            (answer, SHARED)
+        };
         let ready = resolve(&target, Some(answer.clone()));
         let action = &ready["decision_packet"]["primary_action"];
         let failed = execute_checked(
@@ -1131,12 +1223,18 @@ mod tests {
                 .to_string()
                 .contains("fixture interruption")
         );
-        let bytes = std::fs::read(target.join(SHARED)).unwrap();
+        let bytes = std::fs::read(target.join(source)).unwrap();
+        if assessment {
+            assert_eq!(
+                resolve(&target, None)["configuration_write"]["setup_assessment"]["status"],
+                "publication-recovery-required"
+            );
+        }
         let recovery =
             resolve(&target, None)["configuration_write"]["recovery_requests"][0].clone();
         let next = resolve(&target, Some(recovery))["decision_packet"]["primary_action"].clone();
         invoke(&target, next).unwrap();
-        assert_eq!(std::fs::read(target.join(SHARED)).unwrap(), bytes);
+        assert_eq!(std::fs::read(target.join(source)).unwrap(), bytes);
         assert!(
             resolve(&target, None)["configuration_write"]["recovery_requests"]
                 .as_array()

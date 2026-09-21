@@ -2,7 +2,7 @@
   "kind": "agentic-workspace/repository-read-profile/v1",
   "source": {
     "path": ".agentic-workspace/OWNERSHIP.toml",
-    "git_blob_sha1": "72fdfc578e2f8bd496e2b244210c4afa4cd2f988"
+    "git_blob_sha1": "6331a3108593e80b4015423de45c1166165df97f"
   },
   "authority": "orientation-only; no mutation, effect, proof, completion or issue-close authority",
   "currentness": "Read one repository revision; record each selected path and provider blob identity. Reconsider changed selected sources/dependencies; unrelated blobs do not invalidate the reading. Source identity is not truth or runtime admission.",

@@ -16,6 +16,7 @@ mod native_adoption;
 mod native_claim_review;
 mod native_config;
 mod native_config_write;
+mod native_configuration_assessment;
 mod native_configuration_procedure;
 mod native_decision_authority;
 mod native_delegation;

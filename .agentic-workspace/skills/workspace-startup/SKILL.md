@@ -9,6 +9,16 @@ Read applicable repository/local policy. Keep clear work direct. Skills provide
 procedure; agents judge meaning; domain owners retain facts, evidence, effects
 and currentness. Skill selection grants no authority.
 
+At runtime-capable session entry, and after a dependency action may have changed
+the resolved AW artefact, obtain one current ordinary `start` observation unless
+this session already has a sufficient observation of that resolved artefact and
+setup basis. Follow a pending Configuration assessment to its installed material
+and existing setup procedure, even for an unrelated task. Do not require update
+wording, a payload target or a new checked-in skill. The runtime returns current
+setup text when local procedure is old or absent. Reuse settled observations;
+this is a cheap lifecycle check, not a full setup review on every task. Without a
+runtime observation, package integration remains unknown.
+
 Use [the procedure question](procedure.md) to select only needed detail, or follow
 a known reference directly:
 

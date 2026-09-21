@@ -99,6 +99,22 @@
   },
   "required_references": [
     {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/configuration-assessment.json",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Absent Configuration assessment is unassessed; use ordinary native entry for current setup work."
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/local/configuration-assessment.json",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "A repository assessment does not certify absent machine-local readiness."
+    },
+    {
       "source": ".agentic-workspace/docs/jumpstart-contract.md",
       "target": ".agentic-workspace/adoption-receipt.json",
       "kind": "optional",
