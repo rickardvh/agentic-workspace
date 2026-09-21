@@ -1,5 +1,5 @@
-//! Verification's exact source-consistency judgments. The answer establishes a
-//! bounded judgment basis, never authenticated human identity or semantic truth.
+//! Verification's proposed source assessments and exact publication authority.
+//! Authorization retains a proposal, never attesting personal review or truth.
 use crate::{CoreError, digest, native_planning};
 use cap_std::{
     ambient_authority,
@@ -16,7 +16,7 @@ use std::{
 pub(crate) const REQUEST: &str = "verification/reconcile-sources/v1";
 pub(crate) const OP: &str = "verification.record-source-reconciliation";
 const EFFECT: &str = "proof-execution";
-const SEMANTICS: &str = "source-reconciliation/v2";
+const SEMANTICS: &str = "source-reconciliation/v3";
 const GROUP_SIZE: usize = 64;
 
 fn err(e: impl std::fmt::Display) -> CoreError {
@@ -158,6 +158,23 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
     Ok(paths)
 }
 
+fn assessment_semantics(binding: &Value) -> Value {
+    json!({
+        "assessment_role":"untrusted-caller-proposal",
+        "decision_role":"authorize-exact-proposal-publication",
+        "scope":{"relation_id":binding["relation_id"],
+            "sources":binding["sources"].as_object().unwrap().keys().collect::<Vec<_>>(),
+            "work_references":binding["work_postimages"].as_object().unwrap().keys().collect::<Vec<_>>(),
+            "publication_scope":"this-group-only",
+            "wider_completion":"not-authorized; consult current aggregate coverage"},
+        "limits":{"identity_authentication":"not-claimed","assessment_authorship":"not-authenticated",
+            "personal_source_review":"not-attested","semantic_truth":"judgment-not-mechanically-proven",
+            "independent_review":"not-granted","completion_authority":false},
+        "consequences":{"confirm":"Authorize publication of this exact proposed assessment for this group; no personal correctness attestation or independent acceptance.",
+            "defer":"Do not publish this proposal; leave this group unresolved."}
+    })
+}
+
 fn result(binding: &Value, request: &Value) -> Result<Value, CoreError> {
     let judgments = request["arguments"]["judgments"]
         .as_object()
@@ -173,7 +190,8 @@ fn result(binding: &Value, request: &Value) -> Result<Value, CoreError> {
     }
     Ok(
         json!({"kind":"agentic-workspace/source-reconciliation/v1","binding_revision":digest(binding)?,
-        "judgments":judgments,"authority_basis":binding.get("decision_authority").cloned().unwrap_or_else(||json!({"kind":"exact-bounded-human-answer","request_revision":digest(request).unwrap(),"proposal_revision":request["arguments"]["proposal_revision"],"identity_authentication":"not-claimed"})),
+        "judgments":judgments,"assessment_semantics":assessment_semantics(binding),
+        "authority_basis":binding.get("decision_authority").cloned().unwrap_or_else(||json!({"kind":"exact-bounded-human-answer","request_revision":digest(request).unwrap(),"proposal_revision":request["arguments"]["proposal_revision"],"identity_authentication":"not-claimed"})),
         "completion_authority":false,"semantic_truth":"judgment-not-mechanically-proven"}),
     )
 }
@@ -793,14 +811,15 @@ fn group_view(
             return Err(err("judge exactly the owner-issued source set"));
         }
         let proposal = json!({"binding":binding,"judgments":judgments,"destination":path,
+            "assessment_semantics":assessment_semantics(&binding),
             "completion_authority":false,"semantic_truth":"judgment-not-mechanically-proven"});
         let proposal_revision = digest(&proposal)?;
         view["proposal"] = proposal;
         let arguments = json!({"relation_id":binding["relation_id"],"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
-        let decisions = json!([{"id":"source-reconciliation","question":"Confirm these exact source judgments against the bound resulting work?",
+        let decisions = json!([{"id":"source-reconciliation","question":"Authorize publication of this caller-proposed source assessment for this exact group? This does not attest personal source review or independently approve the work.",
                 "material":view["proposal"],
                 "response_request":{"request_kind":REQUEST,"arguments":arguments},
-                "choices":[{"id":"confirm","label":"Confirm these exact judgments"},{"id":"defer","label":"Leave reconciliation unresolved"}],"affects":["claim:complete"]}]);
+                "choices":[{"id":"confirm","label":"Authorize this exact proposal for this group"},{"id":"defer","label":"Do not publish; leave this group unresolved"}],"affects":["claim:complete"]}]);
         if request["arguments"]["answer"].is_null() {
             if request["id"] != REQUEST {
                 return Err(err(

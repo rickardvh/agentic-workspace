@@ -165,10 +165,36 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
         answer["arguments"]["judgments"] = {"docs/guide.md": {"disposition": "reviewed-current", "reason": "Checked exact behavior."}}
     else:
         answer = answer_for(call)
-    action = call({"request": answer})["decision_packet"]["primary_action"]
+    ready = call({"request": answer})
+    semantics = ready["verification"]["source_reconciliation"]["proposal"]["assessment_semantics"]
+    assert semantics["assessment_role"] == "untrusted-caller-proposal"
+    assert semantics["decision_role"] == "authorize-exact-proposal-publication"
+    assert semantics["scope"]["sources"] == ["docs/guide.md"]
+    assert semantics["scope"]["work_references"] == ["src/feature.txt"]
+    assert semantics["scope"]["publication_scope"] == "this-group-only"
+    assert semantics["limits"] == {
+        "identity_authentication": "not-claimed",
+        "assessment_authorship": "not-authenticated",
+        "personal_source_review": "not-attested",
+        "semantic_truth": "judgment-not-mechanically-proven",
+        "independent_review": "not-granted",
+        "completion_authority": False,
+    }
+    assert "Do not publish" in semantics["consequences"]["defer"]
+    if not delegated:
+        nomination = call()["verification"]["source_reconciliation"]["requests"][0]
+        nomination["arguments"]["judgments"] = answer["arguments"]["judgments"]
+        pending = call({"request": nomination})["decision_packet"]["pending_consequences"]["decisions"][0]
+        assert "Authorize publication" in pending["question"]
+        assert pending["material"]["assessment_semantics"] == semantics
+        assert pending["material"]["judgments"] == answer["arguments"]["judgments"]
+    action = ready["decision_packet"]["primary_action"]
     assert call({"invocation": action})["status"] == "applied"
     before = call()
     evidence = before["verification"]["source_reconciliation"]["evidence"]
+    assert evidence["assessment_semantics"] == semantics
+    assert evidence["judgments"] == answer["arguments"]["judgments"]
+    assert evidence["completion_authority"] is False
     receipts = sorted((tmp_path / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json"))
 
     # An unrelated interpreted policy value must not stale accepted semantics.
