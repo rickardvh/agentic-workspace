@@ -32,7 +32,7 @@ fn revision(text: &Option<String>) -> Value {
         .map(|s| json!(crate::native_intent::hash(s.as_bytes())))
         .unwrap_or(Value::Null)
 }
-fn preceding_fence() -> String {
+fn fence() -> String {
     let c = contract();
     format!(
         "{}\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.\n{}",
@@ -40,30 +40,24 @@ fn preceding_fence() -> String {
         c["instruction_fence"]["end"].as_str().unwrap()
     )
 }
-fn fence() -> String {
-    preceding_fence().replace(
-        "Use `.agentic-workspace/skills/workspace-startup/SKILL.md`",
-        "At runtime-capable session entry and after a known dependency change, use the configured AW `start` unless a sufficient current observation is held.\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md`",
-    )
-}
 fn instruction(before: &Option<String>, removing: bool) -> Result<Option<String>, CoreError> {
     let text = before.as_deref().unwrap_or("");
     let c = contract();
     let start = c["instruction_fence"]["start"].as_str().unwrap();
     let end = c["instruction_fence"]["end"].as_str().unwrap();
-    let normalized = text.replace("\r\n", "\n");
     let expected = fence();
-    if normalized.contains(start) || normalized.contains(end) {
-        if normalized.matches(start).count() != 1
-            || normalized.matches(end).count() != 1
-            || (!normalized.contains(&expected) && !normalized.contains(&preceding_fence()))
+    if text.contains(start) || text.contains(end) {
+        if text.matches(start).count() != 1
+            || text.matches(end).count() != 1
+            || text.find(start) >= text.find(end)
         {
             return Err(err(
                 "AGENTS.md has a conflicting managed fence; preserve and reconcile its source",
             ));
         }
         if removing {
-            // Remove only exact managed bytes. Preserve surrounding source verbatim.
+            // The unique ordered markers establish custody of the entire block.
+            // Preserve surrounding source verbatim, regardless of the interior.
             let a = text.find(start).unwrap();
             let b = text.find(end).unwrap() + end.len();
             let result = format!("{}{}", &text[..a], &text[b..]);
