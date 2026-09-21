@@ -4,7 +4,7 @@
 
 Exact footprint, ownership, and availability values generated from `source_maintenance_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:49eaf5b50b48124ba4118f473e7f09e07a31e018c51b8b4d2392b4d052cfb2c5`
+- Contract digest: `sha256:079a91d574806d48d2d14ee47f86a1c138cc23be90406787dfae431c316315c9`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
@@ -16,7 +16,7 @@ Each cell below lists the exact package-managed checked-in files: profile base p
 
 ### `necessary-surfaces` + `none`
 
-File count: 26
+File count: 27
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -29,6 +29,7 @@ File count: 26
 - `.agentic-workspace/fallback/no_cli_startup.py`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -47,7 +48,7 @@ File count: 26
 
 ### `necessary-surfaces` + `planning`
 
-File count: 28
+File count: 29
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -62,6 +63,7 @@ File count: 28
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -80,7 +82,7 @@ File count: 28
 
 ### `necessary-surfaces` + `memory`
 
-File count: 29
+File count: 30
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -96,6 +98,7 @@ File count: 29
 - `.agentic-workspace/memory/repo/index.md`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -114,7 +117,7 @@ File count: 29
 
 ### `necessary-surfaces` + `verification`
 
-File count: 26
+File count: 27
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -127,6 +130,7 @@ File count: 26
 - `.agentic-workspace/fallback/no_cli_startup.py`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -145,7 +149,7 @@ File count: 26
 
 ### `necessary-surfaces` + `planning,memory`
 
-File count: 31
+File count: 32
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -163,6 +167,7 @@ File count: 31
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -181,7 +186,7 @@ File count: 31
 
 ### `necessary-surfaces` + `planning,verification`
 
-File count: 28
+File count: 29
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -196,6 +201,7 @@ File count: 28
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -214,7 +220,7 @@ File count: 28
 
 ### `necessary-surfaces` + `memory,verification`
 
-File count: 29
+File count: 30
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -230,6 +236,7 @@ File count: 29
 - `.agentic-workspace/memory/repo/index.md`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -248,7 +255,7 @@ File count: 29
 
 ### `necessary-surfaces` + `planning,memory,verification`
 
-File count: 31
+File count: 32
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -266,6 +273,7 @@ File count: 31
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/procedure.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
@@ -754,6 +762,8 @@ File count: 56
 
 | Target | Kind | Profiles | Modules | Availability / degraded behaviour |
 | --- | --- | --- | --- | --- |
+| `.agentic-workspace/configuration-assessment.json` | `optional` | necessary-surfaces, full-mirror | — | Absent Configuration assessment is unassessed; use ordinary native entry for current setup work. |
+| `.agentic-workspace/local/configuration-assessment.json` | `optional` | necessary-surfaces, full-mirror | — | A repository assessment does not certify absent machine-local readiness. |
 | `.agentic-workspace/adoption-receipt.json` | `optional` | necessary-surfaces, full-mirror | — | Treat configuration readiness as unresolved until install creates the adoption receipt. |
 | `.agentic-workspace/OWNERSHIP.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/WORKFLOW.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |

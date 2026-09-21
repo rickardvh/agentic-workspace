@@ -53,10 +53,18 @@
     ".agentic-workspace/memory/skills/README.md",
     ".agentic-workspace/memory/skills/REGISTRY.json",
     ".agentic-workspace/memory/skills/memory-capture/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-capture/procedure.md",
+    ".agentic-workspace/memory/skills/memory-capture/references/candidate.md",
+    ".agentic-workspace/memory/skills/memory-capture/references/destination.md",
+    ".agentic-workspace/memory/skills/memory-capture/references/publication.md",
     ".agentic-workspace/memory/skills/memory-capture/agents/openai.yaml",
     ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
     ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
     ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-hygiene/procedure.md",
+    ".agentic-workspace/memory/skills/memory-hygiene/references/declarations.md",
+    ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md",
+    ".agentic-workspace/memory/skills/memory-hygiene/references/repair.md",
     ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml",
     ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md",
     ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml",
@@ -299,6 +307,54 @@
       "role": "shared-replaceable",
       "safety": "safe",
       "source": ".agentic-workspace/memory/WORKFLOW.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/procedure.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-capture/procedure.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/references/candidate.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-capture/references/candidate.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/references/destination.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-capture/references/destination.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/references/publication.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-capture/references/publication.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/procedure.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-hygiene/procedure.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/declarations.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-hygiene/references/declarations.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/repair.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-hygiene/references/repair.md"
     }
   ],
   "obsolete_files": [

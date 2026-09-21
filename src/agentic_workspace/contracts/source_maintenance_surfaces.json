@@ -79,7 +79,8 @@
     ".agentic-workspace/skills/workspace-intent-discovery/references/shape.md",
     ".agentic-workspace/skills/workspace-startup/references/constraints.md",
     ".agentic-workspace/skills/workspace-intent-discovery/references/intent.md",
-    ".agentic-workspace/skills/workspace-intent-discovery/procedure.md"
+    ".agentic-workspace/skills/workspace-intent-discovery/procedure.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md"
   ],
   "necessary_surface_roots": [
     ".agentic-workspace/docs",
@@ -102,7 +103,10 @@
       "source": ".agentic-workspace/OWNERSHIP.toml",
       "target": ".agentic-workspace/configuration-assessment.json",
       "kind": "optional",
-      "profiles": ["necessary-surfaces", "full-mirror"],
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
       "modules": [],
       "degraded_behavior": "Absent Configuration assessment is unassessed; use ordinary native entry for current setup work."
     },
@@ -110,7 +114,10 @@
       "source": ".agentic-workspace/OWNERSHIP.toml",
       "target": ".agentic-workspace/local/configuration-assessment.json",
       "kind": "optional",
-      "profiles": ["necessary-surfaces", "full-mirror"],
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
       "modules": [],
       "degraded_behavior": "A repository assessment does not certify absent machine-local readiness."
     },
@@ -641,6 +648,69 @@
     {
       "source": ".agentic-workspace/skills/REGISTRY.json",
       "target": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "kind": "installed-local",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
+      "target": ".agentic-workspace/instructions/*.md",
+      "kind": "optional",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": [],
+      "degraded_behavior": "Select existing canonical instruction sources through the instruction owner; an absent source needs its exact creation proposal."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
+      "target": ".agentic-workspace/local/instructions/*.md",
+      "kind": "optional",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": [],
+      "degraded_behavior": "Local instructions may be absent; preserve the local scope and current owner creation boundary."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
+      "target": ".agentic-workspace/config.toml",
+      "kind": "installed-local",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
+      "target": ".agentic-workspace/config.local.toml",
+      "kind": "optional",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": [],
+      "degraded_behavior": "Use repo-owned config.toml when no machine-local override exists."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
+      "target": ".agentic-workspace/OWNERSHIP.toml",
+      "kind": "installed-local",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
+      "target": ".agentic-workspace/READING.json",
       "kind": "installed-local",
       "profiles": [
         "necessary-surfaces",
