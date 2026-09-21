@@ -199,6 +199,9 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
 def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_release_commit() -> None:
     workflow = (WORKFLOW_ROOT / "release-from-semver-label.yml").read_text(encoding="utf-8")
 
+    rc_input = workflow.split("      accepted_rc:\n", 1)[1].split("        type: string", 1)[0]
+    assert "required: false" in rc_input
+    assert workflow.count('if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi') == 2
     assert "branches:" in workflow
     assert "master" in workflow
     assert "pull_request:" not in workflow

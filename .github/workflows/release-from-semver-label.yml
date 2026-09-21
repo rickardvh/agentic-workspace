@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       accepted_rc:
-        description: Independently accepted v1.0.0-rc.N to promote from its exact current master source
-        required: true
+        description: Optional accepted v1.0.0-rc.N for first-stable promotion; leave empty for ordinary releases
+        required: false
         type: string
 # Automatic release-PR preparation from master pushes is temporarily disabled.
 # Previous trigger:
