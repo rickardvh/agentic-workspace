@@ -548,6 +548,38 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     dependency = tmp_path / "dependency.md"
     dependency.write_text("Domain rule: blå means blue.\n", encoding="utf-8", newline="\n")
     context = {"target": str(tmp_path), "task": "Explain the supplied domain rule in English; return findings only.", "changed": []}
+    input_refs = ["dependency.md"]
+    if surface == "native":
+        from tests.repo_procedure_fixture import install_method, question
+
+        from agentic_workspace.decision import start
+
+        input_refs += install_method(tmp_path, "delegation-handoff", "host/collaboration")
+        selected, answer = question(context, "host/collaboration")
+        assert "Carry the current frontier" not in json.dumps(selected)
+        for disposition, branches in [("unknown", []), ("answered", ["local"]), ("answered", ["delegate"]), ("answered", ["handoff"])]:
+            answer["arguments"]["answer"] = {"disposition": disposition, "branches": branches}
+            result = start({**context, "projection": "full", "request": answer})
+            assert result["procedure"]["status"] == "current"
+            assert result["task_requirements"]["assignment"]["result"]["selected"] is None
+            assert result["task_requirements"]["delegation"]["requests"] == []
+        fragment = result["procedure"]["next"][0]["resource"]
+        input_refs += [fragment, "frontier.md"]
+        (tmp_path / "frontier.md").write_text(
+            "Outcome: explain the supplied domain rule; read-only scope.\n"
+            "Judgment: a bounded independent explanation is useful; Assignment must admit the target.\n"
+            "Current procedure: " + fragment + "\n"
+            "Stop if required input is missing or scope widens. No parent completion or review authority.\n"
+            "Return observations only through the sealed return contract; proof remains with Verification.\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "unrelated.txt").write_text("not worker context", encoding="utf-8")
+        assert start({**context, "projection": "full", "request": answer})["procedure"]["status"] == "current"
+        method = tmp_path / "tools/skills/host-method/procedure.md"
+        original = method.read_bytes()
+        method.write_bytes(original + b"\nChanged method\n")
+        assert start({**context, "projection": "full", "request": answer})["procedure"]["status"] == "stale"
+        method.write_bytes(original)
 
     transcript = []
     parent_inputs = []
@@ -570,7 +602,9 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     assert not manual["eligible"]
     inputs = before["task_requirements"]["handoff_inputs"]["requests"][0]
     inputs[-1]["arguments"].update(
-        input_refs=["dependency.md"], complete=False, reason="The named domain rule is the complete input for this bounded explanation."
+        input_refs=input_refs,
+        complete=False,
+        reason="The domain rule and selected semantic frontier are sufficient for this bounded explanation.",
     )
     inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
     inputs[-1]["arguments"]["complete"] = True
@@ -589,11 +623,13 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     assert worker["intent"]["outcome"] == context["task"]
     assert worker["inputs"]["capsule"] == [
         {
-            "reference": "dependency.md",
-            "revision": "sha256:" + hashlib.sha256(dependency.read_bytes()).hexdigest(),
-            "content": "Domain rule: blå means blue.\n",
+            "reference": ref,
+            "revision": "sha256:" + hashlib.sha256((tmp_path / ref).read_bytes()).hexdigest(),
+            "content": (tmp_path / ref).read_bytes().decode("utf-8"),
         }
+        for ref in input_refs
     ]
+    assert "not worker context" not in json.dumps(worker)
     assert worker["effects"]["allowed"] == ["read-provided-inputs", "return-observations"]
     assert worker["proof"]["worker_authority"] is False
     assert worker["inputs"]["task_requirements"]["requirements"]["required_result_classes"] == ["read-only"]
@@ -641,8 +677,8 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
         assert "required_identity" not in entry["view"]["return_contract"]
         assert entry["view"]["effects"] == worker["effects"]
         assert entry["burden"]["host_skill_context_bytes"] == {"status": "unknown"}
-        detail = entry["view"]["inputs"]["capsule"][0]["detail_ref"]
-        assert worker_call("expand", reference=detail)["input"] == worker["inputs"]["capsule"][0]
+        for item, captured in zip(entry["view"]["inputs"]["capsule"], worker["inputs"]["capsule"], strict=True):
+            assert worker_call("expand", reference=item["detail_ref"])["input"] == captured
         material = {key: returned[key] for key in ["summary", "changed_paths", "patch", "stop_conditions_hit"]}
         assembled = worker_call("return", material=material)
         assert assembled["reentry"] == reentry
@@ -669,15 +705,17 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
             "parent_owner_response_bytes": sum(byte_size(value) for value in transcript),
             "parent_owner_request_bytes": sum(byte_size(value) for value in parent_inputs),
             "worker_helper_io_single_sample": helper_io,
-            "worker_entry_expand_return_calls": 3,
+            "worker_entry_expand_return_calls": 2 + len(input_refs),
             "return_owner_calls": 1,
             "required_detail_fetches": 0,
-            "optional_detail_fetches_exercised": 1,
+            "optional_detail_fetches_exercised": len(input_refs),
             "worker_return_material_bytes": byte_size(material),
             "legacy_worker_return_bytes": byte_size(returned),
             "baseline_skills_entry_return_bytes": skills + byte_size(worker) + byte_size(returned),
             "bounded_skills_entry_return_bytes": skills + byte_size(entry["view"]) + byte_size(material),
-            "fixture_parent_semantic_answers": 4,
+            "fixture_parent_semantic_answers": 8,
+            "method_owner_calls_before_handoff": 9,
+            "method_owner_io_bytes": "not measured; excluded from handoff-only byte comparison",
             "fixture_worker_material_submissions": 1,
             "fixture_user_steering": 0,
             "fixture_protocol_repairs": 0,
@@ -711,6 +749,11 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     mutation["request"][-1]["arguments"]["returned"]["patch"] = "invented diff"
     with pytest.raises(AssertionError):
         consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **mutation})
+    if surface == "native":
+        method.write_bytes(original + b"\nChanged upstream procedure\n")
+        with pytest.raises(AssertionError, match="changed|stale"):
+            consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
+        method.write_bytes(original)
     dependency.write_text("Changed domain rule.\n")
     with pytest.raises(AssertionError, match="changed|stale"):
         call(export)

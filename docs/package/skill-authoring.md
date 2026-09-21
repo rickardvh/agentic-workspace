@@ -227,6 +227,20 @@ invocation. Do not label a present script an admitted effect or turn its output
 into constructed owner actions. Missing dependencies require repair or the same
 manual method, with unavailable runtime guarantees left unavailable.
 
+## Compose delegation with current owners
+
+The repository-owned [delegation/handoff method](../../tools/skills/delegation-handoff/SKILL.md)
+is a working example of local/delegate/unresolved judgement followed by current
+Assignment and Planning operations. Copy or adapt its bundle into your repository
+and declare your own route; it is an example, not an installed delegation policy.
+
+The method captures the selected procedure, useful still-current judgments,
+constraints, exact evidence references and return expectations as a bounded worker
+frontier. It then uses the owner's sealed inputs, `worker` entry/expand/return and
+current return admission. Capturing upstream references alongside the summary
+lets source drift invalidate a late return. Local work creates no handoff;
+selection cannot make an ineligible target eligible or waive proof and review.
+
 ## Customise and repair
 
 Edit your repository-owned bundle and registry together; remove its row when
