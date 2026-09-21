@@ -53,6 +53,7 @@
     {
       "id": "pr-review-recheck",
       "path": "pr-review-recheck/SKILL.md",
+      "procedure_resource": "procedure.md",
       "executable": {
         "entrypoint": {
           "kind": "file",

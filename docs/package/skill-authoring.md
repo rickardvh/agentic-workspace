@@ -241,6 +241,20 @@ current return admission. Capturing upstream references alongside the summary
 lets source drift invalidate a late return. Local work creates no handoff;
 selection cannot make an ineligible target eligible or waive proof and review.
 
+## Compose review with proof owners
+
+The repository-owned [review/recheck method](../../tools/skills/pr-review-recheck/SKILL.md)
+demonstrates progressive scope, compatibility, proof, recheck and closure questions.
+Its independence and trusted-baseline rules remain in front of procedure selection.
+The selected proof reference resolves the existing Verification request; the method
+cannot declare evidence sufficient or turn its own answer into independent approval.
+
+Adapt the method to your repository's policy and route. Current prior findings can
+be carried with their relied-upon source references; changed evidence requires
+reconsideration, while unrelated changes need not replay the whole method. Read
+only selected branches from the trusted baseline. Without native observation, the
+same Markdown remains usable and missing owner evidence remains explicitly unknown.
+
 ## Customise and repair
 
 Edit your repository-owned bundle and registry together; remove its row when

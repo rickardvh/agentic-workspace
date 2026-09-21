@@ -80,6 +80,12 @@ def procedure(binary, context, operation, **material):
 
 
 def test_selected_check_to_receipt_and_remaining_claim(tmp_path, shared_core_binary, native_cli):
+    import hashlib
+
+    from tests.repo_procedure_fixture import install_method, question
+
+    from agentic_workspace.decision import start
+
     install(tmp_path)
     (tmp_path / "a.txt").write_text("subject")
     context = {"target": str(tmp_path), "task": "Prove bounded behavior", "changed": ["a.txt"]}
@@ -93,11 +99,48 @@ def test_selected_check_to_receipt_and_remaining_claim(tmp_path, shared_core_bin
     candidate = procedure(shared_core_binary, context, "execute")
     assert "effect" not in candidate  # One candidate is not a required action.
     first = procedure(shared_core_binary, context, "prepare")
+    install_method(tmp_path, "pr-review-recheck", "host/review")
+    method_view, method_answer = question(context, "host/review")
+    assert "Check proof separately from intent satisfaction" not in json.dumps(method_view)
+    for disposition, branches in [
+        ("defer", []),
+        ("answered", ["scope"]),
+        ("answered", ["compatibility"]),
+        ("answered", ["closure"]),
+        ("answered", ["proof"]),
+    ]:
+        method_answer["arguments"]["answer"] = {
+            "disposition": disposition,
+            "branches": branches,
+            "material": {"claimed_verdict": "approved"},
+        }
+        method_result = start({**context, "projection": "full", "request": method_answer})
+        assert method_result["procedure"]["status"] == "current"
+        assert method_result["verification"]["claim_review"]["status"] == "not-requested"
+        assert method_result["procedure"]["authority_effect"] == "none"
+    detail_request = next(r for r in method_view["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/discover/v1")
+    detail_request["arguments"].update(parent="host/review", resource=method_result["procedure"]["next"][0])
+    detail = start({**context, "projection": "full", "request": detail_request})
+    fragment = detail["semantic_routes"]["discovery"]["detail"]["sources"][0]["procedure"]["resource"]["selected"]["text"]
+    assert "Check proof separately from intent satisfaction" in fragment
+    assert "trusted Git-object loader" not in json.dumps(detail)
+    # Recheck keeps still-current findings; changed relied-upon evidence does not.
+    method_answer["arguments"]["answer"] = {
+        "disposition": "answered",
+        "branches": ["recheck"],
+        "evidence": [{"reference": "a.txt", "revision": "sha256:" + hashlib.sha256((tmp_path / "a.txt").read_bytes()).hexdigest()}],
+    }
+    (tmp_path / "unrelated.txt").write_text("unrelated")
+    assert start({**context, "projection": "full", "request": method_answer})["procedure"]["status"] == "current"
+    (tmp_path / "a.txt").write_text("changed subject")
+    assert start({**context, "projection": "full", "request": method_answer})["procedure"]["status"] == "stale"
+    (tmp_path / "a.txt").write_text("subject")
+    # Reobserve exact proof carriage after the fixture installs its method and exercises drift.
+    first = procedure(shared_core_binary, context, "prepare")
     request = first["proof"]["execution_requests"][0]
     direct = consume("native", shared_core_binary, native_cli, context, host_path=os.environ["PATH"])
     assert request == direct["verification"]["execution_requests"][0]
-    fragment = (ROOT / ".agentic-workspace/skills/workspace-proof-selection/references/select.md").read_text()
-    identity = json.loads(fragment.split("```agentic-owner-reference\n", 1)[1].split("```", 1)[0])
+    identity = json.loads(fragment.replace("\r\n", "\n").split("```agentic-owner-reference\n", 1)[1].split("```", 1)[0])
     selected = consume("json", shared_core_binary, native_cli, {**context, "reference": identity})
     assert selected["status"] == "current" and selected["value"] == request
     assert not (tmp_path / "marker.txt").exists()
