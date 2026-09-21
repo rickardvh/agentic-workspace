@@ -37,11 +37,10 @@ delivers current installed setup procedure and existing configuration schemas,
 including when repository skills are old or absent. Review that bounded current
 material against standing repository intent. A reliable historical delta is not
 required; skipped releases and absent baselines need the same consideration.
-The assessment basis also covers declared managed host surfaces outside this
-setup bundle. When it changes, inspect the existing payload/adoption routes and
-refresh stale authenticated material before claiming integration is complete.
-An unchanged version cannot hide a material change; a version-only update with
-identical relevant material does not reopen a settled assessment.
+Only a setup-relevant revision or relevant source change warrants reassessment.
+The separate prepared managed revision routes package refresh without a feature
+audit. Version-only and cosmetic changes leave reviewed setup quiet. Retain prior
+decisions and reconsider only affected integration when source dependencies change.
 
 Consider useful optional capabilities as well as compatibility maintenance:
 
@@ -70,7 +69,8 @@ irreducible new human choice, never merely because the package changed.
 
 After changes, obtain a fresh assessment request. Include additional relevant
 repository source paths in its `dependencies` argument; Configuration also binds
-config, intent, selected instructions and instruction-source membership. Select
+config, intent and selected instructions. Include scoped sources that actually
+govern the decision; ordinary entry does not scan instruction directories. Select
 `machine-local` for local readiness. Shared assessment never certifies another
 machine. Fill the returned record's coverage rationale and grounded dispositions.
 Use the consumer's `configuration_behavior.setup_witness` for supported effective
@@ -90,3 +90,9 @@ Unknown formats, major transitions and newer integration are preserved. Resume
 the original work: optional unresolved setup restricts its dependent integration
 claim, not unrelated repository execution. Do not declare package integration
 complete while any relevant assessment or consumer verification remains open.
+
+An unchanged deferred/blocked choice completes review, not integration. Keep its
+reason and resume condition available without asking again on unrelated entry.
+Use `reconsider: true` when dependent work or explicit intent revisits it; otherwise
+resume when a bound prerequisite changes. Do not repeat broad setup or proof just
+to refresh package files or verify one affected integration.

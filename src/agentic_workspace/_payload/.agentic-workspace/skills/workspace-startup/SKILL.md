@@ -12,8 +12,8 @@ and currentness. Skill selection grants no authority.
 At runtime-capable session entry or a possible dependency change, obtain one
 ordinary `start` observation unless a sufficient current observation is held.
 Follow pending Configuration assessment to current installed setup material,
-even for unrelated work. Product update notices also bridge preceding skills to
-this observation; they grant no policy authority. Reuse settled observations.
+even for unrelated work. Reuse settled observations. This rule applies once this
+bootstrap is installed; preceding skills do not guarantee a first runtime call.
 See [entry and upgrade boundaries](references/ordinary.md#ordinary-use).
 
 Use [the procedure question](procedure.md) to select only needed detail, or follow

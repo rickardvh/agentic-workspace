@@ -64,7 +64,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     node_arch = {"amd64": "x64", "x86_64": "x64", "arm64": "arm64", "aarch64": "arm64"}[platform.machine().lower()]
     native = output / "src/native/bin"
     native.mkdir(parents=True)
-    for name in ("_transport.mjs", "operating.mjs", "operating.d.mts", "update-trigger.mjs"):
+    for name in ("_transport.mjs", "operating.mjs", "operating.d.mts"):
         shutil.copy2(ROOT / "bindings/node" / name, native.parent / name)
     shutil.copy2(ROOT / "bindings/node/cli.mjs", output / "src/cli.mjs")
     shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
@@ -93,8 +93,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
         encoding="utf-8",
     )
     package = {
-        key: package[key]
-        for key in ("name", "version", "author", "license", "repository", "homepage", "bugs", "engines", "private", "publishConfig")
+        key: package[key] for key in ("name", "version", "author", "license", "repository", "homepage", "bugs", "engines", "private", "publishConfig")
     }
     package.update(
         {
@@ -106,7 +105,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
                 "./operating": {"types": "./src/native/operating.d.mts", "import": "./src/native/operating.mjs"},
             },
             "files": ["src", "LICENSE", "README.md"],
-            "scripts": {"test": "node src/cli.mjs --help", "postinstall": "node src/native/update-trigger.mjs"},
+            "scripts": {"test": "node src/cli.mjs --help"},
             "agenticWorkspace": {"runtimeBinding": {}},
         }
     )

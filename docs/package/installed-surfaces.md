@@ -49,18 +49,15 @@ Review diagnostic output before sharing it; it may contain sensitive project det
 
 Update the repository's development dependency using its normal package manager,
 then continue ordinary work. With the current startup skill, runtime-capable
-entry checks the resolved AW artefact. Changed setup or managed payload material,
-or an absent assessment, routes the agent through
-Configuration to refresh managed files and assess useful optional capabilities
-against your repository's purpose. No refresh-specific prompt or target-version
-bookkeeping is required for a compatible update.
+entry checks the resolved AW artefact. A changed managed revision routes existing
+package refresh; a missing/stale setup assessment routes the existing setup skill.
+Managed-only edits do not repeat semantic review. No target-version bookkeeping
+is required for compatible updates.
 
-Older checked-in skills receive a product-managed reconciliation notice through
-the existing adopted agent entry. npm publishes it at post-install; Python
-publishes it at the next normal interpreter startup after installation. No AW
-import or user-maintained hook is needed. `uv sync` alone does not execute a wheel
-callback. The notice supplies the route; the agent still judges and integrates
-capabilities. See the [entry boundary](lifecycle.md#automatic-setup-assessment).
+Existing users may invoke AW/setup manually once. Adoption/refresh establishes the
+stable entry within the existing managed boundary; subsequent ordinary entry
+observes updates. No installer or interpreter hook is needed. See the
+[entry boundary](lifecycle.md#automatic-setup-assessment).
 
 The agent applies authorised integrations and checks the affected behaviour.
 Explicit exclusions remain binding; a genuinely new policy choice can need your

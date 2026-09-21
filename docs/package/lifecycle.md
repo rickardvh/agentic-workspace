@@ -10,19 +10,11 @@ Ordinary native `start` exposes Configuration's `setup_assessment` independently
 of task wording and payload-target policy. Compact entry provides a consequence
 route to the same owner. The main skill obtains that observation at session entry
 and after a possible dependency change, reusing a sufficient current observation.
-Product-owned triggers bridge preceding bootstraps by publishing a minimal
-Configuration notice in the authenticated adopted `AGENTS.md` entry. npm uses
-post-install; Python uses installed `.pth` material at the next ordinary
-interpreter startup, without an AW import. `uv sync` itself has no wheel callback.
-Both carry only the same returned `package.update-notice` Configuration write.
-They cannot choose capabilities, change policy or settle assessment. The stable
-notice requests current observation and reuses a settled result; it is not a
-last-seen version record. Removal relinquishes the exact product notice.
-
-No user-maintained lifecycle hook is required. An unadopted directory, absent
-custody, edited notice, incompatible integration or explicitly disabled host
-hooks cannot silently acquire write authority. Native entry remains the recovery
-path; without any supported observation, an external update is unknown.
+Existing users may run AW/setup manually once to establish the stable entry
+through ordinary adoption/refresh. This updates only the existing managed fence.
+Subsequent compatible changes are observed at ordinary entry. Installation only
+supplies the executable: there are no package-manager or interpreter hooks.
+Without runtime observation an external update is unknown.
 
 Submit `setup_assessment.request` to receive current installed setup text and
 configuration declarations, even if repository skills are stale or absent. After
@@ -34,15 +26,23 @@ writer and recovery contract; reading never writes or grants policy consent.
 The current repository assessment lives in
 `.agentic-workspace/configuration-assessment.json`; machine-local assessment uses
 `.agentic-workspace/local/configuration-assessment.json`. These are current owner
-records, not human version checklists or domain evidence stores. Setup material
-and managed host-surface identity, together with relevant repository source
-identity, determine reuse; tasks and HEAD do not. Changes outside the setup bundle
-also reopen assessment. A version-only release with identical material remains
-quiet. Effective
-dispositions require a current consumer witness. Pending, deferred, blocked and
-unavailable dispositions retain a reason and continuation. Exclusion settles
-consideration without asserting that a capability works. Unknown formats and
-major/newer integration are preserved for bounded reconciliation.
+records, not human version checklists or domain evidence stores. A package-owned
+setup revision determines whether semantic review is due. Maintainers change it
+when setup needs reconsideration, including same-version development changes.
+A separate build-prepared managed revision detects changes anywhere in the shipped
+payload and routes existing refresh without repeating setup. Cosmetic edits and
+version-only releases do not reopen semantic review. Ordinary comparison does not
+construct setup text/schemas, hash the shipped payload or explore other owners.
+It reads the bounded selected configuration/intent sources through existing
+currentness, without repository scanning. Selected review alone loads material.
+
+Effective dispositions are verified at publication through the existing consumer.
+Unchanged deferred/blocked work retains its reason and precise resume route, with
+`review_complete: true` and `integration_complete: false`; it creates no repeated
+assessment consequence. Resume for a relevant source/prerequisite change, dependent
+work or explicit `reconsider`. Changed sources retain previous decisions for the
+agent to revisit only affected integration. Exclusions stay binding. Unknown
+formats and major/newer integration remain preserved.
 
 The assessment restriction targets `claim:configuration-integration-complete`.
 Existing payload policies and other owners keep their own restrictions. Package

@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use std::{collections::BTreeSet, env, fs, path::PathBuf};
 
 fn main() {
@@ -33,6 +34,8 @@ fn main() {
         surfaces.len(),
         value["payload_files"].as_array().unwrap().len()
     );
+    let mut identity = Sha256::new();
+    identity.update(serde_json::to_vec(&value).unwrap());
     let mut seen = BTreeSet::new();
     let mut generated = String::from("const PAYLOAD: &[(&str, Materialization, &[u8])] = &[\n");
     for reference in value["payload_files"].as_array().expect("payload manifest") {
@@ -123,12 +126,24 @@ fn main() {
                 "stale portable package seed; regenerate agent interface"
             );
         }
+        identity.update(reference.as_bytes());
+        identity.update(mode.as_bytes());
+        identity.update(
+            fs::read_to_string(&source)
+                .unwrap()
+                .replace("\r\n", "\n")
+                .as_bytes(),
+        );
         generated.push_str(&format!(
             "({reference:?}, Materialization::{mode}, include_bytes!({:?})),\n",
             source.to_str().unwrap()
         ));
     }
     generated.push_str("];\n");
+    generated.push_str(&format!(
+        "const PAYLOAD_REVISION: &str = \"sha256:{:x}\";\n",
+        identity.finalize()
+    ));
     fs::write(
         PathBuf::from(env::var("OUT_DIR").unwrap()).join("payload.rs"),
         generated,

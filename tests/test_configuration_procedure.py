@@ -83,6 +83,18 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     (tmp_path / "unrelated.txt").write_text("Unrelated repository change")
     assert assessment()["status"] == "settled"
     assert (workspace / "configuration-assessment.json").read_bytes() == saved
+    # Managed-only identity changes request bounded refresh, not semantic review.
+    provenance = workspace / "payload-provenance.json"
+    provenance.write_text(json.dumps({"release_identity": {"version": "1.1.0"}, "managed_revision": "prior-managed-bytes"}))
+    changed = call()["configuration_write"]
+    assert changed["managed_refresh"]["required"] is True
+    assert changed["setup_assessment"]["status"] == "settled"
+    assert changed["setup_assessment"]["assessment_due"] is False
+    provenance.write_text(
+        json.dumps({"release_identity": {"version": "1.1.0"}, "managed_revision": changed["managed_refresh"]["revision"]})
+    )
+    assert call()["configuration_write"]["managed_refresh"]["required"] is False
+    assert (workspace / "configuration-assessment.json").read_bytes() == saved
     # A skipped compatible version with the same setup basis is quiet. A source
     # material change under the same version is not hidden by a version stamp.
     path = workspace / "configuration-assessment.json"
@@ -129,6 +141,14 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
     assert assessment()["status"] == "unfinished"
     context["task"] = "Continue a different ordinary task"
     assert assessment()["record"]["dispositions"][0]["resume"]
+    unchanged = call()["configuration_write"]
+    assert unchanged["setup_assessment"]["review_complete"] is True
+    assert unchanged["setup_assessment"]["integration_complete"] is False
+    assert unchanged["setup_assessment"]["assessment_due"] is False
+    assert "configuration-assessment-required" not in json.dumps(call()["decision_packet"])
+    revisit = unchanged["setup_assessment"]["request"]
+    revisit["arguments"]["reconsider"] = True
+    assert call(request=revisit)["configuration_write"]["setup_assessment"]["assessment_due"] is True
     local_read = call()["configuration_write"]["setup_assessment"]["request"]
     local_read["arguments"]["scope"] = "machine-local"
     local = call(request=local_read)["configuration_write"]["setup_assessment"]["record_request"]

@@ -9,59 +9,6 @@ pub(crate) const READ: &str = "configuration/read-setup-assessment/v1";
 pub(crate) const KEY: &str = "package.setup-assessment";
 pub(crate) const SHARED: &str = ".agentic-workspace/configuration-assessment.json";
 pub(crate) const LOCAL: &str = ".agentic-workspace/local/configuration-assessment.json";
-pub(crate) const SIGNAL_KEY: &str = "package.update-notice";
-pub(crate) const UPDATE_NOTICE: &str = "\n<!-- agentic-workspace:update-observation:start -->\nAW dependency reconciliation may be pending. At ordinary session entry, obtain a current\nConfiguration observation with the repository's configured AW `start` invocation unless\na sufficient current observation is already held. Follow its setup assessment to current\ninstalled material, including with old checked-in skills. The agent assesses usefulness\nand authority; this notice grants no policy changes or integration-completion claim.\nReuse settled observations and continue the original task.\n<!-- agentic-workspace:update-observation:end -->\n";
-
-pub(crate) fn notice_bytes(target: &Path) -> Result<Vec<u8>, CoreError> {
-    crate::native_adoption::admit_update_notice(target)?;
-    admit_maintenance(target)?;
-    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let bytes = deps::read(&root, "AGENTS.md")?.ok_or_else(|| err("instruction entry missing"))?;
-    let before = std::str::from_utf8(&bytes).map_err(err)?;
-    if before.contains("<!-- agentic-workspace:update-observation:") {
-        if before.replace("\r\n", "\n").matches(UPDATE_NOTICE).count() == 1
-            && before
-                .matches("<!-- agentic-workspace:update-observation:")
-                .count()
-                == 2
-        {
-            return Ok(bytes);
-        }
-        return Err(err(
-            "edited update notice preserved for Configuration reconciliation",
-        ));
-    }
-    Ok(format!("{before}{UPDATE_NOTICE}").into_bytes())
-}
-
-pub(crate) fn notice_request(
-    target: &Path,
-    template: &dyn Fn(&str, Value) -> Value,
-    result: &mut Value,
-) {
-    if result["setup_assessment"]["integration_complete"] != false {
-        result["update_notice_status"] = json!("not-required");
-        return;
-    }
-    // Installation never acquires custody by finding filenames alone.
-    match notice_bytes(target) {
-        Ok(bytes)
-            if std::fs::read(target.join("AGENTS.md")).ok().as_deref()
-                != Some(bytes.as_slice()) =>
-        {
-            result["update_notice_status"] = json!("pending");
-            result["update_notice_request"] = template(
-                "configuration/edit-source/v1",
-                json!({"source":"AGENTS.md","key":SIGNAL_KEY,"value":crate::native_intent::hash(&bytes)}),
-            );
-        }
-        Ok(_) => result["update_notice_status"] = json!("already-signalled"),
-        Err(error) => {
-            result["update_notice_status"] = json!("unavailable");
-            result["update_notice_reason"] = json!(error.to_string());
-        }
-    }
-}
 const KIND: &str = "agentic-workspace/configuration-assessment/v1";
 fn err(e: impl ToString) -> CoreError {
     CoreError::new(e.to_string())
@@ -92,6 +39,8 @@ fn version_tuple(s: &str) -> Option<Vec<u64>> {
     Some(value)
 }
 fn material() -> Result<Value, CoreError> {
+    #[cfg(test)]
+    crate::native_frontier::built("setup-material");
     let mut files = serde_json::Map::new();
     for path in crate::native_payload::paths()
         .into_iter()
@@ -115,8 +64,10 @@ fn material() -> Result<Value, CoreError> {
     files.insert("workspace_local_override.schema.json".into(), json!(include_str!("../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json").replace("\r\n", "\n")));
     Ok(Value::Object(files))
 }
-fn basis() -> Result<String, CoreError> {
-    digest(&json!({"setup":material()?,"managed_payload":crate::native_payload::identity()?}))
+// Bump only when repository setup needs reconsideration, including same-version
+// development changes. Cosmetic/package-only changes use PAYLOAD_REVISION instead.
+fn basis() -> &'static str {
+    "configuration-setup-v1"
 }
 pub(crate) fn declaration() -> Value {
     json!({"kind":READ,"result_kind":KIND,"input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{"scope":{"enum":["repository","machine-local"]},"reconsider":{"type":"boolean"},"dependencies":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","maxLength":4096}}}}})
@@ -170,34 +121,6 @@ fn references(root: &Dir, scope: &str, extra: &[String]) -> Result<Vec<String>, 
         }
     }
     paths.extend(extra.iter().cloned());
-    // Source membership matters as well as the bytes of previously read files.
-    for directory in [
-        ".agentic-workspace/instructions",
-        if scope == "machine-local" {
-            ".agentic-workspace/local/instructions"
-        } else {
-            ".agentic-workspace/instructions"
-        },
-    ] {
-        match root.read_dir(directory) {
-            Ok(entries) => {
-                for entry in entries {
-                    let entry = entry.map_err(err)?;
-                    if entry.file_type().map_err(err)?.is_file() {
-                        paths.push(format!(
-                            "{directory}/{}",
-                            entry
-                                .file_name()
-                                .to_str()
-                                .ok_or_else(|| err("non-UTF8 instruction path"))?
-                        ));
-                    }
-                }
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-            Err(e) => return Err(err(e)),
-        }
-    }
     paths.sort();
     paths.dedup();
     if paths.len() > 128 {
@@ -345,7 +268,7 @@ fn view_inner(
             .unwrap_or(json!([]))
     };
     let observed = dependencies(&root, scope, &extra)?;
-    let setup = basis()?;
+    let setup = basis();
     let accepted: Option<Vec<deps::Observation>> = record
         .get("dependencies")
         .cloned()
@@ -362,7 +285,7 @@ fn view_inner(
             dependencies: d,
         }),
     );
-    let settled = compatibility == "compatible"
+    let reviewed = compatibility == "compatible"
         && !request.is_some_and(|r| selected && r["arguments"]["reconsider"] == true)
         && record["scope"] == scope
         && record["coverage"]
@@ -377,9 +300,27 @@ fn view_inner(
                         .all(|k| r[k].as_str().is_some_and(|s| !s.trim().is_empty()))
                         && matches!(
                             r["status"].as_str(),
-                            Some("effective" | "already-effective" | "irrelevant" | "excluded")
+                            Some(
+                                "effective"
+                                    | "already-effective"
+                                    | "irrelevant"
+                                    | "excluded"
+                                    | "pending"
+                                    | "deferred"
+                                    | "blocked"
+                                    | "unavailable"
+                            )
                         )
                 })
+        });
+    let settled = reviewed
+        && record["dispositions"].as_array().is_some_and(|rows| {
+            rows.iter().all(|r| {
+                matches!(
+                    r["status"].as_str(),
+                    Some("effective" | "already-effective" | "irrelevant" | "excluded")
+                )
+            })
         });
     let status = if compatibility != "compatible" {
         compatibility
@@ -390,9 +331,24 @@ fn view_inner(
     } else {
         "assessment-required"
     };
-    result["setup_assessment"] = json!({"status":status,"scope":scope,"basis":setup,"currentness":comparison.status,"changed_dependencies":comparison.changed,"record":record,"integration_complete":settled,"machine_readiness":"not-certified-by-repository-assessment","request":template(READ,json!({"scope":scope})),"authority":"Current Configuration judgment only; no policy consent, domain proof or whole-task completion."});
-    if !settled {
+    result["setup_assessment"] = json!({"status":status,"scope":scope,"basis":setup,"currentness":comparison.status,"changed_dependencies":comparison.changed,"record":record,"integration_complete":settled,"review_complete":reviewed,"assessment_due":!reviewed,"machine_readiness":"not-certified-by-repository-assessment","request":template(READ,json!({"scope":scope})),"authority":"Current Configuration judgment only; no policy consent, domain proof or whole-task completion."});
+    if !reviewed {
         restrict(result);
+    }
+    // Prepared artifact identity: no payload construction or repository walk.
+    let provenance =
+        read(&root, ".agentic-workspace/payload-provenance.json")?.unwrap_or(Value::Null);
+    let refresh_due = !provenance.is_null()
+        && provenance["managed_revision"] != crate::native_payload::identity();
+    result["managed_refresh"] = json!({"required":refresh_due,"revision":crate::native_payload::identity(),"request":result["payload_discovery_request"],"adoption_request":result["repository_adoption_request"]});
+    if refresh_due && compatibility == "compatible" {
+        let blockers = result["contribution"]["blockers"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let mut blockers = blockers;
+        blockers.push(json!({"code":"configuration-managed-refresh-required","message":"Managed package material changed. Use existing adoption/payload refresh; retain current semantic setup choices.","affects":["claim:configuration-integration-complete"]}));
+        result["contribution"]["blockers"] = json!(blockers);
     }
     if selected {
         result["setup_assessment"]["material"] = material()?;
@@ -415,7 +371,7 @@ fn view_inner(
         result["setup_assessment"]["remaining_routes"] = json!({"payload":result["payload_discovery_request"],"adoption":result["repository_adoption_request"],"behavior":result["behavior_request"],"exposure":result["skill_exposure_request"]});
         if compatibility == "compatible" && !settled {
             let mut value = json!({"kind":KIND,"runtime_version":version(),"scope":scope,"basis":setup,"selected_dependencies":extra,"dependencies":observed,"coverage":"","dispositions":[],"continuation":null});
-            if comparison.status == deps::Currentness::Current {
+            if !record.is_null() {
                 for field in ["coverage", "dispositions", "continuation"] {
                     value[field] = record[field].clone();
                 }
@@ -436,7 +392,7 @@ fn view_inner(
             &mut local,
         )?;
         result["local_setup_assessment"] = local["setup_assessment"].clone();
-        if local["setup_assessment"]["integration_complete"] != true {
+        if local["setup_assessment"]["assessment_due"] == true {
             restrict(result);
         }
     }
@@ -476,7 +432,7 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
     if value["kind"] != KIND
         || value["scope"] != scope
         || value["runtime_version"] != version()
-        || value["basis"] != basis()?
+        || value["basis"] != basis()
         || value["dependencies"]
             != json!(dependencies(&root, scope, &value["selected_dependencies"])?)
     {
@@ -526,49 +482,9 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
     bytes.push(b'\n');
     Ok(bytes)
 }
-pub(crate) fn reobserve_consumers(
-    target: &Path,
-    current: &Value,
-    result: &mut Value,
-) -> Result<(), CoreError> {
-    for field in ["setup_assessment", "local_setup_assessment"] {
-        if result[field]["integration_complete"] != true {
-            continue;
-        }
-        for row in result[field]["record"]["dispositions"]
-            .as_array()
-            .into_iter()
-            .flatten()
-        {
-            if matches!(
-                row["status"].as_str(),
-                Some("effective" | "already-effective")
-            ) {
-                let witness =
-                    consumer_witness(target, row["concern"].as_str().unwrap_or(""), current)
-                        .unwrap_or(Value::Null);
-                if witness.is_null() || witness != row["observation"] {
-                    result[field]["status"] = json!("consumer-verification-required");
-                    result[field]["integration_complete"] = json!(false);
-                    result[field]["request"]["arguments"]["reconsider"] = json!(true);
-                    restrict(result);
-                    break;
-                }
-            }
-        }
-    }
-    Ok(())
-}
 /// Reobserve the real consumer, including at invoke's publication revalidation.
 /// Stored observations are dependency witnesses, never copies of owner authority.
 pub(crate) fn validate_consumers(target: &Path, current: &Value) -> Result<(), CoreError> {
-    if current["configuration_write"]["update_notice_proposal"] == true
-        && current["configuration_write"]["setup_assessment"]["integration_complete"] != false
-    {
-        return Err(err(
-            "update notice requires pending Configuration assessment",
-        ));
-    }
     let proposal = &current["configuration_write"]["assessment_proposal"];
     if proposal.is_null() {
         return Ok(());

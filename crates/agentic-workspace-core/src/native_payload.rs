@@ -28,18 +28,8 @@ pub(crate) fn paths() -> Vec<&'static str> {
 }
 
 /// Version-independent identity of declared host surfaces and their seed bytes.
-pub(crate) fn identity() -> Result<String, CoreError> {
-    let files = PAYLOAD
-        .iter()
-        .map(|(path, mode, _)| {
-            Ok(json!({"path":path,"materializer":format!("{mode:?}"),"seed":seed(path, *mode)?}))
-        })
-        .collect::<Result<Vec<_>, CoreError>>()?;
-    digest(&json!({
-        "files": files,
-        "host_surfaces": include_str!("../../../src/agentic_workspace/contracts/workspace_surfaces.json").replace("\r\n", "\n"),
-        "capabilities": CAPABILITIES,
-    }))
+pub(crate) fn identity() -> &'static str {
+    PAYLOAD_REVISION
 }
 
 pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
@@ -51,6 +41,7 @@ pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
     let version = product["project"]["version"].as_str().unwrap();
     let value = json!({"kind":"agentic-workspace/payload-provenance/v1",
         "payload_schema":"agentic-workspace/payload/v1",
+        "managed_revision":identity(),
         "payload_capabilities":CAPABILITIES,
         "payload_files":PAYLOAD.iter().map(|(path,_,_)| *path).collect::<Vec<_>>(),
         "release_identity":{"package":"agentic-workspace","version":version},
@@ -73,6 +64,8 @@ pub(crate) fn materialization(path: &str) -> Result<Materialization, CoreError> 
 
 /// Seed bytes require the caller's exact materializer, never generic copy authority.
 pub(crate) fn seed(path: &str, expected: Materialization) -> Result<Vec<u8>, CoreError> {
+    #[cfg(test)]
+    crate::native_frontier::built("payload-seed");
     if let Some((_, mode, bytes)) = PAYLOAD.iter().find(|(p, _, _)| *p == path) {
         if *mode != expected {
             return Err(CoreError::new(

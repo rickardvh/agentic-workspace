@@ -798,11 +798,6 @@ fn resolve_selected(
         &contract,
         request_for(crate::native_resource_owner::OWNER),
     )?;
-    crate::native_configuration_assessment::reobserve_consumers(
-        target,
-        &json!({"configuration":configuration,"startup_adapter":startup_adapter}),
-        &mut config_write,
-    )?;
     let mut contributions = vec![
         resources["contribution"].clone(),
         configuration["contribution"].clone(),
