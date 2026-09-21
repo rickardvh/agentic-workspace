@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep the managed AGENTS.md bootstrap as a minimal skill pointer and refresh arbitrary content inside a unique ordered fence."

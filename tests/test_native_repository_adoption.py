@@ -401,6 +401,7 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     instructions = tmp_path / "AGENTS.md"
     instructions.write_text("# Repository policy\nPreserve this text.\n", encoding="utf-8")
+    original_instructions = instructions.read_bytes()
     # Convergence uses current ownership, never a historical package digest.
     retired = ".agentic-workspace/obsolete-support/old.bin"
     old = tmp_path / retired
@@ -501,7 +502,12 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     result = call(invocation=prepared)
     assert result["effect_outcome"]["status"] == "committed"
     assert instructions.read_text().startswith("# Repository policy\nPreserve this text.\n")
-    assert "use the configured AW `start`" in instructions.read_text()
+    assert instructions.read_bytes() == original_instructions + (
+        b"<!-- agentic-workspace:workflow:start -->\n"
+        b"Use `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; "
+        b"if native skill discovery is unavailable, read it directly.\n"
+        b"<!-- agentic-workspace:workflow:end -->\n"
+    )
     assert instructions.read_text().count("<!-- agentic-workspace:workflow:start -->") == 1
     assert "update-observation" not in instructions.read_text()
     identity = tmp_path / ".agentic-workspace/adoption.json"
@@ -574,3 +580,55 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     assert blocked["status"] == "preserved-blocked"
     assert any("edited or unowned" in b for b in blocked["repository_adoption"]["blockers"])
     assert skill.read_text().endswith("User edits\n")
+
+
+def test_managed_fence_boundary_refresh_and_removal(tmp_path, shared_core_binary, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    context = {"target": str(tmp_path), "task": "Refresh the managed skill pointer"}
+    instructions = tmp_path / "AGENTS.md"
+    start = b"<!-- agentic-workspace:workflow:start -->"
+    end = b"<!-- agentic-workspace:workflow:end -->"
+    prefix = "# Repository café\r\nKeep whitespace.  \n".encode()
+    suffix = b"\r\n\r\nKeep this suffix without a final newline."
+    canonical = (
+        start + b"\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; "
+        b"if native skill discovery is unavailable, read it directly.\n" + end
+    )
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def apply(mode):
+        discovery = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+        request = next(r for r in discovery["adoption_requests"] if r["arguments"]["mode"] == mode)
+        proposed = call(request=request)
+        answer = next(
+            d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+        )["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        assert call(invocation=call(request=answer)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
+
+    # Marker custody works both before adoption and on later refreshes. Interior
+    # content is deliberately unrelated to any current or historical producer.
+    for interior in (b"", b"arbitrary package-owned text", "\r\n# Unknown procedure\r\n秘密\n".encode()):
+        instructions.write_bytes(prefix + start + interior + end + suffix)
+        apply("adopt")
+        assert instructions.read_bytes() == prefix + canonical + suffix
+    skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    skill = (tmp_path / skill_path).read_bytes()
+    assert skill == (ROOT / skill_path).read_bytes()
+    assert b"At runtime-capable session entry or a possible dependency change, obtain one" in skill
+    assert b"ordinary `start` observation unless a sufficient current observation is held." in skill
+
+    malformed = (start, end, end + start, start + start + end, start + end + end, start + end + start + end)
+    for block in malformed:
+        before = prefix + block + suffix
+        instructions.write_bytes(before)
+        with pytest.raises(AssertionError, match="conflicting managed fence"):
+            call(request=call()["configuration_write"]["repository_adoption_request"])
+        assert instructions.read_bytes() == before
+
+    # Removal uses the same ownership boundary, without an interior preimage.
+    instructions.write_bytes(prefix + start + b"\nAnother unknown interior\n" + end + suffix)
+    apply("remove")
+    assert instructions.read_bytes() == prefix + suffix
