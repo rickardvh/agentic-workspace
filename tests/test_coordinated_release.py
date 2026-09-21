@@ -20,6 +20,29 @@ def _load_module():
     return module
 
 
+def test_optional_rc_keeps_first_stable_gate_and_allows_later_releases(monkeypatch) -> None:
+    module = _load_module()
+    changeset = module.Changeset(path=module.ROOT / ".release/changes/a.toml", bump="major", summary="Feature")
+    monkeypatch.setattr(module, "parse_changesets", lambda ownership: [changeset])
+    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [])
+    monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("0.9.0")])
+    ownership = {"release_candidate": {}}
+
+    first_stable = module.plan_release(ownership)
+    assert first_stable["release_required"] is False
+    assert first_stable["reason"] == "first-stable-requires-explicit-accepted-rc"
+
+    monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("1.0.0")])
+    monkeypatch.setattr(
+        module,
+        "parse_changesets",
+        lambda ownership: [module.Changeset(path=changeset.path, bump="minor", summary="Feature")],
+    )
+    next_release = module.plan_release(ownership)
+    assert next_release["release_required"] is True
+    assert next_release["tag"] == "v1.1.0"
+
+
 def test_plan_uses_existing_release_tags_as_floor(monkeypatch) -> None:
     module = _load_module()
     monkeypatch.setattr(
