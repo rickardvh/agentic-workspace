@@ -5303,7 +5303,7 @@ def _agent_created_aid_affordance_payload() -> dict[str, Any]:
             "handoff or closeout steps are reconstructed from memory across turns",
             "a small template, prompt, runbook, wrapper, or shim would prevent rediscovery",
         ],
-        "aid_types": ["script", "runbook", "template", "prompt", "check", "compact-command-runner", "shim"],
+        "aid_types": ["script", "skill", "runbook", "template", "prompt", "check", "compact-command-runner", "shim"],
         "storage_decision": {
             "local_only": WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH.as_posix(),
             "checked_in_candidate": WORKSPACE_AGENT_AID_ROOT_PATH.as_posix(),

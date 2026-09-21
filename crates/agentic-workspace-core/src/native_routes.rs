@@ -17,7 +17,7 @@ fn error(message: impl ToString) -> CoreError {
     CoreError::new(message.to_string())
 }
 
-fn linked(metadata: &cap_std::fs::Metadata) -> bool {
+pub(crate) fn linked(metadata: &cap_std::fs::Metadata) -> bool {
     metadata.file_type().is_symlink() || {
         #[cfg(windows)]
         {
@@ -424,6 +424,14 @@ pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
 /// bounded registry discovery; identity does not grant execution authority.
 pub(crate) fn procedure(target: &Path, name: &str) -> Result<Value, CoreError> {
     let name = name.strip_prefix("skill:").unwrap_or(name);
+    if name.starts_with(crate::native_candidate_skill::PREFIX) {
+        let detail = crate::native_candidate_skill::detail(target, name, None)?;
+        let procedure = &detail["sources"][0]["procedure"];
+        return Ok(
+            json!({"identity":name,"status":if procedure["status"] == "available" {"current"} else {"unavailable"},
+            "procedures":[procedure],"authority_effect":"procedure-reference-only"}),
+        );
+    }
     let catalogue = catalogue(target, Some(name))?;
     let mut candidates = BTreeMap::new();
     for row in catalogue["routes"].as_array().unwrap() {
@@ -503,6 +511,13 @@ pub fn discovery(value: Value) -> Result<Value, CoreError> {
             children.into_values().collect(),
         )
     };
+    if exact.starts_with(crate::native_candidate_skill::PREFIX) {
+        rows = vec![crate::native_candidate_skill::detail(
+            Path::new(&input.target),
+            exact,
+            input.selection.as_ref(),
+        )?];
+    }
     if let Some(selection) = input.selection {
         for row in &mut rows {
             let sources: Vec<_> = row["sources"]

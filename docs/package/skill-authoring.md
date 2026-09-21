@@ -44,6 +44,12 @@ context. Keep the entry short and move large alternatives into separate files.
 
 ## Add a semantic question without custom code
 
+For a provisional skill that needs evaluation before normal discovery, use the
+existing [candidate aid bundle](../../.agentic-workspace/docs/agent-aids-storage.md#candidate-standard-agent-skills).
+The exact `candidate-skills/<name>` lookup uses its standard `SKILL.md` and adjacent
+aid manifest without registering it in ordinary host discovery. A candidate can
+use the same optional procedure resource below; selection grants no promotion.
+
 Use the same maintained Markdown for AW and direct reading. Replace the entry's
 body with:
 
