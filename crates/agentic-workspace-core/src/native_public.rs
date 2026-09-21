@@ -1580,10 +1580,16 @@ fn resolve_selected(
             }
         }
     }
-    if let Some(concern) = public["configuration_write"]["requested_behavior"].as_str() {
+    if let Some(concern) = public["configuration_write"]["requested_behavior"]
+        .as_str()
+        .map(str::to_owned)
+    {
         public["configuration_behavior"] =
-            crate::native_configuration_procedure::observe(target, concern, &public)?;
+            crate::native_configuration_procedure::observe(target, &concern, &public)?;
+        public["configuration_behavior"]["setup_witness"] =
+            crate::native_configuration_assessment::consumer_witness(target, &concern, &public)?;
     }
+    crate::native_configuration_assessment::validate_consumers(target, &public)?;
     Ok(public)
 }
 

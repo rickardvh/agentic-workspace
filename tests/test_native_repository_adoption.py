@@ -501,6 +501,9 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     result = call(invocation=prepared)
     assert result["effect_outcome"]["status"] == "committed"
     assert instructions.read_text().startswith("# Repository policy\nPreserve this text.\n")
+    assert "use the configured AW `start`" in instructions.read_text()
+    assert instructions.read_text().count("<!-- agentic-workspace:workflow:start -->") == 1
+    assert "update-observation" not in instructions.read_text()
     identity = tmp_path / ".agentic-workspace/adoption.json"
     assert identity.is_file()
     ignored = subprocess.run(

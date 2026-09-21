@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Route ordinary entry to necessary Configuration setup or managed refresh with prepared identity, quiet reviewed decisions and no installation hooks."

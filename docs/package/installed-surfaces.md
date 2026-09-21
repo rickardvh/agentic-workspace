@@ -47,11 +47,23 @@ Review diagnostic output before sharing it; it may contain sensitive project det
 
 ## Update AW
 
-First install the new runtime using its [installation instructions](../agentic-workspace-install.md). Then update the repository integration separately:
+Update the repository's development dependency using its normal package manager,
+then continue ordinary work. With the current startup skill, runtime-capable
+entry checks the resolved AW artefact. A changed managed revision routes existing
+package refresh; a missing/stale setup assessment routes the existing setup skill.
+Managed-only edits do not repeat semantic review. No target-version bookkeeping
+is required for compatible updates.
 
-> Inspect this repository's AW integration against the installed release. Show the proposed refresh, preserve project configuration and retained work, and apply only the authorized package changes.
+Existing users may invoke AW/setup manually once. Adoption/refresh establishes the
+stable entry within the existing managed boundary; subsequent ordinary entry
+observes updates. No installer or interpreter hook is needed. See the
+[entry boundary](lifecycle.md#automatic-setup-assessment).
 
-The agent follows the current Configuration adoption/refresh requests. Expect package skills and metadata to converge to the installed version while project declarations and independent work remain preserved. Review and commit the shared diff.
+The agent applies authorised integrations and checks the affected behaviour.
+Explicit exclusions remain binding; a genuinely new policy choice can need your
+answer. Unfinished setup remains visible without blocking unrelated work. Review
+and commit the shared diff. A settled assessment stays quiet until relevant
+sources change; it does not certify machine-local readiness elsewhere.
 
 An edited package file or conflicting declaration should block replacement until its useful changes are preserved in the proper project source. Repeating a completed refresh should not keep changing the same files. Detailed client handling is in the [lifecycle reference](lifecycle.md).
 

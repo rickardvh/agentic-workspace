@@ -91,6 +91,14 @@ mod tests {
                 1
             );
             assert!(full_work.contains(&"configuration-fields"));
+            assert!(!full_work.contains(&"setup-material"));
+            assert!(!full_work.contains(&"payload-seed"));
+            let mut setup_context = context.clone();
+            setup_context["request"] =
+                full["configuration_write"]["setup_assessment"]["request"].clone();
+            let (_, setup_work) = observe(setup_context, Resolution::Full);
+            assert!(setup_work.contains(&"setup-material"));
+            assert!(setup_work.contains(&"payload-seed"));
             let request = full["verification"]["execution_requests"][0].clone();
             let selected = {
                 let mut value = context.clone();

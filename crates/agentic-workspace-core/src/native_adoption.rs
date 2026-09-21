@@ -32,12 +32,18 @@ fn revision(text: &Option<String>) -> Value {
         .map(|s| json!(crate::native_intent::hash(s.as_bytes())))
         .unwrap_or(Value::Null)
 }
-fn fence() -> String {
+fn preceding_fence() -> String {
     let c = contract();
     format!(
         "{}\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.\n{}",
         c["instruction_fence"]["start"].as_str().unwrap(),
         c["instruction_fence"]["end"].as_str().unwrap()
+    )
+}
+fn fence() -> String {
+    preceding_fence().replace(
+        "Use `.agentic-workspace/skills/workspace-startup/SKILL.md`",
+        "At runtime-capable session entry and after a known dependency change, use the configured AW `start` unless a sufficient current observation is held.\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md`",
     )
 }
 fn instruction(before: &Option<String>, removing: bool) -> Result<Option<String>, CoreError> {
@@ -50,7 +56,7 @@ fn instruction(before: &Option<String>, removing: bool) -> Result<Option<String>
     if normalized.contains(start) || normalized.contains(end) {
         if normalized.matches(start).count() != 1
             || normalized.matches(end).count() != 1
-            || !normalized.contains(&expected)
+            || (!normalized.contains(&expected) && !normalized.contains(&preceding_fence()))
         {
             return Err(err(
                 "AGENTS.md has a conflicting managed fence; preserve and reconcile its source",
@@ -63,7 +69,9 @@ fn instruction(before: &Option<String>, removing: bool) -> Result<Option<String>
             let result = format!("{}{}", &text[..a], &text[b..]);
             return Ok(Some(result));
         }
-        return Ok(before.clone());
+        let a = text.find(start).unwrap();
+        let b = text.find(end).unwrap() + end.len();
+        return Ok(Some(format!("{}{}{}", &text[..a], expected, &text[b..])));
     }
     if removing {
         return Ok(before.clone());
@@ -186,6 +194,7 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
                     [
                         "kind",
                         "payload_schema",
+                        "managed_revision",
                         "payload_capabilities",
                         "payload_files",
                         "release_identity",
@@ -199,6 +208,9 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
                     .all(|k| ["package", "version"].contains(&k.as_str()))
             })
             || !current["release_identity"]["version"].is_string()
+            || current
+                .get("managed_revision")
+                .is_some_and(|v| !v.is_string())
             || !["payload_files", "payload_capabilities"].iter().all(|k| {
                 current[k]
                     .as_array()
@@ -508,6 +520,14 @@ pub(crate) fn view(
 ) -> Result<(), CoreError> {
     let args = &request["arguments"];
     let mode = args["mode"].as_str().unwrap_or("adopt");
+    if request["request_kind"] == EDIT
+        && matches!(mode, "adopt" | "reconcile-payload")
+        && let Err(error) = crate::native_configuration_assessment::admit_maintenance(target)
+    {
+        result["status"] = json!("preserved-blocked");
+        result["migration_gap"] = json!(error.to_string());
+        return Ok(());
+    }
     if request["request_kind"] == EDIT && mode == "remove" {
         let mut exposure = json!({});
         crate::native_skill_exposure::view(
