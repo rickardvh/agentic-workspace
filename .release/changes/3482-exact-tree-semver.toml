@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Admit exact-tree stack integration with mixed previously admitted changesets while preserving strict ordinary PR semver checks."
