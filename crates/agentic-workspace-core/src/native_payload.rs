@@ -111,7 +111,7 @@ pub(crate) fn desired(target: &Path, path: &str) -> Result<Vec<u8>, CoreError> {
     }
     // A separately requested profile refresh binds to the ledger currently on disk.
     // Adoption instead projects its resulting ledger in the same bounded effect.
-    let rendered = crate::native_ownership::profile(before.unwrap_or(&ledger))?;
+    let rendered = crate::native_ownership::profile(target, before.unwrap_or(&ledger))?;
     let current_profile = crate::native_planning::read(&root, PROFILE)?;
     crate::native_ownership::admit_profile(
         current_profile

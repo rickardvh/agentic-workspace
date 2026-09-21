@@ -2,8 +2,12 @@
 //! Only authenticated prior package facts may authorize a changed package value.
 use crate::CoreError;
 use serde_json::{Value, json};
-use sha1::{Digest, Sha1};
-use std::collections::BTreeSet;
+use std::{
+    collections::BTreeSet,
+    io::Write,
+    path::Path,
+    process::{Command, Stdio},
+};
 
 pub(crate) const LEDGER: &str = ".agentic-workspace/OWNERSHIP.toml";
 pub(crate) const PROFILE: &str = ".agentic-workspace/READING.json";
@@ -195,18 +199,16 @@ pub(crate) fn compose(before: Option<&str>, prior: &Value) -> Result<String, Cor
     Ok(rendered)
 }
 
-pub(crate) fn profile(ledger: &str) -> Result<String, CoreError> {
+pub(crate) fn profile(target: &Path, ledger: &str) -> Result<String, CoreError> {
     let parsed = parse(ledger)?;
     let mut profile: Value = serde_json::from_slice(&crate::native_payload::seed(
         PROFILE,
         crate::native_payload::Materialization::TargetDerived,
     )?)
     .map_err(err)?;
-    // Git blob identity only, never a security or custody digest.
-    let mut blob = Sha1::new();
-    blob.update(format!("blob {}\0", ledger.len()).as_bytes());
-    blob.update(ledger.as_bytes());
-    profile["source"]["git_blob_sha1"] = json!(format!("{:x}", blob.finalize()));
+    // Project the proposed bytes through the target path's Git clean semantics.
+    // The ledger need not have been written or staged; custody remains raw bytes.
+    profile["source"]["git_blob_sha1"] = json!(git_blob_identity(target, ledger.as_bytes())?);
     profile["entries"] = json!(
         parsed["authority_surfaces"]
             .as_array()
@@ -226,6 +228,98 @@ pub(crate) fn profile(ledger: &str) -> Result<String, CoreError> {
         "{}\n",
         serde_json::to_string_pretty(&profile).map_err(err)?
     ))
+}
+
+/// Read-only build-time binding; ordinary adoption uses the same producer.
+pub(crate) fn render_profile(input: Value) -> Result<Value, CoreError> {
+    #[derive(serde::Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Input {
+        target: String,
+        ledger: String,
+    }
+    let input: Input = serde_json::from_value(input).map_err(err)?;
+    Ok(json!({"text": profile(Path::new(&input.target), &input.ledger)?}))
+}
+
+fn git_blob_identity(target: &Path, bytes: &[u8]) -> Result<String, CoreError> {
+    let repository = Command::new("git")
+        .arg("-C")
+        .arg(target)
+        .args(["rev-parse", "--git-dir"])
+        .output()
+        .map_err(err)?;
+    if !repository.status.success() {
+        return Err(err(
+            "Git repository identity unavailable for ownership read profile",
+        ));
+    }
+    // Path-aware hashing can launch repository-configured filter commands.
+    // Observation has no callback authority: only Git's built-in conversions
+    // are available here, regardless of whether a selected driver is required.
+    let attributes = Command::new("git")
+        .arg("-C")
+        .arg(target)
+        .args(["check-attr", "-z", "filter", "--", LEDGER])
+        .output()
+        .map_err(err)?;
+    let fields: Vec<_> = attributes.stdout.split(|b| *b == 0).collect();
+    if !attributes.status.success()
+        || fields.len() != 4
+        || fields[0] != LEDGER.as_bytes()
+        || fields[1] != b"filter"
+        || !fields[3].is_empty()
+    {
+        return Err(err(
+            "Git filter attributes unavailable for ownership read profile",
+        ));
+    }
+    if !matches!(fields[2], b"unspecified" | b"unset") {
+        return Err(err(
+            "Git identity unavailable: ownership read profile cannot execute a selected filter",
+        ));
+    }
+    // check-attr spells both its state and a literal driver named "unset" or
+    // "unspecified" alike. Do not let those names hide executable callbacks.
+    let state = std::str::from_utf8(fields[2]).map_err(err)?;
+    let reserved_driver = Command::new("git")
+        .arg("-C")
+        .arg(target)
+        .args([
+            "config",
+            "--get-regexp",
+            &format!("^filter\\.{state}\\.(clean|process)$"),
+        ])
+        .output()
+        .map_err(err)?;
+    if reserved_driver.status.code() != Some(1) {
+        return Err(err(
+            "Git identity unavailable: ownership read profile cannot execute a selected filter",
+        ));
+    }
+    let mut child = Command::new("git")
+        .arg("-C")
+        .arg(target)
+        .args(["hash-object", "--stdin", &format!("--path={LEDGER}")])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(err)?;
+    let written = child.stdin.take().unwrap().write_all(bytes);
+    let output = child.wait_with_output().map_err(err)?;
+    written.map_err(err)?;
+    let identity = String::from_utf8(output.stdout).map_err(err)?;
+    let identity = identity.trim();
+    if !output.status.success()
+        || identity.len() != 40
+        || !identity.bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        return Err(err(
+            "Git SHA-1 blob identity unavailable for ownership read profile",
+        ));
+    }
+    Ok(identity.to_owned())
 }
 
 pub(crate) fn profile_matches(actual: &str, expected: &str) -> bool {

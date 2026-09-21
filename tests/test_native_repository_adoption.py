@@ -113,6 +113,7 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
 
     from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
 
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     _committed_payload_alignment = _load_module(_checker_script_path(), "fresh_source_alignment")._committed_payload_alignment
     host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
     for ref in [*host["payload_files"], ".agentic-workspace/payload-provenance.json"]:
@@ -123,12 +124,12 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
     context = {"target": str(tmp_path), "task": "Work in the fresh source checkout"}
 
     def call(**extra):
-        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     ledger = tmp_path / LEDGER
     before = ledger.read_bytes()
     reading = json.loads((tmp_path / PROFILE).read_text())
-    assert (tmp_path / PROFILE).read_text() == render(ledger.read_text())
+    assert (tmp_path / PROFILE).read_text() == render(ledger.read_bytes().decode(), target=tmp_path)
     assert "tools/skills/REGISTRY.json" in [ref for row in reading["entries"] for ref in row["refs"]]
     portable = json.loads((ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text())
     assert "tools/skills/REGISTRY.json" not in [ref for row in portable["entries"] for ref in row["refs"]]
@@ -202,7 +203,7 @@ def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_
         'refs = [".agentic-workspace/skills/REGISTRY.json", "tools/skills/REGISTRY.json"]',
     )
     state["updates"][LEDGER]["after"] = old_ledger
-    state["updates"][PROFILE]["after"] = render(old_ledger)
+    state["updates"][PROFILE]["after"] = render(old_ledger, target=tmp_path)
     for path, update in state["updates"].items():
         if update["after"] is not None:
             output = tmp_path / path
@@ -261,7 +262,10 @@ def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_
     route = next(row for row in reading["entries"] if row["concern"] == "canonical-agent-procedure")
     assert route["refs"] == [".agentic-workspace/skills/REGISTRY.json"]
     raw = ledger.read_bytes()
-    assert reading["source"]["git_blob_sha1"] == hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+    assert (
+        reading["source"]["git_blob_sha1"]
+        == subprocess.check_output(["git", "hash-object", f"--path={LEDGER}", "--stdin"], cwd=tmp_path, input=raw).decode().strip()
+    )
     migrated = json.loads(record.read_text())["invocation"]["arguments"]["binding"]["state"]
     assert migrated["ownership_baseline"] == portable
     before = ledger.read_bytes(), profile.read_bytes()
@@ -281,6 +285,7 @@ def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_b
     config = root / "config.toml"
     config.write_text('[payload]\ntarget_release="source-current"\npolicy="advisory"\n')
     context = {"target": str(tmp_path), "task": "Refresh repository ownership", "changed": ["backend/service.py"]}
+    (tmp_path / ".gitattributes").write_text(f"{LEDGER} text eol=lf\n", encoding="utf-8", newline="\n")
     preserved = {}
     if customized:
         ledger.write_text(
@@ -291,9 +296,10 @@ def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_b
             'read={refs=["docs/api.md"],select="Read the host API contract",unknown=["runtime compatibility"]}\n'
         )
         host = tomllib.loads(ledger.read_text())
+        ledger.write_bytes(ledger.read_text().replace("\n", "\r\n").encode())
         # Previous distributed projection is valid generated material, but bound
         # to AW's source ledger instead of this host. It must be recomputed.
-        profile.write_text(render((ROOT / LEDGER).read_text()))
+        profile.write_text(render((ROOT / LEDGER).read_bytes().decode(), target=ROOT))
         verification = root / "verification/manifest.toml"
         verification.parent.mkdir()
         verification.write_text(
@@ -345,7 +351,10 @@ def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_b
     actual = tomllib.loads(ledger.read_text())
     reading = json.loads(profile.read_text())
     raw = ledger.read_bytes()
-    assert reading["source"]["git_blob_sha1"] == hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+    assert (
+        reading["source"]["git_blob_sha1"]
+        == subprocess.check_output(["git", "hash-object", f"--path={LEDGER}", "--stdin"], cwd=tmp_path, input=raw).decode().strip()
+    )
     if customized:
         assert actual["subsystems"] == host["subsystems"]
         assert next(row for row in actual["authority_surfaces"] if row["concern"] == "host-api") == host["authority_surfaces"][0]
@@ -376,7 +385,7 @@ def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_b
         raw = ledger.read_bytes()
         assert (
             json.loads(profile.read_text())["source"]["git_blob_sha1"]
-            == hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+            == subprocess.check_output(["git", "hash-object", f"--path={LEDGER}", "--stdin"], cwd=tmp_path, input=raw).decode().strip()
         )
         assert adopt()["configuration_write"]["status"] == "already-current"
         current_profile = profile.read_bytes()

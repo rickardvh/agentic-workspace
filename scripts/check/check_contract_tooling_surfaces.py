@@ -4,6 +4,7 @@ import argparse
 import ast
 import importlib.util
 import json
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -152,7 +153,7 @@ def _sample_report_payload() -> dict[str, object]:
     with tempfile.TemporaryDirectory() as tmp_dir:
         target = Path(tmp_dir) / "repo"
         target.mkdir()
-        (target / ".git").mkdir(exist_ok=True)
+        subprocess.run(["git", "init", "-q", str(target)], check=True)
         descriptors = cli._module_operations()  # type: ignore[attr-defined]
         config = cli._load_workspace_config(target_root=target, descriptors=descriptors)  # type: ignore[attr-defined]
         selected_modules, resolved_preset = cli._selected_modules(  # type: ignore[attr-defined]
@@ -241,7 +242,7 @@ def _sample_startup_context_payload() -> dict[str, object]:
     with tempfile.TemporaryDirectory() as tmp_dir:
         target = Path(tmp_dir) / "repo"
         target.mkdir()
-        (target / ".git").mkdir(exist_ok=True)
+        subprocess.run(["git", "init", "-q", str(target)], check=True)
         return cli._start_payload(  # type: ignore[attr-defined]
             target_root=target,
             changed_paths=["generated/workspace/python/cli.py"],
@@ -252,7 +253,7 @@ def _sample_implementer_context_payload() -> dict[str, object]:
     with tempfile.TemporaryDirectory() as tmp_dir:
         target = Path(tmp_dir) / "repo"
         target.mkdir()
-        (target / ".git").mkdir(exist_ok=True)
+        subprocess.run(["git", "init", "-q", str(target)], check=True)
         return cli._implement_payload(  # type: ignore[attr-defined]
             target_root=target,
             changed_paths=[

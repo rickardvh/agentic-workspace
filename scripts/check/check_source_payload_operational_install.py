@@ -302,7 +302,7 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
         from agentic_workspace.static_read_profile import render
 
         profile = repo_root / ".agentic-workspace/READING.json"
-        if not profile.is_file() or _normalized_file_text(profile) != render(_normalized_file_text(ledger_path)):
+        if not profile.is_file() or _normalized_file_text(profile) != render(ledger_path.read_bytes().decode("utf-8"), target=repo_root):
             drift.append({"path": ".agentic-workspace/READING.json", "reason": "source read profile differs from its ledger projection"})
     source_payload_root = repo_root / "src" / "agentic_workspace" / "_payload"
     if manifest_path.is_file():

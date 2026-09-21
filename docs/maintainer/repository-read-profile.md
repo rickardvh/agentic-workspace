@@ -7,7 +7,18 @@ optional read is `.agentic-workspace/READING.json`. The profile is generated fro
 no Planning records, Memory notes, evidence inventory, installed capabilities or
 task selection. Historical accumulation therefore does not enlarge the profile.
 
-The profile identifies the exact Git blob of its source ledger. A reader uses a
+The profile identifies the exact Git blob of its source ledger. The Rust producer
+asks `git hash-object --stdin --path=.agentic-workspace/OWNERSHIP.toml` in the target
+repository to apply its built-in attribute conversions to the proposed ledger bytes.
+No write or staging step is needed. LF and CRLF share an identity only when Git
+defines them as equivalent; `-text` retains their distinction. Before hashing,
+the producer checks the path's `filter` attribute and rejects selected filters
+without executing them. Repository-configured callbacks have no authority during
+observation or proposal, even when Git marks a filter optional. Missing Git,
+unavailable repository identity or attributes, selected filters or a non-SHA-1 object
+format prevent generation rather than producing a guessed identity.
+
+A reader uses a
 single repository revision, verifies that source identity through its repository
 provider, and records the selected files' blob identities and relevant fields.
 If the provider lacks immutable identities, currentness remains unverified.
@@ -18,9 +29,15 @@ proof admission or authorisation.
 The same generated metadata ships in the root package. Installation derives the
 profile from the generic host ledger, including its preserved subsystem overlay;
 it does not copy this repository's Planning or Memory state. The existing agent
-interface generator checks source/payload drift. The serializer only projects
-declared metadata at build/install time. It is not called by `start` or `invoke`,
-and no no-runtime consumer executes it.
+interface generator checks source/payload drift through a thin Python binding to
+the same Rust producer used by native adoption and refresh. No no-runtime consumer
+executes this producer.
+
+Git identity is distinct from dependency binding's `UniversalNewlineUtf8` semantic
+text revisions and `RawBytes` custody revisions. Neither scheme substitutes for
+Git's path semantics. Effect bindings remain byte-exact; the responsible writer
+still owns newline preservation or canonical output. Profile JSON is emitted as
+canonical LF text, while a preserved host ledger keeps its existing bytes.
 
 ## Selective reading
 

@@ -14,6 +14,11 @@ pub fn run_stdio() {
         result
     } else if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("ownership_read_profile"))
+    {
+        crate::native_ownership::render_profile(request["ownership_read_profile"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("worker"))
     {
         crate::assignment_packet::view(request["worker"]["request"].clone())
