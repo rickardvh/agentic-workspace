@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Allow ordinary coordinated release dispatch without a first-stable RC input while retaining the release owner's explicit v1.0.0 promotion gate."
