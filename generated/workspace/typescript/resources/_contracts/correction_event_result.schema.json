@@ -38,7 +38,7 @@
     },
     "target_profile": {
       "type": "string",
-      "description": "Uniquely resolved configured profile whose stable identity was initialized."
+      "description": "Uniquely resolved configured profile whose stable identity was initialised."
     },
     "target_id": {
       "type": "string",

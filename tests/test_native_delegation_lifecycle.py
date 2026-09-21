@@ -279,7 +279,11 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         continuation = proof_view()["planning"]["requests"][0]
         continuation["arguments"]["answer"] = "continue-selected"
         assert proof_view(continuation)["task_requirements"]["bounded_outcome_evidence"] == []
-        proof_request = proof_view(continuation)["verification"]["execution_requests"][0]
+        proof_request = next(
+            request
+            for request in proof_view(continuation)["verification"]["execution_requests"]
+            if request["arguments"]["route_id"] == "patch"
+        )
         proof_action = proof_view([continuation, proof_request])["decision_packet"]["primary_action"]
         checked = proof_view(invocation=proof_action)
         assert checked["value"]["process"]["status"] == "passed"
@@ -305,7 +309,11 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         proof_context["changed"] = [plan_ref, "src/main.txt", "verify_patch.py"]
         partial_continuation = proof_view()["planning"]["requests"][0]
         partial_continuation["arguments"]["answer"] = "continue-selected"
-        partial_request = proof_view(partial_continuation)["verification"]["execution_requests"][0]
+        partial_request = next(
+            request
+            for request in proof_view(partial_continuation)["verification"]["execution_requests"]
+            if request["arguments"]["route_id"] == "patch"
+        )
         partial_action = proof_view([partial_continuation, partial_request])["decision_packet"]["primary_action"]
         partial_checked = proof_view(invocation=partial_action)
         assert partial_checked["value"]["process"]["status"] == "passed"

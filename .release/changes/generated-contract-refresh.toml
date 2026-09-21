@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Refresh generated contract descriptions and the Verification proof-current enclave inventory from their current source definitions."

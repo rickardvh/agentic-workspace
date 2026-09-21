@@ -20,7 +20,7 @@
     "agent-guidance.delete": {
       "identity": "agent-guidance.delete",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4cdafc73154d107ffa98599ae51e276b2c96434fe06408b1a952ca0a74bc056b",
+      "fingerprint": "sha256:7121eeba7e02a2c405071c52baef2e6c9bdc131c4f84d2ab9ae921653341ee00",
       "compatibility_fingerprint": "sha256:1c2ddc5ed7760dd19dd87cfd12b07329eaceae1db09c48c98ed0c3869d03c61a",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -564,7 +564,7 @@
     "agent-guidance.edit": {
       "identity": "agent-guidance.edit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f414591b269907b0d315af595888b0afb6c03ce1e3c5fdb2679bca4260f04e56",
+      "fingerprint": "sha256:7b9127fe8499c53abccdfd04a67ea8aaedfff08f006ac5ddf22b7ce87d63fa6d",
       "compatibility_fingerprint": "sha256:5824b15b1829cbe105a853cc410d4e9340910277d337f7bd22d74ab062e36da8",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -1110,7 +1110,7 @@
     "agent-guidance.merge": {
       "identity": "agent-guidance.merge",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6d0515f6e1b0b457f25d89090fff4fa8bda895c4fca6a7c4bc51ea15bacdd172",
+      "fingerprint": "sha256:28c1348b604445a7bf707294cf01c089674ed751a30657e94d0ddb495f10ad2d",
       "compatibility_fingerprint": "sha256:b3c2f12bf925c80934f267d96827b3df376848fe5ed7b705d2a29e1a3b54aee1",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -1656,7 +1656,7 @@
     "agent-guidance.promote": {
       "identity": "agent-guidance.promote",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b276580b66ceee2ece2a578dd240ddcbf5fdf3713ade360f8e6a278c4094780a",
+      "fingerprint": "sha256:1191b1768c2514dbc2e86a32f2c15a242f861842597324609b6f7977710b0f2d",
       "compatibility_fingerprint": "sha256:fae32d22ddce6b33a056c89efb6c23e1122e24c8a9828487a6b7f7b1ee8160f6",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -2200,7 +2200,7 @@
     "agent-guidance.retire": {
       "identity": "agent-guidance.retire",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3d93e8259c046436069791f2bed9ca48f165ee77d5311cba0fcec58ada220500",
+      "fingerprint": "sha256:a39a1960ebcc0db6da9445e42fc5387892c1de29d78645933edf000289a3edc6",
       "compatibility_fingerprint": "sha256:f1581c9a791a42c38fc170711edca0f30d6aa7a4079059fb243a5a4904a71884",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -2744,7 +2744,7 @@
     "agent-guidance.revalidate": {
       "identity": "agent-guidance.revalidate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:76926c971a188670eb2b39fb2a8778c198925ff9872b7a2b7de655b95a3f24bf",
+      "fingerprint": "sha256:7cb9d6eb0427b83c9dbd91fb2782de553b696c9d563d0d95d19725991e5d30f7",
       "compatibility_fingerprint": "sha256:e367aeb7b9fe4f82b0dbb859adb98161d9460ef66ec21f304d68c0d022808b1b",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -3288,7 +3288,7 @@
     "agent-guidance.split": {
       "identity": "agent-guidance.split",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:70f8a0a4c6a1bbeb29c9877138f41c75ec00ea644350e7960afcdd4f882ddd23",
+      "fingerprint": "sha256:a9b153a8858141b7b96492e53236b9d3269ae905ca960424fda7db35ee65d166",
       "compatibility_fingerprint": "sha256:063e828e8378ff26627fc50ab2fefe9167cb21d1e698eefe7e23ac018bca4964",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -3834,7 +3834,7 @@
     "agent-guidance.supersede": {
       "identity": "agent-guidance.supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9cb7505a51bd967d1144c541777a93a284bd3057b8d835e3e15cf40a8eb0c15d",
+      "fingerprint": "sha256:24574832e91e65f3f1f00de94a3ddfd1befac2bcd5082ac8c6c1c6f42b3a986e",
       "compatibility_fingerprint": "sha256:14199f223fe128ec3815e39b328617ed27f43d11f5762d2e69aece06c231a5d5",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -4380,7 +4380,7 @@
     "agent-guidance.suppress": {
       "identity": "agent-guidance.suppress",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:87c81c2569d89cd780718aa12015df54936cc009365c57158a71a9349f8a0d79",
+      "fingerprint": "sha256:94142b3a9b7e0689f2f7537c3623df892e369838c560ca28e793357ec4af1bdd",
       "compatibility_fingerprint": "sha256:a925b0b8a985c9c99ca20dbf5393012c127298aeb05e2254959dce4964b88da4",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -4924,7 +4924,7 @@
     "agent-guidance.weaken": {
       "identity": "agent-guidance.weaken",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5dcbbc32ea0d8ee3f4850431108bb5de581afea91f036a3a4f772ef3df8b6891",
+      "fingerprint": "sha256:9b80c56ab67c2a7e52640e78df475d281ce222c1031919c63c6690951e39c5a0",
       "compatibility_fingerprint": "sha256:70839847c941c6a0bd4cfdc69cdbce714577cd184c7800455ec1e2a491d03e52",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -5468,7 +5468,7 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:18d0e0f8aa4e3f2183f2e7464c4415b3fb95a1b66dae06301039f50a048b6615",
+      "fingerprint": "sha256:36467a52c8e6be31d510de929bb465b6a838ef0a9da8d1516be87a22735f2c53",
       "compatibility_fingerprint": "sha256:db7f3d4f52345c9df058254878377a8799d27ba8017c171ce112eeac54617891",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -6217,7 +6217,7 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:19a0cea2db855a7c0a4d3e8fce949a453a030a71990f00715833a0eb64ea4fd3",
+      "fingerprint": "sha256:0658e2f3044b45adfb427bc91a828f5a14af57d794a7af13b9a961802cb3b0f3",
       "compatibility_fingerprint": "sha256:cc159797c6062d92be2923ca72b271ee309d4debc5017347ac0676602506f9b8",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -6908,7 +6908,7 @@
     "assignment.dispatch": {
       "identity": "assignment.dispatch",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4d09b0632c258a872d18d9429c4d75c11289fbf270e1a961dfbdc08bea475975",
+      "fingerprint": "sha256:b714c23d478e57ee61f156d73df66f7f50be3fd0e8fb2b6288f694944822c1ba",
       "compatibility_fingerprint": "sha256:9829e841836b65bfaec2e4b4c4e96823cdb2279d05a0d0120f493244bf8832e1",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -7587,7 +7587,7 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:596a462531183203a0601c1510796d7c631129ef151c84ff474d29bbe8f16e43",
+      "fingerprint": "sha256:7fd5f7ef1d6d45fa315af7283e18c59db4e5227d26a6328422a4f3b96009e05a",
       "compatibility_fingerprint": "sha256:a4057b2cf92df76148624dd59b9071fe507bd2773e45aa07fd83997f0721482f",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -8344,7 +8344,7 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5e081af7e82fe9c858a7d109091cbaf7fa6413c7d450333ca0108630a48da62f",
+      "fingerprint": "sha256:f6b1bc387496b7e61ae9bdd15932662af1b94740070907253f28a4cd09cf22e8",
       "compatibility_fingerprint": "sha256:fba81fafe22e955dd5d0762e174ed0e4fc7c89d6ec1b7f18127e7febfbf831a5",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -9045,7 +9045,7 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0c0a2bde53f8913dacd4d9590991c449e314a4ca959b47b51abf448897750d05",
+      "fingerprint": "sha256:961fe88f75ffb65f56183a59fa9eee73d4834abd85c3f9c2309ba09528aadc63",
       "compatibility_fingerprint": "sha256:99e2e89c9061c787701ff167579427e75d1d03ec64637c42cba024d5464fae08",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -9736,7 +9736,7 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1bd5a3ba588fc9c632a1c425b23fdc9a08794da674650434be0359d7928d1e62",
+      "fingerprint": "sha256:34ff168a56fbe4bfa309cb3c26e56f1cb3506bbfb32fc6fcd4dda7e1be121b0c",
       "compatibility_fingerprint": "sha256:2dd31b12b5fa1f22c56a9daf6bdf04da8833246b2866b5624868ba460e66e7db",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -10427,7 +10427,7 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7e6260f61b464595d03f0ca06cd6b4ecca0e26f5afc2478cd91686f12a1301c7",
+      "fingerprint": "sha256:d7863bbaab7b4dd330854284f65522676af7a59dc0ea1b25bc6215f7348c8225",
       "compatibility_fingerprint": "sha256:f6a1ceef5dc9d3bf6c76fcd6e06603cbd64e71ed83232dae088ec73774103306",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -11118,7 +11118,7 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9bcbe77faf4bc346b8b3502151b8fe55a86bf789fcf7e58a4fcbc942f3e974d7",
+      "fingerprint": "sha256:dbf96437f4e97cf8ca28d08cf1bb02783c1ca436594352faf9f4a7eb49c55e90",
       "compatibility_fingerprint": "sha256:c7995bd449b3e6ed48545fdebdc7ff603c45ae5b3eb8e477d9c7e5357d6ebfbd",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -11815,7 +11815,7 @@
     "assignment.status": {
       "identity": "assignment.status",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:50f2b0ce6b96593aac666f8de2335ab37098b66c36169d0a5bc90917041509bd",
+      "fingerprint": "sha256:9d2c52de67fb9238e090062b82379fbda45631ac604ac6d6438ab276f04a4bbe",
       "compatibility_fingerprint": "sha256:a716db21bbce970cab12bc72d3c958ba8c2056d1a636902eff317ea2663f2548",
       "contract": {
         "classification": "read-only-report",
@@ -12892,7 +12892,7 @@
     "correction-event.correct-dispute": {
       "identity": "correction-event.correct-dispute",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c3cd9deda6af9ce668700948019ae1ec39109e510e5ae4cc66a746944a407b52",
+      "fingerprint": "sha256:e7bd3e263fece6bb9cb28bfd04a917eca5ad29c09033f9ee0fcdb44563e23362",
       "compatibility_fingerprint": "sha256:47b71d5315722486fa7068b042a27d3d251237fccff9c9d68501af136a05976b",
       "contract": {
         "classification": "local-record-append",
@@ -13558,7 +13558,7 @@
     "correction-event.identity-init": {
       "identity": "correction-event.identity-init",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1fb94bd2e7a40b27d54533d252b6abbf3addb9e3e95c24d6c398c8be63cc5b8d",
+      "fingerprint": "sha256:cc44b223616f13ad633e9e2036255725214a16e53b9ba4daa914479f0e187c5e",
       "compatibility_fingerprint": "sha256:402008683df3ddef3e6b16424c069a9dc15129b0994e7a4e539e44e3c65f0313",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -14034,7 +14034,7 @@
     "correction-event.prune-compact": {
       "identity": "correction-event.prune-compact",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:cbc81940819ca6f98ef968b2e2f5914af250ee66048bb56b31b278e36c40e27b",
+      "fingerprint": "sha256:5162d19cc3fd902f838469d67cefa99fca81c4d037db100039b170ff58afe352",
       "compatibility_fingerprint": "sha256:5883d86c25941707cc007ac3b8b84e46448ab9aeece99b819afeeeaebbf8f0d3",
       "contract": {
         "classification": "local-record-append",
@@ -14700,7 +14700,7 @@
     "correction-event.query": {
       "identity": "correction-event.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9e0260ffa5b32e14f4d3c2e9aecf0ddb460c7166b40f20a66e59160617191399",
+      "fingerprint": "sha256:570455b5ce4a16e704b30521f257b2495638efa614076685c97a85f45a18194b",
       "compatibility_fingerprint": "sha256:8ad03b6dd6e06f3d138fc4148d7685c740bb4260829a91ae714b1f7dc75c7165",
       "contract": {
         "classification": "read-only-report",
@@ -15396,7 +15396,7 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5970fc70105d8f684073e734e5fbddd1276761a8057d47d57f12ca4ee4ba7867",
+      "fingerprint": "sha256:9ab5ecf60020bf0bb67a7ca87106bcbba104ec083f93662cccb0199b1c08a376",
       "compatibility_fingerprint": "sha256:11b5cbdfb3b7c608bef6dd878327e4a7bcdfa2b52725213f79dee0cc621a094f",
       "contract": {
         "classification": "local-record-append",
@@ -16168,7 +16168,7 @@
     "correction-event.withdraw-supersede": {
       "identity": "correction-event.withdraw-supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6c640db683114ee88530f2d60b30b7a8e17adb0d4c4c14b78a3840a10bac1624",
+      "fingerprint": "sha256:f9b2e8d47545174bf2cca615a7c63f1d87f7e2243bc2f3afb878a264cccdb121",
       "compatibility_fingerprint": "sha256:3de737b501c66d9b0a4baf3823cc02a9cffd7b64c79541c6d62a086b70f0f27d",
       "contract": {
         "classification": "local-record-append",
@@ -20888,7 +20888,7 @@
     "external-evidence.query": {
       "identity": "external-evidence.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6388c9cc80f34353a354c9be4e241c66dfe376d0efc3c54eaaf64ccf7d22787e",
+      "fingerprint": "sha256:78a8cefd60dcc8175e6dd76dc3f69f44401fef8bb7348bf2e033f7e46621209c",
       "compatibility_fingerprint": "sha256:bda8fed87f7ebdaf8cc5af82570648fd38fd40196b638963c76c3f8bade79765",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -21217,7 +21217,7 @@
     "external-evidence.submit": {
       "identity": "external-evidence.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:a7b5af6b438c8ec67832c021fa83628f72ed0dd5e72e228cfae85773e5028288",
+      "fingerprint": "sha256:97be17338de5f8da25d18b8638956ce7f5b71fd1f40a5a3060270f53b6f7e2c7",
       "compatibility_fingerprint": "sha256:42c7818a5bd27be914d7baa8eaab4d620e965bba9237cc98c8f9151545c37d85",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -24595,7 +24595,7 @@
             "type": "string"
           },
           "artifact_ref": {
-            "description": "Path or durable reference to a lifecycle artifact, such as an export packet or imported return record.",
+            "description": "Path or durable reference to a lifecycle artefact, such as an export packet or imported return record.",
             "type": "string"
           },
           "assignment_id": {
@@ -24613,7 +24613,7 @@
             "type": "string"
           },
           "dry_run": {
-            "description": "Whether to compute the lifecycle transition without applying local artifact writes.",
+            "description": "Whether to compute the lifecycle transition without applying local artefact writes.",
             "type": "boolean"
           },
           "expires_at": {
@@ -24642,15 +24642,15 @@
             "type": "string"
           },
           "return_json": {
-            "description": "Serialized worker return payload awaiting admission.",
+            "description": "Serialised worker return payload awaiting admission.",
             "type": "string"
           },
           "return_file": {
-            "description": "Repo-contained UTF-8 file holding one serialized worker return payload awaiting admission; mutually exclusive with return_json.",
+            "description": "Repo-contained UTF-8 file holding one serialised worker return payload awaiting admission; mutually exclusive with return_json.",
             "type": "string"
           },
           "review_result_json": {
-            "description": "Serialized producer-owned independent-review result envelope to admit through assignment.admit.",
+            "description": "Serialised producer-owned independent-review result envelope to admit through assignment.admit.",
             "type": "string"
           },
           "review_result_ref": {
@@ -24686,7 +24686,7 @@
             "type": "array"
           },
           "run_id": {
-            "description": "Stable assignment run identifier used for local lifecycle artifact storage.",
+            "description": "Stable assignment run identifier used for local lifecycle artefact storage.",
             "minLength": 1,
             "type": "string"
           },
@@ -24712,7 +24712,7 @@
             "type": "string"
           },
           "transport": {
-            "description": "Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorized internal or CLI route executes the sealed packet through its target adapter.",
+            "description": "Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorised internal or CLI route executes the sealed packet through its target adapter.",
             "enum": [
               "manual",
               "internal",
@@ -24725,7 +24725,7 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 16384,
-            "description": "JSON transport for the canonical typed task judgment; not Verification or policy authority."
+            "description": "JSON transport for the canonical typed task judgement; not Verification or policy authority."
           }
         },
         "title": "Assignment lifecycle operation input",
@@ -24739,10 +24739,10 @@
         "$id": "agentic-workspace/assignment_lifecycle_result.schema.json",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": true,
-        "description": "Result emitted by public assignment lifecycle operations, including transition status, mutation effect, local artifacts, and recovery guidance.",
+        "description": "Result emitted by public assignment lifecycle operations, including transition status, mutation effect, local artefacts, and recovery guidance.",
         "properties": {
           "artifact_refs": {
-            "description": "Local artifact references written or inspected during the lifecycle transition.",
+            "description": "Local artefact references written or inspected during the lifecycle transition.",
             "items": {
               "type": "string"
             },
@@ -24991,7 +24991,7 @@
             "type": "string"
           },
           "behavior_class": {
-            "description": "Stable behavior class for semantic correction identity.",
+            "description": "Stable behaviour class for semantic correction identity.",
             "type": "string"
           },
           "canonical_owner_evidence_ref": {
@@ -25007,7 +25007,7 @@
             "type": "string"
           },
           "desired_behavior": {
-            "description": "Behavior the correction says should replace the previous behavior.",
+            "description": "Behaviour the correction says should replace the previous behaviour.",
             "type": "string"
           },
           "dry_run": {
@@ -25015,7 +25015,7 @@
             "type": "boolean"
           },
           "event_json": {
-            "description": "Serialized correction event payload.",
+            "description": "Serialised correction event payload.",
             "type": "string"
           },
           "evidence_hash": {
@@ -25063,7 +25063,7 @@
             "type": "string"
           },
           "replaced_behavior": {
-            "description": "Behavior boundary being corrected or superseded.",
+            "description": "Behaviour boundary being corrected or superseded.",
             "type": "string"
           },
           "route_decisions": {
@@ -25086,7 +25086,7 @@
             "type": "string"
           },
           "surface": {
-            "description": "Concrete operation or artifact surface where the correction applies.",
+            "description": "Concrete operation or artefact surface where the correction applies.",
             "type": "string"
           },
           "source": {
@@ -25167,7 +25167,7 @@
           },
           "target_profile": {
             "type": "string",
-            "description": "Uniquely resolved configured profile whose stable identity was initialized."
+            "description": "Uniquely resolved configured profile whose stable identity was initialised."
           },
           "target_id": {
             "type": "string",
@@ -25713,7 +25713,7 @@
           "candidate_json": {
             "type": "string",
             "minLength": 2,
-            "description": "Serialized provider-neutral external evidence candidate."
+            "description": "Serialised provider-neutral external evidence candidate."
           },
           "host_result_ref": {
             "type": "string",
@@ -25816,7 +25816,7 @@
           },
           "expected_record_revisions_json": {
             "type": "string",
-            "description": "Serialized map of guidance identifiers to expected revisions for multi-record mutation."
+            "description": "Serialised map of guidance identifiers to expected revisions for multi-record mutation."
           },
           "reason": {
             "type": "string",
