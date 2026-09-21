@@ -121,14 +121,36 @@ pub(crate) fn detail(
                 "candidate frontmatter terminator must occupy its own line",
             ));
         }
-        let metadata: Value = serde_yaml_ng::from_str(front.0).map_err(error)?;
-        if metadata["name"] != id
+        // Preserve YAML key types: JSON conversion can coerce numeric map keys.
+        let metadata: serde_yaml_ng::Value = serde_yaml_ng::from_str(front.0).map_err(error)?;
+        if metadata["name"].as_str() != Some(id)
             || !metadata["description"]
                 .as_str()
-                .is_some_and(|s| !s.trim().is_empty() && s.len() <= 1024)
+                .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= 1024)
         {
             return Err(error(
-                "candidate requires matching standard name and nonempty description (at most 1024 bytes)",
+                "candidate requires matching standard name and nonempty description (at most 1024 characters)",
+            ));
+        }
+        for field in ["license", "allowed-tools"] {
+            if metadata.get(field).is_some_and(|v| !v.is_string()) {
+                return Err(error(format!("candidate {field} must be a string")));
+            }
+        }
+        if metadata.get("compatibility").is_some_and(|v| {
+            !v.as_str()
+                .is_some_and(|s| (1..=500).contains(&s.chars().count()))
+        }) {
+            return Err(error(
+                "candidate compatibility must be a string of 1-500 characters",
+            ));
+        }
+        if metadata.get("metadata").is_some_and(|v| {
+            !v.as_mapping()
+                .is_some_and(|m| m.iter().all(|(k, v)| k.is_string() && v.is_string()))
+        }) {
+            return Err(error(
+                "candidate metadata must map string keys to string values",
             ));
         }
         let mut material = BTreeMap::new();

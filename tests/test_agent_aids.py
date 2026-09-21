@@ -143,6 +143,34 @@ def test_candidate_bundle_uses_passive_selected_procedure_currentness(tmp_path, 
     plain = route_discovery({"target": str(tmp_path), "exact": "candidate-skills/change-note"})
     assert plain["routes"][0]["sources"][0]["procedure"]["status"] == "available"
     assert "resource" not in plain["routes"][0]["sources"][0]["procedure"]
+    # Standard optional fields retain YAML types; limits count Unicode characters.
+    frontmatter = {
+        "name": "change-note",
+        "description": "é" * 1024,
+        "license": "Apache-2.0",
+        "compatibility": "界" * 500,
+        "metadata": {"version": "1.0"},
+        "allowed-tools": "Read Bash(git:*)",
+    }
+    _write(tmp_path / skill, "---\n" + json.dumps(frontmatter, ensure_ascii=False) + "\n---\nInstructions.\n")
+    assert check_agent_aids.agent_aid_findings(tracked, root=tmp_path) == []
+    for field, invalid in [
+        ("description", "é" * 1025),
+        ("compatibility", "界" * 501),
+        ("compatibility", ""),
+        ("compatibility", 123),
+        ("compatibility", None),
+        ("metadata", []),
+        ("metadata", {"version": 1}),
+        ("metadata", None),
+        ("allowed-tools", ["Read"]),
+        ("allowed-tools", None),
+        ("license", 123),
+    ]:
+        _write(tmp_path / skill, "---\n" + json.dumps({**frontmatter, field: invalid}) + "\n---\nInstructions.\n")
+        assert field in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
+    _write(tmp_path / skill, "---\nname: change-note\ndescription: Valid\nmetadata: {123: value}\n---\nInstructions.\n")
+    assert "metadata" in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
     _write(tmp_path / skill, "# Arbitrary prose is not a standard skill\n")
     assert "frontmatter" in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
     (tmp_path / skill).unlink()
