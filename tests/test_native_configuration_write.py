@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 
 def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_path, shared_core_binary, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     workspace = tmp_path / ".agentic-workspace"
     workspace.mkdir()
     config = workspace / "config.toml"
@@ -31,7 +33,7 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
     context = {"target": str(tmp_path), "task": "Refresh the declared package payload", "changed": ["AGENTS.md"]}
 
     def call(**extra):
-        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     def choices():
         current = call()
@@ -39,7 +41,8 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
         request = current["configuration_write"]["payload_discovery_request"]
         return call(request=request)["configuration_write"]["payload_choices"]
 
-    initial = choices()
+    # Materialize ownership before the reading profile derived from that ledger.
+    initial = sorted(choices(), key=lambda row: row["source"] != ".agentic-workspace/OWNERSHIP.toml")
     assert all(row["status"] == "refresh-available" for row in initial)
     wrong = copy.deepcopy(initial[0]["request"])
     wrong["arguments"]["source"] = "AGENTS.md"

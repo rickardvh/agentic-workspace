@@ -25,7 +25,7 @@ def test_source_repository_configured_native_route_is_stateful(tmp_path: Path, s
 
     from tests.test_native_config_admission import former_repository
 
-    selector, plan = former_repository(tmp_path)
+    selector, plan = former_repository(tmp_path, shared_core_binary, native_cli)
     before = plan.read_bytes()
     configuration = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text())
     invocation = configuration["workspace"]["cli_invoke"]

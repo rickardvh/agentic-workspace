@@ -1100,8 +1100,14 @@ mod tests {
         std::fs::create_dir(&target).unwrap();
         let discovery =
             resolve(&target, None)["configuration_write"]["payload_discovery_request"].clone();
-        let request = resolve(&target, Some(discovery))["configuration_write"]["payload_choices"]
-            [0]["request"]
+        // Recovery concerns publication custody, not Git-dependent host materialization.
+        let choices = resolve(&target, Some(discovery));
+        let request = choices["configuration_write"]["payload_choices"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["source"] == ".agentic-workspace/skills/workspace-startup/SKILL.md")
+            .expect("package-verbatim startup skill is offered")["request"]
             .clone();
         let source = request["arguments"]["source"].as_str().unwrap().to_owned();
         let mut answer = resolve(&target, Some(request))["decision_packet"]["decision_request"]["response_request"].clone();

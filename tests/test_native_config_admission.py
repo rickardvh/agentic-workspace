@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -10,21 +12,30 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def former_repository(target: Path) -> tuple[Path, Path]:
-    manifest = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
-    refs = [*manifest["payload_files"], ".agentic-workspace/payload-provenance.json", ".agentic-workspace/config.toml", "AGENTS.md"]
+def former_repository(target: Path, shared_core_binary: Path, native_cli: Path) -> tuple[Path, Path]:
+    # Establish host-composed ownership and target-derived reading through their
+    # public owner before adding the former repository's policy and Planning state.
+    subprocess.run(["git", "init", "-q", str(target)], check=True)
+    context = {"target": str(target), "task": "Prepare an adopted configuration fixture"}
+
+    def call(**kwargs):
+        return consume("native", shared_core_binary, native_cli, {**context, **kwargs}, host_path=os.environ["PATH"])
+
+    discovered = call(request=call()["configuration_write"]["repository_adoption_request"])
+    adopt = next(r for r in discovered["configuration_write"]["adoption_requests"] if r["arguments"]["mode"] == "adopt")
+    proposal = call(request=adopt)
+    answer = next(
+        d for d in proposal["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+    )["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    action = call(request=answer)["decision_packet"]["primary_action"]
+    assert call(invocation=action)["effect_outcome"]["status"] == "committed"
+    refs = [".agentic-workspace/config.toml", "AGENTS.md"]
     plan_ref = ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
     for ref in [*refs, plan_ref, ".agentic-workspace/verification/manifest.toml"]:
         path = target / ref
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes((ROOT / ref).read_bytes())
-    # Stage a current installation fixture from the actual shipped manifest.
-    # The repository's historical v0.51 installation roster is not a current
-    # source-checkout installation receipt; preserve that negative separately.
-    provenance_path = target / ".agentic-workspace/payload-provenance.json"
-    provenance = json.loads(provenance_path.read_text())
-    provenance["payload_files"] = manifest["payload_files"]
-    provenance_path.write_text(json.dumps(provenance))
     selector = target / ".agentic-workspace/local/planning/owner-selection.json"
     selector.parent.mkdir(parents=True)
     selector.write_text(
@@ -48,11 +59,11 @@ def former_repository(target: Path) -> tuple[Path, Path]:
 def test_real_configuration_admits_only_the_exact_planning_effect(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
-    selector, plan = former_repository(tmp_path)
+    selector, plan = former_repository(tmp_path, shared_core_binary, native_cli)
     context = {"target": str(tmp_path), "task": "Continue the real owner through its explicitly authorized selector transfer"}
 
     def call(**kwargs):
-        return consume(surface, shared_core_binary, native_cli, {**context, **kwargs})
+        return consume(surface, shared_core_binary, native_cli, {**context, **kwargs}, host_path=os.environ["PATH"])
 
     before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     first = call()
@@ -94,11 +105,11 @@ def test_real_configuration_admits_only_the_exact_planning_effect(
 def test_config_force_and_payload_labels_cannot_waive_requirements(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
-    former_repository(tmp_path)
+    former_repository(tmp_path, shared_core_binary, native_cli)
     context = {"target": str(tmp_path), "task": "Inspect current configuration"}
 
     def call():
-        return consume(surface, shared_core_binary, native_cli, context)
+        return consume(surface, shared_core_binary, native_cli, context, host_path=os.environ["PATH"])
 
     config = tmp_path / ".agentic-workspace/config.toml"
     original = config.read_text()
@@ -134,7 +145,7 @@ def test_unconfigured_native_payload_has_no_read_or_artifact_tax(
 
 
 def test_historical_installation_roster_cannot_claim_new_payload(tmp_path, shared_core_binary, native_cli):
-    former_repository(tmp_path)
+    former_repository(tmp_path, shared_core_binary, native_cli)
     provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
     historical = json.loads(provenance.read_text())
     historical["payload_files"].remove(".agentic-workspace/skills/workspace-instruction-correction/SKILL.md")

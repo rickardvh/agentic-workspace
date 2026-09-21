@@ -11,6 +11,7 @@ import sys
 import tarfile
 import tempfile
 import tomllib
+import traceback
 import zipfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -263,7 +264,9 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     source = target / ".agentic-workspace/config.toml"
     source.parent.mkdir()
     # Explicit human-owned input, not a product installation or custody grant.
-    original = b"# retained human policy\r\n[workspace]\r\ncli_invoke='old-command' # retain comment\r\nagent_instructions_file='AGENTS.md'\r\n"
+    original = (
+        b"# retained human policy\r\n[workspace]\r\ncli_invoke='old-command' # retain comment\r\nagent_instructions_file='AGENTS.md'\r\n"
+    )
     source.write_bytes(original)
     guidance = "Preserve human work. Delivery grants no proof or publication authority.\n"
     (target / "AGENTS.md").write_text(guidance, encoding="utf-8", newline="\n")
@@ -363,12 +366,12 @@ def _verification_case(call: Any, target: Path) -> dict[str, str]:
 
 
 def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
-    """Faithful artifact-byte fixtures; no claim of a native payload installer."""
+    """Distinguish package seeds from host materialization through public adoption."""
     target.mkdir(parents=True)
     context = {"target": str(target), "task": "Inspect optional artifact payload", "projection": "full"}
 
-    def start():
-        return _ok(call({"action": "start", "context": context}), "payload start")
+    def start(request=None):
+        return _ok(call({"action": "start", "context": {**context, **({"request": [request]} if request else {})}}), "payload start")
 
     absent = start()
     with zipfile.ZipFile(wheel) as archive:
@@ -391,11 +394,14 @@ def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
         assert f"Version: {version}" in metadata.splitlines(), "paired source artifact version"
         manifest = json.loads(read("src/agentic_workspace/contracts/workspace_surfaces.json"))
         refs = manifest["payload_files"]
+        verbatim = {row["path"] for row in manifest["surfaces"] if row.get("materialization", {}).get("mode") == "package-verbatim"}
+        seeds = {}
         for ref in refs:
             path = target / ref
             assert path.resolve().is_relative_to(target.resolve()), ref
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(read("src/agentic_workspace/_payload/" + ref))
+            seeds[ref] = read("src/agentic_workspace/_payload/" + ref)
+            path.write_bytes(seeds[ref])
     before = _snapshot(target)
     present = start()
     # Exact source/owner revisions change with shipped context; effective
@@ -429,8 +435,34 @@ def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
             }
         )
     )
-    assert start()["configuration"]["payload"]["status"] == "satisfied"
-    path = target / refs[0]
+    before = _snapshot(target)
+    copied = start()["configuration"]["payload"]
+    assert copied["status"] == "unresolved", "package seeds cannot establish host-specific payload conformance"
+    assert any(gap["path"] == ".agentic-workspace/READING.json" for gap in copied["gaps"]), copied["gaps"]
+    assert _snapshot(target) == before, "rejecting seed-only conformance cannot materialize host surfaces"
+
+    target = target.with_name(target.name + "-adopted")
+    target.mkdir()
+    _run(["git", "init", "-q", str(target)], cwd=target)
+    context["target"] = str(target)
+    discovered = start(start()["configuration_write"]["repository_adoption_request"])
+    adopt = next(r for r in discovered["configuration_write"]["adoption_requests"] if r["arguments"]["mode"] == "adopt")
+    proposed = start(adopt)
+    answer = next(
+        d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+    )["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"  # bounded human-decision fixture
+    action = start(answer)["decision_packet"]["primary_action"]
+    adopted = _ok(call({"action": "invoke", "context": {**context, "invocation": action}}), "payload adoption")
+    assert adopted["effect_outcome"]["status"] == "committed"
+    assert adopted["value"]["completion_authority"] is False
+    for ref in verbatim.intersection(refs):
+        assert (target / ref).read_bytes().replace(b"\r\n", b"\n") == seeds[ref].replace(b"\r\n", b"\n"), ref
+    (target / ".agentic-workspace/config.toml").write_text('[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n')
+    current = start()["configuration"]["payload"]
+    assert current["status"] == "satisfied", current["gaps"]
+    # Drift a verbatim surface; host-derived surfaces have their own materializer.
+    path = target / ".agentic-workspace/skills/workspace-startup/SKILL.md"
     original = path.read_bytes()
     path.write_bytes(original + b"\nchanged after admission\n")
     before = _snapshot(target)
@@ -444,9 +476,10 @@ def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
     assert start()["configuration"]["payload"]["status"] == "unresolved"
     return {
         "optional_absence_presence": "equivalent",
-        "exact_artifact_bytes": "admitted",
+        "copied_seeds": "rejected-as-host-conformance",
+        "native_adoption": "admitted",
         "drift_and_missing_bytes": "rejected",
-        "fixture_authority": "read-only conformance, not installation custody",
+        "fixture_authority": "bounded public adoption and read-only conformance; no completion authority",
     }
 
 
@@ -532,7 +565,7 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
             "artifacts": {"python_wheels": [p.name for p in wheels], "typescript_package": archive.name},
             "consumers": results,
             "supported_operations": list(REQUIRED_OPERATIONS),
-            "claim_boundary": "Executed native lifecycle only; no retired generated-operation readiness or payload-installation claim.",
+            "claim_boundary": "Executed native lifecycle and bounded repository adoption; no retired generated-operation readiness or completion claim.",
             "package_boundary": {
                 "source_checkout_imports": 0,
                 "reverse_dependency_violations": 0,
@@ -551,10 +584,14 @@ def main() -> int:
     try:
         report = run(dist_dir=args.dist_dir, require_node=args.require_node)
     except (ReadinessCheckError, AssertionError) as error:
+        message = str(error)
+        if isinstance(error, AssertionError):
+            frame = traceback.extract_tb(error.__traceback__)[-1]
+            message = f"{frame.name} ({Path(frame.filename).name}:{frame.lineno}): {message or frame.line or 'assertion failed'}"
         if args.format == "json":
-            print(json.dumps({"kind": "agentic-workspace/external-consumer-readiness/v2", "status": "failed", "message": str(error)}))
+            print(json.dumps({"kind": "agentic-workspace/external-consumer-readiness/v2", "status": "failed", "message": message}))
         else:
-            print(f"External consumer readiness: failed\n{error}")
+            print(f"External consumer readiness: failed\n{message}")
         return 1
     if args.format == "json":
         print(json.dumps(report, sort_keys=True))
