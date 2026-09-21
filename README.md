@@ -4,9 +4,6 @@
 [![npm](https://img.shields.io/npm/v/%40agentic-workspace%2Fworkspace-cli)](https://www.npmjs.com/package/@agentic-workspace/workspace-cli)
 [![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/crates/agentic-workspace-cli)
 
-> [!IMPORTANT]
-> **v1.0 release candidates:** Find candidate downloads and release-specific installation instructions on [GitHub Releases](https://github.com/rickardvh/agentic-workspace/releases). Release candidates are prereleases intended for testing.
-
 **Persistent operating context and dynamic control for coding agents.**
 
 Agentic Workspace (AW) helps coding agents enter a repository with the right guidance, continue unfinished work across sessions, and preserve useful lessons without turning every task into a workflow.
