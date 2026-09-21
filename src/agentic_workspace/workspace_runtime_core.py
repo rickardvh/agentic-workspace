@@ -8530,7 +8530,7 @@ def _workspace_payload_bytes_for_target(relative: Path, *, target_root: Path) ->
         from .static_read_profile import render
 
         ledger = _workspace_payload_bytes_for_target(Path(".agentic-workspace/OWNERSHIP.toml"), target_root=target_root)
-        return render(ledger.decode("utf-8")).encode("utf-8")
+        return render(ledger.decode("utf-8"), target=target_root).encode("utf-8")
     if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root):
         return _host_ownership_ledger_text_for_target(target_root=target_root).encode("utf-8")
     return _workspace_payload_bytes(relative)

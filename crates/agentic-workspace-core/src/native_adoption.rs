@@ -299,7 +299,7 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     };
     let profile = composed
         .as_deref()
-        .map(crate::native_ownership::profile)
+        .map(|ledger| crate::native_ownership::profile(target, ledger))
         .transpose()?;
     if !removing
         && let Err(error) = crate::native_ownership::admit_profile(

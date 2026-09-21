@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Generate ownership read profiles through one Rust producer using the target repository's Git attributes and clean filters, preserving distinct Git, semantic-text and raw-byte identities."

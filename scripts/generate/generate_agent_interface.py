@@ -58,7 +58,7 @@ def render_host_payload(root: Path) -> dict[str, str]:
             and row["input"] == LEDGER
             and row["renderer"] == "ownership-read-profile-v1"
         ):
-            result = render(materialize(row["input"]))
+            result = render(materialize(row["input"]), target=root)
         else:
             raise ValueError(f"Unsupported host materialization: {path}")
         visiting.remove(path)
@@ -85,7 +85,7 @@ def synchronize(*, check: bool = False) -> list[str]:
     # checker validates its public-host relation; interface generation cannot
     # repair or overwrite that record, including its release identity.
     profile = ROOT / PROFILE
-    expected_profile = render((ROOT / LEDGER).read_text(encoding="utf-8"))
+    expected_profile = render((ROOT / LEDGER).read_bytes().decode("utf-8"), target=ROOT)
     if not profile.is_file() or profile.read_text(encoding="utf-8") != expected_profile:
         drift.append(PROFILE)
         if not check:

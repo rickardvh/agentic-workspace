@@ -52,7 +52,7 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     portable = (ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text()
     shipped = (ROOT / "src/agentic_workspace/_payload" / LEDGER).read_text()
     assert shipped == portable and shipped != (ROOT / LEDGER).read_text()
-    assert (ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text() == render(portable)
+    assert (ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text() == render(portable, target=ROOT)
     for module in ("memory", "planning"):
         fallback = tomllib.loads((ROOT / f"packages/{module}/src/repo_{module}_bootstrap/_ownership.toml").read_text())
         assert set(fallback) == {"schema_version", "module_roots"}
@@ -73,14 +73,45 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert "Do not mutate managed owner state" in skill
     ledger = tomllib.loads((ROOT / ".agentic-workspace/OWNERSHIP.toml").read_text())
     assert ledger["workspace"]["main_skill_path"] == MAIN
-    with pytest.raises(ValueError, match="Unsupported ownership ledger"):
-        render("schema_version=2\n")
-    with pytest.raises(tomllib.TOMLDecodeError):
-        render("[malformed")
+    with pytest.raises(ValueError):
+        render("schema_version=2\n", target=ROOT)
+    with pytest.raises(ValueError):
+        render("[malformed", target=ROOT)
+
+
+def test_read_profile_uses_target_git_identity(tmp_path):
+    ledger = "schema_version = 1\n# Identity source\n"
+    # A plain directory cannot supply repository/path semantics.
+    with pytest.raises(ValueError, match="Git repository identity unavailable"):
+        render(ledger, target=tmp_path)
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=tmp_path, check=True)
+    attributes = tmp_path / ".gitattributes"
+    for policy, equivalent in (("text eol=lf", True), ("-text", False), ("filter=identity-test -text", False)):
+        attributes.write_text(f"{LEDGER} {policy}\n", encoding="utf-8", newline="\n")
+        subprocess.run(["git", "config", "filter.identity-test.clean", "git hash-object --stdin"], cwd=tmp_path, check=True)
+        identities = []
+        for text in (ledger, ledger.replace("\n", "\r\n"), ledger + "# Meaningful change\n"):
+            profile = json.loads(render(text, target=tmp_path))
+            expected = (
+                subprocess.check_output(["git", "hash-object", "--stdin", f"--path={LEDGER}"], cwd=tmp_path, input=text.encode())
+                .decode()
+                .strip()
+            )
+            assert profile["source"]["git_blob_sha1"] == expected
+            identities.append(expected)
+        assert (identities[0] == identities[1]) is equivalent
+        assert identities[2] not in identities[:2]
+    # Required clean-filter failure cannot be replaced by a fabricated identity.
+    subprocess.run(["git", "config", "filter.identity-test.clean", "git nonexistent-clean-filter"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "filter.identity-test.required", "true"], cwd=tmp_path, check=True)
+    with pytest.raises(ValueError, match="Git SHA-1 blob identity unavailable"):
+        render(ledger, target=tmp_path)
 
 
 def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
     """Producer-only mutation cannot influence a closed portable derivation graph."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     contract_path = "src/agentic_workspace/contracts/workspace_surfaces.json"
     contract = json.loads((ROOT / contract_path).read_text())
     for reference in [contract_path, *contract["derivation"]["portable_sources"], LEDGER, PROFILE]:
@@ -89,9 +120,13 @@ def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
         destination.write_bytes((ROOT / reference).read_bytes())
     baseline = generator.render_host_payload(tmp_path)
     poison = 'schema_version=1\n[[subsystems]]\nid="producer-poison"\npaths=["maintainer/poison/**"]\nproof=["poison-maintainer-check"]\n'
-    poison += '[[authority_surfaces]]\nconcern="poison-authority"\nowner="producer"\nread={refs=["maintainer/poison.md"],select="poison",unknown=[]}\n'
+    poison += (
+        '[[authority_surfaces]]\nconcern="poison-authority"\nowner="producer"\n'
+        'surface="maintainer/poison.md"\nownership="repo_owned"\nauthority="primary"\n'
+        'read={refs=["maintainer/poison.md"],select="poison",unknown=[]}\n'
+    )
     (tmp_path / LEDGER).write_text(poison)
-    (tmp_path / PROFILE).write_text(render(poison))
+    (tmp_path / PROFILE).write_text(render(poison, target=tmp_path))
     assert generator.render_host_payload(tmp_path) == baseline
     portable_ref = next(row["materialization"]["source"] for row in contract["surfaces"] if row["path"] == LEDGER)
     portable = tmp_path / portable_ref
@@ -119,6 +154,7 @@ def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
 
 def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypatch):
     """Projection writes cannot silently repair another owner's source record."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     host_ref = "src/agentic_workspace/contracts/workspace_surfaces.json"
     maintenance_ref = "src/agentic_workspace/contracts/source_maintenance_surfaces.json"
     host = json.loads((ROOT / host_ref).read_text())
@@ -255,6 +291,7 @@ def test_source_lifecycle_retires_only_exact_package_bytes(tmp_path):
     # Source maintenance lifecycle is tested here; it is not an installed Python host.
     from agentic_workspace import workspace_runtime_core as owner
 
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     retired = owner._WORKSPACE_SURFACES_MANIFEST["retired_surface_files"][0]
     previous = subprocess.check_output(
         ["git", "show", "efc18f52719bb69f652ef4bf2fa2c4826f05619b:src/agentic_workspace/_payload/" + retired["path"]], cwd=ROOT
@@ -276,7 +313,7 @@ def test_source_lifecycle_retires_only_exact_package_bytes(tmp_path):
     ledger = tomllib.loads(owner._host_ownership_ledger_text())
     assert ledger["workspace"]["main_skill_path"] == MAIN
     installed = json.loads((tmp_path / PROFILE).read_text())
-    assert installed == json.loads(render((tmp_path / LEDGER).read_text()))
+    assert installed == json.loads(render((tmp_path / LEDGER).read_bytes().decode(), target=tmp_path))
     assert len((tmp_path / PROFILE).read_bytes()) < 8_000
 
 

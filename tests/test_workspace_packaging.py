@@ -108,6 +108,7 @@ def test_packed_host_derivation_excludes_poisoned_producer_policy(workspace_sdis
     with tarfile.open(workspace_sdist, "r:gz") as archive:
         archive.extractall(tmp_path / "producer", filter="data")
     producer = next((tmp_path / "producer").iterdir())
+    subprocess.run(["git", "init", "-q", str(producer)], check=True)
     sentinel = "ALIEN_PRODUCER_SENTINEL"
     source = producer / ".agentic-workspace/OWNERSHIP.toml"
     source.parent.mkdir(exist_ok=True)
