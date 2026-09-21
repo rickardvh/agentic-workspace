@@ -1,3 +1,3 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "patch"
-summary = "Discover setup assessment automatically after package updates, retain grounded Configuration decisions, and verify effective integration through its actual consumer."
+summary = "Expose current setup assessment at native entry, bind reuse to setup and managed payload material, and retain grounded Configuration decisions with consumer verification."

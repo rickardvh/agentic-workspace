@@ -27,6 +27,21 @@ pub(crate) fn paths() -> Vec<&'static str> {
         .collect()
 }
 
+/// Version-independent identity of declared host surfaces and their seed bytes.
+pub(crate) fn identity() -> Result<String, CoreError> {
+    let files = PAYLOAD
+        .iter()
+        .map(|(path, mode, _)| {
+            Ok(json!({"path":path,"materializer":format!("{mode:?}"),"seed":seed(path, *mode)?}))
+        })
+        .collect::<Result<Vec<_>, CoreError>>()?;
+    digest(&json!({
+        "files": files,
+        "host_surfaces": include_str!("../../../src/agentic_workspace/contracts/workspace_surfaces.json").replace("\r\n", "\n"),
+        "capabilities": CAPABILITIES,
+    }))
+}
+
 pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
     if path != PROVENANCE {
         return seed(path, Materialization::PackageVerbatim);

@@ -48,11 +48,17 @@ Review diagnostic output before sharing it; it may contain sensitive project det
 ## Update AW
 
 Update the repository's development dependency using its normal package manager,
-then continue ordinary work. At runtime-capable entry the agent checks the resolved
-AW artefact. Changed setup material or an absent assessment routes it through
+then continue ordinary work. With the current startup skill, runtime-capable
+entry checks the resolved AW artefact. Changed setup or managed payload material,
+or an absent assessment, routes the agent through
 Configuration to refresh managed files and assess useful optional capabilities
 against your repository's purpose. No refresh-specific prompt or target-version
 bookkeeping is required for a compatible update.
+
+Older checked-in startup skills can permit work without invoking AW. Updating the
+dependency alone does not replace them or guarantee discovery. Their first AW
+invocation exposes current setup material and the refresh route; automatic entry
+checks apply after that bootstrap is refreshed. See the [entry boundary](lifecycle.md#automatic-setup-assessment).
 
 The agent applies authorised integrations and checks the affected behaviour.
 Explicit exclusions remain binding; a genuinely new policy choice can need your

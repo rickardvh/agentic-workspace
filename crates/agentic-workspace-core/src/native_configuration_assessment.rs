@@ -63,7 +63,7 @@ fn material() -> Result<Value, CoreError> {
     Ok(Value::Object(files))
 }
 fn basis() -> Result<String, CoreError> {
-    digest(&material()?)
+    digest(&json!({"setup":material()?,"managed_payload":crate::native_payload::identity()?}))
 }
 pub(crate) fn declaration() -> Value {
     json!({"kind":READ,"result_kind":KIND,"input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{"scope":{"enum":["repository","machine-local"]},"reconsider":{"type":"boolean"},"dependencies":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","maxLength":4096}}}}})

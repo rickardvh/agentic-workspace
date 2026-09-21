@@ -12,6 +12,19 @@ Do not copy mutable policy or current owner state into this skill. Do not treat 
 
 ## Ordinary use
 
+The current bootstrap requests a cheap runtime observation at session entry and
+after a possible dependency change. Native entry exposes Configuration assessment
+without setup wording, payload opt-in or current checked-in setup text. Reuse a
+sufficient current observation; this is not a full setup review for every task.
+
+Preceding bootstraps permit direct work without that observation. An external
+dependency update changes the installed executable, not their checked-in text.
+Until an agent or host actually invokes AW, those integrations have no guaranteed
+discovery bridge. Installation does not mutate adopted repositories or register
+hooks/watchers. Their first ordinary runtime entry supplies current material;
+refresh establishes the bridge for subsequent sessions. A native-entry fixture
+proves that recovery, not that an old skill causes the first invocation.
+
 1. Read the repository/local instructions that apply to the work. Treat them as policy and constraints, not as a second procedural manual.
 2. Use this skill to decide what information or procedure is useful. Keep sufficient direct work direct. Acquire evidence when missing, stale, conflicting or repeatedly reconstructed information could materially change the task, a required claim or justified future work; use the [evidence sufficiency boundary](evidence.md), not a mandatory context-gathering phase.
 3. When exact current state, admission, action, effect, or recovery matters, use the repository's configured AW invocation. Prefer `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present, then `.agentic-workspace/config.toml` `[workspace].cli_invoke`, then the package default `agentic-workspace`. Source checkouts may provide a repo-local invocation through their bootstrap instructions.

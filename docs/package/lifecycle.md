@@ -10,7 +10,12 @@ Ordinary native `start` exposes Configuration's `setup_assessment` independently
 of task wording and payload-target policy. Compact entry provides a consequence
 route to the same owner. The main skill obtains that observation at session entry
 and after a possible dependency change, reusing a sufficient current observation.
-Without runtime observation an external update is unknown.
+This bridge requires the current bootstrap. Preceding bootstraps permit direct
+work without a runtime call: an external dependency update cannot retroactively
+make that call mandatory. Their first actual native entry exposes recovery and
+refresh; dependency installation alone does not guarantee it. No installer hook
+or watcher mutates adopted repositories. Without runtime observation an external
+update is unknown.
 
 Submit `setup_assessment.request` to receive current installed setup text and
 configuration declarations, even if repository skills are stale or absent. After
@@ -23,7 +28,10 @@ The current repository assessment lives in
 `.agentic-workspace/configuration-assessment.json`; machine-local assessment uses
 `.agentic-workspace/local/configuration-assessment.json`. These are current owner
 records, not human version checklists or domain evidence stores. Setup material
-and relevant source identity determine reuse; tasks and HEAD do not. Effective
+and managed host-surface identity, together with relevant repository source
+identity, determine reuse; tasks and HEAD do not. Changes outside the setup bundle
+also reopen assessment. A version-only release with identical material remains
+quiet. Effective
 dispositions require a current consumer witness. Pending, deferred, blocked and
 unavailable dispositions retain a reason and continuation. Exclusion settles
 consideration without asserting that a capability works. Unknown formats and

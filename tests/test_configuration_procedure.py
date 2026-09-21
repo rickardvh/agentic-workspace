@@ -14,7 +14,7 @@ TASK = "Configure the requested repository behavior"
 
 
 def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path, shared_core_binary, native_cli):
-    """One public owner journey: ordinary discovery, real consumer, persistence and staleness."""
+    """Native-entry recovery, consumer and currentness; not proof that old skills invoke AW."""
     workspace = tmp_path / ".agentic-workspace"
     workspace.mkdir()
     source = workspace / "config.toml"
@@ -22,7 +22,8 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     (tmp_path / "README.md").write_text("Repository rules live in GUIDE.md and must reach ordinary agents.\n")
     guide = tmp_path / "GUIDE.md"
     guide.write_text("Use the repository's required review convention.\n")
-    # Preceding installed skill: no new setup branch and no payload policy.
+    # Native entry recovers preceding material without a payload policy.
+    # This explicit call does not prove that an old skill invokes the runtime.
     old_skill = workspace / "skills/workspace-startup/SKILL.md"
     old_skill.parent.mkdir(parents=True)
     old_skill.write_text("Keep sufficient direct work direct; use native entry for current facts.\n")

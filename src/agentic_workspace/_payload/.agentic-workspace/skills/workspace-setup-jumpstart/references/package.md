@@ -37,6 +37,11 @@ delivers current installed setup procedure and existing configuration schemas,
 including when repository skills are old or absent. Review that bounded current
 material against standing repository intent. A reliable historical delta is not
 required; skipped releases and absent baselines need the same consideration.
+The assessment basis also covers declared managed host surfaces outside this
+setup bundle. When it changes, inspect the existing payload/adoption routes and
+refresh stale authenticated material before claiming integration is complete.
+An unchanged version cannot hide a material change; a version-only update with
+identical relevant material does not reopen a settled assessment.
 
 Consider useful optional capabilities as well as compatibility maintenance:
 
