@@ -1429,6 +1429,14 @@ fn resolve_selected(
             })
     {
         let prepared = compile_value(owner_input.clone())?;
+        // Restrict the composed contribution, including every dependency added
+        // above, rather than restoring its earlier owner-local action copy.
+        instructions["contribution"] = owner_input["contributions"]
+            .as_array()
+            .unwrap()
+            .last()
+            .unwrap()
+            .clone();
         native_instructions::restrict_pending(
             &mut instructions,
             prepared["pending_consequences"]["actions"]
