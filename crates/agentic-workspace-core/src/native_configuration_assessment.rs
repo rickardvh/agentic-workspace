@@ -9,6 +9,59 @@ pub(crate) const READ: &str = "configuration/read-setup-assessment/v1";
 pub(crate) const KEY: &str = "package.setup-assessment";
 pub(crate) const SHARED: &str = ".agentic-workspace/configuration-assessment.json";
 pub(crate) const LOCAL: &str = ".agentic-workspace/local/configuration-assessment.json";
+pub(crate) const SIGNAL_KEY: &str = "package.update-notice";
+pub(crate) const UPDATE_NOTICE: &str = "\n<!-- agentic-workspace:update-observation:start -->\nAW dependency reconciliation may be pending. At ordinary session entry, obtain a current\nConfiguration observation with the repository's configured AW `start` invocation unless\na sufficient current observation is already held. Follow its setup assessment to current\ninstalled material, including with old checked-in skills. The agent assesses usefulness\nand authority; this notice grants no policy changes or integration-completion claim.\nReuse settled observations and continue the original task.\n<!-- agentic-workspace:update-observation:end -->\n";
+
+pub(crate) fn notice_bytes(target: &Path) -> Result<Vec<u8>, CoreError> {
+    crate::native_adoption::admit_update_notice(target)?;
+    admit_maintenance(target)?;
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let bytes = deps::read(&root, "AGENTS.md")?.ok_or_else(|| err("instruction entry missing"))?;
+    let before = std::str::from_utf8(&bytes).map_err(err)?;
+    if before.contains("<!-- agentic-workspace:update-observation:") {
+        if before.replace("\r\n", "\n").matches(UPDATE_NOTICE).count() == 1
+            && before
+                .matches("<!-- agentic-workspace:update-observation:")
+                .count()
+                == 2
+        {
+            return Ok(bytes);
+        }
+        return Err(err(
+            "edited update notice preserved for Configuration reconciliation",
+        ));
+    }
+    Ok(format!("{before}{UPDATE_NOTICE}").into_bytes())
+}
+
+pub(crate) fn notice_request(
+    target: &Path,
+    template: &dyn Fn(&str, Value) -> Value,
+    result: &mut Value,
+) {
+    if result["setup_assessment"]["integration_complete"] != false {
+        result["update_notice_status"] = json!("not-required");
+        return;
+    }
+    // Installation never acquires custody by finding filenames alone.
+    match notice_bytes(target) {
+        Ok(bytes)
+            if std::fs::read(target.join("AGENTS.md")).ok().as_deref()
+                != Some(bytes.as_slice()) =>
+        {
+            result["update_notice_status"] = json!("pending");
+            result["update_notice_request"] = template(
+                "configuration/edit-source/v1",
+                json!({"source":"AGENTS.md","key":SIGNAL_KEY,"value":crate::native_intent::hash(&bytes)}),
+            );
+        }
+        Ok(_) => result["update_notice_status"] = json!("already-signalled"),
+        Err(error) => {
+            result["update_notice_status"] = json!("unavailable");
+            result["update_notice_reason"] = json!(error.to_string());
+        }
+    }
+}
 const KIND: &str = "agentic-workspace/configuration-assessment/v1";
 fn err(e: impl ToString) -> CoreError {
     CoreError::new(e.to_string())
@@ -509,6 +562,13 @@ pub(crate) fn reobserve_consumers(
 /// Reobserve the real consumer, including at invoke's publication revalidation.
 /// Stored observations are dependency witnesses, never copies of owner authority.
 pub(crate) fn validate_consumers(target: &Path, current: &Value) -> Result<(), CoreError> {
+    if current["configuration_write"]["update_notice_proposal"] == true
+        && current["configuration_write"]["setup_assessment"]["integration_complete"] != false
+    {
+        return Err(err(
+            "update notice requires pending Configuration assessment",
+        ));
+    }
     let proposal = &current["configuration_write"]["assessment_proposal"];
     if proposal.is_null() {
         return Ok(());

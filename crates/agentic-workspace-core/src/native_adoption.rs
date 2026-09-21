@@ -60,7 +60,12 @@ fn instruction(before: &Option<String>, removing: bool) -> Result<Option<String>
             // Remove only exact managed bytes. Preserve surrounding source verbatim.
             let a = text.find(start).unwrap();
             let b = text.find(end).unwrap() + end.len();
-            let result = format!("{}{}", &text[..a], &text[b..]);
+            let result = format!("{}{}", &text[..a], &text[b..])
+                .replace(crate::native_configuration_assessment::UPDATE_NOTICE, "")
+                .replace(
+                    &crate::native_configuration_assessment::UPDATE_NOTICE.replace("\n", "\r\n"),
+                    "",
+                );
             return Ok(Some(result));
         }
         return Ok(before.clone());
@@ -143,6 +148,21 @@ pub(crate) fn ownership_baseline(target: &Path) -> Result<Value, CoreError> {
         return crate::native_ownership::parse(text);
     }
     Ok(Value::Null)
+}
+
+pub(crate) fn admit_update_notice(target: &Path) -> Result<(), CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let record =
+        held(target, &root)?.ok_or_else(|| err("update notice requires adoption custody"))?;
+    if !committed(target, &root, &record)?
+        || bytes(&root, IDENTITY)?.is_none()
+        || !bytes(&root, "AGENTS.md")?.is_some_and(|v| v.replace("\r\n", "\n").contains(&fence()))
+    {
+        return Err(err(
+            "update notice requires a committed adopted instruction entry",
+        ));
+    }
+    Ok(())
 }
 pub(crate) fn declarations(owner: &mut Value) {
     owner["requests"].as_array_mut().unwrap().extend([

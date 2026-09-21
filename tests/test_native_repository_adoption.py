@@ -140,6 +140,8 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
         assert current["configuration"]["payload"]["gaps"] == []
         assert ledger.read_bytes() == before
         assert not (tmp_path / ".agentic-workspace/adoption.json").exists()
+        assert "update_notice_request" not in current["configuration_write"]
+        assert current["configuration_write"]["update_notice_status"] == "unavailable"
         assert not (tmp_path / ".agentic-workspace/local/effects").exists()
     # A real package-fact change still fails closed, and discovery identifies
     # its exact source rather than manufacturing a migration baseline.
@@ -534,6 +536,31 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     assert recovered["effect_outcome"]["status"] == "committed"
     assert partial.read_bytes() == expected
 
+    notice = call()["configuration_write"]["update_notice_request"]
+    assert notice["arguments"]["key"] == "package.update-notice"
+    before_notice = instructions.read_bytes()
+    notice_action = call(request=notice)["decision_packet"]["primary_action"]
+    assert notice_action["operation_id"] == "configuration.write"
+    notice_result = call(invocation=notice_action)
+    assert notice_result["effect_outcome"]["status"] == "committed"
+    assert instructions.read_bytes().startswith(before_notice)
+    assert "AW dependency reconciliation may be pending" in instructions.read_text()
+    assert "update_notice_request" not in call()["configuration_write"]
+    assert call()["configuration_write"]["setup_assessment"]["integration_complete"] is False
+    assert not (tmp_path / ".agentic-workspace/configuration-assessment.json").exists()
+    forged_notice = copy.deepcopy(notice)
+    forged_notice["arguments"]["source"] = "README.md"
+    with pytest.raises(AssertionError):
+        call(request=forged_notice)
+    # A visible notice cannot stand in for publication custody. Fresh entry
+    # carries exact recovery without rewriting the committed source.
+    signalled = instructions.read_bytes()
+    (tmp_path / notice_result["custody"]["committed"]["path"]).unlink()
+    recovery = next(r for r in call()["configuration_write"]["recovery_requests"] if r["arguments"]["source"] == "AGENTS.md")
+    recovered_notice = call(invocation=call(request=recovery)["decision_packet"]["primary_action"])
+    assert recovered_notice["effect_outcome"]["status"] == "committed"
+    assert instructions.read_bytes() == signalled
+
     def exposure(mode):
         request = call()["configuration_write"]["skill_exposure_request"]
         row = next(
@@ -562,6 +589,7 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     assert preserved.read_text() == "Independent durable work"
     assert "Preserve this text." in instructions.read_text()
     assert "agentic-workspace:workflow" not in instructions.read_text()
+    assert "agentic-workspace:update-observation" not in instructions.read_text()
     # Deliberate re-adoption needs no removal tombstone or registry reset.
     assert call(invocation=action("adopt"))["effect_outcome"]["status"] == "committed"
     skill = tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md"

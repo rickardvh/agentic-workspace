@@ -55,10 +55,12 @@ Configuration to refresh managed files and assess useful optional capabilities
 against your repository's purpose. No refresh-specific prompt or target-version
 bookkeeping is required for a compatible update.
 
-Older checked-in startup skills can permit work without invoking AW. Updating the
-dependency alone does not replace them or guarantee discovery. Their first AW
-invocation exposes current setup material and the refresh route; automatic entry
-checks apply after that bootstrap is refreshed. See the [entry boundary](lifecycle.md#automatic-setup-assessment).
+Older checked-in skills receive a product-managed reconciliation notice through
+the existing adopted agent entry. npm publishes it at post-install; Python
+publishes it at the next normal interpreter startup after installation. No AW
+import or user-maintained hook is needed. `uv sync` alone does not execute a wheel
+callback. The notice supplies the route; the agent still judges and integrates
+capabilities. See the [entry boundary](lifecycle.md#automatic-setup-assessment).
 
 The agent applies authorised integrations and checks the affected behaviour.
 Explicit exclusions remain binding; a genuinely new policy choice can need your

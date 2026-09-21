@@ -10,12 +10,19 @@ Ordinary native `start` exposes Configuration's `setup_assessment` independently
 of task wording and payload-target policy. Compact entry provides a consequence
 route to the same owner. The main skill obtains that observation at session entry
 and after a possible dependency change, reusing a sufficient current observation.
-This bridge requires the current bootstrap. Preceding bootstraps permit direct
-work without a runtime call: an external dependency update cannot retroactively
-make that call mandatory. Their first actual native entry exposes recovery and
-refresh; dependency installation alone does not guarantee it. No installer hook
-or watcher mutates adopted repositories. Without runtime observation an external
-update is unknown.
+Product-owned triggers bridge preceding bootstraps by publishing a minimal
+Configuration notice in the authenticated adopted `AGENTS.md` entry. npm uses
+post-install; Python uses installed `.pth` material at the next ordinary
+interpreter startup, without an AW import. `uv sync` itself has no wheel callback.
+Both carry only the same returned `package.update-notice` Configuration write.
+They cannot choose capabilities, change policy or settle assessment. The stable
+notice requests current observation and reuses a settled result; it is not a
+last-seen version record. Removal relinquishes the exact product notice.
+
+No user-maintained lifecycle hook is required. An unadopted directory, absent
+custody, edited notice, incompatible integration or explicitly disabled host
+hooks cannot silently acquire write authority. Native entry remains the recovery
+path; without any supported observation, an external update is unknown.
 
 Submit `setup_assessment.request` to receive current installed setup text and
 configuration declarations, even if repository skills are stale or absent. After

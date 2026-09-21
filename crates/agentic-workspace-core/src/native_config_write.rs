@@ -108,6 +108,17 @@ fn bound_sources(target: &Path, source: Option<&str>) -> Result<Value, CoreError
             .map(|b| json!(crate::native_intent::hash(&b)))
             .unwrap_or(Value::Null);
     }
+    if source == Some("AGENTS.md") {
+        for path in [
+            "AGENTS.md",
+            ".agentic-workspace/adoption.json",
+            ".agentic-workspace/local/effects/adoption.prepared.json",
+        ] {
+            values[path] = crate::native_planning::read(&root, path)?
+                .map(|b| json!(crate::native_intent::hash(&b)))
+                .unwrap_or(Value::Null);
+        }
+    }
     if let Some(source) = source.filter(|source| crate::native_payload::paths().contains(source)) {
         let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
         values[source] = crate::native_planning::read(&root, source)?
@@ -123,6 +134,15 @@ fn bound_sources(target: &Path, source: Option<&str>) -> Result<Value, CoreError
     Ok(values)
 }
 fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec<u8>, CoreError> {
+    if key == crate::native_configuration_assessment::SIGNAL_KEY {
+        let bytes = crate::native_configuration_assessment::notice_bytes(target)?;
+        if source != "AGENTS.md" || *value != crate::native_intent::hash(&bytes) {
+            return Err(err(
+                "update notice differs from the exact product-owned signal",
+            ));
+        }
+        return Ok(bytes);
+    }
     if key == crate::native_configuration_assessment::KEY {
         return crate::native_configuration_assessment::proposed(target, source, value);
     }
@@ -255,6 +275,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     // every ordinary capability schema.
     alternatives.push(json!({"properties":{"source":{"type":"string"},"key":{"const":PAYLOAD_KEY},"value":{"type":"string"}}}));
     alternatives.push(json!({"properties":{"source":{"enum":[crate::native_configuration_assessment::SHARED,crate::native_configuration_assessment::LOCAL]},"key":{"const":crate::native_configuration_assessment::KEY},"value":{"type":"object"}}}));
+    alternatives.push(json!({"properties":{"source":{"const":"AGENTS.md"},"key":{"const":crate::native_configuration_assessment::SIGNAL_KEY},"value":{"type":"string"}}}));
     let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
     args["properties"]["nomination"] = crate::native_owner_change::schema();
     args["properties"]["source"] = json!({"type":"string"});
@@ -412,6 +433,12 @@ pub(crate) fn view_selected(
             .collect::<Vec<_>>()
     );
     crate::native_configuration_assessment::view(target, config, request, &template, &mut result)?;
+    crate::native_configuration_assessment::notice_request(target, &template, &mut result);
+    if result["update_notice_request"].is_object() {
+        let mut exact = binding.clone();
+        exact["sources"] = bound_sources(target, Some("AGENTS.md"))?;
+        result["update_notice_request"]["source_revision"] = json!(digest(&exact)?);
+    }
     if [SHARED, LOCAL]
         .iter()
         .any(|source| current[source].is_null())
@@ -514,9 +541,15 @@ pub(crate) fn view_selected(
     for source in [
         crate::native_configuration_assessment::SHARED,
         crate::native_configuration_assessment::LOCAL,
+        "AGENTS.md",
     ] {
-        if let Some(post) = current[source].as_str()
-            && let Some(record) = retained(target, source, post)?
+        let post = if source == "AGENTS.md" {
+            crate::native_planning::read(&root, source)?.map(|b| crate::native_intent::hash(&b))
+        } else {
+            current[source].as_str().map(str::to_owned)
+        };
+        if let Some(post) = post
+            && let Some(record) = retained(target, source, &post)?
         {
             let prepared = crate::attempt_store::prepare_commit(
                 target.to_str().unwrap(),
@@ -529,13 +562,17 @@ pub(crate) fn view_selected(
             )?
             .is_none()
             {
+                let mut recovery = template(
+                    RECOVER,
+                    json!({"source":source,"record_revision":digest(&record)?}),
+                );
+                let mut exact = binding.clone();
+                exact["sources"] = bound_sources(target, Some(source))?;
+                recovery["source_revision"] = json!(digest(&exact)?);
                 result["recovery_requests"]
                     .as_array_mut()
                     .unwrap()
-                    .push(template(
-                        RECOVER,
-                        json!({"source":source,"record_revision":digest(&record)?}),
-                    ));
+                    .push(recovery);
                 let field = if source == crate::native_configuration_assessment::LOCAL {
                     "local_setup_assessment"
                 } else {
@@ -749,11 +786,14 @@ pub(crate) fn view_selected(
         if key == crate::native_configuration_assessment::KEY {
             result["assessment_proposal"] = value.clone();
         }
+        if key == crate::native_configuration_assessment::SIGNAL_KEY {
+            result["update_notice_proposal"] = json!(true);
+        }
         post = crate::native_intent::hash(&bytes);
         let before = crate::native_planning::read(&root, source)?.unwrap_or_default();
         let before_value = if key == crate::native_configuration_assessment::KEY {
             serde_json::from_slice(&before).unwrap_or(Value::Null)
-        } else if key == PAYLOAD_KEY {
+        } else if key == PAYLOAD_KEY || key == crate::native_configuration_assessment::SIGNAL_KEY {
             if args["nomination"].is_object() {
                 return Err(err(
                     "payload refresh requires its exact package-source proposal",
@@ -786,7 +826,9 @@ pub(crate) fn view_selected(
             &json!({"binding":binding,"source":source,"key":args["key"],"value":value,"post_revision":post,"nomination":args["nomination"]}),
         )?;
         if args["answer"].is_null() {
-            if key == crate::native_configuration_assessment::KEY {
+            if key == crate::native_configuration_assessment::KEY
+                || key == crate::native_configuration_assessment::SIGNAL_KEY
+            {
                 // Persisting the supplied agent judgment grants no new policy.
                 // Capability integrations still use their own source authority.
                 let mut authorized = request.clone();

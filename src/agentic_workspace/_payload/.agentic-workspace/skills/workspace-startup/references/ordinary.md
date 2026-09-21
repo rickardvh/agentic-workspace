@@ -17,13 +17,19 @@ after a possible dependency change. Native entry exposes Configuration assessmen
 without setup wording, payload opt-in or current checked-in setup text. Reuse a
 sufficient current observation; this is not a full setup review for every task.
 
-Preceding bootstraps permit direct work without that observation. An external
-dependency update changes the installed executable, not their checked-in text.
-Until an agent or host actually invokes AW, those integrations have no guaranteed
-discovery bridge. Installation does not mutate adopted repositories or register
-hooks/watchers. Their first ordinary runtime entry supplies current material;
-refresh establishes the bridge for subsequent sessions. A native-entry fixture
-proves that recovery, not that an old skill causes the first invocation.
+Preceding bootstraps permit direct work without that observation. Product-managed
+dependency triggers establish a small Configuration notice in the authenticated
+adopted `AGENTS.md` entry, preserving its surrounding repository policy. npm runs
+the trigger at post-install; Python wheels run it at the next ordinary interpreter
+startup through installed `.pth` material, without an explicit AW import. Plain
+`uv sync` has no wheel callback. Neither adapter performs assessment or integration.
+The notice routes the next agent to the same current Configuration/setup material.
+Its retained text requests current observation, not repeated assessment: a settled
+owner stays quiet. No user-maintained hook or version checklist is needed.
+
+An unadopted or unauthenticated directory receives no notice. Disabled lifecycle
+scripts or Python site processing, incompatible integration, or an edited notice
+remain explicit recovery boundaries; use current native entry when available.
 
 1. Read the repository/local instructions that apply to the work. Treat them as policy and constraints, not as a second procedural manual.
 2. Use this skill to decide what information or procedure is useful. Keep sufficient direct work direct. Acquire evidence when missing, stale, conflicting or repeatedly reconstructed information could materially change the task, a required claim or justified future work; use the [evidence sufficiency boundary](evidence.md), not a mandatory context-gathering phase.
