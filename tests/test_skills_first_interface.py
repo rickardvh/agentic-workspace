@@ -6,6 +6,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import tomllib
@@ -79,7 +80,7 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
         render("[malformed", target=ROOT)
 
 
-def test_read_profile_uses_target_git_identity(tmp_path):
+def test_read_profile_uses_target_git_identity(tmp_path, shared_core_binary, native_cli):
     ledger = "schema_version = 1\n# Identity source\n"
     # A plain directory cannot supply repository/path semantics.
     with pytest.raises(ValueError, match="Git repository identity unavailable"):
@@ -87,9 +88,8 @@ def test_read_profile_uses_target_git_identity(tmp_path):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=tmp_path, check=True)
     attributes = tmp_path / ".gitattributes"
-    for policy, equivalent in (("text eol=lf", True), ("-text", False), ("filter=identity-test -text", False)):
+    for policy, equivalent in (("text eol=lf", True), ("-text", False), ("-filter text eol=lf", True)):
         attributes.write_text(f"{LEDGER} {policy}\n", encoding="utf-8", newline="\n")
-        subprocess.run(["git", "config", "filter.identity-test.clean", "git hash-object --stdin"], cwd=tmp_path, check=True)
         identities = []
         for text in (ledger, ledger.replace("\n", "\r\n"), ledger + "# Meaningful change\n"):
             profile = json.loads(render(text, target=tmp_path))
@@ -102,11 +102,29 @@ def test_read_profile_uses_target_git_identity(tmp_path):
             identities.append(expected)
         assert (identities[0] == identities[1]) is equivalent
         assert identities[2] not in identities[:2]
-    # Required clean-filter failure cannot be replaced by a fabricated identity.
-    subprocess.run(["git", "config", "filter.identity-test.clean", "git nonexistent-clean-filter"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "filter.identity-test.required", "true"], cwd=tmp_path, check=True)
-    with pytest.raises(ValueError, match="Git SHA-1 blob identity unavailable"):
-        render(ledger, target=tmp_path)
+    # Neither optional clean commands nor required process filters may run from
+    # the build binding or the public adoption read/proposal, before authorization.
+    attributes.write_text(f"{LEDGER} filter=identity-test text eol=lf\n", encoding="utf-8", newline="\n")
+    sentinel = tmp_path / "filter-sentinel"
+    context = {"target": str(tmp_path), "task": "Observe repository adoption"}
+    for driver, required in (("clean", "false"), ("process", "true")):
+        subprocess.run(["git", "config", f"filter.identity-test.{driver}", "echo invoked > filter-sentinel"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "filter.identity-test.required", required], cwd=tmp_path, check=True)
+        with pytest.raises(ValueError, match="cannot execute a selected filter"):
+            render(ledger, target=tmp_path)
+        current = consume("native", shared_core_binary, native_cli, context, host_path=os.environ["PATH"])
+        request = current["configuration_write"]["repository_adoption_request"]
+        with pytest.raises(AssertionError, match="cannot execute a selected filter"):
+            consume("native", shared_core_binary, native_cli, {**context, "request": request}, host_path=os.environ["PATH"])
+        assert not sentinel.exists()
+        assert not (tmp_path / PROFILE).exists()
+    # Git's printable attribute states can also be literal driver names.
+    for driver_name in ("unset", "unspecified"):
+        attributes.write_text(f"{LEDGER} filter={driver_name}\n", encoding="utf-8", newline="\n")
+        subprocess.run(["git", "config", f"filter.{driver_name}.clean", "echo invoked > filter-sentinel"], cwd=tmp_path, check=True)
+        with pytest.raises(ValueError, match="cannot execute a selected filter"):
+            render(ledger, target=tmp_path)
+        assert not sentinel.exists()
 
 
 def test_portable_derivation_is_isolated_from_source_policy(tmp_path):

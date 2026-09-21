@@ -254,6 +254,49 @@ fn git_blob_identity(target: &Path, bytes: &[u8]) -> Result<String, CoreError> {
             "Git repository identity unavailable for ownership read profile",
         ));
     }
+    // Path-aware hashing can launch repository-configured filter commands.
+    // Observation has no callback authority: only Git's built-in conversions
+    // are available here, regardless of whether a selected driver is required.
+    let attributes = Command::new("git")
+        .arg("-C")
+        .arg(target)
+        .args(["check-attr", "-z", "filter", "--", LEDGER])
+        .output()
+        .map_err(err)?;
+    let fields: Vec<_> = attributes.stdout.split(|b| *b == 0).collect();
+    if !attributes.status.success()
+        || fields.len() != 4
+        || fields[0] != LEDGER.as_bytes()
+        || fields[1] != b"filter"
+        || !fields[3].is_empty()
+    {
+        return Err(err(
+            "Git filter attributes unavailable for ownership read profile",
+        ));
+    }
+    if !matches!(fields[2], b"unspecified" | b"unset") {
+        return Err(err(
+            "Git identity unavailable: ownership read profile cannot execute a selected filter",
+        ));
+    }
+    // check-attr spells both its state and a literal driver named "unset" or
+    // "unspecified" alike. Do not let those names hide executable callbacks.
+    let state = std::str::from_utf8(fields[2]).map_err(err)?;
+    let reserved_driver = Command::new("git")
+        .arg("-C")
+        .arg(target)
+        .args([
+            "config",
+            "--get-regexp",
+            &format!("^filter\\.{state}\\.(clean|process)$"),
+        ])
+        .output()
+        .map_err(err)?;
+    if reserved_driver.status.code() != Some(1) {
+        return Err(err(
+            "Git identity unavailable: ownership read profile cannot execute a selected filter",
+        ));
+    }
     let mut child = Command::new("git")
         .arg("-C")
         .arg(target)

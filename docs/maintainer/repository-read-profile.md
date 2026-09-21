@@ -9,10 +9,13 @@ task selection. Historical accumulation therefore does not enlarge the profile.
 
 The profile identifies the exact Git blob of its source ledger. The Rust producer
 asks `git hash-object --stdin --path=.agentic-workspace/OWNERSHIP.toml` in the target
-repository to apply its attributes and clean filters to the proposed ledger bytes.
+repository to apply its built-in attribute conversions to the proposed ledger bytes.
 No write or staging step is needed. LF and CRLF share an identity only when Git
-defines them as equivalent; `-text` retains their distinction. Missing Git,
-unavailable repository identity, failed required filters or a non-SHA-1 object
+defines them as equivalent; `-text` retains their distinction. Before hashing,
+the producer checks the path's `filter` attribute and rejects selected filters
+without executing them. Repository-configured callbacks have no authority during
+observation or proposal, even when Git marks a filter optional. Missing Git,
+unavailable repository identity or attributes, selected filters or a non-SHA-1 object
 format prevent generation rather than producing a guessed identity.
 
 A reader uses a
