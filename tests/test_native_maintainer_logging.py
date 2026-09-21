@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import os
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -164,8 +166,10 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
         value = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect", "projection": "compact"})
         assert value["session_capture"] == {"status": "capturing", "authoritative": False}
     assert len({row["logical_session_id"] for row in events(tmp_path)}) == 2
-    monkeypatch.setenv("AW_SESSION_LOGGING_DISABLE", "1")
     state = session_logging.load_state_for_argv(["--target", str(tmp_path)])
+    assert state.enabled
+    local = tmp_path / ".agentic-workspace/local"
+    before = {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
     analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
     assert analysis["status"] != "missing-log", analysis
     assert "agentic-workspace start" in json.dumps(analysis), analysis
@@ -177,6 +181,38 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
     assert "command.completed" in content
     assert "private-session-secret" not in content
     assert "omissions" in content
+    assert all(p.read_bytes() == original for p, original in before.items())
+    for source, digest in exported["manifest"]["source_hashes"].items():
+        assert hashlib.sha256((tmp_path / source).read_bytes()).hexdigest() == digest
+
+    # The maintained entrypoint must behave like the formerly required disabled
+    # capture recovery, including tree selection and normalized source records.
+    script = Path(__file__).resolve().parents[1] / "scripts/maintainer/session_diagnostics.py"
+    command = [sys.executable, str(script), "export", "--target", str(tmp_path), "--no-artifacts"]
+    ordinary = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    assert ordinary.returncode == 0, ordinary.stderr
+    ordinary_export = json.loads(ordinary.stdout)
+    assert ordinary_export["status"] == "exported"
+    with gzip.open(tmp_path / ordinary_export["path"], "rt", encoding="utf-8") as stream:
+        ordinary_events = [json.loads(line) for line in stream]
+    monkeypatch.setenv("AW_SESSION_LOGGING_DISABLE", "1")
+    recovery = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    assert recovery.returncode == 0, recovery.stderr
+    recovery_export = json.loads(recovery.stdout)
+    with gzip.open(tmp_path / recovery_export["path"], "rt", encoding="utf-8") as stream:
+        recovery_events = [json.loads(line) for line in stream]
+    assert ordinary_events[1:] == recovery_events[1:]
+    for field in ("source_hashes", "source_session_ids", "session_scope", "evidence_profile"):
+        assert ordinary_export["manifest"][field] == recovery_export["manifest"][field]
+    assert all(p.read_bytes() == original for p, original in before.items())
+
+    monkeypatch.delenv("AW_SESSION_LOGGING_DISABLE")
+    monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "unknown-session")
+    missing_before = {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
+    missing = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    assert missing.returncode == 0, missing.stderr
+    assert json.loads(missing.stdout)["status"] == "missing-log"
+    assert missing_before == {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
 
 
 @pytest.mark.parametrize(

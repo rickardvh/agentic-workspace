@@ -3325,8 +3325,8 @@ def export_session_log(
 ) -> dict[str, Any]:
     logical_identity = _logical_session_identity()
     session = _session_for_caller(target_root=state.target_root, logical_identity=logical_identity)
-    if state.enabled and session:
-        session = ensure_session(state=state)
+    # Export selects existing evidence. Capture/registration retains its native
+    # owner even when logging is enabled for this diagnostic reader.
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
         if not path and not session_id and not _logical_session_identity():
