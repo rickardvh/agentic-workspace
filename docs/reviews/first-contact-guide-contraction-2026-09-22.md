@@ -30,7 +30,7 @@ current instructions. No whole-file deletion or physical move was necessary.
 | --- | --- | ---: | --- | --- |
 | [README.md](../../README.md) | guide | 1661 → 1471 | compress | Product introduction; setup is the human entry. |
 | [docs/index.md](../../docs/index.md) | guide | 206 → 206 | keep | Reader-job navigation precedes exact lookup. |
-| [docs/agentic-workspace-install.md](../../docs/agentic-workspace-install.md) | guide | 926 → 392 | compress | Install, setup, ordinary work; released-version boundary explicit. |
+| [docs/agentic-workspace-install.md](../../docs/agentic-workspace-install.md) | guide | 926 → 412 | compress | Install, setup, ordinary work; Cargo pins both crates exactly, core first; released-version boundary explicit. |
 | [docs/everyday-use.md](../../docs/everyday-use.md) | guide | 771 → 730 | compress | Ordinary tasks; delete repeated machine choreography. |
 | [docs/customization.md](../../docs/customization.md) | guide | 771 → 771 | keep | Choose shared/local scope and strongest owner. |
 | [docs/troubleshooting.md](../../docs/troubleshooting.md) | guide | 724 → 724 | keep | Symptom-first recovery; fix changed installation anchor. |
