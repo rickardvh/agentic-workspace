@@ -457,6 +457,9 @@ def storage_policy_findings(paths: list[str], inventory: dict[str, Any], *, root
     for index, entry in enumerate(inventory["entries"]):
         location = f"{INVENTORY_PATH.relative_to(REPO_ROOT).as_posix()}#entries[{index}]"
         storage_class = entry["storage_class"]
+        pattern = entry["pattern"]
+        if pattern.startswith(".agentic-workspace/") and any(char in pattern for char in "*?") and not entry.get("lifetime"):
+            findings.append(Finding(path=location, message="enclave collection must declare current replacement or terminal lifetime and bounded producer proof"))
         if storage_class in RECONSTRUCTABLE_CLASSES and not entry.get("reconstructable_from"):
             findings.append(Finding(path=location, message=f"{storage_class} entries must declare reconstructable_from"))
         if storage_class in GUARDRAILED_CLASSES:

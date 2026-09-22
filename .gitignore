@@ -31,3 +31,6 @@ scratch/
 
 # Distribution build output
 /dist/
+
+# Native proof synchronization is local, not retained evidence
+/.agentic-workspace/proof/receipts/publication.lock

@@ -232,6 +232,11 @@
             "type": "string",
             "minLength": 1,
             "description": "Additional notes that qualify this record."
+          },
+          "lifetime": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Current replacement or terminal disposition boundary for a wildcard enclave family; adding a producer requires bounded lifetime evidence."
           }
         },
         "allOf": [

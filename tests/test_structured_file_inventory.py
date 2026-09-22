@@ -677,3 +677,13 @@ def test_storage_guardrail_reports_matching_file_size_breach() -> None:
 
     assert len(findings) == 1
     assert "max_bytes=1" in findings[0].message
+
+
+def test_new_enclave_collection_requires_lifetime_before_history_can_grow() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    entry = dict(next(row for row in inventory["entries"] if row["pattern"] == ".agentic-workspace/evaluations/*.json"))
+    entry["pattern"] = ".agentic-workspace/new-owner/*.json"
+    entry.pop("lifetime")
+    inventory["entries"].append(entry)
+    findings = check_structured_file_inventory.storage_policy_findings([], inventory)
+    assert any("enclave collection must declare" in finding.message for finding in findings)

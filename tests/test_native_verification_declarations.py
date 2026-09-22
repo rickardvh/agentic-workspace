@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
@@ -58,3 +60,27 @@ proof_profile="focused"
     assert any("protocol-semantic-scope-requires-owner-judgment" in gap for gap in unresolved["verification"]["evidence_gaps"])
     assert unresolved["decision_packet"]["claim_boundary"]["allowed"] == []
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+def test_repository_proof_commands_resolve_current_source_tools() -> None:
+    import shlex
+    import tomllib
+
+    root = Path(__file__).resolve().parents[1]
+    manifest = tomllib.loads((root / ".agentic-workspace/verification/manifest.toml").read_text(encoding="utf-8"))
+
+    def commands(value):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key == "commands":
+                    yield from child
+                else:
+                    yield from commands(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from commands(child)
+
+    for command in commands(manifest):
+        for token in shlex.split(command):
+            if "/" in token and token.endswith((".py", ".mjs")):
+                assert (root / token).is_file(), f"Declared proof command names a missing source: {command}"

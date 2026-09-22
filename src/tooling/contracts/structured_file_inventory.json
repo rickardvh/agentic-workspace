@@ -191,7 +191,8 @@
       "generated": false,
       "notes": "Checked-in, explicitly non-closing issue dispositions keep implementation evidence separate from longitudinal Evaluation authority.",
       "storage_class": "source-of-truth",
-      "checked_in_justification": "Disposition boundaries and audited remaining gaps must survive checkout until an Evaluation owner operation supersedes them."
+      "checked_in_justification": "Disposition boundaries and audited remaining gaps must survive checkout until an Evaluation owner operation supersedes them.",
+      "lifetime": "Retained legacy conclusion sources have no current append producer. Revise the exact source for continuing value; a new native producer requires terminal disposition proof before adding history."
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
@@ -428,7 +429,8 @@
       "pattern": ".agentic-workspace/agent-aids/**/manifest.json",
       "schema_or_validator": "src/core/contracts/schemas/agent_aid_manifest.schema.json",
       "status": "schema-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Reusable authored or generated source, replaced in place by its declared owner; no per-task append producer. A new accumulating producer requires its terminal lifetime and bounded proof."
     },
     {
       "checked_in_justification": "Small executable fixture proves nontrivial issue bodies are rendered from structured request data instead of shell-composed fields.",
@@ -440,7 +442,8 @@
       "pattern": ".agentic-workspace/agent-aids/scripts/github-issue-body/examples/*.json",
       "schema_or_validator": ".agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py ISSUE_BODY_REQUEST_SCHEMA",
       "status": "typed-validator-backed",
-      "storage_class": "diagnostic-fixture"
+      "storage_class": "diagnostic-fixture",
+      "lifetime": "Reusable authored or generated source, replaced in place by its declared owner; no per-task append producer. A new accumulating producer requires its terminal lifetime and bounded proof."
     },
     {
       "checked_in_justification": "Small advisory route cache retained to reduce repeated setup/adopt discovery; host policy remains in config and active planning.",
@@ -594,7 +597,8 @@
       },
       "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_strategy_dispositions",
       "status": "typed-validator-backed",
-      "storage_class": "non-reconstructable-decision"
+      "storage_class": "non-reconstructable-decision",
+      "lifetime": "Retained evidence decisions have no current append producer. Revise or retire through the declared source owner; a new producer requires bounded lifetime proof."
     },
     {
       "checked_in_justification": "Checked-in suite budget observations preserve maintainer-owned test strategy targets and measurement provenance without making package runtime code carry repo-specific counts.",
@@ -635,7 +639,8 @@
       "pattern": ".agentic-workspace/memory/**/REGISTRY.json",
       "schema_or_validator": "agentic-workspace skills discovery",
       "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Reusable authored or generated source, replaced in place by its declared owner; no per-task append producer. A new accumulating producer requires its terminal lifetime and bounded proof."
     },
     {
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
@@ -647,7 +652,8 @@
       "pattern": ".agentic-workspace/memory/skills/*/agents/openai.yaml",
       "schema_or_validator": "OpenAI agent skill metadata convention",
       "status": "source-checkout-diagnostic",
-      "storage_class": "diagnostic-fixture"
+      "storage_class": "diagnostic-fixture",
+      "lifetime": "Reusable authored or generated source, replaced in place by its declared owner; no per-task append producer. A new accumulating producer requires its terminal lifetime and bounded proof."
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
@@ -671,7 +677,8 @@
       "pattern": ".agentic-workspace/planning/schemas/*.schema.json",
       "schema_or_validator": "JSON Schema draft 2020-12",
       "status": "schema-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Reusable authored or generated source, replaced in place by its declared owner; no per-task append producer. A new accumulating producer requires its terminal lifetime and bounded proof."
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
@@ -683,7 +690,8 @@
       "pattern": ".agentic-workspace/planning/lanes/*.lane.json",
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-lane.schema.json",
       "status": "schema-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Canonical issue relations preserve provider-neutral parent, child, dependency, and maturity authority across sessions and branches.",
@@ -695,7 +703,8 @@
       "pattern": ".agentic-workspace/planning/issue-relations/*.issue-relation.json",
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-issue-relation.schema.json",
       "status": "schema-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
@@ -721,7 +730,8 @@
       ],
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-lane.schema.json",
       "status": "schema-backed",
-      "storage_class": "historical-audit-distillation"
+      "storage_class": "historical-audit-distillation",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Temporary external evidence snapshots are reconstructable and should stay bounded when checked in.",
@@ -785,7 +795,8 @@
       "pattern": ".agentic-workspace/planning/execplans/*.plan.json",
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
       "status": "schema-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Branch-safe planning transitions must survive checkout until their requested integration is reviewed and applied.",
@@ -797,7 +808,8 @@
       "pattern": ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json",
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
       "status": "schema-backed",
-      "storage_class": "non-reconstructable-decision"
+      "storage_class": "non-reconstructable-decision",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Applied branch-safe Planning transitions require a durable target-branch receipt that records the exact lifecycle decision and authority revisions.",
@@ -809,7 +821,8 @@
       "pattern": ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json",
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-integration-receipt.schema.json",
       "status": "schema-backed",
-      "storage_class": "non-reconstructable-decision"
+      "storage_class": "non-reconstructable-decision",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Evaluation assignment receipts bind admitted result identities to the exact Planning owner and authority revision used at conclusion time.",
@@ -831,7 +844,8 @@
       "routed_to": "#2646",
       "schema_or_validator": "agentic-workspace evaluation authority-refresh owner-receipt validator",
       "status": "typed-validator-backed",
-      "storage_class": "historical-audit-distillation"
+      "storage_class": "historical-audit-distillation",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Canonical Planning assignment records preserve the exact selected target, assignment gate, run identity, allowed scope, and return contract required for non-local continuation and dogfood replay.",
@@ -852,7 +866,8 @@
       "pattern": ".agentic-workspace/planning/assignments/*.assignment.json",
       "schema_or_validator": "agentic-workspace assignment lifecycle validator and focused assignment conformance tests",
       "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Verification-owned durable operational selection for source-reconciliation groups; repository-visible references do not transfer target-bound receipt custody.",
@@ -871,7 +886,8 @@
       "pattern": ".agentic-workspace/proof/current/source-reconciliation-*.json",
       "schema_or_validator": "src/core/src/modules/verification/native_source_reconciliation.rs::current_groups / retained; src/core/src/current_projection.rs; tests/test_native_source_reconciliation.py",
       "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Verification replaces the current authenticated projection; superseded evidence retires with custody and consumer checks."
     },
     {
       "checked_in_justification": "One bounded current index postimage carrier survives disposition of superseded proof receipts.",
@@ -910,9 +926,10 @@
       "notes": "Native custody and current subject govern reuse. Authenticated supersession and exact owner disposition bound receipt history without granting proof sufficiency.",
       "owner": "verification",
       "pattern": ".agentic-workspace/proof/receipts/*.json",
-      "schema_or_validator": "src/core/src/modules/verification/proof_publication.rs::owned_index / retained; src/core/src/modules/verification/native_source_reconciliation.rs::retained",
+      "schema_or_validator": "validator: src/core/src/modules/verification/proof_publication.rs::owned_index / retained; src/core/src/modules/verification/native_source_reconciliation.rs::retained",
       "status": "typed-validator-backed",
-      "storage_class": "historical-audit-distillation"
+      "storage_class": "historical-audit-distillation",
+      "lifetime": "Verification automatically supersedes authenticated non-reusable evidence; explicit guarded disposition retires legacy evidence. No event-count history requirement."
     },
     {
       "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
@@ -938,7 +955,8 @@
       ],
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
       "status": "schema-backed",
-      "storage_class": "historical-audit-distillation"
+      "storage_class": "historical-audit-distillation",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Historical closeout proof retained as distilled evidence when the full archive record is intentionally omitted.",
@@ -964,7 +982,8 @@
       ],
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
       "status": "schema-backed",
-      "storage_class": "historical-audit-distillation"
+      "storage_class": "historical-audit-distillation",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Bounded issue #2740 evidence retains measured cold/warm projection reuse, managed-state read counts, and deterministic replay deltas for post-review verification.",
@@ -1016,7 +1035,8 @@
       ],
       "schema_or_validator": "src/tooling/contracts/schemas/proof_route_cost_replay.schema.json",
       "status": "schema-backed",
-      "storage_class": "historical-audit-distillation"
+      "storage_class": "historical-audit-distillation",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
@@ -1028,7 +1048,8 @@
       "pattern": ".agentic-workspace/planning/decompositions/*.decomposition.json",
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
       "status": "schema-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "source-of-truth",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
@@ -1060,7 +1081,8 @@
       ],
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-review.schema.json",
       "status": "schema-backed",
-      "storage_class": "historical-audit-distillation"
+      "storage_class": "historical-audit-distillation",
+      "lifetime": "Planning terminal disposition: exact closed group, no unresolved intent or continuing value, current-consumer guard. Historical kinds without a current producer remain value-audited source; never append copies."
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",

@@ -28,7 +28,9 @@ rather than refreshing dependencies as a side effect of unrelated work.
 
 ## Find the right implementation
 
-Start with the behaviour being changed, then locate its responsible component:
+The [repository map](repository-layout.md) explains authored source, generated material
+and operating-state lifetimes. Start with the behaviour being changed, then locate
+its responsible component:
 
 | Change | Start here |
 | --- | --- |
