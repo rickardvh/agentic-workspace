@@ -136,14 +136,6 @@ def _copy_source_fixture(target_root: Path) -> None:
         "README.md",
         "docs/agentic-workspace-install.md",
         "pyproject.toml",
-        "packages/memory/pyproject.toml",
-        "packages/memory/README.md",
-        "packages/memory/LICENSE",
-        "packages/planning/pyproject.toml",
-        "packages/planning/README.md",
-        "packages/planning/LICENSE",
-        "packages/verification/pyproject.toml",
-        "packages/verification/LICENSE",
     ):
         target = target_root / relative
         target.parent.mkdir(parents=True, exist_ok=True)

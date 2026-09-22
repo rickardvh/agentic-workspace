@@ -64,11 +64,11 @@ def stage_crate(root, crate, destination, source):
             if text.count(old) != 1:
                 raise ValueError("Unknown Cargo payload build layout")
             text = text.replace(old, '.join("_inputs")')
-            declaration = root / "src/agentic_workspace/contracts/workspace_surfaces.json"
+            declaration = root / "src/core/contracts/workspace_surfaces.json"
             copy_input(declaration)
             contract = json.loads(declaration.read_text())
             for reference in contract["payload_files"]:
-                copy_input(root / "src/agentic_workspace/_payload" / reference)
+                copy_input(root / "src/core/payload" / reference)
             for reference in contract["derivation"]["portable_sources"]:
                 copy_input(root / reference)
         output = destination / relative

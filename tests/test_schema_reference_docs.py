@@ -21,7 +21,7 @@ def test_schema_reference_generator_renders_workspace_config_annotations() -> No
 
     text = module.render_schema_reference(module.DEFAULT_SCHEMA)
 
-    assert "Source schema: `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`" in text
+    assert "Source schema: `src/core/contracts/schemas/workspace_config.schema.json`" in text
     assert "`modules.enabled`" in text
     assert '`["planning", "memory"]`' in text
     assert "`workspace.agent_instructions_file`" in text
@@ -39,7 +39,9 @@ def test_schema_reference_annotation_check_covers_workspace_config() -> None:
 
 def test_schema_reference_default_targets_cover_all_contract_schemas() -> None:
     module = _load_generator()
-    schemas = sorted(path.relative_to(module.REPO_ROOT) for path in (module.REPO_ROOT / module.SCHEMA_ROOT).glob("*.schema.json"))
+    schemas = sorted(
+        path.relative_to(module.REPO_ROOT) for root in module.SCHEMA_ROOTS for path in (module.REPO_ROOT / root).glob("*.schema.json")
+    )
 
     assert sorted(target.schema_path for target in module.DEFAULT_TARGETS) == schemas
 
@@ -148,7 +150,7 @@ def test_schema_reference_curated_descriptions_cover_high_value_schemas() -> Non
 
     startup = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/startup_context.schema.json"))
     report = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/workspace_report.schema.json"))
-    aid = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"))
+    aid = module.render_schema_reference(Path("src/core/contracts/schemas/agent_aid_manifest.schema.json"))
 
     assert "minimum safe context for entering or resuming work" in startup
     assert "Ordered surfaces and commands an agent should use" in startup

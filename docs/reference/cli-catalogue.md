@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:68a91618f1b63bd32b8a5030796802a2a5b2df32c8a6bea490f32ce20fb369af`
+- Contract digest: `sha256:27d7860e2a115b0a20bd6851a36984cbba037ab68ff9878e00876acbbb3036f4`
 - Program: `agentic-workspace`
 - Command count: 4
 
@@ -35,6 +35,6 @@ Use `--help` for the installed artefact's actual command boundary. Owner request
 
 `start` is current resolution; `invoke` consumes one exact returned action. `resources` and `worker` are bounded dedicated tools. A request, route, packet seal or successful process does not grant mutation, ownership, proof or completion authority. Optional machine-local diagnostics remain distinct from repository mutation.
 
-The older `cli_commands.json` / `cli_option_groups.json` schemas describe retained source-maintenance and historical adapters. Their `init`, `defaults`, `implement`, `proof` and module command families are not native public commands. Do not switch to a former host to bypass native rejection.
+The retired `init`, `defaults`, `implement`, `proof` and module command families are not native public commands. Owner actions are obtained from the current native decision.
 
 See [installation](../agentic-workspace-install.md), [everyday use](../everyday-use.md) and the [shared authority graph](../architecture/shared-rust-core.md).

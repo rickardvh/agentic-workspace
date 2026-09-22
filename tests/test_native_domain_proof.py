@@ -95,7 +95,7 @@ def test_real_domain_lane_and_semantic_only_scope_stay_source_owned(
         surface,
         shared_core_binary,
         native_cli,
-        {"target": str(tmp_path), "task": "Inspect proof owner", "changed": ["crates/agentic-workspace-core/src/proof_publication.rs"]},
+        {"target": str(tmp_path), "task": "Inspect proof owner", "changed": ["src/core/src/modules/verification/proof_publication.rs"]},
         host_path=os.environ["PATH"],
     )
     candidates = result["verification"]["domain_proof_candidates"]["lanes"]

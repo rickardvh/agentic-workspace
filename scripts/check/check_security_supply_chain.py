@@ -142,7 +142,7 @@ def evaluate_security_supply_chain(
         Path("Cargo.toml"),
         Path("rust-toolchain.toml"),
     ]
-    rust_paths.extend(sorted(path.relative_to(root) for path in root.glob("crates/*/Cargo.toml")))
+    rust_paths.extend([Path("src/core/Cargo.toml"), Path("src/cli/rust/Cargo.toml")])
     missing_rust = [path.as_posix() for path in rust_paths if not (root / path).is_file()]
     rust_command = f"python {rust_policy['runner']} --install"
     missing_rust_gates = [

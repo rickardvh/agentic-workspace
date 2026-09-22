@@ -126,7 +126,7 @@
     {
       "area": "workspace_config_schema",
       "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+      "owner_surface": "src/core/contracts/schemas/workspace_config.schema.json",
       "consumers": [
         ".agentic-workspace/docs/workspace-config-contract.md"
       ],
@@ -135,7 +135,7 @@
     {
       "area": "workspace_local_override_schema",
       "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+      "owner_surface": "src/core/contracts/schemas/workspace_local_override.schema.json",
       "consumers": [
         ".agentic-workspace/docs/workspace-config-contract.md"
       ],
@@ -200,19 +200,9 @@
       "notes": "The internal module capability contract is now formalized as a schema to reduce prose dependency."
     },
     {
-      "area": "module_component_model",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/module_registry.json",
-      "consumers": [
-        "generated/workspace/python/cli.py:modules",
-        "src/agentic_workspace/contracts/schemas/module_registry.schema.json"
-      ],
-      "notes": "The module registry declares root workspace components plus module-owned MCP-style resources, tools, prompts, schemas, roots, safety metadata, and future adapter boundaries without adding an MCP runtime dependency."
-    },
-    {
       "area": "workspace_surfaces_manifest",
       "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/workspace_surfaces.json",
+      "owner_surface": "src/core/contracts/workspace_surfaces.json",
       "consumers": [],
       "notes": "Stable workspace-owned path tables and setup artifact locations are manifest-backed instead of duplicated in cli.py."
     },
@@ -229,7 +219,7 @@
     {
       "area": "workflow_artifact_profiles",
       "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/workflow_artifact_profiles.json",
+      "owner_surface": "src/core/contracts/workflow_artifact_profiles.json",
       "consumers": [
         "generated/workspace/python/cli.py:_workflow_artifact_profile_payload",
         "generated/workspace/python/cli.py:_defaults_payload"
@@ -281,15 +271,6 @@
       "notes": "High-risk command gating, preflight token format, token freshness defaults, and strict-gate messages are manifest-backed instead of inline Python constants."
     },
     {
-      "area": "procedural_operation_contracts",
-      "classification": "procedural-contract",
-      "owner_surface": "src/agentic_workspace/contracts/operation_contracts.json",
-      "consumers": [
-        "future CLI/MCP/skill generators"
-      ],
-      "notes": "Draft operation contracts describe behavior, effects, guards, proof expectations, and primitive sequencing without replacing current runtime logic yet."
-    },
-    {
       "area": "portable_operation_ir",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/operation_primitives.json and src/agentic_workspace/contracts/operations/*.json ir_plan",
@@ -297,33 +278,6 @@
         "future Python and TypeScript target executors"
       ],
       "notes": "The portable IR layer is limited to target-executor primitives over rooted paths, package payloads, JSON/TOML/Markdown, records, schemas, templates, and emitted output. Package-semantic primitives remain explicit runtime capabilities until they are decomposed behind this smaller substrate."
-    },
-    {
-      "area": "generated_tool_conformance",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/conformance_contracts.json",
-      "consumers": [
-        "agentic_workspace.conformance:run_process_conformance"
-      ],
-      "notes": "Black-box conformance contracts validate alternate or generated implementations against operation behavior without trusting their implementation path."
-    },
-    {
-      "area": "operation_conformance_test_ir",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/operation_conformance_test_ir.json",
-      "consumers": [
-        "future operation conformance test runner"
-      ],
-      "notes": "Schema-coupled behavioral cases define the operation conformance migration target. They preserve black-box operation behavior, not exact handwritten regression-test bulk, and keep CLI/process execution as a wrapper-boundary adapter rather than the default semantic proof path."
-    },
-    {
-      "area": "operation_artifact_registry",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/operation_artifact_registry.json",
-      "consumers": [
-        "future proof selection routing"
-      ],
-      "notes": "Explicit operation artifact registry maps operation contracts to executable artifacts, adapters, wrapper surfaces, conformance cases, stale conditions, and changed-path proof routing so the runner does not infer artifacts from layout."
     },
     {
       "area": "target_support",
@@ -334,35 +288,6 @@
         "#1481 TypeScript direct-operation support"
       ],
       "notes": "AW target-support declarations consume command-generation target-extension contracts so implemented targets can enter the semantic conformance matrix without target-specific product semantics or per-operation feature maintenance."
-    },
-    {
-      "area": "module_registry",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/module_registry.json",
-      "consumers": [
-        "generated/workspace/python/cli.py:_module_operations",
-        "generated/workspace/python/cli.py:_module_registry"
-      ],
-      "notes": "Module metadata, command args, and result-contract fields are manifest-backed while lifecycle handlers and detectors remain procedural."
-    },
-    {
-      "area": "cli_command_manifests",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/cli_commands.json",
-      "consumers": [
-        "generated/workspace/python/cli.py:build_parser",
-        "generated/workspace/python/cli.py:_command_suggestions"
-      ],
-      "notes": "Command names, parser help text, and command-local options are manifest-backed instead of duplicated in argparse construction."
-    },
-    {
-      "area": "cli_option_groups",
-      "classification": "declarative",
-      "owner_surface": "src/agentic_workspace/contracts/cli_option_groups.json",
-      "consumers": [
-        "generated/workspace/python/cli.py:build_parser"
-      ],
-      "notes": "Shared parser option groups are manifest-backed instead of duplicated in helper functions."
     },
     {
       "area": "skill_specs",

@@ -180,8 +180,6 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
     for relative in (
         "README.md",
         "docs/agentic-workspace-install.md",
-        "packages/memory/README.md",
-        "packages/planning/README.md",
     ):
         documentation = (root / relative).read_text(encoding="utf-8")
         if "git+https://github.com/rickardvh/agentic-workspace@master" in documentation:

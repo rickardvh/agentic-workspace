@@ -10,9 +10,7 @@ check_agent_aids = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = check_agent_aids
 _SPEC.loader.exec_module(check_agent_aids)
 
-_SCHEMA_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / "agent_aid_manifest.schema.json"
-)
+_SCHEMA_SOURCE = Path(__file__).resolve().parents[1] / "src/core/contracts/schemas/agent_aid_manifest.schema.json"
 
 
 def _write(path: Path, text: str) -> None:
@@ -35,7 +33,7 @@ def test_selected_executable_static_closure_never_runs_helpers(tmp_path):
 
 
 def _prepare_schema(root: Path) -> None:
-    _write(root / "src" / "agentic_workspace" / "contracts" / "schemas" / "agent_aid_manifest.schema.json", _SCHEMA_SOURCE.read_text())
+    _write(root / "src/core/contracts/schemas/agent_aid_manifest.schema.json", _SCHEMA_SOURCE.read_text())
 
 
 def _valid_manifest(**overrides):

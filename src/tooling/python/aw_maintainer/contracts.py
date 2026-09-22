@@ -20,9 +20,10 @@ def contract_roots() -> tuple[Path, ...]:
     repo_root = contracts_root().parents[2]
     return (
         contracts_root(),
-        repo_root / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts",
-        repo_root / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts",
-        repo_root / "packages" / "verification" / "src" / "repo_verification_bootstrap" / "contracts",
+        repo_root / "src/core/contracts",
+        repo_root / "src/core/src/modules/planning/contracts",
+        repo_root / "src/core/src/modules/memory/contracts",
+        repo_root / "src/core/src/modules/verification/contracts",
     )
 
 
@@ -264,52 +265,12 @@ def preflight_policy_manifest() -> dict[str, Any]:
     return load_validated_contract_json("preflight_policy.json", "preflight_policy.schema.json")
 
 
-def module_registry_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("module_registry.json", "module_registry.schema.json")
-
-
-def cli_commands_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("cli_commands.json", "cli_commands.schema.json")
-
-
 def operational_affordance_roles_manifest() -> dict[str, Any]:
     return load_validated_contract_json("operational_affordance_roles.json", "operational_affordance_roles.schema.json")
 
 
-def cli_option_groups_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("cli_option_groups.json", "cli_option_groups.schema.json")
-
-
-def operation_contracts_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("operation_contracts.json", "operation_contracts.schema.json")
-
-
-def conformance_contracts_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("conformance_contracts.json", "conformance_contracts.schema.json")
-
-
-def operation_conformance_test_ir_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("operation_conformance_test_ir.json", "operation_conformance_test_ir.schema.json")
-
-
-def operation_artifact_registry_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("operation_artifact_registry.json", "operation_artifact_registry.schema.json")
-
-
 def target_support_manifest() -> dict[str, Any]:
     return load_validated_contract_json("target_support.json", "target_support.schema.json")
-
-
-def lifecycle_generation_readiness_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("lifecycle_generation_readiness.json", "lifecycle_generation_readiness.schema.json")
-
-
-def conformance_contract_manifest(relative_path: str) -> dict[str, Any]:
-    return load_validated_contract_json(relative_path, "conformance.schema.json")
-
-
-def operation_manifest(relative_path: str) -> dict[str, Any]:
-    return load_contract_json(relative_path)
 
 
 def context_templates_manifest() -> dict[str, Any]:

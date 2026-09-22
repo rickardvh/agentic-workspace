@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_SCHEMA = Path("src/agentic_workspace/contracts/schemas/workspace_config.schema.json")
+DEFAULT_SCHEMA = Path("src/core/contracts/schemas/workspace_config.schema.json")
 MIRRORED_EXTERNAL_SCHEMAS = {
     Path("src/agentic_workspace/contracts/schemas/command_package_ir.schema.json"),
 }
 DEFAULT_OUTPUT = Path("docs/reference/workspace-config.md")
-SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
+SCHEMA_ROOTS = (Path("src/core/contracts/schemas"), Path("src/agentic_workspace/contracts/schemas"))
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ class ReferenceTarget:
 
 def _default_targets() -> tuple[ReferenceTarget, ...]:
     targets: list[ReferenceTarget] = []
-    for schema_path in sorted((REPO_ROOT / SCHEMA_ROOT).glob("*.schema.json")):
+    for schema_path in sorted(path for root in SCHEMA_ROOTS for path in (REPO_ROOT / root).glob("*.schema.json")):
         relative_schema_path = schema_path.relative_to(REPO_ROOT)
         output_name = schema_path.name.removesuffix(".schema.json").replace("_", "-")
         if relative_schema_path == DEFAULT_SCHEMA:

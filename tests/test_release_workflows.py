@@ -136,7 +136,7 @@ def test_package_affecting_scope_excludes_github_automation() -> None:
     assert ".release/releases/" in paths
     assert "docs/release-and-versioning.md" in paths
     assert "bindings/" in paths
-    assert "packages/" in paths
+    assert "src/" in paths
     assert "scripts/release/" in paths
     assert "src/" in paths
     assert "uv.lock" in paths
@@ -148,7 +148,7 @@ def test_release_path_classification_covers_native_sources_and_bindings() -> Non
     classify = _load_release_ownership_classifier().classify_changed_paths
     ownership = _ownership()
     assert classify(["docs/maintenance.md"], ownership)["package_affecting"] is False
-    for path in ("src/agentic_workspace/__init__.py", "bindings/node/package.json", "crates/agentic-workspace-core/src/lib.rs"):
+    for path in ("src/agentic_workspace/__init__.py", "bindings/node/package.json", "src/core/src/lib.rs"):
         result = classify([path], ownership)
         assert result["package_affecting"] is True
         assert result["package_affecting_paths"] == [path]
@@ -450,9 +450,9 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
         ".release/promotions/v1.0.0.json",
         ".release/releases/",
         "Cargo.lock",
-        "crates/agentic-workspace-cli/Cargo.toml",
-        "crates/agentic-workspace-core/Cargo.toml",
         "pyproject.toml",
+        "src/cli/rust/Cargo.toml",
+        "src/core/Cargo.toml",
         "tests/fixtures/native-independent-owner/Cargo.lock",
         "uv.lock",
     ]

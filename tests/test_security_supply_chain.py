@@ -20,7 +20,7 @@ def _copy_security_surface(target: Path) -> None:
         "docs/security/threat-model.md",
         "uv.lock",
         "pyproject.toml",
-        "crates/agentic-workspace-core/src/native_proof.rs",
+        "src/core/src/modules/verification/native_proof.rs",
         "src/agentic_workspace/contracts/security_supply_chain_policy.json",
         "scripts/check/check_security_supply_chain.py",
         ".github/workflow-write-permissions.json",
@@ -35,7 +35,7 @@ def _copy_security_surface(target: Path) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO_ROOT / relative, destination)
     shutil.copytree(REPO_ROOT / ".github/workflows", target / ".github/workflows")
-    for manifest in (REPO_ROOT / "crates").glob("*/Cargo.toml"):
+    for manifest in (REPO_ROOT / "src/core/Cargo.toml", REPO_ROOT / "src/cli/rust/Cargo.toml"):
         destination = target / manifest.relative_to(REPO_ROOT)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(manifest, destination)
@@ -88,7 +88,7 @@ def test_exact_subject_changes_with_lock_workflow_checker_and_source(tmp_path: P
         "Cargo.lock",
         "deny.toml",
         "scripts/check/check_rust_dependencies.py",
-        "crates/agentic-workspace-core/Cargo.toml",
+        "src/core/Cargo.toml",
     ):
         path = tmp_path / relative
         original = path.read_text(encoding="utf-8")

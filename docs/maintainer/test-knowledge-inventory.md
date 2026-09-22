@@ -100,3 +100,15 @@ Current route admission and Memory note validity remain native owner contracts;
 these deletions do not assert that the legacy ledger format has native support.
 Shared Git/instruction fixture builders used by native invocation and delegation
 cases remain in `tests/native_instruction_support.py` without a Python interpreter.
+
+## Native source topology (#3551, #3568)
+
+Native module semantics retain their Rust tests under `src/core/src/modules/`.
+Native public, installed artifact and schema consumers now read the canonical
+core resources. Obsolete standalone package installers, their generated operation
+contracts and conformance metadata are removed; their catalogue-residency and
+historical cleanup-issue assertions establish no current native behavior. The
+current native command catalogue, structured-source validation, release identity
+and source/archive rebuild checks retain those present boundaries. Fixture
+procedure delivery reads the current repository procedures rather than deleted
+installer copies.

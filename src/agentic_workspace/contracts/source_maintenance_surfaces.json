@@ -730,22 +730,14 @@
     ],
     "installed_source_roots": [
       {
-        "repo_path": "src/agentic_workspace/_payload",
-        "installed_prefix": ""
-      },
-      {
-        "repo_path": "packages/memory/bootstrap",
-        "installed_prefix": ""
-      },
-      {
-        "repo_path": "packages/planning/bootstrap",
+        "repo_path": "src/core/payload",
         "installed_prefix": ""
       }
     ],
     "generated_source_authorities": [
       {
         "installed_source": ".agentic-workspace/config.toml",
-        "repo_path": "crates/agentic-workspace-core/src/native_config.rs",
+        "repo_path": "src/core/src/native_config.rs",
         "targets": [
           ".agentic-workspace/docs/workspace-config-contract.md"
         ]

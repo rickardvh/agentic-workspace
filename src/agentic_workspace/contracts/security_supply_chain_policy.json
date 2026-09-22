@@ -20,7 +20,7 @@
     "config": "deny.toml",
     "runner": "scripts/check/check_rust_dependencies.py"
   },
-  "trusted_shell_implementation": "crates/agentic-workspace-core/src/native_proof.rs",
+  "trusted_shell_implementation": "src/core/src/modules/verification/native_proof.rs",
   "release_requirements": [
     "locked-dependency-resolution",
     "security-readiness-receipt",

@@ -36,8 +36,10 @@ exclude it. Former helper imports under `agentic_workspace` have no aliases.
 
 The former Python clients, domain host, compatibility aliases and generated
 Python/TypeScript execution trees are removed. Planning, Memory and Verification
-execute in the native core. Their retained bootstrap data and schemas are Rust
-compile inputs; they do not provide separately runnable Python distributions.
+execute in `src/core/src/modules/`; their native schemas live beside their owner.
+The former `packages/` installer trees and generated operation catalogues are
+removed. Shared contracts live in `src/core/contracts/`, embedded operating
+resources in `src/core/payload/`, and the native CLI in `src/cli/rust/`.
 The source archive contains binding sources and exact Rust compile inputs,
 including canonical contracts and bundled operating resources.
 

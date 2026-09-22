@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_native_help_matches_declared_command_inventory(native_cli: Path) -> None:
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
+    contract = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
     commands = {row["name"] for row in contract["native_cli"]["commands"]}
     result = subprocess.run([str(native_cli), "--help"], capture_output=True, text=True, check=True)
     assert set(re.findall(r"^  ([a-z][\w-]*)  ", result.stdout, re.M)) == commands
@@ -1002,7 +1002,7 @@ def test_public_read_real_repository_decision_preserves_currentness(
     context = {
         "target": str(tmp_path),
         "task": "Review the public semantic boundary",
-        "changed": ["crates/agentic-workspace-core/src/lib.rs"],
+        "changed": ["src/core/src/lib.rs"],
     }
 
     def call(value: dict) -> dict:

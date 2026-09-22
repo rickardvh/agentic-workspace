@@ -15,7 +15,7 @@ check_node, check_python = checker.check_node, checker.check_python
 
 
 def test_public_facade_envelopes_and_drift_rejection(shared_core_binary):
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["language_facade"]
+    contract = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text())["language_facade"]
     check_python(contract)
     check_node(contract, ROOT / "bindings/node/native/operating.mjs", shared_core_binary)
     drift = copy.deepcopy(contract)

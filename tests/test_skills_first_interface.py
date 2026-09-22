@@ -29,7 +29,7 @@ spec.loader.exec_module(generator)
 def assert_current_command_examples(text: str) -> None:
     # Check copyable command recipes against the same declaration the native
     # executable consumes, rather than maintaining a second list of commands.
-    declaration = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["native_cli"]
+    declaration = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text())["native_cli"]
     commands = {item["name"] for item in declaration["commands"]}
     examples = set(re.findall(r"\bagentic-workspace\s+([a-z][a-z-]*)(?=\s+--)", text))
     assert not examples - commands, f"Non-current native command examples: {sorted(examples - commands)}"
@@ -37,9 +37,7 @@ def assert_current_command_examples(text: str) -> None:
 
 def test_active_bootstrap_and_config_command_examples_match_native_surface():
     surfaces = ["AGENTS.md", MAIN, ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/config.toml", "docs/agentic-workspace-install.md"]
-    surfaces += json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())["payload_files"]
-    for module in ("memory", "planning"):
-        surfaces += [path.relative_to(ROOT).as_posix() for path in (ROOT / f"packages/{module}/bootstrap").rglob("*.md")]
+    surfaces += json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())["payload_files"]
     for reference in surfaces:
         assert_current_command_examples((ROOT / reference).read_text(encoding="utf-8").replace("<effective-cli>", "agentic-workspace"))
     # Same guard rejects the durable drift class, including a removed command
@@ -51,9 +49,9 @@ def test_active_bootstrap_and_config_command_examples_match_native_surface():
 def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert generator.synchronize(check=True) == []
     portable = (ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text()
-    shipped = (ROOT / "src/agentic_workspace/_payload" / LEDGER).read_text()
+    shipped = (ROOT / "src/core/payload" / LEDGER).read_text()
     assert shipped == portable and shipped != (ROOT / LEDGER).read_text()
-    assert (ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text() == render(portable, target=ROOT)
+    assert (ROOT / "src/core/payload" / PROFILE).read_text() == render(portable, target=ROOT)
     pointer = STARTUP_POINTER
     agents = (ROOT / "AGENTS.md").read_text()
     assert pointer in agents
@@ -126,7 +124,7 @@ def test_read_profile_uses_target_git_identity(tmp_path, shared_core_binary, nat
 def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
     """Producer-only mutation cannot influence a closed portable derivation graph."""
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    contract_path = "src/agentic_workspace/contracts/workspace_surfaces.json"
+    contract_path = "src/core/contracts/workspace_surfaces.json"
     contract = json.loads((ROOT / contract_path).read_text())
     for reference in [contract_path, *contract["derivation"]["portable_sources"], LEDGER, PROFILE]:
         destination = tmp_path / reference
@@ -169,7 +167,7 @@ def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
 def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypatch):
     """Projection writes cannot silently repair another owner's source record."""
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    host_ref = "src/agentic_workspace/contracts/workspace_surfaces.json"
+    host_ref = "src/core/contracts/workspace_surfaces.json"
     maintenance_ref = "src/agentic_workspace/contracts/source_maintenance_surfaces.json"
     host = json.loads((ROOT / host_ref).read_text())
     maintenance = json.loads((ROOT / maintenance_ref).read_text())
@@ -180,7 +178,6 @@ def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypat
         PROFILE,
         *host["derivation"]["portable_sources"],
         *maintenance["payload_files"],
-        "packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md",
     }
     for reference in references:
         destination = tmp_path / reference

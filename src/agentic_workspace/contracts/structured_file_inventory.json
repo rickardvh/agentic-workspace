@@ -7,7 +7,7 @@
       "generated": false,
       "notes": "Validated directly by the native Verification source reader.",
       "owner": "verification",
-      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/*.schema.json",
+      "pattern": "src/core/src/modules/verification/contracts/*.schema.json",
       "schema_or_validator": "JSON Schema draft 2020-12",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
@@ -19,7 +19,7 @@
       "generated": false,
       "notes": "Native selection and capture enforce closed shape; descriptive context remains advisory.",
       "owner": "memory",
-      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/*.schema.json",
+      "pattern": "src/core/src/modules/memory/contracts/*.schema.json",
       "schema_or_validator": "JSON Schema draft 2020-12",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
@@ -59,7 +59,7 @@
       "generated": true,
       "notes": "The agent-interface generator maintains parity with the installed profile.",
       "owner": "workspace-agent-interface",
-      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/READING.json",
+      "pattern": "src/core/payload/.agentic-workspace/READING.json",
       "reconstructable_from": [
         ".agentic-workspace/OWNERSHIP.toml",
         "scripts/generate/generate_agent_interface.py"
@@ -234,66 +234,6 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Planning operation contracts are module-owned product truth consumed by command generation through operation_contract_root.",
-      "owner": "planning-contracts",
-      "pattern": "packages/planning/src/repo_planning_bootstrap/contracts/operations/*.json",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Memory operation contracts are module-owned product truth consumed by command generation through operation_contract_root.",
-      "owner": "memory-contracts",
-      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/operations/*.json",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Verification operation contracts are module-owned product truth consumed by command generation through operation_contract_root.",
-      "owner": "verification-contracts",
-      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/operations/*.json",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Verification conformance contracts are module-owned process fixtures consumed by generated command conformance checks.",
-      "owner": "verification-contracts",
-      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/conformance/*.json",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/conformance.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Memory payload verification policy is module-owned product truth consumed by the codegen-owned memory.payload.verify primitive.",
-      "owner": "memory-contracts",
-      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
       "notes": "Conformance process contracts are validated by contract tooling checks.",
       "owner": "workspace-contracts",
       "pattern": "src/agentic_workspace/contracts/conformance/*.json",
@@ -332,7 +272,7 @@
       "generated": false,
       "notes": "Payload ownership metadata is consumed by lifecycle checks.",
       "owner": "workspace-payload",
-      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml",
+      "pattern": "src/core/payload/.agentic-workspace/OWNERSHIP.toml",
       "schema_or_validator": "workspace install/doctor ownership checks",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
@@ -356,7 +296,7 @@
       "generated": true,
       "notes": "Generated package copy of the canonical compatibility pointer; no runtime or module discovery authority.",
       "owner": "workspace-payload",
-      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
+      "pattern": "src/core/payload/.agentic-workspace/fallback/no-cli-policy.json",
       "reconstructable_from": [
         ".agentic-workspace/fallback/no-cli-policy.json",
         "scripts/generate/generate_agent_interface.py"
@@ -373,7 +313,7 @@
       "notes": "Resolved workspace config is validated through config/start/report paths.",
       "owner": "workspace-config",
       "pattern": ".agentic-workspace/config.toml",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+      "schema_or_validator": "src/core/contracts/schemas/workspace_config.schema.json",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
     },
@@ -402,7 +342,7 @@
       "generated": false,
       "notes": "Repo ownership metadata is a lifecycle surface; optional [[subsystems]] entries provide host-repo boundary and proof hints.",
       "owner": "workspace-lifecycle",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/ownership_ledger.schema.json",
+      "schema_or_validator": "src/core/contracts/schemas/ownership_ledger.schema.json",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
     },
@@ -486,7 +426,7 @@
       "notes": "Checked-in candidate aids use one manifest per aid directory; scripts/check/check_agent_aids.py enforces nearby manifest coverage for aid files.",
       "owner": "agent-aids",
       "pattern": ".agentic-workspace/agent-aids/**/manifest.json",
-      "schema_or_validator": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+      "schema_or_validator": "src/core/contracts/schemas/agent_aid_manifest.schema.json",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
     },
@@ -929,7 +869,7 @@
       "notes": "One current projection per relation. Only Verification publication replaces superseded groups under its existing lock; current_groups validates bounded unique references and retained validates exact receipt/attempt custody before reuse. Preserve during package upgrade, adoption and uninstall. Generic cleanup must not remove it. Missing or corrupt current material leaves coverage unresolved; historical receipt enumeration is not a recovery substitute. Publication temporaries share the same owner and exact retry checks.",
       "owner": "verification",
       "pattern": ".agentic-workspace/proof/current/source-reconciliation-*.json",
-      "schema_or_validator": "crates/agentic-workspace-core/src/native_source_reconciliation.rs::current_groups / retained; crates/agentic-workspace-core/src/current_projection.rs; tests/test_native_source_reconciliation.py",
+      "schema_or_validator": "src/core/src/modules/verification/native_source_reconciliation.rs::current_groups / retained; src/core/src/current_projection.rs; tests/test_native_source_reconciliation.py",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
     },
@@ -1146,7 +1086,7 @@
       "generated": false,
       "notes": "Source payload workspace skill registry is consumed by install/upgrade and skill discovery.",
       "owner": "workspace-skills",
-      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json",
+      "pattern": "src/core/payload/.agentic-workspace/skills/REGISTRY.json",
       "schema_or_validator": "agentic-workspace skills discovery",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
@@ -1282,18 +1222,6 @@
       "schema_or_validator": "scripts/check/check_validation_runtime_plan.py",
       "status": "typed-validator-backed",
       "storage_class": "diagnostic-fixture"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "toml",
-      "generated": false,
-      "notes": "Memory package and payload manifests share the memory manifest typed-validator contract.",
-      "owner": "memory",
-      "pattern": "packages/memory/**/manifest.toml",
-      "schema_or_validator": "repo_memory_bootstrap._installer_memory._memory_manifest_typed_validator_findings plus doctor memory-manifest checks",
-      "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
     },
     {
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
@@ -1432,220 +1360,12 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Memory package registries are consumed by skills and payload checks.",
-      "owner": "memory-skills",
-      "pattern": "packages/memory/**/REGISTRY.json",
-      "schema_or_validator": "agentic-workspace skills discovery and memory payload verification",
-      "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
-      "editable_by_agents": true,
-      "format": "yaml",
-      "generated": false,
-      "notes": "Agent-specific skill hints are optional source metadata.",
-      "owner": "memory-skills",
-      "pattern": "packages/memory/**/agents/openai.yaml",
-      "schema_or_validator": "OpenAI agent skill metadata convention",
-      "status": "source-checkout-diagnostic",
-      "storage_class": "diagnostic-fixture"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": false,
-      "format": "toml",
-      "generated": false,
-      "notes": "Package bootstrap upgrade-source metadata is payload-managed.",
-      "owner": "package-payload",
-      "pattern": "packages/*/bootstrap/.agentic-workspace/*/UPGRADE-SOURCE.toml",
-      "schema_or_validator": "package upgrade/source checks",
-      "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Fixture JSON is test data, not shipped runtime policy.",
-      "owner": "memory-tests",
-      "pattern": "packages/memory/tests/fixtures/**/*.json",
-      "schema_or_validator": "pytest fixture assertions",
-      "status": "source-checkout-diagnostic",
-      "storage_class": "diagnostic-fixture"
-    },
-    {
-      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
-      "editable_by_agents": true,
-      "format": "toml",
-      "generated": false,
-      "notes": "Fixture TOML is test data, not shipped runtime policy.",
-      "owner": "memory-tests",
-      "pattern": "packages/memory/tests/fixtures/**/*.toml",
-      "schema_or_validator": "pytest fixture assertions",
-      "status": "source-checkout-diagnostic",
-      "storage_class": "diagnostic-fixture"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Bootstrap execplan templates share the execplan schema.",
-      "owner": "planning-payload",
-      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json",
-      "schema_or_validator": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Bootstrap decomposition templates share the decomposition schema.",
-      "owner": "planning-payload",
-      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/*.decomposition.json",
-      "schema_or_validator": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-decomposition.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Bootstrap review templates share the review schema.",
-      "owner": "planning-payload",
-      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json",
-      "schema_or_validator": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
       "notes": "Planning package payload schemas are installed with planning record templates.",
       "owner": "planning-payload",
-      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/*.schema.json",
+      "pattern": "src/core/src/modules/planning/contracts/*.schema.json",
       "schema_or_validator": "JSON Schema draft 2020-12",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Planning bootstrap JSON is covered by package payload verification.",
-      "owner": "planning-payload",
-      "pattern": "packages/planning/bootstrap/**/*.json",
-      "schema_or_validator": "planning payload verification",
-      "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Planning skill registry is consumed by skill discovery.",
-      "owner": "planning-skills",
-      "pattern": "packages/planning/skills/REGISTRY.json",
-      "schema_or_validator": "agentic-workspace skills discovery and planning payload verification",
-      "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Fixture JSON is test data, not shipped runtime policy.",
-      "owner": "planning-tests",
-      "pattern": "packages/planning/tests/fixtures/**/*.json",
-      "schema_or_validator": "pytest fixture assertions",
-      "status": "source-checkout-diagnostic",
-      "storage_class": "diagnostic-fixture"
-    },
-    {
-      "checked_in_justification": "Duplicate or candidate payload metadata retained only while routed to collapse behind one source plus generated outputs.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Package-local maintainer/development artifact validated by planning package tests; not installed into host repos.",
-      "owner": "planning-package",
-      "pattern": "packages/planning/payload-surface-classification.json",
-      "reconstructable_from": [
-        "planning payload source files",
-        "scripts/check planning surface checks",
-        "git history"
-      ],
-      "schema_or_validator": "packages/planning/schemas/payload-surface-classification.schema.json",
-      "status": "schema-backed",
-      "storage_class": "removable-duplicate",
-      "storage_routed_to": "#540"
-    },
-    {
-      "checked_in_justification": "Duplicate or candidate payload metadata retained only while routed to collapse behind one source plus generated outputs.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Package-local maintainer/development artifact validated by planning package tests; not installed into host repos.",
-      "owner": "planning-package",
-      "pattern": "packages/planning/extraction-candidates.json",
-      "reconstructable_from": [
-        "planning payload source files",
-        "scripts/check planning surface checks",
-        "git history"
-      ],
-      "schema_or_validator": "packages/planning/schemas/extraction-candidates.schema.json",
-      "status": "schema-backed",
-      "storage_class": "removable-duplicate",
-      "storage_routed_to": "#540"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Package-local schemas validate planning package maintainer/development artifacts; not installed into host repos.",
-      "owner": "planning-package",
-      "pattern": "packages/planning/schemas/*.schema.json",
-      "schema_or_validator": "JSON Schema draft 2020-12 and planning package tests",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools.",
-      "editable_by_agents": true,
-      "format": "toml",
-      "generated": false,
-      "notes": "Package metadata is validated by Python packaging tools.",
-      "owner": "python-packaging",
-      "pattern": "packages/*/pyproject.toml",
-      "schema_or_validator": "uv/build-backend packaging validation",
-      "status": "typed-validator-backed",
-      "storage_class": "platform-tooling"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": false,
-      "format": "toml",
-      "generated": true,
-      "notes": "Standalone package fallback mirror of the canonical ownership ledger.",
-      "owner": "package-lifecycle",
-      "pattern": "packages/*/src/**/_ownership.toml",
-      "reconstructable_from": [
-        ".agentic-workspace/OWNERSHIP.toml",
-        "scripts/generate/generate_agent_interface.py"
-      ],
-      "schema_or_validator": "validator: python scripts/generate/generate_agent_interface.py --check",
-      "status": "typed-validator-backed",
-      "storage_class": "generated-required-adapter"
     },
     {
       "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools.",
@@ -1658,18 +1378,6 @@
       "schema_or_validator": "uv/build-backend packaging validation",
       "status": "typed-validator-backed",
       "storage_class": "platform-tooling"
-    },
-    {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Generated-command package schemas are kept in parity with workspace schemas.",
-      "owner": "command-generation",
-      "pattern": "command_generation/schemas/*.schema.json",
-      "schema_or_validator": "JSON Schema draft 2020-12 and workspace parity check",
-      "status": "schema-backed",
-      "storage_class": "source-of-truth"
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by generated workspace defaults behavior.",
@@ -1738,631 +1446,10 @@
       "generated": false,
       "notes": "Crate manifests declare native build inputs; executable reducer authority remains Rust source.",
       "owner": "workspace-runtime",
-      "pattern": "crates/*/Cargo.toml",
+      "pattern": "src/**/Cargo.toml",
       "schema_or_validator": "parser: cargo metadata --locked --no-deps",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Checked in so source-checkout launcher behavior, CI, and local package checks can validate generated command package freshness without regenerating first.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated source manifest used by the source-checkout launcher and package checks to detect stale generated CLI artifacts.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/.agentic-workspace-cli-fingerprint.json",
-      "merge_safety": {
-        "classification": "owner-scoped",
-        "owner_boundary": "generated command package owner directory",
-        "reason": "Each generated package carries only its own operation-contract receipt; shared generator inputs are true shared dependencies across receipts."
-      },
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "generated command package inputs"
-      ],
-      "schema_or_validator": "scripts/run_agentic_workspace.py and command package generation checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in for weak-agent or package compatibility; canonical source remains contracts, templates, or renderer inputs.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated TypeScript package manifests are adapter outputs.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/typescript/package.json",
-      "reconstructable_from": [
-        "package render/check commands",
-        "source contracts and templates"
-      ],
-      "routed_to": "#539",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript package source can load command metadata as data instead of embedding large executable literals.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated TypeScript command-package resources are adapter outputs derived from command_package_ir.json.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/typescript/resources/command_package.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "src/agentic_workspace/contracts/command_package_ir.json"
-      ],
-      "routed_to": "#929",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load executable operation contracts at runtime without depending on source-tree contract paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated TypeScript operation-contract resources are adapter outputs derived from operation contracts consumed by generated CLI packages.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/typescript/resources/operations/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "src/agentic_workspace/contracts/operations/*.json"
-      ],
-      "routed_to": "#931",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load package-owned contract resources at runtime without depending on source-tree contract paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated TypeScript contract resource mirrors are adapter outputs copied from workspace and module-owned package contracts.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/typescript/resources/_contracts/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "workspace and module-owned contract resources"
-      ],
-      "routed_to": "#1005",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load package-owned contract resources at runtime without depending on source-tree contract paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Workspace contract resource mirrors are adapter outputs copied from workspace-owned package contracts.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/workspace/python/_contracts/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "src/agentic_workspace/contracts/workspace_defaults"
-      ],
-      "routed_to": "#1005",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "pattern": "generated/*/.agentic-workspace-cli-fingerprint.json",
-      "merge_safety": {
-        "classification": "owner-scoped",
-        "owner_boundary": "generated command package owner directory",
-        "reason": "Owner receipts prevent disjoint generated packages from rewriting one repo-global fingerprint."
-      },
-      "format": "json",
-      "owner": "generated-command-adapters",
-      "status": "generated-derived",
-      "schema_or_validator": "generated command package checks",
-      "editable_by_agents": false,
-      "generated": true,
-      "notes": "Generated freshness fingerprint for checked-in generated command-package outputs.",
-      "storage_class": "generated-required-adapter",
-      "checked_in_justification": "Checked in so generated package freshness checks can compare the generated surface set deterministically.",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "generated command package outputs and source contracts"
-      ],
-      "routed_to": "#931"
-    },
-    {
-      "checked_in_justification": "Released Python and TypeScript clients require identical package-owned discovery metadata.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated fail-closed external operation support profile for released clients.",
-      "owner": "external-consumer-profile-generation",
-      "pattern": "generated/workspace/*/external_consumer_profile.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_external_consumer_profile.py",
-        "src/agentic_workspace/contracts/command_package_ir.json"
-      ],
-      "routed_to": "#2195",
-      "schema_or_validator": "tests/test_external_consumer_profile.py",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Released clients validate operation requirements without source-checkout or mirrored host payload dependencies.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated self-contained external operation contracts and transitive schemas.",
-      "owner": "external-consumer-profile-generation",
-      "pattern": "generated/workspace/*/external_contract_bundle.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_external_consumer_profile.py",
-        "operation contracts and schema authorities"
-      ],
-      "routed_to": "#2197",
-      "schema_or_validator": "tests/test_external_consumer_profile.py",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "pattern": "generated/workspace/*/external_operation_conformance_receipts.json",
-      "format": "json",
-      "owner": "external-operation-conformance-runner",
-      "status": "generated-derived",
-      "schema_or_validator": "tests/test_external_operation_clients.py",
-      "editable_by_agents": false,
-      "generated": true,
-      "notes": "Generated mirror of producer-owned external operation conformance receipts consumed by released clients.",
-      "storage_class": "generated-required-adapter",
-      "checked_in_justification": "Released Python and TypeScript clients need one package-owned receipt generation to fail closed outside a source checkout.",
-      "reconstructable_from": [
-        "uv run python scripts/check/run_operation_conformance_tests.py --target all",
-        "operation conformance IR and external consumer profile"
-      ],
-      "routed_to": "#2200"
-    },
-    {
-      "checked_in_justification": "Checked in for framework-native agent discovery; canonical source remains SkillSpec.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated framework-native plugin manifests are adapter outputs derived from skill_specs.json.",
-      "owner": "generated-skillspec-targets",
-      "pattern": "generated/workspace/plugins/*/.codex-plugin/plugin.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_skillspec_targets.py",
-        "src/agentic_workspace/contracts/skill_specs.json"
-      ],
-      "routed_to": "#989",
-      "schema_or_validator": "SkillSpec generated target freshness and contract tests",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so installed generated Python package resources load without embedding large JSON blocks in executable code.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Python command-package resource JSON files are adapter outputs derived from command_package_ir.json.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/python/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "src/agentic_workspace/contracts/command_package_ir.json"
-      ],
-      "routed_to": "#929",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so conformance and package proof can load generated adapter metadata as data instead of importing generated Python modules from source packages.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Python command-adapter metadata JSON files are adapter outputs derived from command_adapter_generation.json.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/python/generated_command_adapters.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_adapters.py",
-        "src/agentic_workspace/contracts/command_adapter_generation.json"
-      ],
-      "routed_to": "#950",
-      "schema_or_validator": "generated command adapter checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load operation contracts at runtime without depending on source-tree contract paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Python operation-contract resources are adapter outputs derived from operation contracts consumed by generated CLI packages.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/*/python/operations/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "src/agentic_workspace/contracts/operations/*.json"
-      ],
-      "routed_to": "#931",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load package-owned contract resources at runtime without depending on source-tree contract paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Memory contract resource mirrors are adapter outputs copied from memory-owned package contracts.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/python/_contracts/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/src/repo_memory_bootstrap/contracts"
-      ],
-      "routed_to": "#1007",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load module-owned contract resources at runtime without depending on source-tree contract paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Verification contract resource mirrors are adapter outputs copied from verification-owned module contracts.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/verification/python/_contracts/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/verification/src/repo_verification_bootstrap/contracts"
-      ],
-      "routed_to": "#1159",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Memory TypeScript payload JSON mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/typescript/resources/_payload/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/bootstrap"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "toml",
-      "generated": true,
-      "notes": "Generated Memory TypeScript payload TOML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/typescript/resources/_payload/**/*.toml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/bootstrap"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Memory TypeScript payload YAML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/typescript/resources/_payload/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/bootstrap"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Memory payload JSON mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/python/_payload/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/bootstrap"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "toml",
-      "generated": true,
-      "notes": "Generated Memory payload TOML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/python/_payload/**/*.toml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/bootstrap"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Memory payload YAML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/python/_payload/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/bootstrap"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Memory skill registry mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/python/_skills/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/skills"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Memory TypeScript skill registry mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/typescript/resources/_skills/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/skills"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Memory TypeScript skill YAML mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/typescript/resources/_skills/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/skills"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Memory skill YAML mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/memory/python/_skills/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/memory/skills"
-      ],
-      "routed_to": "#892",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Planning payload JSON mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/python/_payload/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/bootstrap"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "toml",
-      "generated": true,
-      "notes": "Generated Planning payload TOML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/python/_payload/**/*.toml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/bootstrap"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Planning payload YAML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/python/_payload/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/bootstrap"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Planning skill registry mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/python/_skills/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/skills"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated Python packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Planning skill YAML mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/python/_skills/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/skills"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Planning TypeScript payload JSON mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/typescript/resources/_payload/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/bootstrap"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "toml",
-      "generated": true,
-      "notes": "Generated Planning TypeScript payload TOML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/typescript/resources/_payload/**/*.toml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/bootstrap"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Planning TypeScript payload YAML mirrors are adapter outputs copied from package payload resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/typescript/resources/_payload/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/bootstrap"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated Planning TypeScript skill registry mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/typescript/resources/_skills/**/*.json",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/skills"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
-    },
-    {
-      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
-      "editable_by_agents": false,
-      "format": "yaml",
-      "generated": true,
-      "notes": "Generated Planning TypeScript skill YAML mirrors are adapter outputs copied from package skill resources.",
-      "owner": "generated-command-adapters",
-      "pattern": "generated/planning/typescript/resources/_skills/**/*.yaml",
-      "reconstructable_from": [
-        "uv run python scripts/generate/generate_command_packages.py",
-        "packages/planning/skills"
-      ],
-      "routed_to": "#1201",
-      "schema_or_validator": "generated command package checks",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
     },
     {
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
@@ -2480,7 +1567,7 @@
       "notes": "Canonical portable owner declarations; generated host ledgers preserve these facts separately from source-maintenance policy.",
       "owner": "workspace-agent-interface",
       "pattern": "src/agentic_workspace/contracts/portable_ownership.toml",
-      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_ownership.rs and scripts/generate/generate_agent_interface.py::render_host_payload",
+      "schema_or_validator": "validator: src/core/src/native_ownership.rs and scripts/generate/generate_agent_interface.py::render_host_payload",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
     },
@@ -2527,8 +1614,8 @@
       "generated": false,
       "notes": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
       "owner": "memory",
-      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/enclave.json",
-      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_enclave.rs::declarations / validate",
+      "pattern": "src/core/src/modules/memory/contracts/enclave.json",
+      "schema_or_validator": "validator: src/core/src/native_enclave.rs::declarations / validate",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
     },
@@ -2539,8 +1626,8 @@
       "generated": false,
       "notes": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
       "owner": "planning",
-      "pattern": "packages/planning/src/repo_planning_bootstrap/contracts/enclave.json",
-      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_enclave.rs::declarations / validate",
+      "pattern": "src/core/src/modules/planning/contracts/enclave.json",
+      "schema_or_validator": "validator: src/core/src/native_enclave.rs::declarations / validate",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
     },
@@ -2551,15 +1638,39 @@
       "generated": false,
       "notes": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
       "owner": "verification",
-      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/enclave.json",
-      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_enclave.rs::declarations / validate",
+      "pattern": "src/core/src/modules/verification/contracts/enclave.json",
+      "schema_or_validator": "validator: src/core/src/native_enclave.rs::declarations / validate",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Schema files are the validation authority for contract manifests and generated payload shapes.",
+      "owner": "workspace-contracts",
+      "pattern": "src/core/contracts/schemas/*.schema.json",
+      "schema_or_validator": "JSON Schema draft 2020-12",
+      "status": "schema-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Root contract manifests are validated through schema-backed loaders or contract tooling checks; cross-file invariants remain in Python checks.",
+      "owner": "workspace-contracts",
+      "pattern": "src/core/contracts/*.json",
+      "schema_or_validator": "aw_maintainer.contracts validated loaders plus scripts/check/check_contract_tooling_surfaces.py",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
     }
   ],
   "generated_mirrors": [
     {
-      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
+      "pattern": "src/core/payload/.agentic-workspace/fallback/no-cli-policy.json",
       "max_bytes": 10000,
       "source_command": "uv run python scripts/generate/generate_agent_interface.py",
       "named_consumer": "installed compatibility pointer checker",
@@ -2579,7 +1690,7 @@
       "removal_or_demotion_path": "remove only when the supported repository-only reader has an equivalent selective source discovery surface"
     },
     {
-      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/READING.json",
+      "pattern": "src/core/payload/.agentic-workspace/READING.json",
       "max_bytes": 1000000,
       "source_command": "uv run python scripts/generate/generate_agent_interface.py",
       "named_consumer": "shipped repository-only read profile",

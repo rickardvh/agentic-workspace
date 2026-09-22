@@ -14,7 +14,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_path, shared_core_binary, native_cli):
     source = json.loads((ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
-    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     required = set(source["payload_files"] + source["necessary_surface_files"])
     required.update(path for paths in source["module_surface_files"].values() for path in paths)
 
@@ -45,7 +45,7 @@ def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes((ROOT / path).read_bytes())
     ledger = tmp_path / ".agentic-workspace/OWNERSHIP.toml"
-    ledger.write_bytes((ROOT / "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml").read_bytes())
+    ledger.write_bytes((ROOT / "src/core/payload/.agentic-workspace/OWNERSHIP.toml").read_bytes())
     ordinary = inventory(tmp_path)
     assert source_only <= ordinary["removals"].keys()
 
@@ -113,7 +113,7 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     for ref in [*host["payload_files"], ".agentic-workspace/payload-provenance.json"]:
         destination = tmp_path / ref
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -129,7 +129,7 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
     reading = json.loads((tmp_path / PROFILE).read_text())
     assert (tmp_path / PROFILE).read_text() == render(ledger.read_bytes().decode(), target=tmp_path)
     assert "tools/skills/REGISTRY.json" in [ref for row in reading["entries"] for ref in row["refs"]]
-    portable = json.loads((ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text())
+    portable = json.loads((ROOT / "src/core/payload" / PROFILE).read_text())
     assert "tools/skills/REGISTRY.json" not in [ref for row in portable["entries"] for ref in row["refs"]]
     provenance = json.loads((tmp_path / ".agentic-workspace/payload-provenance.json").read_text())
     assert provenance["payload_files"] == host["payload_files"]

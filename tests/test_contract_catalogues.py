@@ -12,7 +12,7 @@ SCRIPT = REPO_ROOT / "scripts/generate/generate_contract_catalogues.py"
 
 
 def test_active_executable_examples_agree_with_native_command_authority():
-    contract = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
+    contract = json.loads((REPO_ROOT / "src/core/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
     commands = {row["name"] for row in contract["native_cli"]["commands"]}
     # Audit procedure sources AND delivered copies. History is evidence, not an
     # executable catalogue; exclude only its named homes, not reference docs.
@@ -28,7 +28,7 @@ def test_active_executable_examples_agree_with_native_command_authority():
         *REPO_ROOT.glob(".agentic-workspace/*/WORKFLOW.md"),
         *REPO_ROOT.glob(".agentic-workspace/planning/*/README.md"),
         *REPO_ROOT.glob("packages/**/*.md"),
-        *REPO_ROOT.glob("src/agentic_workspace/_payload/**/*.md"),
+        *REPO_ROOT.glob("src/core/payload/**/*.md"),
         *REPO_ROOT.glob("generated/**/*.md"),
         *REPO_ROOT.glob("tools/skills/**/*.md"),
         *REPO_ROOT.glob("tools/model-cli-harness/fixtures/**/*.md"),
@@ -37,11 +37,11 @@ def test_active_executable_examples_agree_with_native_command_authority():
     # also guidance. Retained legacy parsers, archived fixtures and historical
     # records are not an alternative public command authority.
     producers = {
-        *REPO_ROOT.glob("crates/*/src/**/*.rs"),
+        *REPO_ROOT.glob("src/core/src/**/*.rs"),
+        *REPO_ROOT.glob("src/cli/rust/src/**/*.rs"),
         *REPO_ROOT.glob("packages/**/Makefile"),
         REPO_ROOT / "Makefile",
         REPO_ROOT / "src/tooling/python/aw_maintainer/session_diagnostics.py",
-        REPO_ROOT / "tests/test_native_public_cli.py",
     }
     files.update(producers)
     unsupported = []
@@ -62,17 +62,6 @@ def test_active_executable_examples_agree_with_native_command_authority():
     assert unsupported == [], "\n".join(unsupported)
     native_reference = (REPO_ROOT / "docs/reference/native-cli.md").read_text(encoding="utf-8")
     assert set(re.findall(r"^\| `([\w-]+)` \|", native_reference, re.M)) == commands
-    for path in (REPO_ROOT / "src/agentic_workspace/contracts/operations").glob("*.json"):
-        assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
-    # Retained generated-operation fixtures must carry the same disposition as
-    # their operations, including when opened independently of the registry.
-    from aw_maintainer.contracts import conformance_contracts_manifest, contract_path
-
-    registry = conformance_contracts_manifest()
-    assert registry["migration_status"] == "source-maintenance-only"
-    for fixture in registry["contracts"]:
-        path = contract_path(fixture["path"])
-        assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
 
 
 def _module():
@@ -100,15 +89,12 @@ def test_surface_catalogue_separates_public_footprint_from_maintenance_profiles(
     assert "configuration.repository-adoption" in text
     assert "Optional domain state is never established" in text
     assert "### `necessary-surfaces`" not in text
-    maintenance = _module().render_maintenance_catalogue()
-    assert "### `necessary-surfaces` + `planning,memory,verification`" in maintenance
-    assert "selected-but-unconfigured" in maintenance
 
 
 @pytest.mark.parametrize("line_ending", [b"\n", b"\r\n"], ids=["lf-checkout", "crlf-checkout"])
 def test_checked_in_catalogues_are_fresh(tmp_path: Path, line_ending: bytes) -> None:
     module = _module()
-    for path in [module.CLI_PATH, module.SURFACES_PATH, module.MODULES_PATH, module.SUPPORT_INSTALL_PATH]:
+    for path in [module.CLI_PATH, module.SURFACES_PATH, module.SUPPORT_INSTALL_PATH]:
         target = tmp_path / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((REPO_ROOT / path).read_bytes().replace(b"\r\n", b"\n").replace(b"\n", line_ending))

@@ -388,8 +388,6 @@ def create_preview_subject(
             environment=environment,
         )
         _run(["uv", "lock"], cwd=worktree, environment=environment)
-        _run([sys.executable, "scripts/generate/generate_external_consumer_profile.py"], cwd=worktree, environment=environment)
-        _run([sys.executable, "scripts/generate/generate_command_packages.py"], cwd=worktree, environment=environment)
         changed = _verify_release_only_paths(worktree, ownership)
         _git("diff", "--check", cwd=worktree, environment=environment)
         _git("add", "--", *changed, cwd=worktree, environment=environment)

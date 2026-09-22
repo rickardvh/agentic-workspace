@@ -38,7 +38,7 @@ def inventory(directory: Path) -> list[dict[str, str]]:
 def proof_identity() -> str:
     paths = [Path(__file__), ROOT / "tests/test_native_release_topology.py",
              ROOT / "tests/test_language_facade.py", ROOT / "scripts/check/check_language_facade.py",
-             ROOT / "src/agentic_workspace/contracts/source_decision_contract.json"]
+             ROOT / "src/core/contracts/source_decision_contract.json"]
     return hashlib.sha256(b"".join(path.read_bytes() for path in paths)).hexdigest()
 
 

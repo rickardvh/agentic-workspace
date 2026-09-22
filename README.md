@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/agentic-workspace)](https://pypi.org/project/agentic-workspace/)
 [![npm](https://img.shields.io/npm/v/%40agentic-workspace%2Fworkspace-cli)](https://www.npmjs.com/package/@agentic-workspace/workspace-cli)
-[![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/crates/agentic-workspace-cli)
+[![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/src/cli/rust)
 
 **Persistent operating context and dynamic control for coding agents.**
 

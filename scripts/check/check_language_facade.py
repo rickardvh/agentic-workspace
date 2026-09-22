@@ -91,7 +91,7 @@ def main():
     parser.add_argument("--node-facade", type=Path)
     parser.add_argument("--core", type=Path)
     args = parser.parse_args()
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["language_facade"]
+    contract = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text())["language_facade"]
     check_python(contract, True if args.installed_python else None)
     if args.node_facade:
         check_node(contract, args.node_facade.resolve(), args.core.resolve())

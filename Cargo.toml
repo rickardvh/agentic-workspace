@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/agentic-workspace-core", "crates/agentic-workspace-cli"]
+members = ["src/core", "src/cli/rust"]
 resolver = "2"
 
 [workspace.metadata]

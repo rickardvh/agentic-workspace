@@ -12,14 +12,14 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 
 @pytest.mark.parametrize(
-    "schema_root",
+    "schema_path",
     [
-        ".agentic-workspace",
-        "packages/planning/bootstrap/.agentic-workspace",
+        ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+        "src/core/src/modules/planning/contracts/planning-execplan.schema.json",
     ],
 )
-def test_native_update_observation_schema(schema_root: str) -> None:
-    schema = json.loads((ROOT / schema_root / "planning/schemas/planning-execplan.schema.json").read_text())
+def test_native_update_observation_schema(schema_path: str) -> None:
+    schema = json.loads((ROOT / schema_path).read_text())
     validator = Draft202012Validator(schema)
     body = json.loads((ROOT / ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json").read_text())
     validator.validate(body)

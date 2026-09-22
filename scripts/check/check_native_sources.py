@@ -32,7 +32,7 @@ def check(root: Path = ROOT) -> None:
                     parts = name.split(".")
                     if len(parts) > 1 and parts[0] == "agentic_workspace" and parts[1] not in MODULES:
                         raise ValueError(f"{path.relative_to(root)} imports unsupported product module {name}")
-    contract = json.loads((product / "contracts/source_decision_contract.json").read_text(encoding="utf-8"))
+    contract = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
     check_python(contract["language_facade"])
 
 

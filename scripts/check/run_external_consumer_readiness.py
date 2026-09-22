@@ -392,7 +392,7 @@ def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
 
         metadata = read("PKG-INFO").decode()
         assert f"Version: {version}" in metadata.splitlines(), "paired source artifact version"
-        manifest = json.loads(read("src/agentic_workspace/contracts/workspace_surfaces.json"))
+        manifest = json.loads(read("src/core/contracts/workspace_surfaces.json"))
         refs = manifest["payload_files"]
         verbatim = {row["path"] for row in manifest["surfaces"] if row.get("materialization", {}).get("mode") == "package-verbatim"}
         seeds = {}
@@ -400,7 +400,7 @@ def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
             path = target / ref
             assert path.resolve().is_relative_to(target.resolve()), ref
             path.parent.mkdir(parents=True, exist_ok=True)
-            seeds[ref] = read("src/agentic_workspace/_payload/" + ref)
+            seeds[ref] = read("src/core/payload/" + ref)
             path.write_bytes(seeds[ref])
     before = _snapshot(target)
     present = start()

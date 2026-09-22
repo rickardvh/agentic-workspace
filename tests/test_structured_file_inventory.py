@@ -220,7 +220,7 @@ def test_agent_aid_manifest_is_schema_backed() -> None:
     entry = next(entry for entry in inventory["entries"] if entry["pattern"] == ".agentic-workspace/agent-aids/**/manifest.json")
 
     assert entry["status"] == "schema-backed"
-    assert entry["schema_or_validator"] == "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"
+    assert entry["schema_or_validator"] == "src/core/contracts/schemas/agent_aid_manifest.schema.json"
     assert entry["storage_class"] == "source-of-truth"
 
 
@@ -254,15 +254,10 @@ def test_root_contract_manifests_are_typed_validator_backed() -> None:
 
 def test_memory_manifest_entries_are_typed_validator_backed() -> None:
     inventory = check_structured_file_inventory.load_inventory()
-    manifest_entries = [
-        entry
-        for entry in inventory["entries"]
-        if entry["pattern"] in {".agentic-workspace/memory/repo/manifest.toml", "packages/memory/**/manifest.toml"}
-    ]
+    manifest_entries = [entry for entry in inventory["entries"] if entry["pattern"] in {".agentic-workspace/memory/repo/manifest.toml"}]
 
     assert {entry["pattern"] for entry in manifest_entries} == {
         ".agentic-workspace/memory/repo/manifest.toml",
-        "packages/memory/**/manifest.toml",
     }
     for entry in manifest_entries:
         assert entry["status"] == "typed-validator-backed"
@@ -290,9 +285,6 @@ def test_planning_record_entries_are_schema_backed() -> None:
         ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json": "planning-integration-receipt.schema.json",
         ".agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
         ".agentic-workspace/proof/receipts/*.json": "validator:",
-        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
-        "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/*.decomposition.json": "planning-decomposition.schema.json",
-        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
     }
     entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in planning_patterns}
 
@@ -341,28 +333,6 @@ def test_planning_evidence_entries_are_schema_backed() -> None:
         assert entry["status"] == "schema-backed"
         assert schema_name in entry["schema_or_validator"]
         assert "routed_to" not in entry
-
-
-def test_package_local_planning_artifacts_are_schema_backed() -> None:
-    inventory = check_structured_file_inventory.load_inventory()
-    artifact_patterns = {
-        "packages/planning/payload-surface-classification.json": "payload-surface-classification.schema.json",
-        "packages/planning/extraction-candidates.json": "extraction-candidates.schema.json",
-    }
-    entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in artifact_patterns}
-
-    assert set(entries) == set(artifact_patterns)
-    for pattern, schema_name in artifact_patterns.items():
-        entry = entries[pattern]
-        assert entry["status"] == "schema-backed"
-        assert schema_name in entry["schema_or_validator"]
-        assert "routed_to" not in entry
-
-
-def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:
-    inventory = check_structured_file_inventory.load_inventory()
-
-    assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {"#538", "#539", "#540"}
 
 
 def test_schema_backed_claim_validates_matched_json_file(tmp_path: Path) -> None:

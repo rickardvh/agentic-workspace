@@ -13,7 +13,7 @@ def render_host_payload(root: Path) -> dict[str, str]:
     """Closed derivation graph: no source-maintenance semantic read capability."""
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
-    host = json.loads((root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    host = json.loads((root / "src/core/contracts/workspace_surfaces.json").read_text())
     portable = set(host["derivation"]["portable_sources"])
     for reference in [*portable, *host["derivation"]["source_only_inputs"]]:
         if "\\" in reference or ":" in reference or any(part in {"", ".", ".."} for part in reference.split("/")):
@@ -76,7 +76,7 @@ def synchronize(*, check: bool = False) -> list[str]:
     host_outputs = render_host_payload(ROOT)
     if any(row["path"] in host_outputs for row in manifest.get("retired_surface_files", [])):
         raise ValueError("Source maintenance cannot retire a public host materialization")
-    payload = ROOT / "src/agentic_workspace/_payload"
+    payload = ROOT / "src/core/payload"
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     drift = []
@@ -101,16 +101,6 @@ def synchronize(*, check: bool = False) -> list[str]:
             if not check:
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_text(expected, encoding="utf-8", newline="\n")
-    # Planning's compatibility installer shares this path with Workspace.
-    # Derive identical bytes so alternating upgrades cannot overwrite each
-    # other's configuration guidance on every pass.
-    reference = ".agentic-workspace/docs/workspace-config-contract.md"
-    destination = ROOT / "packages/planning/bootstrap" / reference
-    expected = (ROOT / reference).read_text(encoding="utf-8")
-    if destination.read_text(encoding="utf-8") != expected:
-        drift.append(destination.relative_to(ROOT).as_posix())
-        if not check:
-            destination.write_text(expected, encoding="utf-8", newline="\n")
     for retired in manifest.get("retired_surface_files", []):
         destination = payload / retired["path"]
         if destination.exists():

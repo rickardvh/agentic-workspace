@@ -292,12 +292,7 @@ def test_composed_promotion_fails_closed_on_stale_or_missing_evidence(tmp_path: 
 
 def test_python_support_policy_rejects_package_minimum_below_policy(tmp_path: Path) -> None:
     shutil.copytree(ROOT / ".github", tmp_path / ".github")
-    for relative in (
-        "pyproject.toml",
-        "packages/memory/pyproject.toml",
-        "packages/planning/pyproject.toml",
-        "packages/verification/pyproject.toml",
-    ):
+    for relative in ("pyproject.toml",):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, target)

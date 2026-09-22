@@ -84,7 +84,8 @@ include = [
   "/scripts/release/coordinated_release.py",
   "/Cargo.toml",
   "/Cargo.lock",
-  "/crates",
+  "/src/core",
+  "/src/cli/rust",
   "/README.md",
   "/LICENSE",
   "/src/agentic_workspace/native_core.py",
@@ -92,7 +93,7 @@ include = [
   "/src/agentic_workspace/codex_provider.py",
   "/src/agentic_workspace/sealed_codex_transport.py",
   "/src/agentic_workspace/contracts",
-  "/src/agentic_workspace/_payload",
+  "/src/core/payload",
 ]
 
 [tool.pytest.ini_options]

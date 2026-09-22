@@ -42,8 +42,8 @@ def repository(tmp_path, monkeypatch):
     )
     ownership["preview_release_commit_allowed_paths"].append("uv.lock")
     ownership["cargo_packages"] = [
-        {"name": "agentic-workspace-core", "path": "crates/agentic-workspace-core"},
-        {"name": "agentic-workspace-cli", "path": "crates/agentic-workspace-cli"},
+        {"name": "agentic-workspace-core", "path": "src/core"},
+        {"name": "agentic-workspace-cli", "path": "src/cli/rust"},
     ]
     for crate in ownership["cargo_packages"]:
         manifest = tmp_path / crate["path"] / "Cargo.toml"

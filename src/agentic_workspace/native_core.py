@@ -35,8 +35,8 @@ def core_binary() -> Path:
         and not packaged.exists()
         and Path(__file__).resolve().parent.parent == root / "src"
         and (root / "Cargo.lock").is_file()
-        and (root / "crates/agentic-workspace-core/Cargo.toml").is_file()
-        and (root / "crates/agentic-workspace-cli/Cargo.toml").is_file()
+        and (root / "src/core/Cargo.toml").is_file()
+        and (root / "src/cli/rust/Cargo.toml").is_file()
     ):
         directory = root / "target/debug"
         path = directory / name

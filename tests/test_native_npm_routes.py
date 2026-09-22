@@ -257,7 +257,7 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
         "Cargo.lock",
         "rust-toolchain.toml",
         "scripts/release/native_toolchain.py",
-        "crates/agentic-workspace-core/src/native_routes.rs",
+        "src/core/src/native_routes.rs",
         "bindings/node/semantic-decision.mjs",
         "scripts/release/stage_native_npm.py",
         "bindings/node/package.json",

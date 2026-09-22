@@ -241,7 +241,6 @@ lint-nosync: lint-workspace
 lint: sync-all lint-nosync
 
 markdownlint-memory:
-	@$(COMPACT_RUN) --label "memory markdownlint" --cwd packages/memory -- uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
 
 markdownlint-workspace:
 	@$(COMPACT_RUN) --label "workspace markdownlint" -- uv run python scripts/check/check_workspace_markdown.py

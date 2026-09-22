@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def main(root: Path = ROOT) -> int:
-    host = json.loads((root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
+    host = json.loads((root / "src/core/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
     paths: set[str] = set()
     for surface in host["surfaces"]:
         if not surface["path"].endswith(".md"):
             continue
-        paths.add("src/agentic_workspace/_payload/" + surface["path"])
+        paths.add("src/core/payload/" + surface["path"])
         paths.add(surface["materialization"]["source"])
     if not paths:
         raise ValueError("Workspace declaration contains no Markdown surfaces")

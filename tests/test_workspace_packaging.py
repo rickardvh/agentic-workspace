@@ -17,7 +17,7 @@ from zipfile import ZipFile
 import pytest
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
-PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
+PAYLOAD_ROOT = WORKSPACE_ROOT / "src/core/payload"
 PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
 
 
@@ -120,7 +120,7 @@ def test_packed_host_derivation_excludes_poisoned_producer_policy(workspace_sdis
     outputs = generator.render_host_payload(producer)
     for reference, content in outputs.items():
         assert sentinel not in content
-        (producer / "src/agentic_workspace/_payload" / reference).write_text(content, encoding="utf-8", newline="\n")
+        (producer / "src/core/payload" / reference).write_text(content, encoding="utf-8", newline="\n")
     # Reuse the build cache, not source artifacts: the fixture has an independent
     # source tree, and Cargo revalidates every embedded input from that tree.
     output = tmp_path / "artifacts"
@@ -264,9 +264,9 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
         "hatch_build.py",
         "Cargo.toml",
         "Cargo.lock",
-        "crates/agentic-workspace-core/src/main.rs",
-        "crates/agentic-workspace-cli/Cargo.toml",
-        "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json",
+        "src/core/src/main.rs",
+        "src/cli/rust/Cargo.toml",
+        "src/core/contracts/schemas/separation_of_duty.schema.json",
         "src/agentic_workspace/_binding.py",
         "src/agentic_workspace/codex_provider.py",
         "src/agentic_workspace/sealed_codex_transport.py",
@@ -360,7 +360,7 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
     answer = next(d for d in decisions if d["id"] == "repository-adoption-authorization")["response_request"]
     answer["arguments"]["answer"] = "authorize-write"
     assert call(invocation=call(answer)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
-    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    manifest = json.loads((WORKSPACE_ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     for reference in manifest["payload_files"]:
         assert (target / reference).is_file(), reference
 

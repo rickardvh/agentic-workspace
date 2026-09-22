@@ -164,7 +164,7 @@
     "manifest_kind": "agentic-workspace/agent-aid/v1",
     "manifest_name": "manifest.json",
     "manifest_required": "for checked-in shared aids",
-    "manifest_schema": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+    "manifest_schema": "src/core/contracts/schemas/agent_aid_manifest.schema.json",
     "ordinary_startup": false,
     "promotion_model": {
       "discovery_after_promotion": {
@@ -2111,7 +2111,7 @@
       "manifest_kind": "agentic-workspace/agent-aid/v1",
       "manifest_name": "manifest.json",
       "manifest_required": "for checked-in shared aids",
-      "manifest_schema": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+      "manifest_schema": "src/core/contracts/schemas/agent_aid_manifest.schema.json",
       "ordinary_startup": false,
       "promotion_model": {
         "discovery_after_promotion": {

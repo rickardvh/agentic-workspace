@@ -228,7 +228,7 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     manifest = json.loads((native_dir / "artifact.json").read_text())
     from tests.test_language_facade import check_node
 
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["language_facade"]
+    contract = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text())["language_facade"]
     core = native_dir / ("agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core")
     check_node(contract, package / "src/native/operating.mjs", core)
     assert manifest["cli_sha256"]

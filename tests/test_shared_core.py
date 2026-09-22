@@ -31,7 +31,7 @@ from aw_maintainer.native_conformance import (
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = json.loads((ROOT / "tests/vectors/source_decision.json").read_text(encoding="utf-8"))
 CAPABILITY_CONTRACT = json.loads((ROOT / "tests/vectors/capability_contract.json").read_text(encoding="utf-8"))
-SCHEMA = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/source_decision_input.schema.json").read_text(encoding="utf-8"))
+SCHEMA = json.loads((ROOT / "src/core/contracts/schemas/source_decision_input.schema.json").read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize(
@@ -366,10 +366,10 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
 
     # The CLI transports the canonical public request to the admitted sibling
     # executable. It cannot link a second semantic runtime into the adapter.
-    native = (ROOT / "crates/agentic-workspace-cli/src/main.rs").read_text(encoding="utf-8")
+    native = (ROOT / "src/cli/rust/src/main.rs").read_text(encoding="utf-8")
     calls = set(re.findall(r"agentic_workspace_core::([A-Za-z_][A-Za-z_0-9:]*)", native))
     assert calls == set()
-    manifest = (ROOT / "crates/agentic-workspace-cli/Cargo.toml").read_text(encoding="utf-8")
+    manifest = (ROOT / "src/cli/rust/Cargo.toml").read_text(encoding="utf-8")
     assert "agentic-workspace-core" not in manifest
     assert set(re.findall(r"^fn ([A-Za-z_][A-Za-z_0-9]*)", native, re.MULTILINE)) == {
         "declaration",
@@ -876,7 +876,7 @@ def _planning_context(tmp_path: Path, body: dict[str, Any] | None = None) -> dic
     raw = (ROOT / "tests/vectors/planning_execplan.json").read_bytes() if body is None else json.dumps(body).encode()
     with source.open("xb") as stream:
         stream.write(raw)
-    schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json").read_text())
+    schema = json.loads((ROOT / "src/core/contracts/schemas/planning_reconciliation.schema.json").read_text())
     contract = deepcopy(CAPABILITY_CONTRACT)
     owner = next(owner for owner in contract["owners"] if owner["owner"] == "planning")
     arguments = {

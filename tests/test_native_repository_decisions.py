@@ -236,7 +236,7 @@ def repository(root: Path):
     context = {
         "target": str(root),
         "task": "Preserve the actual shared semantic boundary",
-        "changed": ["crates/agentic-workspace-core/src/lib.rs"],
+        "changed": ["src/core/src/lib.rs"],
     }
     return context, material
 

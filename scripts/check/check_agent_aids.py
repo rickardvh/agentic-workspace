@@ -13,7 +13,7 @@ from jsonschema import Draft202012Validator
 REPO_ROOT = Path(__file__).resolve().parents[2]
 AGENT_AID_ROOT = PurePosixPath(".agentic-workspace/agent-aids")
 MANIFEST_NAME = "manifest.json"
-SCHEMA_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "agent_aid_manifest.schema.json"
+SCHEMA_PATH = REPO_ROOT / "src/core/contracts/schemas/agent_aid_manifest.schema.json"
 TYPE_DIRS = {
     "scripts": "script",
     "skills": "skill",
@@ -284,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
 def executable_dependency_findings(root: Path) -> list[Finding]:
     """Static material closure only: never import/probe declared executables."""
     schema = json.loads(
-        (REPO_ROOT / "src/agentic_workspace/contracts/schemas/executable_affordance.schema.json").read_text(encoding="utf-8")
+        (REPO_ROOT / "src/core/contracts/schemas/executable_affordance.schema.json").read_text(encoding="utf-8")
     )
     validator = Draft202012Validator(schema)
     pending = ["tools/skills/REGISTRY.json", ".agentic-workspace/skills/REGISTRY.json"]

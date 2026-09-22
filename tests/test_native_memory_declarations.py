@@ -33,7 +33,7 @@ promotion_trigger="Repeated observation"
     manifest.write_text(source)
     registry = tmp_path / ".agentic-workspace/memory/skills/REGISTRY.json"
     registry.parent.mkdir(parents=True)
-    registry.write_bytes((ROOT / "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json").read_bytes())
+    registry.write_bytes((ROOT / ".agentic-workspace/memory/skills/REGISTRY.json").read_bytes())
     context = {"target": str(tmp_path), "task": "Assess selected Memory"}
 
     def call(**extra):

@@ -75,8 +75,8 @@
     "uv.lock",
     ".release/changes/",
     ".release/promotions/v1.0.0.json",
-    "crates/agentic-workspace-core/Cargo.toml",
-    "crates/agentic-workspace-cli/Cargo.toml",
+    "src/core/Cargo.toml",
+    "src/cli/rust/Cargo.toml",
     "Cargo.lock",
     "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
@@ -86,8 +86,8 @@
     ".release/releases/",
     ".release/previews/",
     "uv.lock",
-    "crates/agentic-workspace-core/Cargo.toml",
-    "crates/agentic-workspace-cli/Cargo.toml",
+    "src/core/Cargo.toml",
+    "src/cli/rust/Cargo.toml",
     "Cargo.lock",
     "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
@@ -95,14 +95,12 @@
     ".release/changes/",
     ".release/releases/",
     "docs/release-and-versioning.md",
-    "packages/",
     "pyproject.toml",
     "scripts/release/",
     "src/",
     "uv.lock",
     "Cargo.toml",
     "Cargo.lock",
-    "crates/",
     "bindings/"
   ],
   "non_semver_generated_metadata": [],
@@ -167,12 +165,12 @@
   "cargo_packages": [
     {
       "name": "agentic-workspace-core",
-      "path": "crates/agentic-workspace-core",
+      "path": "src/core",
       "binary": "agentic-workspace-core"
     },
     {
       "name": "agentic-workspace-cli",
-      "path": "crates/agentic-workspace-cli",
+      "path": "src/cli/rust",
       "binary": "agentic-workspace"
     }
   ],

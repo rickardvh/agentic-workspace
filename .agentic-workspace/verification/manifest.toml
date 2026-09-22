@@ -259,8 +259,8 @@ title = "Native adapter conformance"
 purpose = "Keep thin transports and generated reference catalogues aligned with the native semantic authority."
 applies_to_paths = [
   "src/cli/**",
-  "crates/agentic-workspace-cli/src/main.rs",
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/cli/rust/src/main.rs",
+  "src/core/contracts/source_decision_contract.json",
   "scripts/release/**",
   "scripts/generate/**",
 ]
@@ -289,8 +289,8 @@ expected_evidence = [
 ]
 review_owner = "maintainer"
 authority_refs = [
-  "crates/agentic-workspace-cli/src/main.rs",
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/cli/rust/src/main.rs",
+  "src/core/contracts/source_decision_contract.json",
   "docs/maintainer/native-release-topology.md",
 ]
 stale_when = [
@@ -322,7 +322,7 @@ applies_to_paths = [
   ".agentic-workspace/config*.toml",
   ".agentic-workspace/memory/repo/**",
   ".agentic-workspace/skills/**",
-  "src/agentic_workspace/contracts/**",
+  "src/core/contracts/**",
 ]
 applies_to_task_markers = [
   "memory manifest",
@@ -345,14 +345,14 @@ expected_evidence = [
 review_owner = "context source owner"
 authority_refs = [
   ".agentic-workspace/memory/repo/manifest.toml",
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/core/contracts/source_decision_contract.json",
   "scripts/check/check_memory_freshness.py",
   "scripts/check/check_structured_file_inventory.py",
 ]
 stale_when = [
   ".agentic-workspace/memory/repo/**",
   ".agentic-workspace/skills/**",
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/core/contracts/source_decision_contract.json",
 ]
 non_goals = [
   "Do not lint unrelated documentation or code.",
@@ -370,8 +370,8 @@ review_aids = [
 title = "Closeout intent satisfaction"
 purpose = "Make completion-honesty and residue-routing review repeatable for planning and closeout behavior without letting Verification decide semantic satisfaction."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/**",
-  "crates/agentic-workspace-core/src/**",
+  "src/core/src/**",
+  "src/core/src/**",
   "tests/test_native_proof_producer.py",
 ]
 applies_to_task_markers = [
@@ -403,12 +403,12 @@ authority_refs = [
   ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
 ]
 stale_when = [
-  "crates/agentic-workspace-core/src/native_proof.rs",
-  "crates/agentic-workspace-core/src/native_verification.rs",
-  "crates/agentic-workspace-core/src/native_public.rs",
+  "src/core/src/modules/verification/native_proof.rs",
+  "src/core/src/modules/verification/native_verification.rs",
+  "src/core/src/native_public.rs",
   "tests/test_native_proof_producer.py",
-  "crates/agentic-workspace-core/src/",
-  "crates/agentic-workspace-core/src/native_*.rs",
+  "src/core/src/",
+  "src/core/src/native_*.rs",
 ]
 non_goals = [
   "Verification does not decide whether the user is satisfied.",
@@ -426,9 +426,9 @@ review_aids = [
 title = "Requirement grounding and delegation"
 purpose = "Keep requirement-grounding and delegation support inspectable without turning Verification into the decision maker."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_assignment.rs",
-  "crates/agentic-workspace-core/src/native_requirements.rs",
-  "crates/agentic-workspace-core/src/native_delegation.rs",
+  "src/core/src/native_assignment.rs",
+  "src/core/src/native_requirements.rs",
+  "src/core/src/native_delegation.rs",
 ]
 applies_to_task_markers = [
   "requirement grounding",
@@ -459,15 +459,15 @@ authority_refs = [
   ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
 ]
 stale_when = [
-  "crates/agentic-workspace-core/src/native_assignment.rs",
-  "crates/agentic-workspace-core/src/native_delegation.rs",
-  "crates/agentic-workspace-core/src/native_handoff.rs",
-  "crates/agentic-workspace-core/src/native_requirements.rs",
+  "src/core/src/native_assignment.rs",
+  "src/core/src/native_delegation.rs",
+  "src/core/src/native_handoff.rs",
+  "src/core/src/native_requirements.rs",
   "tests/test_native_assignment_judgment.py",
   "tests/test_native_readonly_handoff.py",
   ".agentic-workspace/config.toml",
   ".agentic-workspace/OWNERSHIP.toml",
-  "crates/agentic-workspace-core/src/native_*.rs",
+  "src/core/src/native_*.rs",
 ]
 non_goals = [
   "Verification does not choose whether to delegate.",
@@ -514,16 +514,16 @@ review_owner = "maintainer"
 authority_refs = [
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
 ]
 stale_when = [
-  "crates/agentic-workspace-core/src/native_verification.rs",
+  "src/core/src/modules/verification/native_verification.rs",
   "tests/test_native_verification_strategy.py",
   "tests/**",
-  "crates/agentic-workspace-core/tests/**",
+  "src/core/tests/**",
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
 ]
 non_goals = [
   "Verification does not authorize deletion by itself.",
@@ -623,9 +623,9 @@ authority_refs = [
   "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility",
 ]
 stale_when = [
-  "crates/agentic-workspace-core/src/native_config.rs",
-  "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
-  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+  "src/core/src/native_config.rs",
+  "src/core/contracts/schemas/workspace_config.schema.json",
+  "src/core/contracts/schemas/workspace_local_override.schema.json",
   "tests/test_native_config_admission.py",
 ]
 non_goals = [
@@ -788,7 +788,7 @@ review_aids = [
 [assurance.domain_proof_lanes.workspace_proof_runtime]
 purpose = "Focused root Workspace proof-routing behavior."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_proof.rs",
+  "src/core/src/modules/verification/native_proof.rs",
   "tests/test_native_domain_proof.py",
 ]
 commands = [
@@ -903,7 +903,7 @@ proof_profiles = [
   "workspace_behavior",
 ]
 authority_refs = [
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/core/contracts/source_decision_contract.json",
   "scripts/generate/generate_contract_catalogues.py",
 ]
 escalation = [
@@ -915,9 +915,9 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.correction_guidance_authority]
 purpose = "Focused trusted-correction custody, normalization, canonical-owner disposition, and guidance authority behavior."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_owner_change.rs",
-  "crates/agentic-workspace-core/src/native_config_write.rs",
-  "crates/agentic-workspace-core/src/native_instruction_write.rs",
+  "src/core/src/native_owner_change.rs",
+  "src/core/src/native_config_write.rs",
+  "src/core/src/native_instruction_write.rs",
   "tests/test_native_config_admission.py",
 ]
 commands = [
@@ -936,8 +936,8 @@ proof_profiles = [
   "workspace_behavior",
 ]
 authority_refs = [
-  "src/agentic_workspace/contracts/source_decision_contract.json",
-  "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
+  "src/core/contracts/source_decision_contract.json",
+  "src/core/contracts/schemas/correction_event_input.schema.json",
 ]
 escalation = [
   "the change alters checked-in Memory authority, host signature admission, or cross-repository guidance storage",
@@ -950,7 +950,7 @@ purpose = "Focused maintenance route for repo-owned proof-routing authority."
 applies_to_paths = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/verification/manifest.toml",
-  "crates/agentic-workspace-core/src/**",
+  "src/core/src/**",
   "Makefile",
   "tests/test_native_domain_proof.py",
 ]
@@ -989,7 +989,7 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.session_logging_friction]
 purpose = "Focused session-log friction evidence and proof-route maintenance behavior."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/maintainer_logging.rs",
+  "src/core/src/maintainer_logging.rs",
   "tests/test_native_maintainer_logging.py",
 ]
 commands = [
@@ -1019,7 +1019,7 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.memory_package_behavior]
 purpose = "Focused Memory package behavior."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/**",
+  "src/core/src/**",
   "tests/test_native_memory*.py",
 ]
 commands = [
@@ -1038,7 +1038,7 @@ proof_profiles = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
 ]
 escalation = [
   "the change crosses root workspace orchestration or installed payload boundaries",
@@ -1049,8 +1049,8 @@ owner = "memory"
 [assurance.domain_proof_lanes.planning_package_behavior]
 purpose = "Focused Planning package behavior."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/**",
-  "crates/agentic-workspace-core/src/planning.rs",
+  "src/core/src/**",
+  "src/core/src/planning.rs",
   "tests/test_native_planning*.py",
 ]
 commands = [
@@ -1069,7 +1069,7 @@ proof_profiles = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
 ]
 escalation = [
   "the change crosses root workspace orchestration, closeout trust, or installed payload boundaries",
@@ -1101,7 +1101,7 @@ proof_profiles = [
 authority_refs = [
   ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
   ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
 ]
 escalation = [
   "Planning runtime or schema changes",
@@ -1139,8 +1139,8 @@ owner = "workspace-maintainers"
 [assurance.domain_proof_lanes.planning_reconciliation_runtime]
 purpose = "Focused Planning-to-workspace reconciliation, residue disposition, and bounded-effect routing behavior."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/**",
-  "crates/agentic-workspace-core/src/native_source_reconciliation.rs",
+  "src/core/src/**",
+  "src/core/src/modules/verification/native_source_reconciliation.rs",
   ".agentic-workspace/OWNERSHIP.toml",
   "src/core/payload/**",
 ]
@@ -1162,7 +1162,7 @@ proof_profiles = [
 authority_refs = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
 ]
 escalation = [
   "the change alters external-effect authority beyond bounded issue filing, creates a new durable owner, or crosses independent review authority",
@@ -1173,7 +1173,7 @@ owner = "planning"
 [assurance.domain_proof_lanes.verification_package_behavior]
 purpose = "Focused Verification package behavior."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/**",
+  "src/core/src/**",
   "tests/test_native_verification*.py",
 ]
 commands = [
@@ -1204,8 +1204,8 @@ owner = "verification"
 purpose = "Focused generated command package and adapter conformance."
 applies_to_paths = [
   "src/cli/**",
-  "crates/agentic-workspace-cli/src/main.rs",
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/cli/rust/src/main.rs",
+  "src/core/contracts/source_decision_contract.json",
   "scripts/release/**",
   "scripts/generate/**",
 ]
@@ -1226,7 +1226,7 @@ proof_profiles = [
 ]
 authority_refs = [
   ".agentic-workspace/verification/manifest.toml#proof_routes.generated_adapter_conformance",
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/core/contracts/source_decision_contract.json",
 ]
 escalation = [
   "Docker packaging, runtime handoff, native CLI/transport internals, or cross-target behavior changed",
@@ -1237,9 +1237,9 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.delegation_lifecycle_review_repair]
 purpose = "Focused proof for delegation lifecycle conformance and its canonical AW proof receipts."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_assignment.rs",
-  "crates/agentic-workspace-core/src/native_delegation.rs",
-  "crates/agentic-workspace-core/src/native_handoff.rs",
+  "src/core/src/native_assignment.rs",
+  "src/core/src/native_delegation.rs",
+  "src/core/src/native_handoff.rs",
 ]
 commands = [
   "uv run pytest tests/test_native_delegation_lifecycle.py tests/test_native_assignment_judgment.py -q",
@@ -1256,7 +1256,7 @@ proof_profiles = [
   "workspace_behavior",
 ]
 authority_refs = [
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/core/contracts/source_decision_contract.json",
   ".agentic-workspace/proof/receipts/index.json",
 ]
 escalation = [
@@ -1268,8 +1268,8 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.shared_kernel_contract]
 purpose = "Exact shared Rust authority, selective consequences, and independent language/JSON consumers."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/lib.rs",
-  "crates/agentic-workspace-core/tests/vectors.rs",
+  "src/core/src/lib.rs",
+  "src/core/tests/vectors.rs",
   "tests/vectors/source_decision.json",
   "tests/vectors/capability_contract.json",
   "tests/test_source_request_dependencies.py",
@@ -1290,7 +1290,7 @@ proof_profiles = [
   "workspace_behavior",
 ]
 authority_refs = [
-  "crates/agentic-workspace-core/src/lib.rs",
+  "src/core/src/lib.rs",
   "tests/vectors/source_decision.json",
 ]
 escalation = [
@@ -1302,12 +1302,12 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.native_public_owners]
 purpose = "Native transport and source-owning Planning/Verification ingress through four independent consumers."
 applies_to_paths = [
-  "crates/agentic-workspace-cli/**",
-  "crates/agentic-workspace-core/src/native_*.rs",
-  "crates/agentic-workspace-core/src/maintainer_logging.rs",
-  "crates/agentic-workspace-core/src/direct_task.rs",
-  "crates/agentic-workspace-core/src/assurance_applicability.rs",
-  "src/agentic_workspace/contracts/schemas/assurance_applicability.schema.json",
+  "src/cli/rust/**",
+  "src/core/src/native_*.rs",
+  "src/core/src/maintainer_logging.rs",
+  "src/core/src/direct_task.rs",
+  "src/core/src/modules/verification/assurance_applicability.rs",
+  "src/core/contracts/schemas/assurance_applicability.schema.json",
   "tests/test_native_public_cli.py",
   "tests/test_native_startup_adapter.py",
   "tests/test_native_maintainer_logging.py",
@@ -1319,10 +1319,10 @@ applies_to_paths = [
   "tests/test_native_assignment_policy.py",
   "tests/test_native_assignment_judgment.py",
   "tests/test_native_readonly_handoff.py",
-  "crates/agentic-workspace-core/src/assignment_packet.rs",
-  "crates/agentic-workspace-core/src/assignment_policy.rs",
-  "crates/agentic-workspace-core/src/transport_source.rs",
-  "crates/agentic-workspace-core/src/verification_strategy.rs",
+  "src/core/src/assignment_packet.rs",
+  "src/core/src/assignment_policy.rs",
+  "src/core/src/transport_source.rs",
+  "src/core/src/verification_strategy.rs",
   "tests/test_native_proof_producer.py",
   "tests/test_native_advisory_config.py",
   "tests/test_native_system_intent.py",
@@ -1359,11 +1359,11 @@ authority_refs = [
   "tests/test_native_assignment_policy.py",
   "tests/test_native_assignment_judgment.py",
   "tests/test_native_readonly_handoff.py",
-  "crates/agentic-workspace-core/src/assignment_packet.rs",
-  "crates/agentic-workspace-core/src/assignment_policy.rs",
-  "crates/agentic-workspace-core/src/transport_source.rs",
-  "crates/agentic-workspace-core/src/verification_strategy.rs",
-  "crates/agentic-workspace-cli/tests/transport.rs",
+  "src/core/src/assignment_packet.rs",
+  "src/core/src/assignment_policy.rs",
+  "src/core/src/transport_source.rs",
+  "src/core/src/verification_strategy.rs",
+  "src/cli/rust/tests/transport.rs",
 ]
 escalation = [
   "a changed owner is not exercised through native public ingress",
@@ -1375,10 +1375,10 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.proof_subject_owner]
 purpose = "Shared proof identity, receipt admission and bounded current-owner evidence reconciliation."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/proof_subject.rs",
-  "crates/agentic-workspace-core/src/proof_receipt.rs",
-  "crates/agentic-workspace-core/src/proof_publication.rs",
-  "crates/agentic-workspace-core/src/attempt_store.rs",
+  "src/core/src/proof_subject.rs",
+  "src/core/src/proof_receipt.rs",
+  "src/core/src/modules/verification/proof_publication.rs",
+  "src/core/src/attempt_store.rs",
 ]
 commands = [
   "cargo test --locked -p agentic-workspace-core proof_subject",
@@ -1411,9 +1411,9 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.delegation_outcome_attribution]
 purpose = "Conservative shared-core responsibility, configuration-scoped burden and assignment-derived evidence."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_assignment.rs",
-  "crates/agentic-workspace-core/src/native_delegation.rs",
-  "crates/agentic-workspace-core/src/native_handoff.rs",
+  "src/core/src/native_assignment.rs",
+  "src/core/src/native_delegation.rs",
+  "src/core/src/native_handoff.rs",
   "bindings/node/**",
 ]
 commands = [
@@ -1444,9 +1444,9 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.delegation_execution_configurations]
 purpose = "Focused source-current execution configuration and provider-native transport proof."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_config.rs",
-  "crates/agentic-workspace-core/src/native_delegation.rs",
-  "crates/agentic-workspace-core/src/transport.rs",
+  "src/core/src/native_config.rs",
+  "src/core/src/native_delegation.rs",
+  "src/core/src/transport.rs",
 ]
 commands = [
   "uv run pytest tests/test_native_execution_configurations.py tests/test_native_transport.py -q",
@@ -1476,9 +1476,9 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.delegation_owner_conformance]
 purpose = "Focused ratchet for current Planning custody, task-bound Verification, and sparse assignment observations."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/assignment.rs",
-  "crates/agentic-workspace-core/src/planning.rs",
-  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "src/core/src/assignment.rs",
+  "src/core/src/planning.rs",
+  "src/core/src/native_assignment.rs",
 ]
 commands = [
   "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_assignment_policy.py tests/test_native_public_cli.py -q",
@@ -1531,7 +1531,7 @@ proof_profiles = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/core/contracts/source_decision_contract.json",
 ]
 escalation = [
   "the change alters Docker packaging, native CLI/transport internals, or cross-target runtime handoff beyond the Evaluation operation",
@@ -1542,8 +1542,8 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.compact_output_contract]
 purpose = "Focused compact-output profile, public CLI option, and budget maintenance proof."
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/operating.rs",
-  "crates/agentic-workspace-cli/src/main.rs",
+  "src/core/src/operating.rs",
+  "src/cli/rust/src/main.rs",
   "tests/test_native_operating_carriage.py",
 ]
 commands = [
@@ -1574,7 +1574,7 @@ owner = "workspace-cli-runtime"
 purpose = "Focused test-evidence change review."
 applies_to_paths = [
   "tests/**",
-  "crates/agentic-workspace-core/tests/**",
+  "src/core/tests/**",
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
   "scripts/model_cli_harness/run_model_cli_harness.py",
@@ -1689,10 +1689,10 @@ review_aids = [
 
 [assurance.domain_proof_lanes.workspace_root_guidance]
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_public.rs",
-  "crates/agentic-workspace-core/src/native_startup.rs",
-  "crates/agentic-workspace-core/src/native_config.rs",
-  "crates/agentic-workspace-core/src/operating.rs",
+  "src/core/src/native_public.rs",
+  "src/core/src/native_startup.rs",
+  "src/core/src/native_config.rs",
+  "src/core/src/operating.rs",
 ]
 applies_to_task_markers = [
   "host guidance target localization",
@@ -1734,7 +1734,7 @@ review_aids = [
 purpose = "Focused workspace-local override documentation, schema, and configuration contract proof."
 applies_to_paths = [
   "docs/reference/workspace-local-override.md",
-  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+  "src/core/contracts/schemas/workspace_local_override.schema.json",
 ]
 commands = [
   "uv run pytest tests/test_native_config_admission.py -q",
@@ -1751,7 +1751,7 @@ proof_profiles = [
   "workspace_behavior",
 ]
 authority_refs = [
-  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+  "src/core/contracts/schemas/workspace_local_override.schema.json",
   "docs/reference/workspace-local-override.md",
 ]
 escalation = [
@@ -1796,7 +1796,7 @@ applies_to_paths = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json",
+  "src/core/contracts/schemas/evaluation_issue_disposition.schema.json",
 ]
 claim_boundary = "focused-current-evaluation-evidence-contract-required-before-conclusion-claim"
 commands = [
@@ -1826,7 +1826,7 @@ review_aids = [
 level = "high"
 applies_to_paths = [
   "tests/**",
-  "crates/agentic-workspace-core/tests/**",
+  "src/core/tests/**",
   "docs/maintainer/test-knowledge-inventory.md",
   "docs/maintainer/testing-strategy.md",
 ]
@@ -1856,7 +1856,7 @@ notes = "Changing ordinary test evidence should explain the trust question and r
 [assurance.requirements.closeout_intent_satisfaction]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
   "tests/test_native_planning_create.py",
   "tests/test_native_public_cli.py",
 ]
@@ -1887,10 +1887,10 @@ notes = "Planning and closeout behavior changes need explicit intent-satisfactio
 [assurance.requirements.typed_cli_selector_contract]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_proof.rs",
-  "crates/agentic-workspace-core/src/operating.rs",
-  "crates/agentic-workspace-core/src/native_*.rs",
-  "crates/agentic-workspace-cli/src/main.rs",
+  "src/core/src/modules/verification/native_proof.rs",
+  "src/core/src/operating.rs",
+  "src/core/src/native_*.rs",
+  "src/cli/rust/src/main.rs",
   "docs/maintainer/native-release-topology.md",
   "tests/test_native_public_cli.py",
   "tests/test_native_domain_proof.py",
@@ -1926,8 +1926,8 @@ notes = "Typed usage, validation, or failed direct-action results must declare a
 [assurance.requirements.proof_execution_integrity]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_proof.rs",
-  "crates/agentic-workspace-core/src/native_public.rs",
+  "src/core/src/modules/verification/native_proof.rs",
+  "src/core/src/native_public.rs",
   "tests/test_native_domain_proof.py",
   ".agentic-workspace/proof/**",
 ]
@@ -1960,8 +1960,8 @@ notes = "A green proof claim requires affected-owner coverage, one admitted exec
 [assurance.requirements.binding_automatic_assignment]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_public.rs",
-  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "src/core/src/native_public.rs",
+  "src/core/src/native_assignment.rs",
   "tests/test_native_public_cli.py",
   ".agentic-workspace/config.local.toml",
 ]
@@ -1995,9 +1995,9 @@ notes = "Once durable local policy and a current binding non-local assignment au
 [assurance.requirements.config_orthogonality_constructibility]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_config.rs",
-  "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
-  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+  "src/core/src/native_config.rs",
+  "src/core/contracts/schemas/workspace_config.schema.json",
+  "src/core/contracts/schemas/workspace_local_override.schema.json",
   "tests/test_native_config_admission.py",
   "docs/reference/workspace-config.md",
   "docs/reference/workspace-local-override.md",
@@ -2033,7 +2033,7 @@ notes = "Independent writable config dimensions must compose for every legal val
 [assurance.requirements.direct_no_signal]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_public.rs",
+  "src/core/src/native_public.rs",
   "tests/test_native_public_cli.py",
 ]
 applies_to_task_markers = [
@@ -2064,9 +2064,9 @@ notes = "Installed but irrelevant Planning, Memory, proof, reporting, and dogfoo
 [assurance.requirements.selected_planning_read_budget]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
   "tests/test_native_operating_carriage.py",
-  "crates/agentic-workspace-core/src/native_planning.rs",
+  "src/core/src/modules/planning/native_planning.rs",
 ]
 applies_to_task_markers = [
   "selected planning read",
@@ -2114,9 +2114,9 @@ producer_command = "uv run pytest tests/test_native_operating_carriage.py -q"
 [assurance.requirements.selected_planning_scaling_budget]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/",
+  "src/core/src/",
   "tests/test_native_operating_carriage.py",
-  "crates/agentic-workspace-core/src/native_planning.rs",
+  "src/core/src/modules/planning/native_planning.rs",
 ]
 applies_to_task_markers = [
   "selected planning read",
@@ -2167,8 +2167,8 @@ producer_command = "uv run pytest tests/test_native_operating_carriage.py -q"
 [assurance.requirements.invalid_selector_rejection_budget]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/operating.rs",
-  "crates/agentic-workspace-core/src/native_*.rs",
+  "src/core/src/operating.rs",
+  "src/core/src/native_*.rs",
   "tests/test_native_public_cli.py",
 ]
 applies_to_task_markers = [
@@ -2216,8 +2216,8 @@ producer_command = "uv run pytest tests/test_native_public_cli.py -k upgrade_unk
 [assurance.requirements.selected_proof_residue_budget]
 level = "high"
 applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_proof.rs",
-  "crates/agentic-workspace-core/src/native_public.rs",
+  "src/core/src/modules/verification/native_proof.rs",
+  "src/core/src/native_public.rs",
   "tests/test_native_domain_proof.py",
 ]
 applies_to_task_markers = [
@@ -2322,7 +2322,7 @@ blocking_claims = [
 ]
 applies_to_paths = [
   "docs/maintainer/native-release-topology.md",
-  "crates/agentic-workspace-core/src/native_*.rs",
+  "src/core/src/native_*.rs",
 ]
 authority_refs = [
   "AGENTS.md",
