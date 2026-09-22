@@ -24,7 +24,7 @@ fail_evidence_labels = [
   "context_authority_drift",
   "generated_context_drift",
 ]
-automation_hint = "uv run pytest tests/test_native_memory_declarations.py tests/test_native_startup_adapter.py -q && uv run python scripts/generate/generate_agent_interface.py --check"
+automation_hint = "uv run pytest tests/test_native_memory_declarations.py tests/test_native_startup_adapter.py -q && uv run python src/tooling/generate/generate_agent_interface.py --check"
 
 [scenarios.authoritative_validation_run]
 protocol_id = "authoritative_validation"
@@ -43,7 +43,7 @@ pass_evidence_labels = [
 fail_evidence_labels = [
   "validation_result_rejected",
 ]
-automation_hint = "uv run python scripts/check/run_compact_command.py --label <label> -- <command>"
+automation_hint = "uv run python src/tooling/check/run_compact_command.py --label <label> -- <command>"
 
 [scenarios.generated_adapter_local_conformance]
 protocol_id = "generated_adapter_conformance"
@@ -66,7 +66,7 @@ fail_evidence_labels = [
   "generated_package_drift",
   "generated_adapter_conformance_drift",
 ]
-automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q && uv run python scripts/generate/generate_contract_catalogues.py --check"
+automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q && uv run python src/tooling/generate/generate_contract_catalogues.py --check"
 manual_boundary = "Historical Docker/generated-host labels are not renewed evidence. Cross-platform release admission requires its actual platform artifacts."
 
 [scenarios.generated_adapter_docker_conformance]
@@ -90,7 +90,7 @@ fail_evidence_labels = [
   "generated_docker_proof_failure",
   "generated_docker_conformance_failure",
 ]
-automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q && uv run python scripts/generate/generate_contract_catalogues.py --check"
+automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q && uv run python src/tooling/generate/generate_contract_catalogues.py --check"
 manual_boundary = "Historical Docker/generated-host labels are not renewed evidence. Cross-platform release admission requires its actual platform artifacts."
 
 [scenarios.closeout_intent_satisfaction_review]
@@ -219,7 +219,7 @@ manual_boundary = "Executable fixtures cover the declared configuration owner; t
 title = "Authoritative validation admission"
 purpose = "Admit ordinary compact validation as reusable exact-subject evidence without treating exit zero alone as proof."
 applies_to_paths = [
-  "scripts/check/run_compact_command.py",
+  "src/tooling/check/run_compact_command.py",
   "docs/maintainer/validation-runtime-2435/**",
   "scratch/validation-results/**",
 ]
@@ -235,11 +235,11 @@ expected_evidence = [
 ]
 review_owner = "maintainer"
 authority_refs = [
-  "scripts/check/run_compact_command.py",
+  "src/tooling/check/run_compact_command.py",
   "docs/maintainer/validation-runtime-2435/validation-plan.json",
 ]
 stale_when = [
-  "scripts/check/run_compact_command.py",
+  "src/tooling/check/run_compact_command.py",
   "docs/maintainer/validation-runtime-2435/**",
 ]
 non_goals = [
@@ -247,7 +247,7 @@ non_goals = [
   "A passing process does not prove a different subject or route.",
 ]
 commands = [
-  "uv run python scripts/check/run_compact_command.py --label <label> -- <command>",
+  "uv run python src/tooling/check/run_compact_command.py --label <label> -- <command>",
 ]
 review_aids = [
   "Inspect validation_evidence_admissions for typed rejection reasons before relying on a bundle.",
@@ -261,8 +261,8 @@ applies_to_paths = [
   "src/cli/**",
   "src/cli/rust/src/main.rs",
   "src/core/contracts/source_decision_contract.json",
-  "scripts/release/**",
-  "scripts/generate/**",
+  "src/tooling/release/**",
+  "src/tooling/generate/**",
 ]
 applies_to_task_markers = [
   "generated adapter",
@@ -296,8 +296,8 @@ authority_refs = [
 stale_when = [
   "src/cli/**",
   "src/core/**",
-  "scripts/release/**",
-  "scripts/generate/generate_contract_catalogues.py",
+  "src/tooling/release/**",
+  "src/tooling/generate/generate_contract_catalogues.py",
 ]
 non_goals = [
   "Verification does not decide whether a feature is correct.",
@@ -305,7 +305,7 @@ non_goals = [
 ]
 commands = [
   "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q",
-  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+  "uv run python src/tooling/generate/generate_contract_catalogues.py --check",
 ]
 review_aids = [
   "If Docker is unavailable, record the proof-environment gap rather than treating missing Docker as adapter success.",
@@ -346,8 +346,8 @@ review_owner = "context source owner"
 authority_refs = [
   ".agentic-workspace/memory/repo/manifest.toml",
   "src/core/contracts/source_decision_contract.json",
-  "scripts/check/check_memory_freshness.py",
-  "scripts/check/check_structured_file_inventory.py",
+  "src/tooling/check/check_memory_freshness.py",
+  "src/tooling/check/check_structured_file_inventory.py",
 ]
 stale_when = [
   ".agentic-workspace/memory/repo/**",
@@ -360,7 +360,7 @@ non_goals = [
 ]
 commands = [
   "uv run pytest tests/test_native_memory_declarations.py tests/test_native_startup_adapter.py -q",
-  "uv run python scripts/generate/generate_agent_interface.py --check",
+  "uv run python src/tooling/generate/generate_agent_interface.py --check",
 ]
 review_aids = [
   "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
@@ -648,7 +648,7 @@ scenario_refs = [
   "authoritative_validation_run",
 ]
 commands = [
-  "uv run python scripts/check/run_compact_command.py --label <label> -- <command>",
+  "uv run python src/tooling/check/run_compact_command.py --label <label> -- <command>",
 ]
 review_aids = [
   "Reference the admitted bundle id; do not reinterpret raw process output.",
@@ -666,7 +666,7 @@ scenario_refs = [
 ]
 commands = [
   "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q",
-  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+  "uv run python src/tooling/generate/generate_contract_catalogues.py --check",
 ]
 review_aids = [
   "Compare the generated adapter evidence to the changed generated surfaces and claim boundary.",
@@ -820,8 +820,8 @@ notes = "This lane is the first focused replacement for generic workspace_behavi
 [assurance.domain_proof_lanes.review_stack_operations]
 purpose = "Focused external-review continuation and declared PR-stack publication behavior."
 applies_to_paths = [
-  "scripts/github/chatgpt_review_loop.py",
-  "scripts/github/review_stack_ops.py",
+  "src/tooling/github/chatgpt_review_loop.py",
+  "src/tooling/github/review_stack_ops.py",
   "tools/skills/pr-review-recheck/SKILL.md",
   "tests/test_chatgpt_review_loop.py",
   "tests/test_review_stack_ops.py",
@@ -854,12 +854,12 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.pr_comment_delta]
 purpose = "Focused GitHub PR comment-delta behavior."
 applies_to_paths = [
-  "scripts/github/pr_comment_delta.py",
+  "src/tooling/github/pr_comment_delta.py",
   "tests/test_pr_comment_delta.py",
 ]
 commands = [
   "uv run pytest tests/test_pr_comment_delta.py -q",
-  "uv run ruff check scripts/github/pr_comment_delta.py tests/test_pr_comment_delta.py",
+  "uv run ruff check src/tooling/github/pr_comment_delta.py tests/test_pr_comment_delta.py",
 ]
 review_aids = [
   "Confirm comment identity, pagination, and delta classification remain covered without widening proof to unrelated GitHub tooling.",
@@ -889,7 +889,7 @@ applies_to_paths = [
   "docs/reference/cli-catalogue.md",
 ]
 commands = [
-  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+  "uv run python src/tooling/generate/generate_contract_catalogues.py --check",
 ]
 review_aids = [
   "Confirm the CLI catalogue is an exact generated projection of the current canonical command contracts.",
@@ -904,7 +904,7 @@ proof_profiles = [
 ]
 authority_refs = [
   "src/core/contracts/source_decision_contract.json",
-  "scripts/generate/generate_contract_catalogues.py",
+  "src/tooling/generate/generate_contract_catalogues.py",
 ]
 escalation = [
   "the catalogue generator or canonical command authority changes",
@@ -937,7 +937,7 @@ proof_profiles = [
 ]
 authority_refs = [
   "src/core/contracts/source_decision_contract.json",
-  "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
+  "src/tooling/contracts/schemas/correction_event_input.schema.json",
 ]
 escalation = [
   "the change alters checked-in Memory authority, host signature admission, or cross-repository guidance storage",
@@ -956,7 +956,7 @@ applies_to_paths = [
 ]
 commands = [
   "uv run pytest tests/test_native_domain_proof.py tests/test_native_verification_declarations.py -q",
-  "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+  "uv run python src/tooling/check/check_structured_file_inventory.py --quiet-success",
 ]
 manual_evidence = [
   "proof_route_authority_review",
@@ -1083,7 +1083,7 @@ applies_to_paths = [
   ".agentic-workspace/planning/**",
 ]
 commands = [
-  "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+  "uv run python src/tooling/check/check_structured_file_inventory.py --quiet-success",
   "uv run pytest tests/test_native_planning_create.py tests/test_native_planning_lifetime.py -q",
 ]
 review_aids = [
@@ -1206,12 +1206,12 @@ applies_to_paths = [
   "src/cli/**",
   "src/cli/rust/src/main.rs",
   "src/core/contracts/source_decision_contract.json",
-  "scripts/release/**",
-  "scripts/generate/**",
+  "src/tooling/release/**",
+  "src/tooling/generate/**",
 ]
 commands = [
   "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q",
-  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+  "uv run python src/tooling/generate/generate_contract_catalogues.py --check",
 ]
 review_aids = [
   "Use the Verification generated-adapter protocol to decide whether Docker proof is required or an environment gap must be recorded.",
@@ -1328,7 +1328,7 @@ applies_to_paths = [
   "tests/test_native_system_intent.py",
   "tests/test_native_former_routes.py",
   "tests/test_native_npm_routes.py",
-  "scripts/release/stage_native_npm.py",
+  "src/tooling/release/stage_native_npm.py",
   "tests/test_assurance_applicability.py",
 ]
 commands = [
@@ -1512,7 +1512,7 @@ owner = "verification"
 purpose = "Former Evaluation host routes remain unavailable; maintained external evaluation evidence stays explicitly bounded to its observed source."
 applies_to_paths = [
   "tests/test_native_former_routes.py",
-  "tools/model-cli-harness/**",
+  "src/tooling/model-cli-harness/**",
 ]
 commands = [
   "uv run pytest tests/test_native_former_routes.py tests/test_external_agent_evaluation_lane.py -q",
@@ -1577,7 +1577,7 @@ applies_to_paths = [
   "src/core/tests/**",
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
-  "tools/model-cli-harness/run_model_cli_harness.py",
+  "src/tooling/model-cli-harness/run_model_cli_harness.py",
 ]
 commands = [
   "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
@@ -1652,8 +1652,8 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.validation_runtime_2435]
 applies_to_paths = [
   "docs/maintainer/validation-runtime-2435/*.json",
-  "scripts/check/allocate_validation_run_id.py",
-  "scripts/check/run_compact_command.py",
+  "src/tooling/check/allocate_validation_run_id.py",
+  "src/tooling/check/run_compact_command.py",
   "tests/test_compact_command_runner.py",
   "tests/test_validation_runtime_plan.py",
 ]
@@ -1763,7 +1763,7 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.maintained_external_evaluation_evidence]
 purpose = "Focused contract proof for maintained external-agent evaluation evidence."
 applies_to_paths = [
-  "tools/model-cli-harness/external-agent-evaluation/*.json",
+  "src/tooling/model-cli-harness/external-agent-evaluation/*.json",
 ]
 commands = [
   "uv run pytest tests/test_external_agent_evaluation_lane.py -q",
@@ -1780,7 +1780,7 @@ proof_profiles = [
   "workspace_behavior",
 ]
 authority_refs = [
-  "tools/model-cli-harness/external-agent-evaluation",
+  "src/tooling/model-cli-harness/external-agent-evaluation",
   "tests/test_external_agent_evaluation_lane.py",
 ]
 escalation = [
@@ -1796,11 +1796,11 @@ applies_to_paths = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json",
+  "src/tooling/contracts/schemas/evaluation_issue_disposition.schema.json",
 ]
 claim_boundary = "focused-current-evaluation-evidence-contract-required-before-conclusion-claim"
 commands = [
-  "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+  "uv run python src/tooling/check/check_structured_file_inventory.py --quiet-success",
 ]
 escalation = [
   "the disposition changes Evaluation runtime semantics or closes over evidence that is not currently admitted",
@@ -2332,7 +2332,7 @@ authority_refs = [
 [assurance.requirements.model_harness_evidence]
 level = "high"
 applies_to_paths = [
-  "tools/model-cli-harness/**",
+  "src/tooling/model-cli-harness/**",
   "docs/maintainer/test-knowledge-inventory.md",
 ]
 applies_to_task_markers = [
