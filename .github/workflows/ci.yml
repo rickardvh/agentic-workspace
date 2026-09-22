@@ -101,8 +101,12 @@ jobs:
       - name: Verify instruction publication recovery
         timeout-minutes: 2
         run: uv run pytest tests/test_native_instruction_write.py::test_instruction_recovery_preserves_drift_and_unknown_files -v
+      # This existing authority-composition journey passed on hosted Linux in
+      # 126.62s. Keep its assertions and allow bounded runner headroom; the
+      # overall merge job remains capped at 15 minutes. See the PR test/CI
+      # disposition for the measurement and stop/escalate boundary.
       - name: Verify instruction checks preserve write protections
-        timeout-minutes: 2
+        timeout-minutes: 3
         run: uv run pytest tests/test_native_instruction_verification.py::test_current_check_releases_claim_but_preserves_same_instruction_protection -v
       - name: Verify deferred configuration continuation
         timeout-minutes: 2
