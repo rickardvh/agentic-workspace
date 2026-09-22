@@ -238,7 +238,7 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
 
 
-@pytest.mark.parametrize("stage", ["receipt", "temporary"])
+@pytest.mark.parametrize("stage", ["receipt", "temporary", "superseded"])
 def test_interrupted_publication_recovers_exact_owner_answer(tmp_path, shared_core_binary, native_cli, stage):
     import json
 
@@ -247,12 +247,23 @@ def test_interrupted_publication_recovers_exact_owner_answer(tmp_path, shared_co
     def call(extra=None):
         return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
 
+    old_receipt = None
+    old_bytes = None
+    if stage == "superseded":
+        first = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+        call({"invocation": first})
+        old_receipt = tmp_path / first["arguments"]["receipt_ref"]
+        old_bytes = old_receipt.read_bytes()
+        (tmp_path / "src/feature.txt").write_text("new behavior", encoding="utf-8")
     answer = answer_for(call)
     action = call({"request": answer})["decision_packet"]["primary_action"]
     done = call({"invocation": action})
     receipt = tmp_path / action["arguments"]["receipt_ref"]
     before = receipt.read_bytes()
     (tmp_path / done["custody"]["committed"]["path"]).unlink()
+    if old_receipt is not None:
+        assert not old_receipt.exists()
+        old_receipt.write_bytes(old_bytes)  # Exact preimage before superseded deletion.
     if stage == "temporary":
         receipt.rename(str(receipt) + ".tmp")
     recovered = call()
@@ -261,6 +272,8 @@ def test_interrupted_publication_recovers_exact_owner_answer(tmp_path, shared_co
     assert retry == action
     call({"invocation": retry})
     assert receipt.read_bytes() == before
+    if old_receipt is not None:
+        assert not old_receipt.exists()
     assert call()["verification"]["source_reconciliation"]["status"] == "current"
     assert json.loads(before)["value"]["authority_basis"]["kind"] == "exact-bounded-human-answer"
 
@@ -520,7 +533,7 @@ def test_current_group_projection_ignores_history_and_preserves_missing_evidence
     call({"invocation": action})
     projection = next((tmp_path / ".agentic-workspace/proof/current").glob("source-reconciliation-*.json"))
     assert json.loads(projection.read_text()) == [action["arguments"]["receipt_ref"]]
-    assert receipt.exists()  # superseded immutable evidence is preserved
+    assert not receipt.exists()  # authenticated superseded evidence has no live consumer
     current_receipt = tmp_path / action["arguments"]["receipt_ref"]
     current_receipt.unlink()
     with pytest.raises(AssertionError, match="current reconciliation receipt unavailable"):

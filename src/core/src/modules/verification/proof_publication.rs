@@ -17,6 +17,41 @@ fn err(e: impl std::fmt::Display) -> CoreError {
 fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
+pub(crate) fn retention_committed(target: &Path, receipt: &Value) -> Result<(), CoreError> {
+    retained(target, receipt)?;
+    attempt_store::inspect_committed(
+        &target.to_string_lossy(),
+        receipt[CUSTODY]["custody"].clone(),
+    )?;
+    Ok(())
+}
+pub(crate) fn retention_lock(root: &Dir) -> Result<std::fs::File, CoreError> {
+    lock(root)
+}
+
+pub(crate) fn retention_reusable(target: &Path, receipt: &Value) -> Result<bool, CoreError> {
+    if receipt["result"] != "passed"
+        || receipt["proof_subject"]["runtime"]["implementation"] != "native-aw-proof"
+    {
+        return Ok(false);
+    }
+    let Some(committed) = crate::native_proof::committed_publication(target, receipt)? else {
+        return Ok(false);
+    };
+    let previous = &committed["invocation"]["arguments"]["selection"];
+    let changed: Vec<String> =
+        serde_json::from_value(receipt["changed_paths"].clone()).map_err(err)?;
+    Ok(crate::native_proof::freshness(
+        target,
+        "",
+        &changed,
+        &previous["work"],
+        &previous["strategy"],
+        receipt,
+    )?["status"]
+        == "reusable")
+}
+
 #[cfg(test)]
 thread_local! { static SOURCE_READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
 fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, CoreError> {
@@ -46,6 +81,13 @@ fn retained(target: &Path, receipt: &Value) -> Result<Value, CoreError> {
     {
         return Err(err(
             "proof publication carrier does not name an admitted producer result; preserved",
+        ));
+    }
+    if let Some(plan) = held.get("retention")
+        && held["outcome"]["value"]["publication"]["retention_revision"] != crate::digest(plan)?
+    {
+        return Err(err(
+            "Proof retention differs from exact publication outcome",
         ));
     }
     let prepared = attempt_store::prepare_commit(
@@ -84,6 +126,9 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
         return Err(err(
             "proof-publication-index-custody-required; existing index preserved",
         ));
+    }
+    if crate::native_proof_retention::index_custody(target, bytes).unwrap_or(false) {
+        return Ok(index);
     }
     // A locator bounds IO; only the exact committed index hash grants custody.
     // The predecessor native format had one receipt. Multiple unlocated entries
@@ -131,6 +176,7 @@ fn require_capacity(index: &Value) -> Result<(), CoreError> {
 /// No write and no schema-based acquisition; used before launching a new process.
 pub(crate) fn check(target: &Path) -> Result<(), CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    crate::native_proof_retention::publication_ready(&root)?;
     require_capacity(&owned_index(target, &root, read(&root, INDEX)?.as_deref())?)
 }
 fn lock(root: &Dir) -> Result<std::fs::File, CoreError> {
@@ -192,6 +238,7 @@ fn install(root: &Dir, expected: Option<&[u8]>, next: &[u8], nonce: &str) -> Res
         // A hard link is an absent-only atomic installation of already durable bytes.
         // No truncate/create interval can expose a partial index.
         root.hard_link(&temporary, root, INDEX).map_err(err)?;
+        root.remove_file(&temporary).map_err(err)?;
     } else {
         root.rename(&temporary, root, INDEX).map_err(err)?;
     }
@@ -229,6 +276,7 @@ fn publish_checked(
 ) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let _lock = lock(&root)?;
+    let _reconciliation = crate::native_source_reconciliation::retention_lock(&root)?;
     revalidate()?;
     let before = read(&root, INDEX)?;
     let mut next = owned_index(target, &root, before.as_deref())?;
@@ -245,17 +293,61 @@ fn publish_checked(
             "existing receipt requires exact publication recovery; preserved",
         ));
     }
+    let mut candidates = Vec::new();
+    {
+        for old_id in next["receipts"].as_object().unwrap().keys() {
+            let Ok(old_path) = receipt_path(old_id) else {
+                continue;
+            };
+            let Some(bytes) = read(&root, &old_path)? else {
+                continue;
+            };
+            let Ok(old) = parse(&bytes) else { continue };
+            if (receipt["result"] == "passed" || old["result"] != "passed")
+                && !receipt.to_string().contains(old_id)
+                && old["command"] == receipt["command"]
+                && old["changed_paths"] == receipt["changed_paths"]
+                && retention_committed(target, &old).is_ok()
+            {
+                let old_attempt = retained(target, &old)?;
+                let previous = &old_attempt["record"]["invocation"]["arguments"]["selection"];
+                let current = &invocation["arguments"]["selection"];
+                let same_work = previous["work"]["id"] == current["work"]["id"]
+                    || [previous, current].iter().all(|selection| {
+                        selection["work"]["id"]
+                            .as_str()
+                            .is_some_and(|id| id.starts_with("direct-task:"))
+                    });
+                if previous["choice"] == current["choice"] && same_work {
+                    candidates.push(old_path);
+                }
+            }
+        }
+    }
+    let plan = crate::native_proof_retention::automatic_plan(
+        &root,
+        &candidates,
+        std::slice::from_ref(&path),
+    )?;
+    for retired in plan["sources"].as_object().unwrap().keys() {
+        next["receipts"].as_object_mut().unwrap().remove(
+            retired
+                .strip_prefix(&format!("{STORE}/"))
+                .unwrap()
+                .trim_end_matches(".json"),
+        );
+    }
     next["receipts"][id] = json!({"path":format!("{id}.json"),"producer_class":"aw-proof","revision":receipt["revision"],"source_ref":receipt["source_ref"],"status":"current"});
     next["current_publication"] = json!(id);
     let next_bytes = serde_json::to_vec_pretty(&next).map_err(err)?;
-    outcome["value"]["publication"] = json!({"status":"published","reference":format!("proof://receipts/{id}"),"index_sha256":hash(&next_bytes)});
+    outcome["value"]["publication"] = json!({"status":"published","reference":format!("proof://receipts/{id}"),"index_sha256":hash(&next_bytes),"retention_revision":crate::digest(&plan)?});
     let prepared =
         attempt_store::prepare_commit(&target.to_string_lossy(), custody.clone(), outcome.clone())?;
     if prepared["record"]["invocation"] != *invocation {
         return Err(err("publication invocation differs from retained producer"));
     }
     let mut receipt = receipt.clone();
-    receipt[CUSTODY] = json!({"kind":"agentic-workspace/proof-publication-custody/v1","custody":prepared["custody"],"outcome":outcome,"before_sha256":before.as_ref().map(|b|hash(b))});
+    receipt[CUSTODY] = json!({"kind":"agentic-workspace/proof-publication-custody/v1","custody":prepared["custody"],"outcome":outcome,"before_sha256":before.as_ref().map(|b|hash(b)),"retention":plan});
     create(
         &root,
         &path,
@@ -271,8 +363,11 @@ fn publish_checked(
             .map_err(err)?
             .as_nanos()
     );
+    crate::native_proof_retention::automatic_check(&root, &plan, false)?;
     install(&root, before.as_deref(), &next_bytes, &nonce)?;
     after("index-replaced")?;
+    crate::native_proof_retention::automatic_remove(&root, &plan)?;
+    after("superseded-removed")?;
     let committed =
         attempt_store::commit(json!({"target":target,"custody":custody,"outcome":outcome}))?;
     after("commit-written")?;
@@ -290,6 +385,7 @@ pub(crate) fn recover(
         return Ok(None);
     }
     let _lock = lock(&root)?;
+    let _reconciliation = crate::native_source_reconciliation::retention_lock(&root)?;
     let mut candidate = None;
     let mut count = 0;
     let mut inventory = 0;
@@ -350,6 +446,16 @@ pub(crate) fn recover(
         }
         let mut next = owned_index(target, &root, current.as_deref())?;
         let id = receipt["receipt_id"].as_str().unwrap();
+        if let Some(sources) = held["retention"]["sources"].as_object() {
+            for retired in sources.keys() {
+                next["receipts"].as_object_mut().unwrap().remove(
+                    retired
+                        .strip_prefix(&format!("{STORE}/"))
+                        .ok_or_else(|| err("Invalid retained proof retirement"))?
+                        .trim_end_matches(".json"),
+                );
+            }
+        }
         next["receipts"][id] = json!({"path":format!("{id}.json"),"producer_class":"aw-proof","revision":receipt["revision"],"source_ref":receipt["source_ref"],"status":"current"});
         next["current_publication"] = json!(id);
         let next_bytes = serde_json::to_vec_pretty(&next).map_err(err)?;
@@ -366,7 +472,13 @@ pub(crate) fn recover(
                 .map_err(err)?
                 .as_nanos()
         );
+        if let Some(plan) = held.get("retention") {
+            crate::native_proof_retention::automatic_check(&root, plan, true)?;
+        }
         install(&root, current.as_deref(), &next_bytes, &nonce)?;
+    }
+    if let Some(plan) = held.get("retention") {
+        crate::native_proof_retention::automatic_remove(&root, plan)?;
     }
     let mut custody = held["custody"].clone();
     // The predeclared reference is authority only when its exact bytes exist.
@@ -404,7 +516,10 @@ mod tests {
             Self(path)
         }
         fn prepared(&self) -> (Value, Value, Value, Value) {
-            let mut input = json!({"target":self.0,"task":"Check source","changed":["a.txt"]});
+            self.prepared_for("Check source")
+        }
+        fn prepared_for(&self, task: &str) -> (Value, Value, Value, Value) {
+            let mut input = json!({"target":self.0,"task":task,"changed":["a.txt"]});
             let initial = crate::native_public::start(input.clone()).unwrap();
             let mut request = initial["verification"]["record_requests"][0].clone();
             request["arguments"]["result"] = json!("passed");
@@ -427,9 +542,19 @@ mod tests {
     }
     #[test]
     fn retained_pre_and_post_image_recover_without_execution() {
-        for stage in ["receipt-retained", "index-replaced", "commit-written"] {
+        for stage in [
+            "receipt-retained",
+            "index-replaced",
+            "superseded-removed",
+            "commit-written",
+        ] {
             let repo = Repo::new();
-            let (invocation, custody, receipt, outcome) = repo.prepared();
+            let (first, custody, receipt, outcome) = repo.prepared();
+            let old_path = receipt_path(receipt["receipt_id"].as_str().unwrap()).unwrap();
+            publish(&repo.0, &receipt, &first, &custody, outcome, || Ok(())).unwrap();
+            fs::write(repo.0.join("a.txt"), "new current source").unwrap();
+            let (invocation, custody, receipt, outcome) =
+                repo.prepared_for("Check the updated source");
             let result = publish_checked(
                 &repo.0,
                 &receipt,
@@ -464,6 +589,7 @@ mod tests {
                 recovered
             );
             check(&repo.0).unwrap();
+            assert!(!repo.0.join(old_path).exists());
         }
     }
     #[test]

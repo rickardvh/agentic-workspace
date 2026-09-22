@@ -860,6 +860,18 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
     contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
     crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
+    contract["owners"][0]["requests"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_proof_retention::declarations());
+    contract["owners"][0]["operations"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_proof_retention::operations());
+    contract["owners"][0]["revision"] = json!(digest(&json!([
+        contract["owners"][0]["requests"],
+        contract["owners"][0]["operations"]
+    ]))?);
     contract["revision"] = json!(digest(&contract)?);
     Ok(contract)
 }

@@ -2393,3 +2393,8 @@ pub(crate) mod native_assignment;
 pub(crate) mod native_assignment_policy;
 
 mod worker_entry;
+
+mod retention_sources;
+
+#[path = "modules/verification/native_proof_retention.rs"]
+mod native_proof_retention;

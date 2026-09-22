@@ -311,6 +311,9 @@ pub fn restrict_pending(
         let mut writes = crate::attempt_store::write_paths(
             &json!({"idempotency_key":action["logical_effect_id"]}),
         )?;
+        writes.extend(crate::native_source_reconciliation::retention_write_scope(
+            action,
+        )?);
         let destination = action["arguments"]["receipt_ref"].as_str().unwrap();
         writes.extend([
             destination.to_owned(),
@@ -384,20 +387,30 @@ pub fn restrict_pending(
     }
 
     for action in pending.iter().filter(|action| {
-        action["source_owner"] == "planning"
+        (action["source_owner"] == "verification"
             && matches!(
                 action["operation_id"].as_str(),
-                Some(
-                    "planning.reconcile"
-                        | crate::native_planning_retention::OP
-                        | crate::native_planning_retention::RECOVERY
-                        | "planning.create"
-                        | "planning.update"
-                        | "planning.update-recover"
-                )
-            )
+                Some(crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY)
+            ))
+            || (action["source_owner"] == "planning"
+                && matches!(
+                    action["operation_id"].as_str(),
+                    Some(
+                        "planning.reconcile"
+                            | crate::native_planning_retention::OP
+                            | crate::native_planning_retention::RECOVERY
+                            | "planning.create"
+                            | "planning.update"
+                            | "planning.update-recover"
+                    )
+                ))
     }) {
         let writes = if matches!(
+            action["operation_id"].as_str(),
+            Some(crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY)
+        ) {
+            crate::native_proof_retention::write_scope(action)?
+        } else if matches!(
             action["operation_id"].as_str(),
             Some(crate::native_planning_retention::OP | crate::native_planning_retention::RECOVERY)
         ) {

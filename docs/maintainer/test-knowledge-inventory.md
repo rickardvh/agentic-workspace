@@ -126,3 +126,24 @@ The completion-cost schema estimator and its tests are retired: they described
 removed Python operation schemas, not current native output. Native output and
 contract budget evidence remains with the native owner suites. No replacement
 historical cost taxonomy or duplicate relocation-only tests are introduced.
+
+## Native proof retention (#3552, #3566)
+
+The existing publication interruption and source-reconciliation suites remain the
+producer owners. Their retained-history expectation now distinguishes current
+referenced evidence from authenticated superseded groups. Native disposition
+cases cover exact legacy index transfer, consumer drift across owner roots and
+partial index/deletion recovery. Planning and Verification share only confined
+bounded filesystem enumeration; the existing cross-platform link/junction case
+continues to exercise that primitive.
+
+The hundreds-cycle exercise is a bounded implementation experiment, not another
+permanent ordinary-suite workload. Its file/byte plateau and elapsed time belong
+in the PR evidence. These checks do not establish independent acceptance or
+currentness of every historical source; actual migration and preserved consumers
+are reported separately.
+
+The migrated legacy failure `edfc5fcd80bdec7d` concerned the retired generated
+Python command conformance check. Its boundary remains represented by current
+native command and adapter contract checks; its failed historical execution is
+not a current native failure or a reusable proof result.

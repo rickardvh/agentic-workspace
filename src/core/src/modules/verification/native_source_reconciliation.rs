@@ -232,7 +232,10 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
             "source reconciliation publication has different producer custody",
         ));
     }
-    let outcome = json!({"status":"applied","effects":[EFFECT],"value":record["value"]});
+    let mut outcome = json!({"status":"applied","effects":[EFFECT],"value":record["value"]});
+    if let Some(plan) = record.get("retention") {
+        outcome["value"]["retention_revision"] = json!(digest(plan)?);
+    }
     let prepared = crate::attempt_store::prepare_commit(
         target.to_str().unwrap(),
         record["custody"].clone(),
@@ -512,7 +515,8 @@ fn current_groups(root: &Dir, binding: &Value) -> Result<Vec<String>, CoreError>
     }
     Ok(paths)
 }
-fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<(), CoreError> {
+fn group_plan(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<Value, CoreError> {
+    let mut candidates = Vec::new();
     let mut paths = Vec::new();
     let observations = RefCell::new(BTreeMap::new());
     for old_path in current_groups(root, binding)? {
@@ -521,7 +525,7 @@ fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Resu
             .ok_or_else(|| err("current reconciliation receipt unavailable"))?;
         let record: Value = serde_json::from_slice(&bytes).map_err(err)?;
         let old = &record["invocation"]["arguments"]["binding"];
-        retained(target, &old_path, old)?
+        let held = retained(target, &old_path, old)?
             .ok_or_else(|| err("current reconciliation custody unavailable"))?;
         let group = old["work_postimages"]
             .as_object()
@@ -541,6 +545,11 @@ fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Resu
                 .any(|key| binding["work_postimages"].get(key).is_some())
         {
             paths.push(old_path);
+        } else if held["committed"] == true
+            && old_path != path
+            && !binding.to_string().contains(&old_path)
+        {
+            candidates.push(old_path);
         }
     }
     paths.push(path.to_owned());
@@ -549,7 +558,42 @@ fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Resu
             "current reconciliation projection exceeds subject bound",
         ));
     }
-    crate::current_projection::write(root, &projection_path(binding)?, &json!(paths))
+    let projection = projection_path(binding)?;
+    let plan = crate::native_proof_retention::automatic_plan(
+        root,
+        &candidates,
+        &[
+            path.to_owned(),
+            format!("{path}.tmp"),
+            projection.clone(),
+            format!("{projection}.tmp"),
+        ],
+    )?;
+    Ok(
+        json!({"retirement":plan,"projection":projection,"before":native_planning::read(root,&projection)?.map(|b|crate::native_intent::hash(&b)),"paths":paths}),
+    )
+}
+fn publish_group(root: &Dir, plan: &Value, recovering: bool) -> Result<(), CoreError> {
+    crate::native_proof_retention::automatic_check(root, &plan["retirement"], recovering)?;
+    let projection = plan["projection"]
+        .as_str()
+        .ok_or_else(|| err("Reconciliation projection missing"))?;
+    let current = native_planning::read(root, projection)?;
+    let after = serde_json::to_vec(&plan["paths"]).map_err(err)?;
+    if current.as_deref() != Some(after.as_slice()) {
+        if current
+            .as_ref()
+            .map(|b| json!(crate::native_intent::hash(b)))
+            .unwrap_or(Value::Null)
+            != plan["before"]
+        {
+            return Err(err(
+                "Reconciliation projection changed; preserve retirement",
+            ));
+        }
+        crate::current_projection::write(root, projection, &plan["paths"])?;
+    }
+    crate::native_proof_retention::automatic_remove(root, &plan["retirement"])
 }
 
 fn grouped_view(
@@ -918,22 +962,8 @@ pub(crate) fn execute(
         ));
     }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let lock_path = ".agentic-workspace/local/effects/source-reconciliation.lock";
-    native_planning::read(&root, lock_path)?;
-    root.create_dir_all(".agentic-workspace/local/effects")
-        .map_err(err)?;
-    native_planning::read(&root, lock_path)?;
-    let lock = root
-        .open_with(
-            lock_path,
-            OpenOptions::new().read(true).write(true).create(true),
-        )
-        .map_err(err)?
-        .into_std();
-    if lock.metadata().map_err(err)?.len() != 0 {
-        return Err(err("unowned reconciliation lock preserved"));
-    }
-    lock.try_lock().map_err(err)?;
+    let _publication = crate::proof_publication::retention_lock(&root)?;
+    let _lock = retention_lock(&root)?;
     let path = invocation["arguments"]["receipt_ref"].as_str().unwrap();
     let prior = retained(target, path, binding)?;
     if prior
@@ -951,13 +981,19 @@ pub(crate) fn execute(
         json!({"target":target,"decision":decision,"invocation":invocation,
         "custody":custody}),
     )?;
-    let outcome = json!({"status":"applied","effects":[EFFECT],"value":value});
+    let plan = if let Some(plan) = prior.as_ref().and_then(|p| p.get("retention")) {
+        plan.clone()
+    } else {
+        group_plan(&root, target, binding, path)?
+    };
+    let mut outcome = json!({"status":"applied","effects":[EFFECT],"value":value});
+    outcome["value"]["retention_revision"] = json!(digest(&plan)?);
     let prepared = crate::attempt_store::prepare_commit(
         target.to_str().unwrap(),
         admission["custody"].clone(),
         outcome.clone(),
     )?;
-    let record = json!({"invocation":invocation,"value":value,"custody":prepared["custody"]});
+    let record = json!({"invocation":invocation,"value":value,"custody":prepared["custody"],"retention":plan});
     let bytes = serde_json::to_vec(&record).map_err(err)?;
     if bytes.len() > crate::decision_source::MAX_SOURCE_BYTES {
         return Err(err(
@@ -985,9 +1021,62 @@ pub(crate) fn execute(
         root.remove_file(&temporary).map_err(err)?;
     }
     revalidate()?;
-    publish_group(&root, target, binding, path)?;
+    publish_group(&root, &plan, prior.is_some())?;
     let committed = crate::attempt_store::commit(
         json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
     )?;
     Ok(json!({"outcome":outcome,"custody":committed["custody"],"post_effect_changed_paths":[path]}))
+}
+
+pub(crate) fn retention_committed(
+    target: &Path,
+    path: &str,
+    record: &Value,
+) -> Result<bool, CoreError> {
+    Ok(
+        retained(target, path, &record["invocation"]["arguments"]["binding"])?
+            .is_some_and(|p| p["committed"] == true),
+    )
+}
+pub(crate) fn retention_lock(root: &Dir) -> Result<std::fs::File, CoreError> {
+    let lock_path = ".agentic-workspace/local/effects/source-reconciliation.lock";
+    native_planning::read(root, lock_path)?;
+    root.create_dir_all(".agentic-workspace/local/effects")
+        .map_err(err)?;
+    native_planning::read(root, lock_path)?;
+    let lock = root
+        .open_with(
+            lock_path,
+            OpenOptions::new().read(true).write(true).create(true),
+        )
+        .map_err(err)?
+        .into_std();
+    if lock.metadata().map_err(err)?.len() != 0 {
+        return Err(err("unowned reconciliation lock preserved"));
+    }
+    lock.try_lock().map_err(err)?;
+    Ok(lock)
+}
+
+pub(crate) fn retention_write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
+    let target = Path::new(
+        action["arguments"]["target"]
+            .as_str()
+            .ok_or_else(|| err("Reconciliation target missing"))?,
+    );
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let path = action["arguments"]["receipt_ref"].as_str().unwrap();
+    let binding = &action["arguments"]["binding"];
+    let plan = if let Some(record) = retained(target, path, binding)? {
+        record.get("retention").cloned().unwrap_or(Value::Null)
+    } else {
+        group_plan(&root, target, binding, path)?
+    };
+    let mut paths: Vec<String> = plan["retirement"]["sources"]
+        .as_object()
+        .into_iter()
+        .flat_map(|o| o.keys().cloned())
+        .collect();
+    paths.push(".agentic-workspace/proof/receipts/publication.lock".into());
+    Ok(paths)
 }

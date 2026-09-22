@@ -874,6 +874,25 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "One bounded current index postimage carrier survives disposition of superseded proof receipts.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "guardrails": {
+        "max_items": 1,
+        "max_bytes": 262144,
+        "preferred_refs": [
+          "exact native committed disposition custody"
+        ]
+      },
+      "notes": "Only native Verification index transfer writes this carrier. Exact committed attempt and postimage bytes establish index mutation custody, never proof sufficiency. Preserve on generic cleanup and installation changes.",
+      "owner": "verification",
+      "pattern": ".agentic-workspace/proof/current/index-custody.json",
+      "schema_or_validator": "src/core/src/modules/verification/native_proof_retention.rs::index_custody",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Trusted proof receipts bind reusable validation evidence to exact commands, paths, and repository state.",
       "editable_by_agents": false,
       "format": "json",
@@ -888,10 +907,10 @@
         ],
         "routed_to": "#2448"
       },
-      "notes": "Content-addressed proof receipts are admitted by the proof receipt validator before reuse.",
-      "owner": "workspace-proof",
+      "notes": "Native custody and current subject govern reuse. Authenticated supersession and exact owner disposition bound receipt history without granting proof sufficiency.",
+      "owner": "verification",
       "pattern": ".agentic-workspace/proof/receipts/*.json",
-      "schema_or_validator": "validator: uv run python src/tooling/run_agentic_workspace.py proof --help",
+      "schema_or_validator": "src/core/src/modules/verification/proof_publication.rs::owned_index / retained; src/core/src/modules/verification/native_source_reconciliation.rs::retained",
       "status": "typed-validator-backed",
       "storage_class": "historical-audit-distillation"
     },

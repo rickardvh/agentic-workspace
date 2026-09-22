@@ -133,6 +133,8 @@ fn resolve_selected(
                 && i["operation_id"] != "configuration.recover-write"
                 && i["operation_id"] != crate::native_planning_retention::OP
                 && i["operation_id"] != crate::native_planning_retention::RECOVERY
+                && i["operation_id"] != crate::native_proof_retention::OP
+                && i["operation_id"] != crate::native_proof_retention::RECOVERY
                 && i["operation_id"] != "memory.dispose"
                 && i["operation_id"] != "memory.recover-disposition"
                 && i["operation_id"] != "memory.capture-decision"
@@ -1075,6 +1077,22 @@ fn resolve_selected(
                     .retain(|b| b["code"] != code || !b["affects"].as_array().unwrap().is_empty());
             }
         }
+        let retirement_request = verification_request(crate::native_proof_retention::REQUEST)
+            .or_else(|| verification_request(crate::native_proof_retention::RECOVER));
+        let retention =
+            crate::native_proof_retention::view(target, &work, &contract, retirement_request)?;
+        if retention["action"].is_object() {
+            verification["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .push(retention["action"].clone());
+            verification["contribution"]["revision"] = json!(digest(&json!([
+                verification["contribution"]["revision"],
+                retention["action"]
+            ]))?);
+            verification["contribution"]["settled"] = json!(false);
+        }
+        verification["retention"] = retention;
         let reconciliation = crate::native_source_reconciliation::view(
             target,
             &work,
@@ -1384,6 +1402,8 @@ fn resolve_selected(
                         "proof.report"
                             | crate::native_planning_retention::OP
                             | crate::native_planning_retention::RECOVERY
+                            | crate::native_proof_retention::OP
+                            | crate::native_proof_retention::RECOVERY
                             | "configuration.write"
                             | "configuration.recover-write"
                             | "configuration.defer-choice"
@@ -1875,6 +1895,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "proof.report"
         && invocation["operation_id"] != crate::native_planning_retention::OP
         && invocation["operation_id"] != crate::native_planning_retention::RECOVERY
+        && invocation["operation_id"] != crate::native_proof_retention::OP
+        && invocation["operation_id"] != crate::native_proof_retention::RECOVERY
         && invocation["operation_id"] != "planning.create"
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
@@ -2080,6 +2102,28 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         result["value"]["reentry"] =
             crate::native_delegation::result_reentry(&executed, invocation)?;
         return Ok(result);
+    }
+    if matches!(
+        invocation["operation_id"].as_str(),
+        Some(crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY)
+    ) {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        progress.entered_effect_owner = true;
+        let executed = crate::native_proof_retention::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
     }
     if matches!(
         invocation["operation_id"].as_str(),

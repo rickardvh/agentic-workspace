@@ -55,6 +55,8 @@ def test_native_selected_command_publishes_and_replays_without_task_claim(
     value = applied["value"]
     assert value["process"]["status"] == "passed"
     assert value["publication"]["status"] == "published"
+    retirement = call(context)["verification"]["retention"]
+    assert retirement["status"] == "quiet"  # Current reusable proof is not a retirement candidate.
     assert value["claim_boundary"]["completion_claim_allowed"] is False
     replay = call({**context, "invocation": invocation})
     assert replay["value"] == value

@@ -69,65 +69,7 @@ pub(crate) fn operations() -> Vec<Value> {
         "effects":["planning-state"],"reads":["planning"]})).collect()
 }
 
-fn files(root: &Dir, path: &str, output: &mut BTreeMap<String, Vec<u8>>) -> Result<(), CoreError> {
-    if path.split('/').count() > 32 {
-        return Err(err("Planning retention depth bound exceeded; preserved"));
-    }
-    // Check each ancestor before enumeration, including Windows reparse points.
-    let mut prefix = String::new();
-    for part in path.split('/') {
-        if !prefix.is_empty() {
-            prefix.push('/');
-        }
-        prefix.push_str(part);
-        match root.symlink_metadata(&prefix) {
-            Ok(m) if crate::native_routes::linked(&m) => {
-                return Err(err("Planning retention preserves linked sources"));
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-            Err(e) => return Err(err(e)),
-            _ => {}
-        }
-    }
-    for entry in root.read_dir(path).map_err(err)? {
-        let entry = entry.map_err(err)?;
-        let name = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| err("non-UTF8 Planning source preserved"))?;
-        // Interpreter caches carry no owner semantics or continuation authority.
-        if matches!(name.as_str(), "__pycache__" | ".pytest_cache") {
-            continue;
-        }
-        let child = format!("{path}/{name}");
-        let metadata = root.symlink_metadata(&child).map_err(err)?;
-        if crate::native_routes::linked(&metadata) {
-            return Err(err("Planning retention preserves linked sources"));
-        }
-        if metadata.is_dir() {
-            files(root, &child, output)?;
-        } else if metadata.is_file() {
-            if output.len() >= 4096
-                || output.values().map(Vec::len).sum::<usize>() as u64 + metadata.len()
-                    > 64 * 1024 * 1024
-            {
-                return Err(err("Planning retention source bound exceeded; preserved"));
-            }
-            output.insert(
-                child.clone(),
-                if metadata.len() == 0 {
-                    Vec::new()
-                } else {
-                    read(root, &child)?
-                        .ok_or_else(|| err("Planning retention source disappeared"))?
-                },
-            );
-        } else {
-            return Err(err("Planning retention preserves non-file sources"));
-        }
-    }
-    Ok(())
-}
+use crate::retention_sources::files;
 
 fn terminal(path: &str, bytes: &[u8]) -> bool {
     if !path.starts_with(HOME) || !path.ends_with(".json") {
@@ -152,11 +94,18 @@ fn observe_sources(root: &Dir) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
         ".agentic-workspace/evaluations",
         ".agentic-workspace/reconstruction",
         ".agentic-workspace/system-intent",
+        ".agentic-workspace/instructions",
     ] {
         files(root, path, &mut sources)?;
     }
     // Local selection and work continuation are consumers, not disposable history.
     for path in [
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        "AGENTS.md",
+        "SYSTEM_INTENT.md",
+        ".agentic-workspace/evaluations.json",
+        ".agentic-workspace/delegation-outcomes.json",
         ".agentic-workspace/local/planning/owner-selection.json",
         ".agentic-workspace/local/work-threads/index.json",
     ] {
