@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Consolidate native implementation and embedded resources under src/core and src/cli/rust; remove obsolete standalone module installers and catalogues."
