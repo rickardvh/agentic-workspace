@@ -1,6 +1,6 @@
 # Repository layout
 
-The authored product lives under `src/`. Follow behavior to its owner rather than
+The authored product lives under `src/`. Follow behaviour to its owner rather than
 choosing a language first.
 
 | Path | Authority and lifetime |

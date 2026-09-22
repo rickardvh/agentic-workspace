@@ -196,6 +196,44 @@ fn result(binding: &Value, request: &Value) -> Result<Value, CoreError> {
     )
 }
 
+// Retained checkout evidence must not publish machine paths. Fingerprints retain
+// exact target binding; local custody remains authoritative after restoration.
+const TARGET_FIELDS: [&str; 3] = [
+    "/invocation/arguments/target",
+    "/custody/attempt/target",
+    "/custody/committed/target",
+];
+fn portable_record(mut record: Value) -> Result<Value, CoreError> {
+    let mut targets = serde_json::Map::new();
+    for field in TARGET_FIELDS {
+        let value = record
+            .pointer_mut(field)
+            .ok_or_else(|| err("reconciliation target absent"))?;
+        targets.insert(field.to_owned(), json!(digest(value)?));
+        *value = json!(".");
+    }
+    record["target_revisions"] = json!(targets);
+    Ok(record)
+}
+fn restore_record(target: &Path, mut record: Value) -> Result<Value, CoreError> {
+    let Some(expected) = record.get("target_revisions").cloned() else {
+        return Ok(record);
+    };
+    let canonical = std::fs::canonicalize(target).map_err(err)?;
+    let candidates = [json!(target), json!(canonical)];
+    for field in TARGET_FIELDS {
+        if record.pointer(field) != Some(&json!(".")) {
+            return Err(err("reconciliation relative target invalid"));
+        }
+        let restored = candidates
+            .iter()
+            .find(|value| digest(value).ok().as_deref() == expected[field].as_str())
+            .ok_or_else(|| err("reconciliation custody belongs to a different target"))?;
+        *record.pointer_mut(field).unwrap() = restored.clone();
+    }
+    Ok(record)
+}
+
 fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let published = native_planning::read(&root, path)?;
@@ -206,7 +244,7 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
     let Some(bytes) = published.as_ref().or(temporary.as_ref()) else {
         return Ok(None);
     };
-    let record: Value = serde_json::from_slice(bytes).map_err(err)?;
+    let record = restore_record(target, serde_json::from_slice(bytes).map_err(err)?)?;
     let invocation = &record["invocation"];
     if invocation["operation_id"] != OP
         || invocation["source_owner"] != "verification"
@@ -994,7 +1032,7 @@ pub(crate) fn execute(
         outcome.clone(),
     )?;
     let record = json!({"invocation":invocation,"value":value,"custody":prepared["custody"],"retention":plan});
-    let bytes = serde_json::to_vec(&record).map_err(err)?;
+    let bytes = serde_json::to_vec(&portable_record(record)?).map_err(err)?;
     if bytes.len() > crate::decision_source::MAX_SOURCE_BYTES {
         return Err(err(
             "source reconciliation receipt exceeds bounded recovery size",

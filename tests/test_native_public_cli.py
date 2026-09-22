@@ -180,6 +180,7 @@ def consume(
     host_path: str | None = None,
     allow_failure: bool = False,
     reference_helper: bool = False,
+    custom_core: bool = False,
 ) -> dict:
     context = {"projection": "full", **context}
     installed = native_artifact_consumers.CURRENT
@@ -251,6 +252,10 @@ def consume(
             if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH", "PYTHONHOME", "NODE_PATH"}
         }
         environment["PATH"] = effective_path
+        if custom_core:
+            # Independent-owner composition deliberately uses a separately built
+            # admitted core with the installed binding; ordinary tests stay paired.
+            environment["AGENTIC_WORKSPACE_CORE_BINARY"] = str(binary)
     result = subprocess.run(
         command,
         input=stdin,

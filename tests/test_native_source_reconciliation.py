@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -197,6 +198,20 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     assert evidence["judgments"] == answer["arguments"]["judgments"]
     assert evidence["completion_authority"] is False
     receipts = sorted((tmp_path / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json"))
+
+    # Checked-in evidence binds this checkout without retaining its machine path.
+    for receipt in receipts:
+        original = receipt.read_bytes()
+        record = json.loads(original)
+        assert record["invocation"]["arguments"]["target"] == "."
+        assert record["custody"]["attempt"]["target"] == "."
+        assert str(tmp_path).replace("\\", "\\\\") not in original.decode()
+        record["target_revisions"]["/custody/attempt/target"] = "sha256:" + "0" * 64
+        receipt.write_text(json.dumps(record), encoding="utf-8")
+        with pytest.raises(AssertionError, match="different target"):
+            call()
+        receipt.write_bytes(original)
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
 
     # An unrelated interpreted policy value must not stale accepted semantics.
     config.write_text(config.read_text() + '\n[workspace]\ncli_invoke="aw-current"\n')

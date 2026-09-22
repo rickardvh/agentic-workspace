@@ -352,10 +352,10 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Payload provenance records the AW executable/source identity that last synced the repo payload and is consumed by installed-state compatibility checks.",
+      "notes": "Native payload admission checks the exact managed revision and shipped bytes; no former Python host participates.",
       "owner": "workspace-lifecycle",
       "pattern": ".agentic-workspace/payload-provenance.json",
-      "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._read_payload_provenance",
+      "schema_or_validator": "validator:src/core/src/native_payload.rs",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
     },
@@ -536,7 +536,7 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Optional compact evidence handoff records satisfied Assurance/Verification labels after proof or review without storing raw transcripts.",
+      "notes": "Retained historical Verification source; the retired Python loader is not a current validator or executable proof route. Native admission uses current proof producer output.",
       "owner": "verification",
       "pattern": ".agentic-workspace/verification/assurance-evidence-records.json",
       "merge_safety": {
@@ -544,8 +544,8 @@
         "owner_boundary": "current repository assurance-label state",
         "reason": "The record expresses one jointly reviewed assurance-label state, so competing edits require reconciliation rather than silent composition."
       },
-      "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_assurance_evidence_records",
-      "status": "typed-validator-backed",
+      "schema_or_validator": "JSON syntax and Verification source-owner reconciliation",
+      "status": "source-checkout-diagnostic",
       "storage_class": "non-reconstructable-decision"
     },
     {
@@ -587,7 +587,7 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Optional owner-scoped disposition records explain ordinary test evidence ownership, durability, and follow-up proof decisions. The logical collection is derived by sorted record id; a shared append-style aggregate is prohibited.",
+      "notes": "Retained historical Verification source; the retired Python loader is not a current validator or executable proof route. Native admission uses current proof producer output.",
       "owner": "verification",
       "pattern": ".agentic-workspace/verification/test-strategy-dispositions/*.json",
       "merge_safety": {
@@ -595,8 +595,8 @@
         "owner_boundary": "disposition id and matching filename",
         "reason": "Each proof owner writes one record; consumers derive a sorted logical collection without a shared branch-written aggregate."
       },
-      "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_strategy_dispositions",
-      "status": "typed-validator-backed",
+      "schema_or_validator": "JSON syntax and Verification source-owner reconciliation",
+      "status": "source-checkout-diagnostic",
       "storage_class": "non-reconstructable-decision",
       "lifetime": "Retained evidence decisions have no current append producer. Revise or retire through the declared source owner; a new producer requires bounded lifetime proof."
     },
@@ -605,7 +605,7 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Optional repo-owned test suite budget observations with provenance and freshness semantics for test_strategy_check drift output.",
+      "notes": "Retained historical Verification source; the retired Python loader is not a current validator or executable proof route. Native admission uses current proof producer output.",
       "owner": "verification",
       "pattern": ".agentic-workspace/verification/test-suite-budget.json",
       "merge_safety": {
@@ -613,8 +613,8 @@
         "owner_boundary": "repository test strategy budget",
         "reason": "Suite targets and observations are one maintainer-owned strategy decision and concurrent changes must reconcile."
       },
-      "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_suite_budget",
-      "status": "typed-validator-backed",
+      "schema_or_validator": "JSON syntax and Verification source-owner reconciliation",
+      "status": "source-checkout-diagnostic",
       "storage_class": "non-reconstructable-decision"
     },
     {
@@ -1707,6 +1707,19 @@
       "schema_or_validator": "aw_maintainer.contracts validated loaders plus src/tooling/check/check_contract_tooling_surfaces.py",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
+    },
+    {
+      "pattern": ".agentic-workspace/configuration-assessment.json",
+      "owner": "configuration",
+      "format": "json",
+      "generated": false,
+      "editable_by_agents": false,
+      "storage_class": "source-of-truth",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "validator:src/core/src/native_configuration_assessment.rs",
+      "checked_in_justification": "One current repository setup assessment preserves settled judgments and precise unresolved owner continuations.",
+      "lifetime": "Replace through the Configuration owner when setup or bound dependencies change; never append assessment history.",
+      "notes": "Shared assessment grants neither machine readiness nor independent acceptance. Owner write custody and consumer validation govern publication."
     }
   ],
   "generated_mirrors": [
