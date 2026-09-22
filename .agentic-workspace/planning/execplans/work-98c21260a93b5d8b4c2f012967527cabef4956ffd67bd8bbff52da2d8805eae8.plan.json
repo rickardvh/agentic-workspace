@@ -7,7 +7,7 @@
   },
   "continuation": {
     "owner": "first-contact-lane",
-    "residual_intent": "Complete all three authorised layers. Configured Terra inventory dispatch rejected before effect: handoff or execution configuration changed; no child ran. Preserve recovery and assess local fallback."
+    "residual_intent": "Publish #3559 ready for independent review, then implement #3558 current onboarding and #3562 guide contraction. Public-package setup proof awaits a release containing the command."
   },
   "creation_provenance": {
     "custody": {
@@ -36,23 +36,23 @@
     "outcome": "Implement #3559 -> #3558 -> #3562 in coherent stacked PRs: install, authorise repository adoption, then ordinary agent work; concise guides with exact reference preserved."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "planned",
+  "lifecycle": "live",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Implement #3559 setup through existing owner; then #3558 onboarding/currentness; then #3562 style and mixed-role corpus contraction. Reassess each ready independent child for configured delegation.",
+  "next_action": "Publish #3559 ready for independent review, then implement #3558 current onboarding and #3562 guide contraction. Public-package setup proof awaits a release containing the command.",
   "owner_level": "lane",
   "parent": {
     "closure_boundary": "Implementation and bounded proof; public release journey and independent acceptance stay separately reported.",
     "contribution": "First-contact product and documentation lane",
     "owner_id": "github-3562"
   },
-  "phase": "shaping",
+  "phase": "implementation",
   "proof": {
     "claims": [
-      "Implementation not yet complete. Native adoption semantics reused; public package acceptance needs a published command."
+      "#3559 native command implemented. 13 adoption-owner tests, installed-wheel journey, 6 native CLI tests and 6 catalogue tests pass; interface drift and clippy clean. Independent review and published-package acceptance not claimed."
     ],
     "refs": [],
     "requirements": [
@@ -71,7 +71,7 @@
       ]
     }
   },
-  "revision": 1,
+  "revision": 2,
   "scope": {
     "effects": [
       "Native setup composition, generated contracts, guide contraction, installed journey validation and stacked PRs."
@@ -87,5 +87,34 @@
       ".release/changes"
     ]
   },
-  "title": "First-contact lane: human setup, current onboarding, concise guides"
+  "title": "First-contact lane: human setup, current onboarding, concise guides",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/657018acce57e4717d9da5e724bfd994b9c6002dfa5514fc19d020a9b62d5b9d.attempt.json",
+        "revision": "sha256:8602ab32fe6b2937b5d0192be98b1aed9038015b8638463d8bf7134fe1de2131",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/657018acce57e4717d9da5e724bfd994b9c6002dfa5514fc19d020a9b62d5b9d.result.json",
+        "revision": "sha256:6fb269a578364e0eef89e90f372382c41a53bb3ad88f5d1a1654f5574f432e3e",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:a0935112c08183bb13139d1f98f3812d6012e891bfd8398686584ee576001a62",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:fd47b438f6d1fc977cc6fa04bade826a4e83b486476e69447d8d7dd5e2fd2c0d",
+        "owner_id": "work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8",
+        "owner_path": ".agentic-workspace/planning/execplans/work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8.plan.json"
+      }
+    }
+  }
 }
