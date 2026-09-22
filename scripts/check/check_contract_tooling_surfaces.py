@@ -12,7 +12,12 @@ from jsonschema import Draft202012Validator
 
 from agentic_workspace import workspace_runtime_core as runtime_core
 from agentic_workspace import workspace_runtime_primitives as cli
-from agentic_workspace.contract_tooling import (
+from agentic_workspace.operating_decision import (
+    ordinary_decision_enforcement_contract,
+    ordinary_decision_enforcement_findings,
+    resolve_context_authority_projection,
+)
+from aw_maintainer.contracts import (
     authority_markers_manifest,
     cli_commands_manifest,
     cli_option_groups_manifest,
@@ -51,11 +56,6 @@ from agentic_workspace.contract_tooling import (
     workflow_artifact_profiles_manifest,
     workspace_runtime_primitive_families_manifest,
     workspace_surfaces_manifest,
-)
-from agentic_workspace.operating_decision import (
-    ordinary_decision_enforcement_contract,
-    ordinary_decision_enforcement_findings,
-    resolve_context_authority_projection,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -1739,7 +1739,7 @@ def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> 
     dynamic_loaders = {str(entry.get("loader", "")) for entry in dynamic_entries if isinstance(entry, dict)}
     implemented_dynamic_loaders: set[str] = set()
 
-    contract_tooling_path = REPO_ROOT / "src" / "agentic_workspace" / "contract_tooling.py"
+    contract_tooling_path = REPO_ROOT / "src/tooling/python/aw_maintainer/contracts.py"
     tree = ast.parse(contract_tooling_path.read_text(encoding="utf-8"))
     validated_loader_calls: dict[str, tuple[str, str]] = {}
     for node in tree.body:
@@ -2695,7 +2695,7 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
     else:
         owner_admission = generated_authority.get("source", {}).get("admission", {}).get("owner_admission", {})
         owner_result = generated_authority.get("source", {}).get("admission", {}).get("owner_result", {})
-        if owner_admission.get("producer") != "agentic_workspace.contract_tooling.generated_references":
+        if owner_admission.get("producer") != "aw_maintainer.contracts.generated_references":
             errors.append("generated-references must be admitted by its registered contract-tooling owner")
         if owner_result.get("kind") != "generated-cli-owner-source-manifest/v1" or owner_result.get("status") != "current":
             errors.append("generated-references must admit a current generated-source owner result")

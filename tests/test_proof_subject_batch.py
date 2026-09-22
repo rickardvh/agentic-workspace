@@ -3,7 +3,8 @@
 import json
 from pathlib import Path
 
-from agentic_workspace import decision, proof_receipt_admission, proof_subject, workspace_runtime_proof
+from agentic_workspace import _binding as transport
+from agentic_workspace import proof_receipt_admission, proof_subject, workspace_runtime_proof
 
 
 def test_subject_batch_bounds_transport_and_rechecks_changed_inputs(tmp_path: Path, monkeypatch) -> None:
@@ -47,14 +48,14 @@ def test_reconciliation_batches_current_candidates_once(tmp_path: Path, monkeypa
     ]
     monkeypatch.setattr(workspace_runtime_proof, "_read_proof_receipt_records", lambda _: (receipts, receipts[0], {}, ""))
     native_processes = []
-    run = decision.subprocess.run
+    run = transport.subprocess.run
 
     def observe_process(args, **kwargs):
         if Path(args[0]).name.removesuffix(".exe") == "agentic-workspace-core":
             native_processes.append(args)
         return run(args, **kwargs)
 
-    monkeypatch.setattr(decision.subprocess, "run", observe_process)
+    monkeypatch.setattr(transport.subprocess, "run", observe_process)
     calls = []
     for module, name in [(proof_subject, "proof_subject"), (proof_receipt_admission, "proof_receipt")]:
         real = getattr(module, name)

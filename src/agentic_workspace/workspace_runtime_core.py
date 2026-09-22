@@ -112,25 +112,6 @@ from agentic_workspace.config import (
 from agentic_workspace.config import (
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES as SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
 )
-from agentic_workspace.contract_tooling import (
-    authority_markers_manifest,
-    cli_commands_manifest,
-    cli_option_groups_manifest,
-    compact_contract_manifest,
-    context_templates_manifest,
-    contract_inventory_manifest,
-    improvement_latitude_policy_manifest,
-    improvement_signal_contract_manifest,
-    module_registry_manifest,
-    optimization_bias_policy_manifest,
-    preflight_policy_manifest,
-    proof_selection_rules_manifest,
-    repo_friction_policy_manifest,
-    report_contract_manifest,
-    setup_findings_policy_manifest,
-    workflow_artifact_profiles_manifest,
-    workspace_surfaces_manifest,
-)
 from agentic_workspace.current_work_context import (
     resolve_current_work_context,
     startup_route_fingerprint_check,
@@ -199,7 +180,6 @@ from agentic_workspace.reporting_support import (
 )
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
-from agentic_workspace.review_stack_topology import validate_admitted_pr_topology
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.semantic_task_routes import current_semantic_task_route_fact, route_selector_matches
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
@@ -233,6 +213,26 @@ from agentic_workspace.workspace_selector_validation import (
     _selector_tokens,
     _validated_detail_route_command,
 )
+from aw_maintainer.contracts import (
+    authority_markers_manifest,
+    cli_commands_manifest,
+    cli_option_groups_manifest,
+    compact_contract_manifest,
+    context_templates_manifest,
+    contract_inventory_manifest,
+    improvement_latitude_policy_manifest,
+    improvement_signal_contract_manifest,
+    module_registry_manifest,
+    optimization_bias_policy_manifest,
+    preflight_policy_manifest,
+    proof_selection_rules_manifest,
+    repo_friction_policy_manifest,
+    report_contract_manifest,
+    setup_findings_policy_manifest,
+    workflow_artifact_profiles_manifest,
+    workspace_surfaces_manifest,
+)
+from aw_maintainer.review_topology import validate_admitted_pr_topology
 
 _workspace_runtime_core = sys.modules[__name__]
 CANONICAL_RUNTIME_OWNER = "agentic_workspace.workspace_runtime_core"
@@ -4065,7 +4065,7 @@ def _assurance_applicability_rows(
     selected_semantic_routes: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     from agentic_workspace.assignment_source import revision
-    from agentic_workspace.decision import assurance_applicability, direct_task_subject
+    from aw_maintainer.native_conformance import assurance_applicability, direct_task_subject
 
     identity = direct_task_subject(task_text or "", _normalize_changed_paths(changed_paths or []))
     result = assurance_applicability(
@@ -8527,7 +8527,7 @@ def _host_ownership_ledger_text_for_target(*, target_root: Path) -> str:
 
 def _workspace_payload_bytes_for_target(relative: Path, *, target_root: Path) -> bytes:
     if relative == Path(".agentic-workspace/READING.json"):
-        from .static_read_profile import render
+        from aw_maintainer.ownership_profile import render
 
         ledger = _workspace_payload_bytes_for_target(Path(".agentic-workspace/OWNERSHIP.toml"), target_root=target_root)
         return render(ledger.decode("utf-8"), target=target_root).encode("utf-8")
@@ -43000,7 +43000,7 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
 
 
 def _resolved_delegation_policy(local_override: MixedAgentLocalOverride, profiles: list[dict[str, Any]]) -> dict[str, Any]:
-    from agentic_workspace.decision import assignment_policy
+    from aw_maintainer.native_conformance import assignment_policy
 
     return assignment_policy(
         {
@@ -44762,7 +44762,7 @@ def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_
     if task_text.strip() and relation in {"bounded-independent", "not-applicable"}:
         # Legacy field names carry a work reference, not necessarily a file or
         # durable Planning owner. The exact direct task is its semantic source.
-        from agentic_workspace.decision import direct_task_subject
+        from aw_maintainer.native_conformance import direct_task_subject
 
         direct_revision = str(direct_task_subject(task_text, changed_paths)["revision"])
         return {
@@ -44828,7 +44828,7 @@ def _assignment_plan_binding_matches(*, assignment: dict[str, Any], live_binding
     ):
         # Already sealed legacy work keeps its admitted source contract, but
         # cannot borrow an unrelated modern direct task merely by being current.
-        from agentic_workspace.decision import direct_task_subject
+        from aw_maintainer.native_conformance import direct_task_subject
 
         expected = str(direct_task_subject(str(gate.get("human_intent") or ""), bound_paths)["revision"])
         return plan_revision == expected and bound_paths == allowed_paths
@@ -45276,7 +45276,7 @@ def _current_assignment_selection(
     task_requirements: dict[str, Any] = {}
     if config.target_root is not None and config.local_override.delegation_targets:
         from agentic_workspace.assignment_source import configuration_requirements, current_route_configurations
-        from agentic_workspace.decision import direct_task_subject
+        from aw_maintainer.native_conformance import direct_task_subject
 
         work = (
             {"id": work_identity["slice_id"], "revision": str(work_identity["plan_revision"])}
@@ -45344,7 +45344,7 @@ def _current_assignment_selection(
     )
     if configurations:
         from agentic_workspace.assignment_source import revision
-        from agentic_workspace.decision import execution_configurations
+        from aw_maintainer.native_conformance import execution_configurations
 
         feasibility_revision = configurations["revision"]
         offer_revision = revision({"feasibility": feasibility_revision, "decision": assignment_decision["assignment_decision_revision"]})
@@ -46292,7 +46292,7 @@ def _agent_configuration_queries_report_payload(*, installed_modules: list[str],
 
 
 def _config_field_enforcement_entries() -> list[dict[str, Any]]:
-    from agentic_workspace.contract_tooling import contract_schema
+    from aw_maintainer.contracts import contract_schema
 
     entries = []
     for name, scope in [("workspace_config", "repo-config"), ("workspace_local_override", "local-config")]:
@@ -50935,7 +50935,7 @@ def _host_repo_orientation_payload(*, target_root: Path) -> dict[str, Any]:
 
 
 def _setup_configuration_concerns_payload(*, target_root: Path, config: WorkspaceConfig, selected_modules: list[str]) -> dict[str, Any]:
-    from agentic_workspace.decision import start
+    from agentic_workspace import start
 
     current = start({"target": str(target_root), "task": "Inspect current configuration", "changed": [], "projection": "full"})
     return {
@@ -51361,7 +51361,7 @@ def _proof_receipt_publication_transaction(*, target_root: Path, producer_receip
 
 
 def _proof_publication_identity(receipt: dict[str, Any]) -> dict[str, Any]:
-    from agentic_workspace.decision import proof_receipt
+    from aw_maintainer.native_conformance import proof_receipt
 
     return proof_receipt({"action": "publication-identity", "receipt": receipt})["identity"]
 
@@ -51887,7 +51887,7 @@ def _record_proof_receipt_payload(
     )
     if str(task_text or "").strip() and receipt_claim_sufficiency == "sufficient":
         work = _live_assignment_plan_binding(target_root=target_root, task_text=str(task_text), changed_paths=receipt["changed_paths"])
-        from agentic_workspace.decision import direct_task_subject
+        from aw_maintainer.native_conformance import direct_task_subject
 
         receipt["task_claim_judgment"] = {
             "task_identity": direct_task_subject(str(task_text), receipt["changed_paths"]),
@@ -59861,8 +59861,8 @@ def _write_trusted_producer_receipt(
     task_text: str | None = None,
 ) -> str:
     if producer_class == "aw-proof":
-        from agentic_workspace.decision import invoke as native_invoke
-        from agentic_workspace.decision import start as native_start
+        from agentic_workspace import invoke as native_invoke
+        from agentic_workspace import start as native_start
 
         context = {
             "target": str(target_root),
@@ -60689,7 +60689,7 @@ def _strong_handoff_packet_template() -> dict[str, Any]:
 
 
 def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
-    from agentic_workspace.contract_tooling import contract_schema
+    from aw_maintainer.contracts import contract_schema
 
     defaults = _defaults_payload()["mixed_agent"]
     local_override = config.local_override
@@ -64114,7 +64114,7 @@ _DIRECT_CLOSEOUT_RESIDUE_KINDS = {"issue", "planning", "memory", "docs", "review
 
 def _batch_task_judgment(context: dict[str, Any]) -> dict[str, Any]:
     """Batch current owner observations without retaining a cache or authority."""
-    from agentic_workspace.decision import task_judgment
+    from aw_maintainer.native_conformance import task_judgment
 
     field = "receipts" if context.get("action") == "candidates" else "observations"
     items = list(context.get(field, []))

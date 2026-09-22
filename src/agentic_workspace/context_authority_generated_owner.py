@@ -48,7 +48,7 @@ def generated_references_context_authority_owner_operation(**kwargs: Any) -> dic
     current = manifest_status["status"] == "current"
     status = "current" if current else "stale"
     reason = "" if current else manifest_status["reason"]
-    producer = "agentic_workspace.contract_tooling.generated_references"
+    producer = "aw_maintainer.contracts.generated_references"
     operation_id = "generated-command-packages.refresh"
     boundary = "Generated command package source-manifest authority"
     population = {"status": "present" if current else "invalid"}

@@ -30,7 +30,7 @@ def resource(surface, binary, native, context):
         args = [
             sys.executable,
             "-c",
-            "import json,sys; from agentic_workspace.decision import resources; print(json.dumps(resources(json.load(sys.stdin))))",
+            "import json,sys; from agentic_workspace import resources; print(json.dumps(resources(json.load(sys.stdin))))",
         ]
         payload = context
     else:

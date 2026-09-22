@@ -72,10 +72,12 @@ def test_wheel_contains_only_binding_host_adapter_and_paired_core(wheel):
 
 def test_source_public_import_is_native_and_fails_closed(tmp_path, shared_core_binary):
     script = """
-import json, sys
+import importlib.util, json, sys
 import agentic_workspace as aw
+for module in ("decision", "contract_tooling", "static_read_profile", "review_stack_topology"):
+    assert importlib.util.find_spec("agentic_workspace." + module) is None
 assert not any(name in sys.modules for name in (
-    'agentic_workspace.client', 'agentic_workspace.decision',
+    'agentic_workspace.client', 'aw_maintainer.native_conformance',
     'agentic_workspace.workspace_runtime_core', 'agentic_workspace.modules'))
 assert not hasattr(aw, 'invoke_operation')
 assert not hasattr(aw, 'compile_source_decision')

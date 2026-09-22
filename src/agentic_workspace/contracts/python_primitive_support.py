@@ -2853,7 +2853,7 @@ def _assignment_export_prompt(packet: Any) -> str:
 
 
 def _assignment_worker_context(packet: Mapping[str, Any]) -> dict[str, Any]:
-    from agentic_workspace.decision import assignment_packet
+    from aw_maintainer.native_conformance import assignment_packet
 
     return assignment_packet({"action": "worker-context", "packet": packet})
 
@@ -2891,13 +2891,13 @@ def _assignment_dispatch_configuration(*, identity: Mapping[str, Any], transport
 
 
 def _assignment_packet_integrity(packet: Mapping[str, Any]) -> str:
-    from agentic_workspace.decision import assignment_packet
+    from aw_maintainer.native_conformance import assignment_packet
 
     return str(assignment_packet({"action": "integrity", "packet": packet})["integrity"])
 
 
 def _assignment_seal_host_native_packet(packet: Mapping[str, Any]) -> dict[str, Any]:
-    from agentic_workspace.decision import assignment_packet
+    from aw_maintainer.native_conformance import assignment_packet
 
     return assignment_packet({"action": "seal", "packet": packet})
 

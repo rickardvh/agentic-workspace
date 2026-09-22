@@ -125,7 +125,7 @@ def semantic_route_catalogue(root: Path) -> dict[str, Any]:
 
 
 def discover_semantic_routes(root: Path, *, parent: str = "", exact: str = "") -> dict[str, Any]:
-    from agentic_workspace.decision import route_discovery
+    from aw_maintainer.native_conformance import route_discovery
 
     return route_discovery({"target": str(root.resolve()), "parent": parent, "exact": exact})
 

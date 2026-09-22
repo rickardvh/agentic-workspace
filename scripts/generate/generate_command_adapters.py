@@ -11,7 +11,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from agentic_workspace.contract_tooling import command_adapter_generation_manifest  # noqa: E402
+from aw_maintainer.contracts import command_adapter_generation_manifest  # noqa: E402
 
 DEFAULT_PROGRAM = "agentic-workspace"
 

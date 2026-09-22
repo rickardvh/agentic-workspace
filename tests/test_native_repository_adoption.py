@@ -111,7 +111,7 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
     """Committed source projections work on a new machine, without writer custody."""
     from tests.test_source_payload_operational_install import _checker_script_path, _load_module
 
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     _committed_payload_alignment = _load_module(_checker_script_path(), "fresh_source_alignment")._committed_payload_alignment
@@ -169,8 +169,8 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
 @pytest.mark.parametrize("change", ["unchanged", "customized", "conflict", "unknown-history"])
 def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_binary, native_cli, change):
     """A legacy producer held installed hashes, not a structured baseline."""
-    from agentic_workspace.decision import admit_stored_attempt, commit_stored_attempt
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.native_conformance import admit_stored_attempt, commit_stored_attempt
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     context = {"target": str(tmp_path), "task": "Refresh legacy repository ownership"}
@@ -276,7 +276,7 @@ def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_
 @pytest.mark.parametrize("customized", [False, True])
 def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_binary, native_cli, customized):
     """One native journey also runs unchanged against installed release artifacts."""
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     root = tmp_path / ".agentic-workspace"

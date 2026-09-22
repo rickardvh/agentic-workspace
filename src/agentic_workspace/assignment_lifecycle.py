@@ -63,7 +63,7 @@ def load_indexed_assignment_task_proof(*, target_root: Path, receipt_ref: str) -
 
 def assignment_task_proof_binding(receipt: Mapping[str, Any]) -> str:
     """Bind an AW proof subject to one exact assignment obligation."""
-    from agentic_workspace.decision import proof_receipt
+    from aw_maintainer.native_conformance import proof_receipt
 
     return str(proof_receipt({"action": "binding", "receipt": dict(receipt)})["binding"])
 

@@ -169,7 +169,7 @@ def derive_orchestration_frontier(
 
 def attribute_orchestration_outcome(*, evidence: Mapping[str, Any]) -> dict[str, Any]:
     """Project admitted owner facts through the shared executable authority."""
-    from agentic_workspace.decision import attribute_assignment_outcome
+    from aw_maintainer.native_conformance import attribute_assignment_outcome
 
     return attribute_assignment_outcome(evidence)
 

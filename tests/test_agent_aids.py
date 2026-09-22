@@ -87,7 +87,8 @@ def test_valid_agent_aid_manifest_passes(tmp_path: Path) -> None:
 
 
 def test_candidate_bundle_uses_passive_selected_procedure_currentness(tmp_path, shared_core_binary):
-    from agentic_workspace.decision import route_discovery, start
+    from agentic_workspace import start
+    from aw_maintainer.native_conformance import route_discovery
 
     _prepare_schema(tmp_path)
     base = ".agentic-workspace/agent-aids/skills/change-note"

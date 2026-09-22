@@ -34,7 +34,6 @@ from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, admit_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
-from agentic_workspace.decision import separation_of_duty
 from agentic_workspace.improvement_consequence import (
     IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH,
     ConsequenceStoreUnavailable,
@@ -154,6 +153,7 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _tiny_surface_compatibility_review,
 )
 from agentic_workspace.workspace_runtime_planning import _active_planning_record_for_report_section
+from aw_maintainer.native_conformance import separation_of_duty
 
 INDEPENDENT_REVIEW_RESULT_DIR = Path(".agentic-workspace/local/independent-review-results")
 INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-result-index/v1"
@@ -7735,7 +7735,7 @@ def _signed_independent_review_host_verdict_with_keys(
     public_keys: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, Any]:
     """Pure fixture/host seam; callers must already own key authority."""
-    from agentic_workspace.decision import review_authentication
+    from aw_maintainer.native_conformance import review_authentication
 
     return review_authentication(
         {
@@ -7755,7 +7755,7 @@ def _signed_independent_review_host_verdict(
     target_root: Path,
 ) -> dict[str, Any]:
     """Observe host context; shared core consumes unchanged release-pinned keys."""
-    from agentic_workspace.decision import review_authentication
+    from aw_maintainer.native_conformance import review_authentication
 
     return review_authentication(
         {

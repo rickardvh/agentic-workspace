@@ -439,7 +439,7 @@
       "disposition": "regenerate rather than hand edit",
       "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"],
       "source_owner_contract": {
-        "owner_module": "agentic_workspace.contract_tooling.generated_references",
+        "owner_module": "aw_maintainer.contracts.generated_references",
         "owner_result_kind": "generated-cli-owner-source-manifest/v1",
         "repair_operation_id": "generated-command-packages.refresh",
         "reconciliation_mode": "unavailable",

@@ -321,7 +321,7 @@
       "notes": "Root contract manifests are validated through schema-backed loaders or contract tooling checks; cross-file invariants remain in Python checks.",
       "owner": "workspace-contracts",
       "pattern": "src/agentic_workspace/contracts/*.json",
-      "schema_or_validator": "agentic_workspace.contract_tooling validated loaders plus scripts/check/check_contract_tooling_surfaces.py",
+      "schema_or_validator": "aw_maintainer.contracts validated loaders plus scripts/check/check_contract_tooling_surfaces.py",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
     },

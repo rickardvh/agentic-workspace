@@ -15,7 +15,7 @@ from agentic_workspace.result_adapter import serialise_value
 def _validate_current_authoring(payload: dict[str, Any], *, local: bool) -> None:
     from jsonschema import Draft202012Validator
 
-    from agentic_workspace.contract_tooling import contract_schema
+    from aw_maintainer.contracts import contract_schema
 
     name = "workspace_local_override" if local else "workspace_config"
     errors = list(Draft202012Validator(contract_schema(f"{name}.schema.json")).iter_errors(payload))
@@ -1575,7 +1575,7 @@ def normalize_current_economic_evidence(raw: Any, *, config_path: Path) -> dict[
 def load_delegation_target_profiles(
     *, raw_targets: dict[str, Any], config_path: Path
 ) -> tuple[tuple[DelegationTargetProfile, ...], list[str]]:
-    from agentic_workspace.decision import transport_sources
+    from aw_maintainer.native_conformance import transport_sources
 
     _validate_current_authoring({"delegation_targets": raw_targets}, local=True)
     decoded = transport_sources(raw_targets)["sources"] if raw_targets else {}
@@ -1870,7 +1870,7 @@ def _merge_local_config_payloads(*, base: dict[str, Any], override: dict[str, An
         return dict(override)
     if not override:
         return dict(base)
-    from agentic_workspace.decision import local_source_overlay
+    from aw_maintainer.native_conformance import local_source_overlay
 
     return local_source_overlay(base, override)
 

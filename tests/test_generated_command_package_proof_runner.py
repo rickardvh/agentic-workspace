@@ -3066,7 +3066,7 @@ def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None
 
     sources = checker._tracked_python_source_files()
 
-    assert "src/agentic_workspace/contract_tooling.py" in sources
+    assert "src/tooling/python/aw_maintainer/contracts.py" in sources
     assert "scripts/check/check_generated_command_packages.py" in sources
 
 

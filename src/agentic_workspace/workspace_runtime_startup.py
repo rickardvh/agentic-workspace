@@ -17,7 +17,6 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
-from agentic_workspace.decision import repository_decision_view
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
@@ -176,6 +175,7 @@ from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,
 )
 from agentic_workspace.workspace_selector_validation import _selector_inventory_selected_payload, _validated_detail_route_command
+from aw_maintainer.native_conformance import repository_decision_view
 
 
 def _compact_start_effective_orchestration(posture: Any) -> dict[str, Any]:

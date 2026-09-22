@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
-from agentic_workspace.review_stack_topology import (
+from aw_maintainer.review_topology import (
     TOPOLOGY_OBSERVATION_KIND,
     TopologyAdmissionError,
     current_provider_pr_identity,

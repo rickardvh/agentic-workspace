@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.review_stack_topology import (
+from aw_maintainer.review_topology import (
     TOPOLOGY_OBSERVATION_KIND,
     TopologyAdmissionError,
     admit_pr_topology_observation,

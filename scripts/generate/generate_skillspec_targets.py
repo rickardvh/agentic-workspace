@@ -9,7 +9,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from agentic_workspace.contract_tooling import (  # noqa: E402
+from aw_maintainer.contracts import (  # noqa: E402
     render_skillspec_plugin_target,
     render_skillspec_target_skill,
     skill_specs_manifest,

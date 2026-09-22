@@ -67,7 +67,7 @@ def test_active_executable_examples_agree_with_native_command_authority():
         assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
     # Retained generated-operation fixtures must carry the same disposition as
     # their operations, including when opened independently of the registry.
-    from agentic_workspace.contract_tooling import conformance_contracts_manifest, contract_path
+    from aw_maintainer.contracts import conformance_contracts_manifest, contract_path
 
     registry = conformance_contracts_manifest()
     assert registry["migration_status"] == "source-maintenance-only"

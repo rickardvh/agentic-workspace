@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from agentic_workspace import config
-from agentic_workspace.contract_tooling import (
+from aw_maintainer.contracts import (
     compact_contract_manifest,
     contract_schema,
     proof_routes_manifest,

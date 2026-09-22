@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from agentic_workspace.decision import proof_receipt
+from aw_maintainer.native_conformance import proof_receipt
 
 PROOF_RECEIPT_RESULT_OPTIONS = ("passed", "failed", "skipped", "waived")
 

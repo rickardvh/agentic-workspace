@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from agentic_workspace.conformance import materialize_fixture, run_process_conformance
-from agentic_workspace.contract_tooling import conformance_contract_manifest, conformance_contracts_manifest
+from aw_maintainer.contracts import conformance_contract_manifest, conformance_contracts_manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_SHIM = (

@@ -26,6 +26,13 @@ source-only conformance fixtures do not make them wheel compatibility promises.
 The isolated wheel consumer test checks the current API with development core
 overrides removed and checks that those retired surfaces remain absent.
 
+Repository-only Python helpers live in `src/tooling/python/aw_maintainer`.
+`native_conformance` exposes internal Rust vector/contract operations for tests;
+public consumers import `agentic_workspace` directly. `contracts`,
+`ownership_profile` and `review_topology` serve source generation and GitHub
+maintainer workflows. Editable development includes this tooling path; wheels
+exclude it. Former helper imports under `agentic_workspace` have no aliases.
+
 Legacy Python clients, operations, generated command trees, and the three module
 distributions remain source development and migration fixtures. They are not
 wheel contents, installed dependencies, npm contents, or release assets. The

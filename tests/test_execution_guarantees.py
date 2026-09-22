@@ -14,8 +14,8 @@ from tests.test_external_operation_clients import (
 
 from agentic_workspace import cli
 from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
-from agentic_workspace.decision import execution_configurations
 from agentic_workspace.generated_operations import assignment_export
+from aw_maintainer.native_conformance import execution_configurations
 
 
 @pytest.mark.parametrize("value", ["history.non-persisted", [""], [True], ["UPPER"], ["same", "same"], [f"fact.{i}" for i in range(33)]])

@@ -80,7 +80,7 @@ only-include = [
   "src/agentic_workspace/sealed_codex_transport.py",
 ]
 sources = ["src"]
-dev-mode-dirs = ["src"]
+dev-mode-dirs = ["src", "src/tooling/python"]
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
@@ -118,7 +118,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 140
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "src/tooling/python", "tests"]
 
 [tool.ruff.lint]
 ignore = ["E501"]

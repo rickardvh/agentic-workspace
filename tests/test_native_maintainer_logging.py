@@ -225,7 +225,7 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
     ],
 )
 def test_shared_logging_policy(settings, override, enabled, mode, shared_core_binary):
-    from agentic_workspace.decision import session_logging_policy
+    from aw_maintainer.native_conformance import session_logging_policy
 
     result = session_logging_policy({"local": {"session_logging": settings}, "disable_override": override})
     assert result == {"enabled": enabled, "path_mode": mode}

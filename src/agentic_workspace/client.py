@@ -13,7 +13,7 @@ from typing import Any, Mapping, Sequence, cast
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.contract_tooling import operation_contracts_manifest
+from aw_maintainer.contracts import operation_contracts_manifest
 
 FAILURE_KINDS = {
     "absent",

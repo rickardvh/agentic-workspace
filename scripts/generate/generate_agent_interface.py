@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def render_host_payload(root: Path) -> dict[str, str]:
     """Closed derivation graph: no source-maintenance semantic read capability."""
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     host = json.loads((root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
     portable = set(host["derivation"]["portable_sources"])
@@ -78,7 +78,7 @@ def synchronize(*, check: bool = False) -> list[str]:
     if any(row["path"] in host_outputs for row in manifest.get("retired_surface_files", [])):
         raise ValueError("Source maintenance cannot retire a public host materialization")
     payload = ROOT / "src/agentic_workspace/_payload"
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     drift = []
     # Provenance stays lifecycle/release-owned source truth. The source-payload

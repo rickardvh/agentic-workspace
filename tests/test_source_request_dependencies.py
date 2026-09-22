@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 from tests.test_shared_core import VECTORS, _compile, _expanded
 
-from agentic_workspace.decision import DecisionContractError, admit_invocation
+from agentic_workspace import DecisionContractError
+from aw_maintainer.native_conformance import admit_invocation
 
 
 def test_source_dependencies_preserve_old_actions_and_reject_stale_requests(shared_core_binary: Path) -> None:

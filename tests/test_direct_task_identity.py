@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from agentic_workspace.decision import direct_task_subject
 from agentic_workspace.workspace_runtime_core import _assignment_plan_binding_matches, _live_assignment_plan_binding
+from aw_maintainer.native_conformance import direct_task_subject
 
 
 def test_python_bridge_preserves_established_unicode_identity_vectors() -> None:

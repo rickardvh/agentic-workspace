@@ -11,7 +11,7 @@ import platform
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.decision import proof_subject
+from aw_maintainer.native_conformance import proof_subject
 
 PROOF_SUBJECT_KIND = "agentic-workspace/proof-subject/v1"
 

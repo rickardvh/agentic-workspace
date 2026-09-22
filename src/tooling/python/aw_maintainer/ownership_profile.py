@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentic_workspace.decision import _request
+from aw_maintainer.native_conformance import _request
 
 LEDGER = ".agentic-workspace/OWNERSHIP.toml"
 PROFILE = ".agentic-workspace/READING.json"

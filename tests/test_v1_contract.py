@@ -10,7 +10,6 @@ from typing import Any
 
 import pytest
 
-from agentic_workspace.decision import compile_source_decision, select_decision_detail
 from agentic_workspace.modules import Module, discover_modules, module_contributions, register_module_operations
 from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.operations import (
@@ -20,6 +19,7 @@ from agentic_workspace.operations import (
     StaleInvocationError,
     UncertainOperationError,
 )
+from aw_maintainer.native_conformance import compile_source_decision, select_decision_detail
 
 ROOT = Path(__file__).resolve().parents[1]
 CAPABILITY_CONTRACT = json.loads((ROOT / "tests/vectors/capability_contract.json").read_text(encoding="utf-8"))

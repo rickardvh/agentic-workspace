@@ -254,7 +254,7 @@ def agent_aid_findings(paths: list[str] | None = None, root: Path = REPO_ROOT) -
         findings.extend(_entrypoint_findings(path, payload, tracked_set))
         findings.extend(_safety_policy_findings(path, payload, root=root, tracked=tracked_set))
         if payload.get("type") == "skill" and payload.get("status") in {"candidate", "shared"}:
-            from agentic_workspace.decision import route_discovery
+            from aw_maintainer.native_conformance import route_discovery
 
             try:
                 result = route_discovery({"target": str(root), "exact": f"candidate-skills/{PurePosixPath(path).parent.name}"})

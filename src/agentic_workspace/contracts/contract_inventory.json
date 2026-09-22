@@ -466,7 +466,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/python_contract_consumption.json",
       "consumers": [
-        "agentic_workspace.contract_tooling",
+        "aw_maintainer.contracts",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "The Python contract-consumption boundary, validated-loader route, and schema-derived model policy are explicit contract data rather than implicit helper behavior."

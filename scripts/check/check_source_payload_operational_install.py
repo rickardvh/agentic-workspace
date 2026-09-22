@@ -299,7 +299,7 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
                 matches = actual == expected_value
             if not matches:
                 drift.append({"path": ".agentic-workspace/OWNERSHIP.toml", "reason": f"source ledger conflicts with portable {section}"})
-        from agentic_workspace.static_read_profile import render
+        from aw_maintainer.ownership_profile import render
 
         profile = repo_root / ".agentic-workspace/READING.json"
         if not profile.is_file() or _normalized_file_text(profile) != render(ledger_path.read_bytes().decode("utf-8"), target=repo_root):

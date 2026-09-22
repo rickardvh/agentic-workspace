@@ -274,7 +274,7 @@
     "data_shapes": "this JSON contract and referenced JSON Schema",
     "executable_semantics": "crates/agentic-workspace-core",
     "bindings": [
-      "src/agentic_workspace/decision.py",
+      "src/tooling/python/aw_maintainer/native_conformance.py",
       "bindings/node/semantic-decision.mjs"
     ],
     "json_transport": "agentic-workspace-core binary stdin/stdout"

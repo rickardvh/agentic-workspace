@@ -281,7 +281,7 @@ def _write_source_current_payload_fixture(tmp_path: Path) -> None:
 
 
 def test_committed_payload_alignment_accepts_matching_source_current_state(tmp_path: Path) -> None:
-    from agentic_workspace.static_read_profile import render
+    from aw_maintainer.ownership_profile import render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     mod = _load_module(_checker_script_path(), "source_payload_committed_alignment_current")

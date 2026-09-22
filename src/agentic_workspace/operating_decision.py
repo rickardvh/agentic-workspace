@@ -26,7 +26,6 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_result_status,
 )
 from agentic_workspace.control_inputs import compile_control_inputs
-from agentic_workspace.decision import compile_source_decision
 from agentic_workspace.future_learning import compile_future_learning
 from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
@@ -36,6 +35,7 @@ from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
 from agentic_workspace.reconciliation import compile_reconciliation
 from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
 from agentic_workspace.scoped_instructions import inspect_instructions
+from aw_maintainer.native_conformance import compile_source_decision
 
 BLOCKER_PRECEDENCE = [
     "missing-authority",

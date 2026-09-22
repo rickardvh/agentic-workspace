@@ -13,7 +13,7 @@ class ContractValidationError(ValueError):
 
 
 def contracts_root() -> Path:
-    return Path(__file__).resolve().parent / "contracts"
+    return Path(__file__).resolve().parents[4] / "src" / "agentic_workspace" / "contracts"
 
 
 def contract_roots() -> tuple[Path, ...]:

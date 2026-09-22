@@ -13,7 +13,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.contract_tooling import contract_schema
+from aw_maintainer.contracts import contract_schema
 
 
 def run_process_conformance(

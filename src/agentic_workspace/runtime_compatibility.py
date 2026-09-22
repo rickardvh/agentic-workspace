@@ -31,7 +31,7 @@ def _read_table(path: Path, errors: list[str]) -> dict[str, Any]:
 
 def admit_runtime_compatibility(target_root: Path) -> dict[str, Any]:
     """Observe only configuration and this reader; shared core admits compatibility."""
-    from agentic_workspace.decision import runtime_compatibility
+    from aw_maintainer.native_conformance import runtime_compatibility
 
     global _LAST_ADMISSION
     root = target_root.resolve()

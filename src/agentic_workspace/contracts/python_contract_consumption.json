@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/python-contract-consumption/v1",
   "loader_boundary": {
-    "module": "agentic_workspace.contract_tooling",
+    "module": "aw_maintainer.contracts",
     "generic_loader": "load_contract_json(relative_path)",
     "validated_loader": "load_validated_contract_json(relative_path, schema_relative_path)",
     "error_type": "ContractValidationError"

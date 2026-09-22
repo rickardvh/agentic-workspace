@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.contract_tooling import python_runtime_projection_inventory_manifest
+from aw_maintainer.contracts import python_runtime_projection_inventory_manifest
 
 LARGE_RUNTIME_PATHS = {
     "src/agentic_workspace/workspace_runtime_core.py",

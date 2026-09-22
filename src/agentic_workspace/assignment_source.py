@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import DelegationTargetProfile, load_workspace_config
-from agentic_workspace.decision import replace_assignment
+from aw_maintainer.native_conformance import replace_assignment
 
 SOURCE = ".agentic-workspace/config.local.toml"
 
@@ -30,7 +30,7 @@ def configuration_requirements(
     changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     """Current owner projection; absent task judgment never means no constraints."""
-    from agentic_workspace.decision import task_requirements, verification_requirements
+    from aw_maintainer.native_conformance import task_requirements, verification_requirements
 
     current_judgment = dict(judgment) if judgment is not None else None
     request = current_judgment.pop("verification_request", None) if current_judgment is not None else None
@@ -123,13 +123,13 @@ def _current_route_configurations(
     Executable presence proves only the generic argv transport. It never proves
     a remote model, vendor parameter, or native continuation is available.
     """
-    from agentic_workspace.decision import execution_configurations
+    from aw_maintainer.native_conformance import execution_configurations
 
     if requirements is None:
         raise ValueError("current-task-requirements-required")
     from types import SimpleNamespace
 
-    from agentic_workspace.decision import assignment_policy
+    from aw_maintainer.native_conformance import assignment_policy
 
     resolved_policy = assignment_policy(
         {
@@ -561,7 +561,7 @@ def replace_after_repair(
 
 
 def current_replacement(root: Path, packet: dict[str, Any], work: dict[str, Any]) -> dict[str, Any]:
-    from agentic_workspace.decision import admit_assignment_packet
+    from aw_maintainer.native_conformance import admit_assignment_packet
 
     previous_run = packet.get("replacement", {}).get("previous_run_id", "")
     if not previous_run or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in previous_run):

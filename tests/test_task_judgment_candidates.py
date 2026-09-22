@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from agentic_workspace import assignment_lifecycle, workspace_runtime_core, workspace_runtime_proof
-from agentic_workspace.decision import direct_task_subject
+from aw_maintainer.native_conformance import direct_task_subject
 
 
 @pytest.mark.parametrize("task", ["Current bounded task", "", "\x1c\x1f"])
@@ -105,7 +105,7 @@ def test_task_judgment_shared_owner_rejects_invalid_binding_and_preserves_review
 
 
 def test_task_judgment_history_transport_is_batched(monkeypatch: pytest.MonkeyPatch) -> None:
-    from agentic_workspace import decision
+    from aw_maintainer import native_conformance as decision
 
     calls = []
     original = decision._request

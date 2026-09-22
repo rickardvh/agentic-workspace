@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, overload
 
 from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE
-from agentic_workspace.contract_tooling import authority_markers_manifest, proof_selection_rules_manifest
+from aw_maintainer.contracts import authority_markers_manifest, proof_selection_rules_manifest
 
 _AUTHORITY_MARKERS = authority_markers_manifest()
 _PROOF_SELECTION_RULES = proof_selection_rules_manifest()

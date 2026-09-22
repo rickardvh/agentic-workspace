@@ -84,7 +84,7 @@ def test_selected_check_to_receipt_and_remaining_claim(tmp_path, shared_core_bin
 
     from tests.repo_procedure_fixture import install_method, question
 
-    from agentic_workspace.decision import start
+    from agentic_workspace import start
 
     install(tmp_path)
     (tmp_path / "a.txt").write_text("subject")

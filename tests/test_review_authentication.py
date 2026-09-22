@@ -13,7 +13,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 from tests.workspace_proof_support import _independent_review_host_signature, _write_independent_review_host_result
 
 from agentic_workspace import workspace_runtime_proof as proof
-from agentic_workspace.decision import review_authentication
+from aw_maintainer.native_conformance import review_authentication
 
 ROOT = Path(__file__).resolve().parents[1]
 

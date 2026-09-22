@@ -11,8 +11,9 @@ from types import SimpleNamespace
 import pytest
 from tests.test_native_public_cli import native_cli as native_cli
 
+from agentic_workspace import DecisionContractError
 from agentic_workspace.assignment_source import configuration_requirements
-from agentic_workspace.decision import DecisionContractError, direct_task_subject, verification_requirements
+from aw_maintainer.native_conformance import direct_task_subject, verification_requirements
 
 MANIFEST = ".agentic-workspace/verification/manifest.toml"
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,7 +113,7 @@ def test_executor_does_not_inherit_an_evaluator_obligation(current, monkeypatch)
     def unexpected(_):
         raise AssertionError("An executor without a selected obligation must not acquire global evaluator constraints")
 
-    monkeypatch.setattr("agentic_workspace.decision.verification_requirements", unexpected)
+    monkeypatch.setattr("aw_maintainer.native_conformance.verification_requirements", unexpected)
     task = direct_task_subject(current["task"], current["changed_paths"])
     result = configuration_requirements(
         SimpleNamespace(required_execution_guarantees=()),

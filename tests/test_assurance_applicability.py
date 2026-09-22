@@ -90,7 +90,7 @@ def test_python_consumers_share_exact_applicability_without_marker_match() -> No
 def test_real_source_requirement_keeps_claim_boundary_when_scope_is_unknown(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path
 ) -> None:
-    from agentic_workspace import decision
+    import agentic_workspace as decision
     from agentic_workspace import workspace_runtime_core as runtime
     from agentic_workspace.config import load_workspace_config
 

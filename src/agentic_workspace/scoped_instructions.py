@@ -11,12 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.decision import instruction_applicability, instruction_source_admission
 from agentic_workspace.semantic_task_routes import (
     current_semantic_task_route_fact,
     discover_semantic_routes,
     select_semantic_task_routes,
 )
+from aw_maintainer.native_conformance import instruction_applicability, instruction_source_admission
 
 INSTRUCTION_DIR = Path(".agentic-workspace/instructions")
 FRONTMATTER_FIELDS = ("paths", "routes", "read", "reconcile", "governed_by", "use", "checks", "protect")

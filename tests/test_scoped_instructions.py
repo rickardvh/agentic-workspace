@@ -108,8 +108,8 @@ def test_instruction_hard_bindings_require_current_shared_admission(tmp_path: Pa
 
 
 def test_shared_semantic_route_only_activates_independently_admitted_instruction(tmp_path: Path) -> None:
-    from agentic_workspace.decision import semantic_route_view
     from agentic_workspace.semantic_task_routes import semantic_route_host_context
+    from aw_maintainer.native_conformance import semantic_route_view
 
     _route_skill_registry(tmp_path)
     source = _write(

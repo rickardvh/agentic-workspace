@@ -202,7 +202,7 @@ def consume(
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":
-        binding = "agentic_workspace" if installed else "agentic_workspace.decision"
+        binding = "agentic_workspace"
         command = [
             *([str(installed["python"]), "-I"] if installed else [sys.executable]),
             "-c",

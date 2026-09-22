@@ -17,7 +17,7 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 from agentic_workspace.config import workspace_pointer_block
-from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ".agentic-workspace/skills/workspace-startup/SKILL.md"
@@ -402,7 +402,7 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
         assert not (tmp_path / ".agentic-workspace/skills/workspace-operating-loop/SKILL.md").exists()
         for reference in ("AGENTS.md", MAIN, ".agentic-workspace/config.toml"):
             assert_current_command_examples((tmp_path / reference).read_text())
-    from agentic_workspace.decision import resources
+    from agentic_workspace import resources
 
     context = {"target": str(tmp_path), "task": "Installed resource procedure"}
     proposal = resources({**context, "request": {"operation": "scratch-create"}})

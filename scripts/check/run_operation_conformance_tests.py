@@ -37,7 +37,7 @@ from command_generation.conformance import (  # noqa: E402
     run_typescript_function_conformance_case,
 )
 
-from agentic_workspace.contract_tooling import (  # noqa: E402
+from aw_maintainer.contracts import (  # noqa: E402
     contract_schema,
     operation_artifact_registry_manifest,
     operation_conformance_test_ir_manifest,

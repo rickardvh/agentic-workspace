@@ -55,7 +55,7 @@ from workspace_command_generation import (  # noqa: E402
     render_workspace_command_package_outputs,
 )
 
-from agentic_workspace.contract_tooling import (  # noqa: E402
+from aw_maintainer.contracts import (  # noqa: E402
     command_package_ir_manifest,
     generated_command_check_inventory_manifest,
     load_contract_json,
@@ -3808,6 +3808,7 @@ def _tracked_python_source_files() -> list[str]:
 def _source_tree_python_files() -> list[str]:
     roots = [
         REPO_ROOT / "src" / "agentic_workspace",
+        REPO_ROOT / "src/tooling/python/aw_maintainer",
         REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap",
         REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap",
         REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap",

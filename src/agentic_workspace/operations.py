@@ -8,14 +8,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import (
-    DecisionContractError,
-    admit_attempt,
-    admit_stored_attempt,
-    commit_attempt,
-    commit_stored_attempt,
-    operation_result,
-)
+from agentic_workspace import DecisionContractError
+from aw_maintainer.native_conformance import admit_attempt, admit_stored_attempt, commit_attempt, commit_stored_attempt, operation_result
 
 
 class OperationError(RuntimeError):

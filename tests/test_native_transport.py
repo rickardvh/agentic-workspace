@@ -751,7 +751,7 @@ def test_continuation_residue_cannot_invalidate_its_own_admission(tmp_path, monk
 
 @pytest.mark.parametrize("mode", ["fresh", "resume", "fork", "restart"])
 def test_completed_publication_preserves_only_exact_attempt_admission(tmp_path, monkeypatch, snapshot, mode):
-    from agentic_workspace.decision import execution_configurations
+    from aw_maintainer.native_conformance import execution_configurations
 
     monkeypatch.setattr(native, "discover", lambda root: snapshot)
     source = tmp_path / ".agentic-workspace/config.local.toml"

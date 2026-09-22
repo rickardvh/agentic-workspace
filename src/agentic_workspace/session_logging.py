@@ -24,8 +24,8 @@ from typing import Any
 from agentic_workspace import __version__
 from agentic_workspace import config as config_lib
 from agentic_workspace.current_work_context import resolve_current_work_context
-from agentic_workspace.decision import session_logging_policy
 from agentic_workspace.result_adapter import serialise_value
+from aw_maintainer.native_conformance import session_logging_policy
 
 SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
 SESSION_RECORD_KIND = "agentic-workspace/session-logging-record/v1"
@@ -1565,7 +1565,7 @@ def _expected_fixture_failure(origin: dict[str, Any]) -> bool:
 
 @functools.lru_cache(maxsize=1)
 def _declared_workspace_command_interfaces() -> tuple[dict[str, Any], ...]:
-    from agentic_workspace.contract_tooling import command_package_ir_manifest
+    from aw_maintainer.contracts import command_package_ir_manifest
 
     package = next(
         (

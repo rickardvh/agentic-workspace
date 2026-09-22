@@ -149,8 +149,8 @@ def test_planning_claim_cannot_use_published_manual_result(
 def test_python_unknown_index_and_rollback_preserve_publication(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from agentic_workspace import DecisionContractError
     from agentic_workspace import workspace_runtime_core as runtime
-    from agentic_workspace.decision import DecisionContractError
 
     monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
     context = fixture(tmp_path)

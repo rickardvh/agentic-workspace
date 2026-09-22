@@ -12,8 +12,8 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import (
-    DecisionContractError,
+from agentic_workspace import DecisionContractError
+from aw_maintainer.native_conformance import (
     admit_attempt,
     admit_invocation,
     admit_stored_attempt,
@@ -54,7 +54,7 @@ SCHEMA = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/source_deci
     ],
 )
 def test_attribution_has_one_typed_authority(shared_core_binary: Path, evidence: dict, responsibility: str) -> None:
-    from agentic_workspace.decision import attribute_assignment_outcome
+    from aw_maintainer.native_conformance import attribute_assignment_outcome
 
     result = attribute_assignment_outcome(evidence)
     assert result["responsibility"] == responsibility
@@ -68,7 +68,7 @@ def test_attribution_has_one_typed_authority(shared_core_binary: Path, evidence:
 
 
 def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path) -> None:
-    from agentic_workspace.decision import execution_configurations
+    from aw_maintainer.native_conformance import execution_configurations
 
     candidate = {
         "id": "worker:resume",
@@ -391,7 +391,7 @@ def test_node_binding_executes_the_same_core(shared_core_binary: Path) -> None:
 def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (
-        ROOT / "src/agentic_workspace/decision.py",
+        ROOT / "src/tooling/python/aw_maintainer/native_conformance.py",
         ROOT / "src/agentic_workspace/native_core.py",
         ROOT / "bindings/node/semantic-decision.mjs",
     ):
@@ -1725,7 +1725,7 @@ def _commit_native(root: Path) -> str:
 
 
 def test_repo_native_source_is_current_relevant_and_transport_equivalent(shared_core_binary: Path, tmp_path: Path) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, _ = _native_archive(tmp_path)
     actual = repository_decision_view(**context)
@@ -1761,7 +1761,7 @@ def test_repo_native_source_is_current_relevant_and_transport_equivalent(shared_
     "change", ["source", "authority", "forged-actor", "unadmitted-commit", "missing-admission", "self-source", "effect-authority"]
 )
 def test_native_source_never_self_admits_or_replays_stale_authority(shared_core_binary: Path, tmp_path: Path, change: str) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, record = _native_archive(tmp_path)
     if change == "authority":
@@ -1806,7 +1806,7 @@ def test_native_source_never_self_admits_or_replays_stale_authority(shared_core_
 def test_native_supersession_uses_existing_contract_and_keeps_rationale(
     shared_core_binary: Path, tmp_path: Path, selected_scope: str
 ) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, record = _native_archive(tmp_path)
     old = repository_decision_view(**context)["decision_context"]["states"][0]
@@ -1826,7 +1826,7 @@ def test_native_supersession_uses_existing_contract_and_keeps_rationale(
 
 
 def test_native_exact_scope_does_not_depend_on_json_escaping(shared_core_binary: Path, tmp_path: Path) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, _ = _native_archive(tmp_path)
     path = tmp_path / "design/choice.md"
@@ -1836,7 +1836,7 @@ def test_native_exact_scope_does_not_depend_on_json_escaping(shared_core_binary:
 
 
 def test_native_decision_blob_boundaries_remain_bounded(shared_core_binary: Path, tmp_path: Path) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, record = _native_archive(tmp_path)
     second = deepcopy(record)
@@ -1859,7 +1859,7 @@ def test_native_decision_blob_boundaries_remain_bounded(shared_core_binary: Path
 
 
 def test_destination_discovery_is_confined_and_never_admits_working_bytes(shared_core_binary: Path, tmp_path: Path) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, record = _native_archive(tmp_path)
     context["admitted_revision"] = ""
@@ -1915,7 +1915,6 @@ def test_source_node_transport_requires_explicit_development_binary(shared_core_
 
 def test_source_context_is_bound_before_finalization(shared_core_binary: Path, tmp_path: Path) -> None:
     """#2909: isolate source currentness from aggregate worktree/cache churn."""
-    from agentic_workspace.decision import repository_decision_view
     from agentic_workspace.operating_decision import (
         admit_projection_surface_decision_input,
         consume_projection_surface_decision_input,
@@ -1923,6 +1922,7 @@ def test_source_context_is_bound_before_finalization(shared_core_binary: Path, t
         revalidate_projection_surface_decision_input,
     )
     from agentic_workspace.projection_reuse import _operating_decision_revisions, admitted_projection_revisions
+    from aw_maintainer.native_conformance import repository_decision_view
 
     source, _ = _native_archive(tmp_path)
     baseline, _, _ = admitted_projection_revisions(root=tmp_path, operation="start", query={"task": "edit"})
@@ -1975,7 +1975,7 @@ def test_source_context_is_bound_before_finalization(shared_core_binary: Path, t
 def test_memory_decision_fallback_promotes_only_to_exact_current_native_source(
     shared_core_binary: Path, tmp_path: Path, destination: str
 ) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, record = _native_archive(tmp_path)
     # Test host admits the exact known agent-authored source to Memory. The
@@ -2018,7 +2018,7 @@ def test_memory_decision_fallback_promotes_only_to_exact_current_native_source(
 
 
 def test_fallback_source_cannot_choose_its_owner_or_widen_admission(shared_core_binary: Path, tmp_path: Path) -> None:
-    from agentic_workspace.decision import repository_decision_view
+    from aw_maintainer.native_conformance import repository_decision_view
 
     context, _ = _native_archive(tmp_path)
     context["fallback"] = {"archive": "design", "admitted_revision": context["admitted_revision"], "owner": "human"}
@@ -2075,7 +2075,7 @@ def _route_host() -> dict[str, Any]:
 
 
 def test_public_semantic_route_roundtrip_is_cross_surface(shared_core_binary: Path) -> None:
-    from agentic_workspace.decision import semantic_route_view
+    from aw_maintainer.native_conformance import semantic_route_view
 
     host = _route_host()
     discovery = semantic_route_view(host)
@@ -2109,7 +2109,7 @@ def test_public_semantic_route_roundtrip_is_cross_surface(shared_core_binary: Pa
 
 @pytest.mark.parametrize("change", ["work", "source", "removed"])
 def test_public_semantic_route_staleness_is_scoped(shared_core_binary: Path, change: str) -> None:
-    from agentic_workspace.decision import semantic_route_view
+    from aw_maintainer.native_conformance import semantic_route_view
 
     host = _route_host()
     request = semantic_route_view(host)["requests"][1]
@@ -2130,7 +2130,7 @@ def test_public_semantic_route_staleness_is_scoped(shared_core_binary: Path, cha
 
 @pytest.mark.parametrize("field", ["owner", "effects", "claims", "proof", "custody", "actor", "authority_effect"])
 def test_public_semantic_route_cannot_supply_authority(shared_core_binary: Path, field: str) -> None:
-    from agentic_workspace.decision import semantic_route_view
+    from aw_maintainer.native_conformance import semantic_route_view
 
     host = _route_host()
     request = semantic_route_view(host)["requests"][1]
@@ -2140,7 +2140,7 @@ def test_public_semantic_route_cannot_supply_authority(shared_core_binary: Path,
 
 
 def test_public_semantic_route_discovery_is_bounded_and_complete(shared_core_binary: Path) -> None:
-    from agentic_workspace.decision import semantic_route_view
+    from aw_maintainer.native_conformance import semantic_route_view
 
     host = _route_host()
     host["source"]["routes"] = [f"work/choice-{index:02}" for index in range(35)]
@@ -2161,7 +2161,7 @@ def test_public_semantic_route_discovery_is_bounded_and_complete(shared_core_bin
 
 @pytest.mark.parametrize("source_owner", ["repository", "memory"])
 def test_repo_decision_consumes_public_route_without_path_match(shared_core_binary: Path, tmp_path: Path, source_owner: str) -> None:
-    from agentic_workspace.decision import repository_decision_view, semantic_route_view
+    from aw_maintainer.native_conformance import repository_decision_view, semantic_route_view
 
     context, record = _native_archive(tmp_path)
     record["semantic_routes"] = ["architecture/authority"]
@@ -2228,7 +2228,7 @@ def _instruction_host(root: Path, text: str) -> tuple[dict[str, Any], Path]:
 
 
 def test_instruction_source_admission_cross_surface_and_authority_separation(shared_core_binary: Path, tmp_path: Path) -> None:
-    from agentic_workspace.decision import instruction_source_admission
+    from aw_maintainer.native_conformance import instruction_source_admission
 
     host, _ = _instruction_host(
         tmp_path,
@@ -2260,7 +2260,7 @@ def test_instruction_source_admission_cross_surface_and_authority_separation(sha
     "change", ["no-admission", "unavailable-snapshot", "source-changed", "observed-changed", "lookalike", "conflicting", "self-grant"]
 )
 def test_instruction_source_cannot_mint_or_reuse_hard_authority(shared_core_binary: Path, tmp_path: Path, change: str) -> None:
-    from agentic_workspace.decision import instruction_source_admission
+    from aw_maintainer.native_conformance import instruction_source_admission
 
     host, source = _instruction_host(tmp_path, "---\nchecks:\n  - run: pytest -q\nprotect:\n  - generated/**\n---\n# Rule\n")
     if change == "no-admission":
@@ -2299,7 +2299,7 @@ def test_instruction_source_cannot_mint_or_reuse_hard_authority(shared_core_bina
     ],
 )
 def test_instruction_binding_scopes_are_distinct(shared_core_binary: Path, tmp_path: Path, body: str, effects: list[str]) -> None:
-    from agentic_workspace.decision import instruction_source_admission
+    from aw_maintainer.native_conformance import instruction_source_admission
 
     host, _ = _instruction_host(tmp_path, "---\n" + body + "---\n# Scope\n")
     assert instruction_source_admission(host)["sources"][0]["authority"]["effects"] == effects
@@ -2324,7 +2324,7 @@ def test_generated_node_instruction_declarations_are_not_binding(tmp_path: Path)
 @pytest.mark.parametrize("transport", ["manual", "internal"])
 def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path: Path, shared_core_binary: Path, transport: str) -> None:
     """#2909: source-owner inputs are distinct from public request intention."""
-    from agentic_workspace.decision import admit_assignment_packet, assignment_packet, replace_assignment
+    from aw_maintainer.native_conformance import admit_assignment_packet, assignment_packet, replace_assignment
 
     # This is packet replacement proof, not an execution lifecycle. Seal the
     # fixture with its owner instead of invoking the retired Python CLI host.

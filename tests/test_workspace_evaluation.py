@@ -14,7 +14,6 @@ from agentic_workspace import cli
 from agentic_workspace import evaluation as evaluation_module
 from agentic_workspace.client import AWClientError
 from agentic_workspace.config import WorkspaceUsageError
-from agentic_workspace.contract_tooling import contract_schema
 from agentic_workspace.evaluation import (
     ASSIGNMENT_AUTHORITY_RECEIPT_DIR,
     EVALUATION_OBSERVATION_KIND,
@@ -54,6 +53,7 @@ from agentic_workspace.evaluation import (
     transition_evaluation,
     write_observation_authority,
 )
+from aw_maintainer.contracts import contract_schema
 
 ROOT = Path(__file__).resolve().parents[1]
 
