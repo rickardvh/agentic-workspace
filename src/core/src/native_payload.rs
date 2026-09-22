@@ -22,9 +22,20 @@ const CAPABILITIES: &[&str] = &["installed-state-sync-v2"];
 pub(crate) fn paths() -> Vec<&'static str> {
     PAYLOAD
         .iter()
-        .map(|(path, _, _)| *path)
+        .map(|(path, _, _, _)| *path)
         .chain([PROVENANCE])
         .collect()
+}
+
+/// Explicit package delivery does not transfer a procedure's domain ownership.
+pub(crate) fn owner(path: &str) -> Option<&'static str> {
+    if path == PROVENANCE {
+        return Some("workspace");
+    }
+    PAYLOAD
+        .iter()
+        .find(|(p, _, _, _)| *p == path)
+        .map(|(_, owner, _, _)| *owner)
 }
 
 /// Version-independent identity of declared host surfaces and their seed bytes.
@@ -43,7 +54,7 @@ pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
         "payload_schema":"agentic-workspace/payload/v1",
         "managed_revision":identity(),
         "payload_capabilities":CAPABILITIES,
-        "payload_files":PAYLOAD.iter().map(|(path,_,_)| *path).collect::<Vec<_>>(),
+        "payload_files":PAYLOAD.iter().map(|(path,_,_,_)| *path).collect::<Vec<_>>(),
         "release_identity":{"package":"agentic-workspace","version":version},
         "rule":"Artifact-derived payload identity; native admission also checks every shipped byte. No domain-state or completion authority."});
     let mut bytes = serde_json::to_vec_pretty(&value).map_err(|e| CoreError::new(e.to_string()))?;
@@ -57,8 +68,8 @@ pub(crate) fn materialization(path: &str) -> Result<Materialization, CoreError> 
     }
     PAYLOAD
         .iter()
-        .find(|(p, _, _)| *p == path)
-        .map(|(_, mode, _)| *mode)
+        .find(|(p, _, _, _)| *p == path)
+        .map(|(_, _, mode, _)| *mode)
         .ok_or_else(|| CoreError::new("source is not in the artifact's payload declaration"))
 }
 
@@ -66,7 +77,7 @@ pub(crate) fn materialization(path: &str) -> Result<Materialization, CoreError> 
 pub(crate) fn seed(path: &str, expected: Materialization) -> Result<Vec<u8>, CoreError> {
     #[cfg(test)]
     crate::native_frontier::built("payload-seed");
-    if let Some((_, mode, bytes)) = PAYLOAD.iter().find(|(p, _, _)| *p == path) {
+    if let Some((_, _, mode, bytes)) = PAYLOAD.iter().find(|(p, _, _, _)| *p == path) {
         if *mode != expected {
             return Err(CoreError::new(
                 "host surface requires its declared materializer, not package copying",
@@ -195,7 +206,7 @@ pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
             gaps.push(json!({"path":PROVENANCE,"reason":"required-payload-capability-unproven","capability":capability}));
         }
     }
-    for (reference, _, _) in PAYLOAD {
+    for (reference, _, _, _) in PAYLOAD {
         let bytes = read(reference);
         let expected_bytes = desired(target, reference).ok();
         if expected_bytes.is_none()

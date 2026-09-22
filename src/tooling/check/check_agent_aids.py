@@ -283,9 +283,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def executable_dependency_findings(root: Path) -> list[Finding]:
     """Static material closure only: never import/probe declared executables."""
-    schema = json.loads(
-        (REPO_ROOT / "src/core/contracts/schemas/executable_affordance.schema.json").read_text(encoding="utf-8")
-    )
+    schema = json.loads((REPO_ROOT / "src/core/contracts/schemas/executable_affordance.schema.json").read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)
     pending = ["tools/skills/REGISTRY.json", ".agentic-workspace/skills/REGISTRY.json"]
     seen = set()
@@ -302,7 +300,7 @@ def executable_dependency_findings(root: Path) -> list[Finding]:
             findings.append(Finding(reference, "registry reference escapes source root"))
             continue
         registry = json.loads(path.read_text(encoding="utf-8"))
-        pending.extend(registry.get("registry_sources", []))
+        pending.extend(source if isinstance(source, str) else source["path"] for source in registry.get("registry_sources", []))
         for skill in registry.get("skills", []):
             declaration = skill.get("executable")
             if declaration is None:

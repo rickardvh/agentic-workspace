@@ -1,14 +1,455 @@
 schema_version = 1
 
-[workspace]
-workflow_path = ".agentic-workspace/WORKFLOW.md"
-main_skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
-read_profile_path = ".agentic-workspace/READING.json"
-ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
-managed_root = ".agentic-workspace/"
+[[authority_surfaces]]
+authority = "primary"
+concern = "startup-instructions"
+owner = "repo"
+ownership = "repo_owned"
+summary = "Repo-level startup instructions and local operating constraints. The managed AW fence is only a bootstrap pointer to the canonical skill."
+surface = "AGENTS.md"
 
-[ownership_classes.repo_owned]
-summary = "Repository-native state owned by the repo and not upgrade-replaceable by installed packages."
+[authority_surfaces.read]
+refs = [
+    "AGENTS.md",
+    ".agentic-workspace/instructions/",
+]
+select = "Read the repository bootstrap and only task-relevant scoped instruction files; their paths/routes and checks/protect/reconcile/governed_by metadata retain source authority. Local instructions are not repository-visible."
+unknown = [
+    "runtime applicability",
+    "local instruction state",
+    "publication admission",
+]
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "workspace-policy"
+owner = "repo"
+ownership = "repo_owned"
+summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
+surface = ".agentic-workspace/config.toml"
+
+[authority_surfaces.read]
+refs = [".agentic-workspace/config.toml"]
+select = "Follow system_intent.sources/preferred_source to repository intent and assurance.decision_record_target to settled decisions; absent intent configuration uses SYSTEM_INTENT.md and README.md. Policy bytes describe requirements, not observed runtime capabilities."
+unknown = [
+    "effective local overrides",
+    "live provider capability",
+    "current decision admission",
+]
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "canonical-agent-procedure"
+owner = "workspace"
+ownership = "module_managed"
+summary = "Canonical reusable procedure for agents using Agentic Workspace; it does not own repo policy, domain state/evidence, or effect authority."
+surface = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+
+[authority_surfaces.read]
+refs = [".agentic-workspace/skills/REGISTRY.json"]
+select = "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime."
+unknown = ["runtime route admission"]
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "bounded-planning-continuity"
+owner = "planning"
+ownership = "module_managed"
+summary = "Owner-scoped execution continuity owned by the planning package; repository-wide views are derived."
+surface = ".agentic-workspace/planning/execplans/"
+
+[authority_surfaces.read]
+refs = [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/",
+]
+select = "Prefer a task-supplied owner ref; otherwise follow active.execplans.surface in the optional state file or enumerate only immediate *.plan.json names, excluding archive. Select the relevant owner by meaning. Read intent.outcome/non_goals, scope, proof/relationships, blockers, next_action and continuation from that record; recorded status is not fresh proof or local active selection."
+unknown = [
+    "local selected owner",
+    "current custody",
+    "task completion",
+]
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "source-maintainer-procedure"
+owner = "repo"
+ownership = "repo_owned"
+summary = "Source-repository maintainer skills; not portable package procedure."
+surface = "tools/skills/REGISTRY.json"
+
+[authority_surfaces.read]
+refs = ["tools/skills/REGISTRY.json"]
+select = "Select the relevant repository-maintainer procedure and follow its declared source; this registry belongs only to this source repository."
+unknown = ["runtime route admission"]
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "design-constraints"
+owner = "repo"
+ownership = "repo_owned"
+summary = "Design tests for product-shape, ownership, and lifecycle changes."
+surface = "docs/design-principles.md"
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "ownership-ledger"
+owner = "workspace"
+ownership = "module_managed"
+summary = "Ownership ledger and static read-only orientation map for managed paths, fences, and authority surfaces."
+surface = ".agentic-workspace/OWNERSHIP.toml"
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "system-intent-mirror"
+owner = "workspace"
+ownership = "module_managed"
+summary = "Workspace-owned mirrored system-intent contract consumed by package operations."
+surface = ".agentic-workspace/system-intent/intent.toml"
+
+[[authority_surfaces]]
+authority = "candidate"
+concern = "agent-aid-candidates"
+owner = "repo"
+ownership = "repo_owned"
+summary = "Optional checked-in candidate area for reusable agent-created aids before promotion to ordinary repo-native surfaces."
+surface = ".agentic-workspace/agent-aids/"
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "planning-install-tree"
+owner = "planning"
+ownership = "module_managed"
+summary = "Planning-owned installed workflow and helper surfaces."
+surface = ".agentic-workspace/planning/"
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "memory-shared-support"
+owner = "memory"
+ownership = "module_managed"
+summary = "Memory-owned shared workflow, version, bootstrap, and skill support surfaces."
+surface = ".agentic-workspace/memory/"
+
+[authority_surfaces.read]
+refs = [".agentic-workspace/memory/repo/manifest.toml"]
+select = "Use notes metadata (routes_from, semantic_routes and task_relevance) to select relevant note paths; follow only those notes and their stated dependencies. Treat notes as advisory, even if historical metadata says canonical or decision. Stale/superseded/contradicted or changed dependencies require reconsideration."
+unknown = [
+    "factual freshness",
+    "governing decision authority",
+    "promotion admission",
+]
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "verification-manifest"
+owner = "verification"
+ownership = "repo_owned"
+summary = "Repo-owned Verification protocol manifest for reusable proof routes, scenarios, and known evidence gaps."
+surface = ".agentic-workspace/verification/manifest.toml"
+
+[authority_surfaces.read]
+refs = [".agentic-workspace/verification/manifest.toml"]
+select = "Read relevant requirements, protocol/source refs and proof/claim limits. Follow exact evidence refs only when needed. An asserted check, receipt or accepted progress is repository-recorded evidence, not a new successful check or permission to approve/close."
+unknown = [
+    "current proof selection",
+    "fresh check success",
+    "claim/effect authority",
+]
+
+[[authority_surfaces]]
+authority = "fenced"
+concern = "workspace-workflow-pointer"
+owner = "workspace"
+ownership = "managed_fence"
+summary = "Managed mixed-agent bootstrap pointer to the canonical AW skill; not a competing operating procedure."
+surface = "AGENTS.md#agentic-workspace:workflow"
+
+[[authority_surfaces]]
+authority = "primary"
+concern = "verification-current-reconciliation"
+owner = "verification"
+ownership = "repo_owned"
+summary = "Durable current source-reconciliation selection, owned and replaced only by Verification. Repository visibility does not transfer task/target-bound authority; generic cleanup must preserve it."
+surface = ".agentic-workspace/proof/current/"
+
+[authority_surfaces.read]
+refs = [".agentic-workspace/proof/current/"]
+select = "Select only source-reconciliation-<relation>.json for the relevant relation; follow its exact receipt references when needed. Verification validates the bounded projection and receipt custody. Publication supersedes current groups; upgrades, adoption and uninstall preserve this durable owner state and its exact publication temporaries. Missing or corrupt material is unresolved coverage, never authority to reconstruct acceptance from history."
+unknown = [
+    "current coverage",
+    "receipt custody",
+    "semantic acceptance",
+    "publication authority",
+]
+
+[[enclave]]
+class = "managed-support"
+lifetime = "current-source"
+owner = "source-maintenance"
+path = ".agentic-workspace/WORKFLOW.md"
+scope = "exact"
+
+[[enclave]]
+class = "managed-support"
+lifetime = "current-source"
+owner = "source-maintenance"
+path = ".agentic-workspace/docs/jumpstart-contract.md"
+scope = "exact"
+
+[[enclave]]
+class = "managed-support"
+lifetime = "current-source"
+owner = "source-maintenance"
+path = ".agentic-workspace/docs/module-map.md"
+scope = "exact"
+
+[[enclave]]
+class = "managed-support"
+lifetime = "current-source"
+owner = "source-maintenance"
+path = ".agentic-workspace/docs/setup-findings-contract.md"
+scope = "exact"
+
+[[enclave]]
+class = "managed-support"
+lifetime = "current-source"
+owner = "source-maintenance"
+path = ".agentic-workspace/fallback/no-cli-policy.json"
+scope = "exact"
+
+[[enclave]]
+class = "managed-support"
+lifetime = "current-source"
+owner = "source-maintenance"
+path = ".agentic-workspace/fallback/no_cli_startup.py"
+scope = "exact"
+
+[[enclave]]
+class = "managed-support"
+lifetime = "current-source"
+owner = "source-maintenance"
+path = ".agentic-workspace/system-intent/WORKFLOW.md"
+scope = "exact"
+
+[[fences]]
+end = "<!-- agentic-workspace:workflow:end -->"
+file = "AGENTS.md"
+module = "workspace"
+name = "workspace-workflow-pointer"
+ownership = "managed_fence"
+start = "<!-- agentic-workspace:workflow:start -->"
+uninstall_policy = "remove-fence-only"
+
+[[managed_surfaces]]
+kind = "compatibility-procedure-pointer"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/WORKFLOW.md"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+kind = "canonical-agent-procedure"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+kind = "generated-read-profile"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/READING.json"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+kind = "ownership-ledger"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/OWNERSHIP.toml"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+kind = "system-intent-workflow"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/system-intent/WORKFLOW.md"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+kind = "module-root"
+module = "memory"
+ownership = "repo_owned"
+path = ".agentic-workspace/memory/**"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "module-root"
+module = "planning"
+ownership = "repo_owned"
+path = ".agentic-workspace/planning/**"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/instructions/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/configuration/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "current-configuration-assessment"
+module = "workspace"
+ownership = "repo_owned"
+path = ".agentic-workspace/configuration-assessment.json"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "current-local-configuration-assessment"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/configuration-assessment.json"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/effects/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "planning"
+ownership = "module_managed"
+path = ".agentic-workspace/local/planning/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "memory"
+ownership = "module_managed"
+path = ".agentic-workspace/local/memory/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "verification"
+ownership = "module_managed"
+path = ".agentic-workspace/local/proof/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "verification"
+ownership = "module_managed"
+path = ".agentic-workspace/local/proof-receipts/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/decision-point-intent/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/current-task-routes.json"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/delegation-runs/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/patch-integrations/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "planning"
+ownership = "module_managed"
+path = ".agentic-workspace/local/work-threads/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "verification"
+ownership = "module_managed"
+path = ".agentic-workspace/local/independent-review-host-results/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/logs/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/session-logging/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "task-scratch"
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/local/scratch/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "current-source-reconciliation-state"
+module = "verification"
+ownership = "repo_owned"
+path = ".agentic-workspace/proof/current/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+kind = "canonical-agent-procedure-bundle"
+module = "planning"
+ownership = "module_managed"
+path = ".agentic-workspace/planning/skills/**"
+uninstall_policy = "remove-if-owned"
+
+[[module_roots]]
+module = "workspace"
+ownership = "module_managed"
+path = ".agentic-workspace/"
+uninstall_policy = "remove-managed-files-only"
+
+[[module_roots]]
+module = "memory"
+ownership = "repo_owned"
+path = ".agentic-workspace/memory/"
+uninstall_policy = "preserve-current-owner-state"
+
+[[module_roots]]
+module = "planning"
+ownership = "repo_owned"
+path = ".agentic-workspace/planning/"
+uninstall_policy = "preserve-current-owner-state"
+
+[notes]
+purpose = "This file defines the workspace ownership ledger, static repository-readable orientation map, and authority boundaries. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."
 
 [ownership_classes.managed_fence]
 summary = "Product-managed content inside an explicit fence in a repo-owned file."
@@ -16,434 +457,153 @@ summary = "Product-managed content inside an explicit fence in a repo-owned file
 [ownership_classes.module_managed]
 summary = "Upgrade-replaceable content owned by one installed module under .agentic-workspace/."
 
-[[module_roots]]
-module = "workspace"
-path = ".agentic-workspace/"
-ownership = "module_managed"
-uninstall_policy = "remove-managed-files-only"
-
-[[module_roots]]
-module = "memory"
-path = ".agentic-workspace/memory/"
-ownership = "repo_owned"
-uninstall_policy = "preserve-current-owner-state"
-
-[[module_roots]]
-module = "planning"
-path = ".agentic-workspace/planning/"
-ownership = "repo_owned"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/WORKFLOW.md"
-kind = "compatibility-procedure-pointer"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
-kind = "canonical-agent-procedure"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/READING.json"
-kind = "generated-read-profile"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/OWNERSHIP.toml"
-kind = "ownership-ledger"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/system-intent/WORKFLOW.md"
-kind = "system-intent-workflow"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
-
-[[managed_surfaces]]
-module = "memory"
-path = ".agentic-workspace/memory/**"
-kind = "module-root"
-ownership = "repo_owned"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/planning/**"
-kind = "module-root"
-ownership = "repo_owned"
-uninstall_policy = "preserve-current-owner-state"
-
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/instructions/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/configuration/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/configuration-assessment.json"
-kind = "current-configuration-assessment"
-ownership = "repo_owned"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/configuration-assessment.json"
-kind = "current-local-configuration-assessment"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/effects/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/local/planning/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "memory"
-path = ".agentic-workspace/local/memory/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "verification"
-path = ".agentic-workspace/local/proof/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "verification"
-path = ".agentic-workspace/local/proof-receipts/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/decision-point-intent/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/current-task-routes.json"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/delegation-runs/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/patch-integrations/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "planning"
-path = ".agentic-workspace/local/work-threads/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "verification"
-path = ".agentic-workspace/local/independent-review-host-results/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/logs/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/session-logging/"
-kind = "structured-local-owner"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[managed_surfaces]]
-module = "workspace"
-path = ".agentic-workspace/local/scratch/"
-kind = "task-scratch"
-ownership = "module_managed"
-uninstall_policy = "preserve-current-owner-state"
-
-[[fences]]
-name = "workspace-workflow-pointer"
-module = "workspace"
-file = "AGENTS.md"
-start = "<!-- agentic-workspace:workflow:start -->"
-end = "<!-- agentic-workspace:workflow:end -->"
-ownership = "managed_fence"
-uninstall_policy = "remove-fence-only"
-
-[[authority_surfaces]]
-concern = "startup-instructions"
-read = { refs = ["AGENTS.md", ".agentic-workspace/instructions/"], select = "Read the repository bootstrap and only task-relevant scoped instruction files; their paths/routes and checks/protect/reconcile/governed_by metadata retain source authority. Local instructions are not repository-visible.", unknown = ["runtime applicability", "local instruction state", "publication admission"] }
-surface = "AGENTS.md"
-owner = "repo"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Repo-level startup instructions and local operating constraints. The managed AW fence is only a bootstrap pointer to the canonical skill."
-
-[[authority_surfaces]]
-concern = "workspace-policy"
-read = { refs = [".agentic-workspace/config.toml"], select = "Follow system_intent.sources/preferred_source to repository intent and assurance.decision_record_target to settled decisions; absent intent configuration uses SYSTEM_INTENT.md and README.md. Policy bytes describe requirements, not observed runtime capabilities.", unknown = ["effective local overrides", "live provider capability", "current decision admission"] }
-surface = ".agentic-workspace/config.toml"
-owner = "repo"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
-
-[[authority_surfaces]]
-concern = "canonical-agent-procedure"
-read = { refs = [".agentic-workspace/skills/REGISTRY.json"], select = "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime.", unknown = ["runtime route admission"] }
-surface = ".agentic-workspace/skills/workspace-startup/SKILL.md"
-owner = "workspace"
-ownership = "module_managed"
-authority = "primary"
-summary = "Canonical reusable procedure for agents using Agentic Workspace; it does not own repo policy, domain state/evidence, or effect authority."
-
-[[authority_surfaces]]
-concern = "bounded-planning-continuity"
-read = { refs = [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"], select = "Prefer a task-supplied owner ref; otherwise follow active.execplans.surface in the optional state file or enumerate only immediate *.plan.json names, excluding archive. Select the relevant owner by meaning. Read intent.outcome/non_goals, scope, proof/relationships, blockers, next_action and continuation from that record; recorded status is not fresh proof or local active selection.", unknown = ["local selected owner", "current custody", "task completion"] }
-surface = ".agentic-workspace/planning/execplans/"
-owner = "planning"
-ownership = "module_managed"
-authority = "primary"
-summary = "Owner-scoped execution continuity owned by the planning package; repository-wide views are derived."
-
-[[authority_surfaces]]
-concern = "source-maintainer-procedure"
-surface = "tools/skills/REGISTRY.json"
-owner = "repo"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Source-repository maintainer skills; not portable package procedure."
-read = { refs = ["tools/skills/REGISTRY.json"], select = "Select the relevant repository-maintainer procedure and follow its declared source; this registry belongs only to this source repository.", unknown = ["runtime route admission"] }
-
-[[authority_surfaces]]
-concern = "design-constraints"
-surface = "docs/design-principles.md"
-owner = "repo"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Design tests for product-shape, ownership, and lifecycle changes."
-
-[[authority_surfaces]]
-concern = "ownership-ledger"
-surface = ".agentic-workspace/OWNERSHIP.toml"
-owner = "workspace"
-ownership = "module_managed"
-authority = "primary"
-summary = "Ownership ledger and static read-only orientation map for managed paths, fences, and authority surfaces."
-
-[[authority_surfaces]]
-concern = "system-intent-mirror"
-surface = ".agentic-workspace/system-intent/intent.toml"
-owner = "workspace"
-ownership = "module_managed"
-authority = "primary"
-summary = "Workspace-owned mirrored system-intent contract consumed by package operations."
-
-[[authority_surfaces]]
-concern = "agent-aid-candidates"
-surface = ".agentic-workspace/agent-aids/"
-owner = "repo"
-ownership = "repo_owned"
-authority = "candidate"
-summary = "Optional checked-in candidate area for reusable agent-created aids before promotion to ordinary repo-native surfaces."
-
-[[authority_surfaces]]
-concern = "planning-install-tree"
-surface = ".agentic-workspace/planning/"
-owner = "planning"
-ownership = "module_managed"
-authority = "primary"
-summary = "Planning-owned installed workflow and helper surfaces."
-
-[[authority_surfaces]]
-concern = "memory-shared-support"
-read = { refs = [".agentic-workspace/memory/repo/manifest.toml"], select = "Use notes metadata (routes_from, semantic_routes and task_relevance) to select relevant note paths; follow only those notes and their stated dependencies. Treat notes as advisory, even if historical metadata says canonical or decision. Stale/superseded/contradicted or changed dependencies require reconsideration.", unknown = ["factual freshness", "governing decision authority", "promotion admission"] }
-surface = ".agentic-workspace/memory/"
-owner = "memory"
-ownership = "module_managed"
-authority = "primary"
-summary = "Memory-owned shared workflow, version, bootstrap, and skill support surfaces."
-
-[[authority_surfaces]]
-concern = "verification-manifest"
-read = { refs = [".agentic-workspace/verification/manifest.toml"], select = "Read relevant requirements, protocol/source refs and proof/claim limits. Follow exact evidence refs only when needed. An asserted check, receipt or accepted progress is repository-recorded evidence, not a new successful check or permission to approve/close.", unknown = ["current proof selection", "fresh check success", "claim/effect authority"] }
-surface = ".agentic-workspace/verification/manifest.toml"
-owner = "verification"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Repo-owned Verification protocol manifest for reusable proof routes, scenarios, and known evidence gaps."
-
-[[authority_surfaces]]
-concern = "workspace-workflow-pointer"
-surface = "AGENTS.md#agentic-workspace:workflow"
-owner = "workspace"
-ownership = "managed_fence"
-authority = "fenced"
-summary = "Managed mixed-agent bootstrap pointer to the canonical AW skill; not a competing operating procedure."
+[ownership_classes.repo_owned]
+summary = "Repository-native state owned by the repo and not upgrade-replaceable by installed packages."
 
 [[subsystems]]
+does_not_own = [
+    "Planning runtime behavior",
+    "cross-surface reconciliation policy",
+    "durable memory note policy",
+]
+escalate_when = [
+    "change alters Planning runtime or schema",
+    "record mutation widens cross-surface authority",
+]
 id = "planning-records"
-paths = [".agentic-workspace/planning/execplans/*.plan.json", ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json", ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json"]
-owns = ["passive execplan record validity", "target-integration proposal and receipt guards"]
-does_not_own = ["Planning runtime behavior", "cross-surface reconciliation policy", "durable memory note policy"]
-proof = ["uv run agentic-planning doctor --target . --format json", "uv run python scripts/check/check_planning_surfaces.py --format json", "uv run pytest packages/planning/tests/test_branch_safe_planning.py -k integration_proposal -q"]
-escalate_when = ["change alters Planning runtime or schema", "record mutation widens cross-surface authority"]
+owns = [
+    "passive execplan record validity",
+    "target-integration proposal and receipt guards",
+]
+paths = [
+    ".agentic-workspace/planning/execplans/*.plan.json",
+    ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json",
+    ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json",
+]
+proof = [
+    "uv run agentic-planning doctor --target . --format json",
+    "uv run python scripts/check/check_planning_surfaces.py --format json",
+    "uv run pytest packages/planning/tests/test_branch_safe_planning.py -k integration_proposal -q",
+]
 
 [[subsystems]]
+does_not_own = [
+    "durable memory note policy",
+    "workspace command runtime internals",
+]
+escalate_when = [
+    "change widens planning state semantics",
+    "closeout or archive behavior changes",
+]
 id = "planning"
-paths = [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/schemas/**", ".agentic-workspace/planning/issue-relations/**", ".agentic-workspace/planning/assignments/**", ".agentic-workspace/planning/lanes/**", ".agentic-workspace/planning/decompositions/**", "packages/planning/**"]
-owns = ["active execution state", "execplan scaffolds and closeout", "planning package workflow semantics"]
-does_not_own = ["durable memory note policy", "workspace command runtime internals"]
+owns = [
+    "active execution state",
+    "execplan scaffolds and closeout",
+    "planning package workflow semantics",
+]
+paths = [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/schemas/**",
+    ".agentic-workspace/planning/issue-relations/**",
+    ".agentic-workspace/planning/assignments/**",
+    ".agentic-workspace/planning/lanes/**",
+    ".agentic-workspace/planning/decompositions/**",
+    "packages/planning/**",
+]
 proof = ["make check-planning-nosync"]
-escalate_when = ["change widens planning state semantics", "closeout or archive behavior changes"]
 
 [[subsystems]]
+does_not_own = [
+    "active execution planning",
+    "workspace command runtime internals",
+]
+escalate_when = [
+    "change widens what memory may store",
+    "promotion policy changes",
+]
 id = "memory"
-paths = [".agentic-workspace/memory/**", "packages/memory/**"]
-owns = ["durable repo knowledge", "memory note routing", "memory package workflow semantics"]
-does_not_own = ["active execution planning", "workspace command runtime internals"]
+owns = [
+    "durable repo knowledge",
+    "memory note routing",
+    "memory package workflow semantics",
+]
+paths = [
+    ".agentic-workspace/memory/**",
+    "packages/memory/**",
+]
 proof = ["make check-memory-nosync"]
-escalate_when = ["change widens what memory may store", "promotion policy changes"]
 
 [[subsystems]]
+does_not_own = [
+    "semantic user acceptance",
+    "active execution planning",
+    "issue or parent-lane closure",
+]
+escalate_when = [
+    "change makes Verification a proof authority",
+    "protocol changes widen closeout or acceptance semantics",
+]
 id = "verification"
-paths = [".agentic-workspace/verification/**", "packages/verification/**"]
-owns = ["reusable proof protocols", "verification evidence routing", "verification package workflow semantics"]
-does_not_own = ["semantic user acceptance", "active execution planning", "issue or parent-lane closure"]
+owns = [
+    "reusable proof protocols",
+    "verification evidence routing",
+    "verification package workflow semantics",
+]
+paths = [
+    ".agentic-workspace/verification/**",
+    "packages/verification/**",
+]
 proof = ["make check-verification-nosync"]
-escalate_when = ["change makes Verification a proof authority", "protocol changes widen closeout or acceptance semantics"]
 
 [[subsystems]]
+does_not_own = [
+    "planning package state semantics",
+    "memory note policy",
+    "generated command package source contracts",
+]
+escalate_when = [
+    "change widens public command contract",
+    "change requires planning or memory package semantics",
+]
 id = "workspace-cli-runtime"
-paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
-owns = ["workspace command routing", "compact report assembly", "runtime adapter dispatch", "workspace runtime source boundaries"]
-does_not_own = ["planning package state semantics", "memory note policy", "generated command package source contracts"]
+owns = [
+    "workspace command routing",
+    "compact report assembly",
+    "runtime adapter dispatch",
+    "workspace runtime source boundaries",
+]
+paths = [
+    "generated/workspace/python/**",
+    "src/agentic_workspace/workspace_runtime*.py",
+]
 proof = ["uv run pytest tests/test_workspace_cli.py -q"]
-escalate_when = ["change widens public command contract", "change requires planning or memory package semantics"]
 
 [[subsystems]]
+does_not_own = [
+    "formal benchmark policy",
+    "provider authentication",
+    "package runtime command semantics",
+]
+escalate_when = [
+    "scenario changes become formal benchmark policy",
+    "provider instability is misclassified as product behavior",
+]
 id = "model-cli-harness"
-paths = ["tools/model-cli-harness/**", "scripts/model_cli_harness/**", "tests/test_external_agent_evaluation_lane.py"]
-owns = ["model CLI dogfooding scenarios", "adaptive model-run evaluation records", "harness scorer guardrails"]
-does_not_own = ["formal benchmark policy", "provider authentication", "package runtime command semantics"]
+owns = [
+    "model CLI dogfooding scenarios",
+    "adaptive model-run evaluation records",
+    "harness scorer guardrails",
+]
+paths = [
+    "tools/model-cli-harness/**",
+    "scripts/model_cli_harness/**",
+    "tests/test_external_agent_evaluation_lane.py",
+]
 proof = ["uv run pytest tests/test_external_agent_evaluation_lane.py -q"]
-escalate_when = ["scenario changes become formal benchmark policy", "provider instability is misclassified as product behavior"]
 
-[notes]
-purpose = "This file defines the workspace ownership ledger, static repository-readable orientation map, and authority boundaries. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."
-
-# Current source-maintenance support only; never promoted to the portable host ledger.
-
-[[enclave]]
-path = ".agentic-workspace/WORKFLOW.md"
-owner = "source-maintenance"
-scope = "exact"
-class = "managed-support"
-lifetime = "current-source"
-
-[[enclave]]
-path = ".agentic-workspace/docs/jumpstart-contract.md"
-owner = "source-maintenance"
-scope = "exact"
-class = "managed-support"
-lifetime = "current-source"
-
-[[enclave]]
-path = ".agentic-workspace/docs/module-map.md"
-owner = "source-maintenance"
-scope = "exact"
-class = "managed-support"
-lifetime = "current-source"
-
-[[enclave]]
-path = ".agentic-workspace/docs/setup-findings-contract.md"
-owner = "source-maintenance"
-scope = "exact"
-class = "managed-support"
-lifetime = "current-source"
-
-[[enclave]]
-path = ".agentic-workspace/fallback/no-cli-policy.json"
-owner = "source-maintenance"
-scope = "exact"
-class = "managed-support"
-lifetime = "current-source"
-
-[[enclave]]
-path = ".agentic-workspace/fallback/no_cli_startup.py"
-owner = "source-maintenance"
-scope = "exact"
-class = "managed-support"
-lifetime = "current-source"
-
-[[enclave]]
-path = ".agentic-workspace/system-intent/WORKFLOW.md"
-owner = "source-maintenance"
-scope = "exact"
-class = "managed-support"
-lifetime = "current-source"
-
-[[managed_surfaces]]
-module = "verification"
-path = ".agentic-workspace/proof/current/"
-kind = "current-source-reconciliation-state"
-ownership = "repo_owned"
-uninstall_policy = "preserve-current-owner-state"
-
-[[authority_surfaces]]
-concern = "verification-current-reconciliation"
-read = { refs = [".agentic-workspace/proof/current/"], select = "Select only source-reconciliation-<relation>.json for the relevant relation; follow its exact receipt references when needed. Verification validates the bounded projection and receipt custody. Publication supersedes current groups; upgrades, adoption and uninstall preserve this durable owner state and its exact publication temporaries. Missing or corrupt material is unresolved coverage, never authority to reconstruct acceptance from history.", unknown = ["current coverage", "receipt custody", "semantic acceptance", "publication authority"] }
-surface = ".agentic-workspace/proof/current/"
-owner = "verification"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Durable current source-reconciliation selection, owned and replaced only by Verification. Repository visibility does not transfer task/target-bound authority; generic cleanup must preserve it."
+[workspace]
+main_skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+managed_root = ".agentic-workspace/"
+ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
+read_profile_path = ".agentic-workspace/READING.json"
+workflow_path = ".agentic-workspace/WORKFLOW.md"

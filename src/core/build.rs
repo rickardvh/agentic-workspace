@@ -37,7 +37,8 @@ fn main() {
     let mut identity = Sha256::new();
     identity.update(serde_json::to_vec(&value).unwrap());
     let mut seen = BTreeSet::new();
-    let mut generated = String::from("const PAYLOAD: &[(&str, Materialization, &[u8])] = &[\n");
+    let mut generated =
+        String::from("const PAYLOAD: &[(&str, &str, Materialization, &[u8])] = &[\n");
     for reference in value["payload_files"].as_array().expect("payload manifest") {
         let reference = reference.as_str().expect("payload path");
         assert!(seen.insert(reference), "duplicate public host surface");
@@ -51,6 +52,10 @@ fn main() {
             "every host surface needs exactly one materialization"
         );
         let material = &rows[0]["materialization"];
+        let owner = rows[0].get("owner").map_or("workspace", |value| {
+            value.as_str().expect("payload owner must be a string")
+        });
+        assert!(!owner.is_empty(), "payload owner must be named");
         let mode = match material["mode"]
             .as_str()
             .expect("host materialization mode")
@@ -135,7 +140,7 @@ fn main() {
                 .as_bytes(),
         );
         generated.push_str(&format!(
-            "({reference:?}, Materialization::{mode}, include_bytes!({:?})),\n",
+            "({reference:?}, {owner:?}, Materialization::{mode}, include_bytes!({:?})),\n",
             source.to_str().unwrap()
         ));
     }

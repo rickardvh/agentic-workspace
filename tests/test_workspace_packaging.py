@@ -343,6 +343,10 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
 
     target.mkdir()
     subprocess.run(["git", "init", "-q", str(target)], check=True)
+    retained_plan = target / ".agentic-workspace/planning/execplans/archive/retained.json"
+    retained_plan.parent.mkdir(parents=True)
+    retained_plan.write_bytes(b'{"note":"Preserve independently owned Planning history"}')
+    retained_bytes = retained_plan.read_bytes()
     task = "Draft a note for an observable behavior change"
 
     def call(request=None, invocation=None):
@@ -363,6 +367,45 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
     manifest = json.loads((WORKSPACE_ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     for reference in manifest["payload_files"]:
         assert (target / reference).is_file(), reference
+
+    # Planning procedures must come from the installed artifact/adoption owner,
+    # never a source-tree fixture copy. Domain classification stays with Planning.
+    planning_root = target / ".agentic-workspace/planning/skills"
+    planning_registry = json.loads((planning_root / "REGISTRY.json").read_text(encoding="utf-8"))
+    expected = {
+        route if isinstance(route, str) else route["id"]
+        for skill in planning_registry["skills"]
+        for route in skill.get("semantic_routes", [])
+    }
+    assert {
+        "planning/assignment/lifecycle",
+        "planning/work/continuity",
+        "planning/work/closeout",
+        "planning/review/continuation",
+    } <= expected
+    current = call()
+    assert "planning" in {row["id"] for row in current["semantic_routes"]["discovery"]["children"]}
+    for route in sorted(expected):
+        discover = current["semantic_routes"]["requests"][0]
+        discover["arguments"] = {"parent": route}
+        selected = call(discover)
+        detail = selected["semantic_routes"]["discovery"]["detail"]
+        assert detail["id"] == route
+        assert len(detail["sources"]) == 1
+        assert detail["sources"][0]["procedure"]["status"] == "available"
+    discover["arguments"] = {"parent": "planning/assignment/lifecycle"}
+    selected = call(discover)
+    assert selected["semantic_routes"]["discovery"]["detail"]["sources"][0]["skill_id"] == "planning-assignment"
+    assert selected["task_requirements"] == current["task_requirements"]
+    answer = call(selected["procedure"]["requests"][0])["procedure"]["requests"][0]
+    answer["arguments"]["answer"] = {"disposition": "answered", "branches": ["assessment"], "material": {}}
+    answered = call(answer)
+    discover["arguments"]["resource"] = answered["procedure"]["next"][0]
+    resource = call(discover)["semantic_routes"]["discovery"]["detail"]["sources"][0]["procedure"]["resource"]
+    assert resource["selected"]["text"] == (planning_root / "planning-assignment/references/assessment.md").read_text(encoding="utf-8")
+    inventory = call(call()["configuration_write"]["repository_adoption_request"])["configuration_write"]["repository_adoption"]["enclave"]
+    assert inventory["entries"][".agentic-workspace/planning/skills/REGISTRY.json"]["owner"] == "planning"
+    assert retained_plan.read_bytes() == retained_bytes
 
     # Author an ordinary host skill; no module, executable helper or product-specific question schema.
     bundle = target / ".agentic-workspace/skills/change-note"

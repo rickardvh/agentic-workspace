@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:1b26ade986a695eaf4d92e22ef4f55831f7af67223c103b7620680d3051c544e",
+  "managed_revision": "sha256:987a15ec3c64762852755141a1b696a9d244cefe855a51a1c5d670ab789cdfc4",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -47,7 +47,31 @@
     ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
-    ".agentic-workspace/skills/workspace-proof-selection/procedure.md"
+    ".agentic-workspace/skills/workspace-proof-selection/procedure.md",
+    ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
+    ".agentic-workspace/planning/skills/planning-assignment/procedure.md",
+    ".agentic-workspace/planning/skills/planning-assignment/references/assessment.md",
+    ".agentic-workspace/planning/skills/planning-assignment/references/binding.md",
+    ".agentic-workspace/planning/skills/planning-assignment/references/manual.md",
+    ".agentic-workspace/planning/skills/planning-assignment/references/recovery.md",
+    ".agentic-workspace/planning/skills/planning-assignment/references/return.md",
+    ".agentic-workspace/planning/skills/planning-assignment/SKILL.md",
+    ".agentic-workspace/planning/skills/planning-closeout-trust/procedure.md",
+    ".agentic-workspace/planning/skills/planning-closeout-trust/references/finish.md",
+    ".agentic-workspace/planning/skills/planning-closeout-trust/references/intent.md",
+    ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
+    ".agentic-workspace/planning/skills/planning-reporting/SKILL.md",
+    ".agentic-workspace/planning/skills/planning-review-continuation/procedure.md",
+    ".agentic-workspace/planning/skills/planning-review-continuation/references/continuation.md",
+    ".agentic-workspace/planning/skills/planning-review-continuation/references/triage.md",
+    ".agentic-workspace/planning/skills/planning-review-continuation/SKILL.md",
+    ".agentic-workspace/planning/skills/planning-work/procedure.md",
+    ".agentic-workspace/planning/skills/planning-work/references/continuity.md",
+    ".agentic-workspace/planning/skills/planning-work/references/intake.md",
+    ".agentic-workspace/planning/skills/planning-work/references/structure.md",
+    ".agentic-workspace/planning/skills/planning-work/SKILL.md",
+    ".agentic-workspace/planning/skills/README.md",
+    ".agentic-workspace/planning/skills/REGISTRY.json"
   ],
   "payload_schema": "agentic-workspace/payload/v1",
   "release_identity": {

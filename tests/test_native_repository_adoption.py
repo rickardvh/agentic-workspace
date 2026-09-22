@@ -83,6 +83,12 @@ def test_payload_inventory_reconciliation_preserves_content_and_custody(tmp_path
     skill.write_bytes(source + b"\nHost customization\n")
     assert propose("reconcile-payload")["configuration_write"]["status"] == "preserved-blocked"
     skill.write_bytes(source)
+    planning_skill = tmp_path / ".agentic-workspace/planning/skills/planning-assignment/SKILL.md"
+    planning_source = planning_skill.read_bytes()
+    planning_skill.write_bytes(planning_source + b"\nHost Planning customization\n")
+    assert propose("reconcile-payload")["configuration_write"]["status"] == "preserved-blocked"
+    assert planning_skill.read_bytes() == planning_source + b"\nHost Planning customization\n"
+    planning_skill.write_bytes(planning_source)
     old["host_notes"] = "Preserve me"
     provenance.write_text(json.dumps(old))
     assert propose("reconcile-payload")["configuration_write"]["status"] == "preserved-blocked"
