@@ -4,6 +4,30 @@ Use this guide to prepare a coordinated AW release and identify the evidence
 required before publication. For installing an existing release, use
 [Getting started](agentic-workspace-install.md).
 
+## Keep first contact current
+
+After stable publication, refresh the existing public install projection and
+regenerate its reference:
+
+```sh
+python src/tooling/release/current_install.py --refresh
+python src/tooling/generate/generate_contract_catalogues.py
+```
+
+The checker verifies the latest stable release, dereferenced tag, accepted
+promotion and receipt digest. CI compares the checked-in projection with those
+public bytes; the post-publication job intentionally reports drift until the
+refresh is committed. This does not revoke an already published artefact or block
+the sibling registry publication jobs. Never relabel an older projection current
+merely because its renderer agrees with it.
+
+Existing platform, registry and coordinated Cargo consumers exercise setup,
+the installed startup pointer and a fresh ordinary task. The registry lane uses
+Python tool, npm-global and npm-local installs; the local route must work without
+a global AW executable. These probes prove command and procedure delivery, not
+model obedience or independent acceptance. Remove a development-only setup notice
+from first-contact pages only after the public journey passes for that release.
+
 Agentic Workspace uses coordinated workspace releases: one root
 `agentic-workspace` Python distribution (wheel and sdist), one TypeScript CLI npm
 package, and a paired native CLI/core archive share one numeric version. Separate

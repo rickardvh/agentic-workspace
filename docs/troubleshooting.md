@@ -6,7 +6,7 @@ Start with the symptom you can observe. Preserve existing files while investigat
 
 Ask it to read `AGENTS.md`, then `.agentic-workspace/skills/workspace-startup/SKILL.md`. The managed entry section should point to that skill.
 
-If the entry or skill is missing, check whether the repository was [adopted](agentic-workspace-install.md#2-add-aw-to-your-repository), not merely whether the executable was installed. Do not copy package files by hand to fill the gap.
+If the entry or skill is missing, check whether the repository was [adopted](agentic-workspace-install.md#2-add-aw-to-the-repository), not merely whether the executable was installed. Do not copy package files by hand to fill the gap.
 
 If direct reading works but native skill discovery does not, inspect the host's discovery configuration. The `AGENTS.md` route remains usable without discovery links. A model can also ignore valid guidance; distinguish that behaviour from missing integration in a bug report.
 

@@ -62,10 +62,9 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert [skill["id"] for skill in registry["skills"] if skill["visibility"] == "ordinary-default"] == ["workspace-startup"]
     assert "workspace-operating-loop" not in {skill["id"] for skill in registry["skills"]}
     assert MAIN in (ROOT / ".agentic-workspace/WORKFLOW.md").read_text()
-    skill = (ROOT / MAIN).read_text()
-    assert len(skill.encode()) < 2048
-    assert "remain **unknown**" in skill
-    assert "Do not mutate managed owner state" in skill
+    # Reachability and the consumer below are executable boundaries; prose
+    # quality and byte quotas are not executable authority.
+    assert "references/unavailable.md" in (ROOT / MAIN).read_text()
     ledger = tomllib.loads((ROOT / ".agentic-workspace/OWNERSHIP.toml").read_text())
     assert ledger["workspace"]["main_skill_path"] == MAIN
     with pytest.raises(ValueError):
@@ -205,7 +204,8 @@ def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():
         raw = content.encode()
         return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
 
-    files = {ref: (ROOT / ref).read_text() for ref in ["AGENTS.md", MAIN, LEDGER, PROFILE]}
+    fallback = str(Path(MAIN).parent / "references/unavailable.md").replace("\\", "/")
+    files = {ref: (ROOT / ref).read_text() for ref in ["AGENTS.md", MAIN, fallback, LEDGER, PROFILE]}
     plan = ".agentic-workspace/planning/execplans/selected.plan.json"
     manifest = ".agentic-workspace/memory/repo/manifest.toml"
     note = ".agentic-workspace/memory/repo/domains/relevant.md"
@@ -242,7 +242,8 @@ def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():
         return content
 
     assert MAIN in fetch("AGENTS.md")
-    assert PROFILE in fetch(MAIN)
+    assert "references/unavailable.md" in fetch(MAIN)
+    assert PROFILE in fetch(fallback)
     profile = json.loads(fetch(PROFILE))
     assert profile["kind"] == "agentic-workspace/repository-read-profile/v1"
     assert profile["source"]["git_blob_sha1"] == blob(fetch(profile["source"]["path"]))

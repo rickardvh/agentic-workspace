@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  release:
+    types: [published]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
@@ -20,6 +22,19 @@ permissions:
   contents: read
 
 jobs:
+  current-public-install:
+    name: Current accepted public install
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'release' && 'master' || github.ref }}
+      - name: Compare the current projection with accepted public release bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python src/tooling/release/current_install.py
+
   merge-sufficiency:
     name: Merge sufficiency
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.expected_head_sha == github.sha) }}

@@ -122,3 +122,16 @@ def test_support_install_projection_is_immutable_and_hash_bound() -> None:
     assert f"Receipt digest: `sha256:{projection['receipt']['sha256']}`" in text
     assert f"/releases/tag/v{projection['version']}" in text
     assert f"/releases/download/v{projection['version']}/{artifact['name']}" in artifact["url"]
+    spec = importlib.util.spec_from_file_location("current_install", REPO_ROOT / "src/tooling/release/current_install.py")
+    current = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(current)
+    current.check_current(projection, projection)
+    with pytest.raises(ValueError, match="stale"):
+        current.check_current({**projection, "version": "0.0.1"}, projection)
+    with pytest.raises(ValueError, match="mismatch"):
+        current.projection(
+            {"tag_name": "v1.2.3", "draft": False, "prerelease": False},
+            b'{"kind":"agentic-workspace/distribution-install-readiness/v1","status":"passed","version":"1.2.3"}',
+            {"kind": "agentic-workspace/support-bearing-promotion/v1", "status": "passed", "source_commit": "source", "artifacts": {}},
+            "source",
+        )

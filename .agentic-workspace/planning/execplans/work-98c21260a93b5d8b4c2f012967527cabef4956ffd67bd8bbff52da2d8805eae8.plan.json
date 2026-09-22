@@ -7,7 +7,7 @@
   },
   "continuation": {
     "owner": "first-contact-lane",
-    "residual_intent": "Publish #3559 ready for independent review, then implement #3558 current onboarding and #3562 guide contraction. Public-package setup proof awaits a release containing the command."
+    "residual_intent": "Publish #3558 ready for independent review, then implement #3562 guide/reference policy and largest mixed-role current pages. Public 1.2.0 setup journey is blocked until a new release; independent acceptance remains external."
   },
   "creation_provenance": {
     "custody": {
@@ -42,7 +42,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish #3559 ready for independent review, then implement #3558 current onboarding and #3562 guide contraction. Public-package setup proof awaits a release containing the command.",
+  "next_action": "Publish #3558 ready for independent review, then implement #3562 guide/reference policy and largest mixed-role current pages. Public 1.2.0 setup journey is blocked until a new release; independent acceptance remains external.",
   "owner_level": "lane",
   "parent": {
     "closure_boundary": "Implementation and bounded proof; public release journey and independent acceptance stay separately reported.",
@@ -52,7 +52,7 @@
   "phase": "implementation",
   "proof": {
     "claims": [
-      "#3559 native command implemented. 13 adoption-owner tests, installed-wheel journey, 6 native CLI tests and 6 catalogue tests pass; interface drift and clippy clean. Independent review and published-package acceptance not claimed."
+      "#3559 implementation is in PR #3584. #3558 contracts first-contact pages and installed skills, refreshes accepted 1.2.0 projection, and wires installed journeys into existing platform/registry/Cargo consumers. Local installed wheel and npm journeys pass; public 1.2.0 correctly fails unknown setup. Source and publication limits remain explicit."
     ],
     "refs": [],
     "requirements": [
@@ -71,7 +71,7 @@
       ]
     }
   },
-  "revision": 2,
+  "revision": 3,
   "scope": {
     "effects": [
       "Native setup composition, generated contracts, guide contraction, installed journey validation and stacked PRs."
@@ -92,18 +92,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/657018acce57e4717d9da5e724bfd994b9c6002dfa5514fc19d020a9b62d5b9d.attempt.json",
-        "revision": "sha256:8602ab32fe6b2937b5d0192be98b1aed9038015b8638463d8bf7134fe1de2131",
+        "path": ".agentic-workspace/local/effects/d0a0adb0e24392f094fca2aba1a23fdeae8e0a758db52270dc39702c62f54cde.attempt.json",
+        "revision": "sha256:e975ff705d8727391bafcdd34e113dccdffdf0da1eb27f9404d29bb8c50c6c98",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/657018acce57e4717d9da5e724bfd994b9c6002dfa5514fc19d020a9b62d5b9d.result.json",
-        "revision": "sha256:6fb269a578364e0eef89e90f372382c41a53bb3ad88f5d1a1654f5574f432e3e",
+        "path": ".agentic-workspace/local/effects/d0a0adb0e24392f094fca2aba1a23fdeae8e0a758db52270dc39702c62f54cde.result.json",
+        "revision": "sha256:d48e695a2960e16c4a766805597acc3ecbe8719f5e85cc213f7b0b3bb3a0f2c6",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:a0935112c08183bb13139d1f98f3812d6012e891bfd8398686584ee576001a62",
+    "invocation_revision": "sha256:2aab2a8ef74270ae4f55c8f001ff268e2e22248b95e7dcdcc9c98d2a4edc1773",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -111,7 +111,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:fd47b438f6d1fc977cc6fa04bade826a4e83b486476e69447d8d7dd5e2fd2c0d",
+        "document_revision": "sha256:901972ee845e9dec0b961bb13a7e1d20baa6e6e7db1471e5a49e2175f1e463d4",
         "owner_id": "work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8",
         "owner_path": ".agentic-workspace/planning/execplans/work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8.plan.json"
       }

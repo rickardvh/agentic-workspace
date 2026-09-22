@@ -21,6 +21,7 @@ from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 
 import coordinated_release
+from first_contact import journey
 
 
 def fetch(url, *, missing=False):
@@ -146,18 +147,18 @@ def smoke(identity):
             if key not in {"PYTHONPATH", "AGENTIC_WORKSPACE_CORE_BINARY", "NODE_AUTH_TOKEN", "NPM_TOKEN"}
         }
         env["NPM_CONFIG_CACHE"] = str(root / "npm-cache")
-        subprocess.run([sys.executable, "-m", "venv", str(root / "venv")], check=True)
-        python = root / "venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        env["UV_TOOL_DIR"] = str(root / "tools")
+        env["UV_TOOL_BIN_DIR"] = str(root / "tool-bin")
+        python = root / "tools/agentic-workspace" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
         subprocess.run(
             [
-                str(python),
-                "-m",
-                "pip",
-                "--isolated",
+                shutil.which("uv"),
+                "tool",
                 "install",
-                "--no-cache-dir",
-                "--no-deps",
-                "--only-binary=:all:",
+                "--python",
+                sys.executable,
+                "--no-cache",
+                "--no-build",
                 "--index-url",
                 "https://pypi.org/simple",
                 "agentic-workspace==" + identity["package_versions"]["python"],
@@ -202,6 +203,44 @@ def smoke(identity):
             env=env,
             check=True,
         )
+        # Reuse these already-installed public packages for the human journey.
+        subprocess.run(["git", "init", "-q", str(root)], check=True, env=env)
+        npm = shutil.which("npm")
+        local_env = dict(env)
+        local_env["PATH"] = os.pathsep.join([str(Path(shutil.which("node")).parent), str(Path(shutil.which("git")).parent)])
+        if shutil.which("agentic-workspace", path=local_env["PATH"]):
+            raise ValueError("npm-local journey exposes a global AW executable")
+        journey([npm, "exec", "--no", "--", "agentic-workspace"], root, local_env)
+        python_repo = root / "python-consumer"
+        python_repo.mkdir()
+        subprocess.run(["git", "init", "-q", str(python_repo)], check=True, env=env)
+        executable = python.parent / ("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
+        journey([str(executable)], python_repo, env)
+        prefix = root / "npm-global"
+        subprocess.run(
+            [
+                npm,
+                "install",
+                "--global",
+                "--prefix",
+                str(prefix),
+                "--ignore-scripts",
+                "--no-audit",
+                "--no-fund",
+                "@agentic-workspace/workspace-cli@" + identity["package_versions"]["npm"],
+            ],
+            check=True,
+            env=env,
+        )
+        global_repo = root / "global-consumer"
+        global_repo.mkdir()
+        subprocess.run(["git", "init", "-q", str(global_repo)], check=True, env=env)
+        global_env = dict(local_env)
+        global_env["PATH"] = str(prefix if os.name == "nt" else prefix / "bin") + os.pathsep + local_env["PATH"]
+        executable = shutil.which("agentic-workspace", path=global_env["PATH"])
+        if not executable or not Path(executable).is_relative_to(prefix):
+            raise ValueError("Global invocation did not resolve to the isolated public install")
+        journey([executable], global_repo, global_env)
 
 
 def main():

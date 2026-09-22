@@ -10,7 +10,7 @@ Use the documentation and packages for the same AW release. A newer source check
 
 A **stable release** carries the project's supported compatibility and installation claims for its stated platforms. The [stable install reference](reference/support-bearing-install.md) identifies that release.
 
-A **release candidate** or **preview** is available for testing, not stable support. Passing its tests does not turn it into a stable release. [Getting started](agentic-workspace-install.md) provides a pinned prerelease example and the runtime/platform requirements.
+A **release candidate** or **preview** is available for testing, not stable support. Passing its tests does not turn it into a stable release. Use the selected release's platform declaration and receipts for its runtime requirements.
 
 Rust, Python and TypeScript are ways to consume the same core, not three independent product implementations. Your project's language need not match the interface used to install or call AW.
 

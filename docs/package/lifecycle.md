@@ -71,7 +71,7 @@ Do not generate effect-bearing fields from filenames or a schema example. An abs
 
 ## Preserve the right material
 
-The [host-surface contract](../../src/agentic_workspace/contracts/workspace_surfaces.json) drives the package file set and its materialisation. Some files match package bytes; ownership combines portable package facts with supported project declarations; the read profile derives from the resulting ownership ledger.
+The [host-surface contract](../../src/core/contracts/workspace_surfaces.json) drives the package file set and its materialisation. Some files match package bytes; ownership combines portable package facts with supported project declarations; the read profile derives from the resulting ownership ledger.
 
 Use those operations rather than maintaining a second install/removal list. Package provenance does not make unrelated project content removable. Shared configuration, independent domain records, local state and unknown content remain separately owned. Edited or conflicting package material can require resolution before replacement or deletion.
 

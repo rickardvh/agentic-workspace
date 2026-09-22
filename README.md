@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/agentic-workspace)](https://pypi.org/project/agentic-workspace/)
 [![npm](https://img.shields.io/npm/v/%40agentic-workspace%2Fworkspace-cli)](https://www.npmjs.com/package/@agentic-workspace/workspace-cli)
-[![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/src/cli/rust)
+[![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/crates/agentic-workspace-cli)
 
 **Persistent operating context and dynamic control for coding agents.**
 
@@ -10,7 +10,7 @@ Agentic Workspace (AW) helps coding agents enter a repository with the right gui
 
 It builds on repository instructions and skills with persistent, source-owned context and a small Rust-backed tool surface for exact current information and bounded operations. Keep your existing agent, editor, source tree, tests, and review process; AW connects them to the operating context that matters for the task at hand.
 
-[Customise repository behaviour](https://github.com/rickardvh/agentic-workspace/blob/master/docs/customization.md) · [Get started](https://github.com/rickardvh/agentic-workspace#get-started) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md) · [Releases](https://github.com/rickardvh/agentic-workspace/releases)
+[Customise repository behaviour](https://github.com/rickardvh/agentic-workspace/blob/master/docs/customization.md) Â· [Get started](https://github.com/rickardvh/agentic-workspace#get-started) Â· [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) Â· [Documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md) Â· [Releases](https://github.com/rickardvh/agentic-workspace/releases)
 
 ## Why AW?
 
@@ -28,7 +28,7 @@ AW keeps only the operating context whose availability can materially change age
 | Hand work to another agent | Bounded assignments with explicit context, constraints, and return expectations. |
 | Avoid repeated rediscovery | Useful lessons and corrections retained with the appropriate owner. |
 
-The goal is less repeated explanation, searching, handoff reconstruction, and repair—not a larger prompt or a new workflow to manage.
+The goal is less repeated explanation, searching, handoff reconstruction, and repairâ€”not a larger prompt or a new workflow to manage.
 
 **Small tasks stay small.** A typo fix does not need Planning, Memory, Verification, delegation, or another artefact merely because those capabilities are available.
 
@@ -56,7 +56,7 @@ The next agent can recover that continuation rather than reconstructing the prev
 
 The same principle applies to a handoff: preserve enough for the receiving agent to do bounded work without copying the entire parent session. Returned work still needs appropriate integration and verification.
 
-[See everyday examples →](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md)
+[See everyday examples â†’](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md)
 
 ## How it works
 
@@ -67,14 +67,14 @@ A small repository entry point leads the agent to AW's canonical `workspace-star
 The underlying model is deliberately small:
 
 ```text
-Find the relevant context → Do the work → Update what matters
+Find the relevant context â†’ Do the work â†’ Update what matters
 ```
 
 Internally, AW resolves a compact operating contract, exposes supported actions, and reconciles their consequences afterward. That machinery is a substrate for the agent, not a phase machine the user has to operate around every task.
 
 Source code, documentation, tests, decisions, and other canonical repository material remain in their existing homes. AW routes to those sources rather than importing the repository into a second knowledge system.
 
-[Product model](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/overview.md) · [Architecture](https://github.com/rickardvh/agentic-workspace/blob/master/docs/architecture.md)
+[Product model](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/overview.md) Â· [Architecture](https://github.com/rickardvh/agentic-workspace/blob/master/docs/architecture.md)
 
 ## Trust and support
 
@@ -84,37 +84,21 @@ AW's operation boundaries and verification support do not replace human judgemen
 
 Exact package identities, installation commands, runtime versions, operating-system support, and prerelease/stable status are deliberately kept in release-bound or generated owners instead of copied into this landing page.
 
-[Installation and adoption](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) · [Threat model](https://github.com/rickardvh/agentic-workspace/blob/master/docs/security/threat-model.md) · [Evidence and support](https://github.com/rickardvh/agentic-workspace/blob/master/docs/evidence-and-support.md)
+[Installation and adoption](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) Â· [Threat model](https://github.com/rickardvh/agentic-workspace/blob/master/docs/security/threat-model.md) Â· [Evidence and support](https://github.com/rickardvh/agentic-workspace/blob/master/docs/evidence-and-support.md)
 
 ## Get started
 
-Use the [installation and adoption guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) for the release class you intend to run. Stable support, release candidates, and previews have different evidence and support boundaries; exact install commands and platform claims belong to the selected release and its receipts rather than this README.
+1. Install AW: `npm install --global @agentic-workspace/workspace-cli`.
+2. From your Git working-tree root, run `agentic-workspace setup` and authorise
+   the proposed integration.
+3. Give your agent an ordinary task, such as correcting a documentation error.
 
-For support-bearing installs, follow the [generated install projection](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/support-bearing-install.md) to the selected release's `distribution-install-readiness.json` receipt and its exact installation command.
-
-### Adopt a repository
-
-Installing the runtime and adopting a repository are separate operations. After installing the selected artefact, run ordinary `start` against the target Git repository:
-
-```bash
-agentic-workspace start --target . \
-  --task "Inspect this repository" \
-  --format json
-```
-
-If the repository is not yet adopted and the selected artefact includes the current adoption owner, Configuration returns the exact repository-adoption request. Follow that request and execute only the returned authorised action. Adoption establishes the small package-owned host footprint and managed `AGENTS.md` fence; it does **not** invent repository policy, choose optional modules, or create Planning, Memory, or Verification state.
-
-### In an adopted repository
-
-The repository's small entry point leads to the canonical `workspace-startup` skill. Agent hosts with supported native skill discovery can expose the same skill directly.
-
-For an initial check, ask your agent:
-
-> Use this repository's Agentic Workspace setup to identify the guidance and checks relevant to an API change. Do not modify anything yet.
-
-For direct inspection, use the same `start` boundary with the actual task. After adoption, continue giving your agent ordinary work; the canonical skill teaches it when AW is useful, so you should not need to run a manual command sequence around every change.
-
-[Installation and adoption](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [CLI reference](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/cli-catalogue.md)
+The setup command is awaiting stable publication. Check the
+[Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md)
+for the current release boundary, Python/Cargo alternatives and repository-local
+npm invocation. Installation supplies the runtime; setup adds the AW enclave and
+an AGENTS.md pointer. Your agent then follows that pointer without a manual command
+sequence around each task.
 
 ## Your repository, your rules
 
@@ -124,9 +108,9 @@ A simplified host repository looks like this:
 
 ```text
 your-repository/
-├── AGENTS.md              # Small managed entry point inside a repo-owned file
-├── src/, docs/, tests/    # Existing project contents
-└── .agentic-workspace/    # Package integration plus optional owner state
+â”œâ”€â”€ AGENTS.md              # Small managed entry point inside a repo-owned file
+â”œâ”€â”€ src/, docs/, tests/    # Existing project contents
+â””â”€â”€ .agentic-workspace/    # Package integration plus optional owner state
 ```
 
 The current public adoption footprint is Configuration-owned and deliberately small. Package-managed skills, ownership/read-profile metadata, provenance, and adoption identity stay distinct from repo-owned configuration, module-owned state, local data, and promoted output.
@@ -145,7 +129,7 @@ Reusable methods belong in skills. Binding rules belong in instructions or confi
 
 The same Configuration-owned footprint is used for adoption, refresh, and removal. De-adoption removes only authenticated package-owned integration, preserves repo-owned configuration and domain state, and refuses to erase edited or unowned content merely because it sits under an AW path.
 
-[Configuration reference](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/workspace-config.md) · [Repository footprint](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/installed-surface-catalogue.md)
+[Configuration reference](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/workspace-config.md) Â· [Repository footprint](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/installed-surface-catalogue.md)
 
 ## Add structure where it helps
 
@@ -161,7 +145,7 @@ These are peer capabilities, not mandatory workflow stages. Repositories can use
 
 Repository-specific rules and procedures do not require a new module. Modules are for independently owned domain capabilities, including read-only facts; persistence is optional.
 
-[Modules and extensions →](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/modules.md)
+[Modules and extensions â†’](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/modules.md)
 
 ## Works with agents rather than replacing them
 
@@ -173,15 +157,15 @@ The ordinary deterministic product semantics live in a shared Rust core. Native,
 
 Host integrations still differ. Provider independence does not mean every agent host discovers skills identically or every model follows repository guidance perfectly; current support and evidence remain release- and environment-bound.
 
-[Evidence and support →](https://github.com/rickardvh/agentic-workspace/blob/master/docs/evidence-and-support.md)
+[Evidence and support â†’](https://github.com/rickardvh/agentic-workspace/blob/master/docs/evidence-and-support.md)
 
 ## Learn more
 
-**Use AW:** [Installation and adoption](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Configuration](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/workspace-config.md)
+**Use AW:** [Installation and adoption](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) Â· [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) Â· [Configuration](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/workspace-config.md)
 
-**Understand AW:** [Product overview](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/overview.md) · [Architecture](https://github.com/rickardvh/agentic-workspace/blob/master/docs/architecture.md) · [Design principles](https://github.com/rickardvh/agentic-workspace/blob/master/docs/design-principles.md) · [Modules](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/modules.md)
+**Understand AW:** [Product overview](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/overview.md) Â· [Architecture](https://github.com/rickardvh/agentic-workspace/blob/master/docs/architecture.md) Â· [Design principles](https://github.com/rickardvh/agentic-workspace/blob/master/docs/design-principles.md) Â· [Modules](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/modules.md)
 
-**Look up details:** [CLI reference](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/cli-catalogue.md) · [Installed surfaces](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/installed-surface-catalogue.md) · [Full documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md)
+**Look up details:** [CLI reference](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/cli-catalogue.md) Â· [Installed surfaces](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/installed-surface-catalogue.md) Â· [Full documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md)
 
 ## Contributing
 

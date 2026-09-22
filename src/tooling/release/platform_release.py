@@ -16,6 +16,8 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+from first_contact import journey
+
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = "platform-release-manifest.json"
 
@@ -233,19 +235,15 @@ def smoke(directory, receipt):
             '[project]\nname="consumer"\nversion="0.1.0"\nrequires-python=">=3.11"\ndependencies=[' + json.dumps(requirement) + "]\n"
         )
         run([uv, "sync", "--no-cache", "--python", sys.executable], cwd=python_repo, env=env)
-        command = ["start", "--target", ".", "--task", "Verify compiler-free installation", "--format", "json"]
-        run([uv, "run", "--no-sync", "agentic-workspace", *command], cwd=python_repo, env=env, stdout=subprocess.DEVNULL)
+        journey([uv, "run", "--no-sync", "agentic-workspace"], python_repo, env)
         npm_repo = root / "npm"
         npm_repo.mkdir()
         run([git, "init", "-q"], cwd=npm_repo, env=env)
         (npm_repo / "package.json").write_text('{"name":"consumer","version":"1.0.0","private":true}')
         run([npm, "install", "--ignore-scripts", directory / data["npm"]["asset"]], cwd=npm_repo, env=env)
-        run(
-            [node, npm_repo / "node_modules/@agentic-workspace/workspace-cli/src/cli.mjs", *command],
-            cwd=npm_repo,
-            env=env,
-            stdout=subprocess.DEVNULL,
-        )
+        if shutil.which("agentic-workspace", path=env["PATH"]):
+            raise ValueError("Repository-local npm smoke must not have a global AW executable")
+        journey([npm, "exec", "--no", "--", "agentic-workspace"], npm_repo, env)
         native_repo = root / "native"
         native_repo.mkdir()
         with zipfile.ZipFile(directory / row["native_archive"]["asset"]) as archive:
@@ -253,12 +251,7 @@ def smoke(directory, receipt):
         for path in native_repo.glob("agentic-workspace*"):
             path.chmod(0o755)
         run([git, "init", "-q"], cwd=native_repo, env=env)
-        run(
-            [native_repo / ("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace"), *command],
-            cwd=native_repo,
-            env=env,
-            stdout=subprocess.DEVNULL,
-        )
+        journey([str(native_repo / ("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace"))], native_repo, env)
     receipt.write_text(
         json.dumps(
             {
@@ -268,7 +261,7 @@ def smoke(directory, receipt):
                 "source_commit": data["source_commit"],
                 "inventory_sha256": digest(directory / MANIFEST),
                 "rust_available": False,
-                "checks": ["uv-sync", "npm-install", "native-start"],
+                "checks": ["uv-sync", "npm-local-install", "installed-first-contact"],
             },
             indent=2,
         )
@@ -287,7 +280,7 @@ def verify_consumers(directory):
             "source_commit": data["source_commit"],
             "inventory_sha256": digest(directory / MANIFEST),
             "rust_available": False,
-            "checks": ["uv-sync", "npm-install", "native-start"],
+            "checks": ["uv-sync", "npm-local-install", "installed-first-contact"],
         }:
             raise ValueError("Missing, stale or failed compiler-free platform proof")
     return data
