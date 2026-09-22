@@ -23,6 +23,7 @@ canonical_home = ".agentic-workspace/memory/repo/domains/example-runtime-boundar
 task_relevance = "optional"
 routes_from = ["src/agentic_workspace/**", "generated/**", "scripts/generate/**"]
 stale_when = ["src/agentic_workspace/contracts/**", "scripts/generate/**", "generated/**"]
+disposition = { note_revision = "sha256:5095dbb2b420c5891b316affe324a1d17ac817b54dcb3d143ff7936442013313", reason = "Retire obsolete package-layout advice from active selection under the authorised #3550/#3551/#3552 migration. Current source, payload and installation boundaries are owned by docs/architecture.md and docs/maintainer/repository-layout.md. Preserve this historical source text and its consumers; this does not admit its former claims.", status = "retire" }
 
 [notes.".agentic-workspace/memory/repo/domains/memory-package-context.md"]
 note_type = "domain"
@@ -30,6 +31,7 @@ canonical_home = ".agentic-workspace/memory/repo/domains/memory-package-context.
 task_relevance = "optional"
 routes_from = ["packages/memory/**"]
 stale_when = ["packages/memory/src/**", "packages/memory/bootstrap/**", "packages/memory/README.md"]
+disposition = { note_revision = "sha256:75e4cbf7a6510d005945970a236a0fd95137e1159e36881bbb9d143e5bc138bb", reason = "Retire obsolete package-layout advice from active selection under the authorised #3550/#3551/#3552 migration. Current source, payload and installation boundaries are owned by docs/architecture.md and docs/maintainer/repository-layout.md. Preserve this historical source text and its consumers; this does not admit its former claims.", status = "retire" }
 
 [notes.".agentic-workspace/memory/repo/domains/planning-package-context.md"]
 note_type = "domain"
@@ -37,6 +39,7 @@ canonical_home = ".agentic-workspace/memory/repo/domains/planning-package-contex
 task_relevance = "optional"
 routes_from = ["packages/planning/**", ".agentic-workspace/planning/**"]
 stale_when = ["packages/planning/src/**", "packages/planning/bootstrap/**", "packages/planning/README.md"]
+disposition = { note_revision = "sha256:1f2e5bcecc4bc25a793d87851749cf96b75c0786241ccadf73e28df141749b0f", reason = "Retire obsolete package-layout advice from active selection under the authorised #3550/#3551/#3552 migration. Current source, payload and installation boundaries are owned by docs/architecture.md and docs/maintainer/repository-layout.md. Preserve this historical source text and its consumers; this does not admit its former claims.", status = "retire" }
 
 [notes.".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md"]
 note_type = "decision"

@@ -13,7 +13,7 @@ fn err(e: impl std::fmt::Display) -> CoreError {
 struct ProcessGuard(Box<dyn process_wrap::std::ChildWrapper>);
 impl Drop for ProcessGuard {
     fn drop(&mut self) {
-        let _ = self.0.kill();
+        let _ = self.0.start_kill();
         let until = Instant::now() + Duration::from_millis(250);
         while Instant::now() < until {
             if !matches!(self.0.try_wait(), Ok(None)) {
@@ -106,11 +106,22 @@ pub(crate) fn run(
         });
     }
     let mut timed_out = false;
-    let status = loop {
+    let status = 'execution: loop {
         if started.elapsed() >= budget {
             timed_out = true;
-            child.kill().map_err(err)?;
-            break child.wait().map_err(err)?;
+            child.start_kill().map_err(err)?;
+            let until = Instant::now() + Duration::from_millis(250);
+            loop {
+                if let Some(status) = child.try_wait().map_err(err)? {
+                    break 'execution status;
+                }
+                if Instant::now() >= until {
+                    return Err(err(
+                        "process termination remains uncertain; owner recovery required",
+                    ));
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
         }
         if let Some(status) = child.try_wait().map_err(err)? {
             break status;
@@ -118,7 +129,10 @@ pub(crate) fn run(
         std::thread::sleep(Duration::from_millis(10));
     };
     // A command leaving descendants behind cannot extend the evidence lifetime.
-    let _ = child.kill();
+    // ChildWrapper::kill also waits for the whole Windows job. A prior
+    // try_wait may already have consumed its completion notification, so that
+    // second wait is unbounded even after a successful short command.
+    let _ = child.start_kill();
     let mut output = serde_json::Map::new();
     for _ in 0..2 {
         match receiver.recv_timeout(Duration::from_secs(2)) {
@@ -142,4 +156,46 @@ pub(crate) fn run(
         json!({"status":if timed_out {"timeout"}else if status.success(){"passed"}else{"failed"},"exit_code":status.code(),
         "duration_ms":started.elapsed().as_millis(),"output":output,"execution_kind":"trusted-process"}),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_commands_finish_without_a_second_job_wait() {
+        for _ in 0..32 {
+            #[cfg(windows)]
+            let mut command = Command::new("cmd.exe");
+            #[cfg(windows)]
+            command.args(["/d", "/c", "echo bounded"]);
+            #[cfg(unix)]
+            let mut command = Command::new("sh");
+            #[cfg(unix)]
+            command.args(["-c", "echo bounded"]);
+            let result = run(command, None, Duration::from_secs(2)).unwrap();
+            assert_eq!(result["status"], "passed");
+            assert!(
+                result["output"]["stdout"]["tail"]
+                    .as_str()
+                    .unwrap()
+                    .contains("bounded")
+            );
+        }
+    }
+    #[test]
+    fn timeout_terminates_without_an_unbounded_job_wait() {
+        #[cfg(windows)]
+        let mut command = Command::new("cmd.exe");
+        #[cfg(windows)]
+        command.args(["/d", "/c", "ping -n 30 127.0.0.1 > nul"]);
+        #[cfg(unix)]
+        let mut command = Command::new("sh");
+        #[cfg(unix)]
+        command.args(["-c", "sleep 30"]);
+        let began = Instant::now();
+        let result = run(command, None, Duration::from_millis(100)).unwrap();
+        assert_eq!(result["status"], "timeout");
+        assert!(began.elapsed() < Duration::from_secs(5));
+    }
 }

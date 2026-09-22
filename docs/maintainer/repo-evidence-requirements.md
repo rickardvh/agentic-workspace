@@ -25,7 +25,7 @@ Use the existing assurance configuration. The ordinary scoped Markdown surface m
 ```toml
 [assurance.requirements.typed_exit]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/**"]
+applies_to_paths = ["src/core/**"]
 required_evidence = ["typed_exit_fixture"]
 force = "required-before-closeout"
 blocking_claims = ["claim-work-complete"]
@@ -40,7 +40,7 @@ detail_route = "agentic-workspace start --target . --task 'Inspect typed-exit ev
 ```markdown
 ---
 paths:
-  - src/agentic_workspace/**
+  - src/core/**
 checks:
   - requirement:typed_exit
 ---

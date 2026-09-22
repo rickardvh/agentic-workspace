@@ -90,7 +90,7 @@ a passing narrow check does not automatically require all broader suites.
   stop once argument fidelity and binding floors are proven, or escalate to an
   affected platform only if its encoding behaviour remains materially unresolved.
 
-## Current Inventory
+## Historical reduction evidence
 
 The June 15, 2026 inventory for #1521 was refreshed after the first reduction slices with:
 
@@ -102,7 +102,7 @@ The June 15, 2026 inventory for #1521 was refreshed after the first reduction sl
 
 Collection is fast, so the immediate problem is not raw collection time. A full root duration pass exceeded 10 minutes during #1521 measurement, so the current pressure is both runtime hotspots and a growing pile of narrow regression tests around broad workflow surfaces.
 
-The largest current executable clusters by collected test count are:
+The largest executable clusters in that historical Python-host inventory were:
 
 - `tests/test_generated_tool_conformance.py` (91)
 - `packages/memory/tests/test_install.py` (79)
@@ -116,11 +116,11 @@ The largest current executable clusters by collected test count are:
 - `packages/memory/tests/test_routing.py` (44)
 - `packages/planning/tests/test_check_planning_surfaces.py` (43)
 
-These current clusters are not automatically bad. Treat them as the first places to look for scenario consolidation, table-driven structure, or contract-owned conformance cases when related work changes them.
+Those package/host clusters are retired. Current owner scenarios are under `tests/test_native_*.py` and native Rust tests; do not revive the former layout to reproduce these counts. Use current collection and targeted duration evidence for new work.
 
 Retired legacy clusters from the #1536/#1537/#1538/#1539/#1540/#1541 finish-lane slice are no longer current executable hotspots: `tests/test_model_cli_harness.py`, `tests/test_workspace_report_cli.py`, `tests/test_workspace_start_preflight_cli.py`, `packages/planning/tests/test_summary.py`, `tests/test_contract_tooling.py`, and `tests/test_workspace_lifecycle_cli.py`. Their migration records live in `docs/maintainer/test-knowledge-inventory.md`; new work should use focused current evidence rather than reviving those broad files.
 
-The first #1521 reduction slice consolidated repeated packaging builds in `tests/test_workspace_packaging.py`, `packages/memory/tests/test_packaging.py`, and `packages/planning/tests/test_packaging.py`. Those tests now reuse module-scoped wheel and sdist artefacts while preserving the same inventory, import, workflow, and install assertions. The packaging subset passes in about 20 seconds on the local Windows checkout.
+The first #1521 reduction slice consolidated repeated packaging builds in `tests/test_workspace_packaging.py`, `packages/memory/tests/test_packaging.py`, and `packages/planning/tests/test_packaging.py`. Those tests then reused module-scoped wheel and sdist artefacts while preserving the same inventory, import, workflow, and install assertions. That packaging subset passed in about 20 seconds on the local Windows checkout.
 
 The #1524 workflow-cluster slice merged the live-checkout active-only and verbose preflight mode checks in `tests/test_workspace_start_preflight_cli.py` into one scenario-matrix test. The affected `tests/test_workspace_report_cli.py` plus `tests/test_workspace_start_preflight_cli.py` subset moved from 234 collected tests / 139.18 seconds to 233 collected tests / 133.93 seconds while retaining the active-state, full-takeover, startup-guidance, and resolved-config assertions.
 

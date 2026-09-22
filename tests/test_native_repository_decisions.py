@@ -26,7 +26,7 @@ def test_decision_archive_directory_identity(tmp_path, shared_core_binary, nativ
     spellings = [archive, archive + "/"]
     if destination == "repository":
         contracts = ROOT / "src/tooling/contracts"
-        schema = json.loads((contracts / "schemas/workspace_config.schema.json").read_text())
+        schema = json.loads((ROOT / "src/core/contracts/schemas/workspace_config.schema.json").read_text(encoding="utf-8"))
         defaults = json.loads((contracts / "workspace_defaults/payload.json").read_text())
         example = tomllib.loads("\n".join(defaults["assurance_onboarding"]["smallest_useful_config"]))
         spellings = list(
@@ -510,7 +510,8 @@ def test_repository_identity_collision_and_forged_authorship_are_rejected(tmp_pa
     (tmp_path / ".agentic-workspace/config.toml").write_text('[assurance]\ndecision_record_target="docs/decisions"\n')
     unadmitted = source.with_name("native-" + "0" * 64 + ".md")
     source.rename(unadmitted)
-    blockers = json.dumps(call()["decision_packet"]["blockers"])
+    # The copied historical decision keeps its original exact applicability.
+    blockers = json.dumps(call(changed=["crates/agentic-workspace-core/src/lib.rs"])["decision_packet"]["blockers"])
     assert "assurance.decision_record_revision" in blockers
     assert unadmitted.name in blockers
     assert "repository/source owner" in blockers

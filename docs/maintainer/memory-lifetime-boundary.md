@@ -32,12 +32,13 @@ The repository has six declared notes and one durable fact. None is removed mere
 to reduce a count:
 
 - The routing index still connects declared notes and is referenced by the Memory
-  workflow. Keep its routing role; reconcile obsolete source paths with the final
-  repository topology.
+  workflow. Keep its routing role; current source locations are documented in the
+  [repository layout](repository-layout.md).
 - The runtime, Memory and Planning context notes retain useful source/payload/install
   and active-execution/advisory distinctions. Their former Python/package paths are
-  stale source claims, not evidence for current native implementation. Preserve the
-  useful distinctions and their existing consumers until source reconciliation.
+  stale source claims, not evidence for current native implementation. The Memory owner has retired these three notes from active selection. The
+  useful distinctions now live in the canonical architecture and repository layout;
+  existing historical consumers still require the original source text.
 - The consolidation decision's exact human disposition says to preserve its source
   text. It remains suppressed from active selection and retained as requested.
 - The recurring-failures note and selected-plan-owned-next-task fact preserve the

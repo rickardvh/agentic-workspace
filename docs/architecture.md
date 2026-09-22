@@ -48,7 +48,7 @@ survives a failure to produce the next response. An uncertain effect requires
 recovery, not replay as a new operation. A settled owner is not proof that the
 user's larger task is complete.
 
-These responsibilities are sometimes described as *resolve → act → reconcile*.
+These responsibilities are sometimes described as *resolve â†’ act â†’ reconcile*.
 They are not mandatory workflow phases for the model or the user.
 
 ## Instructions and extensions
@@ -88,11 +88,11 @@ cannot establish runtime capability, fresh proof or permission to mutate state.
 | --- | --- |
 | `src/core/` | Shared deterministic behaviour and native state/effect owners. |
 | `src/cli/rust/` | Public command parsing and forwarding. |
-| `src/agentic_workspace/`, `src/cli/typescript/` | Installed language bindings and transport declarations. |
-| `src/agentic_workspace/contracts/` | Declarative contracts and schemas, including retained maintenance formats. |
-| `packages/`, other Python source | Source-development and maintenance machinery; not a second installed semantic runtime. |
+| `src/cli/python/`, `src/cli/typescript/` | Installed language bindings and transport declarations. |
+| `src/core/contracts/`, `src/core/src/modules/*/contracts/` | Shared and domain-owned native contracts and schemas. |
+| `src/tooling/`, `src/adapters/codex/` | Maintainer machinery and provider protocol integration. |
 | `.agentic-workspace/` | This repository's own AW integration, policy and retained state. |
-| `docs/`, `tools/`, `scripts/` | Human documentation and repository-specific maintenance tools. |
+| `docs/`, `tools/skills/` | Human documentation and repository procedures. |
 
 [System intent](../SYSTEM_INTENT.md) owns product direction; [design principles](design-principles.md)
 explain tradeoffs. Use the [contributor guide](maintainer/contributor-playbook.md)

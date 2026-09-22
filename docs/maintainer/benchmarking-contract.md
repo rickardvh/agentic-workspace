@@ -1,14 +1,17 @@
 # Benchmarking Contract
 
-This is a development-only benchmark contract for human-free repo-operating evaluation.
+This records the former development-only benchmark proposal for human-free repo-operating evaluation.
 
 It stays in the monorepo as a dev harness and does not ship into target repos.
 
-Use `packages/planning/src/repo_planning_bootstrap/_benchmark.py` and the checked-in fixtures under `packages/planning/tests/fixtures/benchmark/` to read and exercise the machine-readable contract.
+The former Planning Python benchmark implementation and its package fixtures were
+retired with the Python host. This page preserves the proposal, not an executable
+route. Current maintainer evaluations live in `src/tooling/model-cli-harness/`;
+native measurement behavior is exercised by `tests/test_native_measurement.py`.
 
-## Canonical Shape
+## Historical proposed shape
 
-`benchmark_contract/v1` is the canonical contract shape for the first benchmark slice.
+`benchmark_contract/v1` was the proposed contract shape for the first benchmark slice.
 
 It defines:
 
