@@ -1,0 +1,103 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "invariants": "Exact admission, no launch on rejection, no full packet diagnostics, no blind retries, no proof/review authority."
+  },
+  "continuation": {
+    "assignment": "Current Astra binding for diagnosis/integration. Configured Terra bounded test inventory dispatched successfully after fix and admitted by Assignment for supporting use only; no independent review.",
+    "frontier": "Implementation and focused validation complete for the bounded leaf: startup dependencies enter before handoff/Planning sealing; exact dispatch remains fail-closed with bounded owner/actionable mismatch diagnostics. Independent PR review and merge remain outstanding. #3558/#3562 public-release acceptance is separate retained work."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/7ef613b9e4096391a373be700589cfae26ff8e28e2a756b2a1d20840d0d13e50.attempt.json",
+        "revision": "sha256:c97822837524382e536e32a3b9ded25f4c3cfb3990c55829c4be68a8817821f2",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/7ef613b9e4096391a373be700589cfae26ff8e28e2a756b2a1d20840d0d13e50.result.json",
+        "revision": "sha256:92490f6880fd2179cc09fc7fbb17fedaf5659ab1965910cce83efbb44d7aeef4",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:179a181b0745dfe368dff3f83e333d3241334d0a209e4bd047359e8ab7ab7e29",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:6b2dd89645db24ee2e7236f60e7e76f371d87bed00fec07b347cab74b089b198"
+  },
+  "id": "work-83f5d9b3bae1c9d0b9a64dfe08d132dfe93599b574c80bc411bc8bc18d64a8bf",
+  "intent": {
+    "outcome": "Current exact dispatch survives public carriage; relevant drift rejects before effect with bounded actionable diagnostics."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "live",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Publish codex/3588-dispatch-currentness ready for independent review; external reviewer owns acceptance, and the PR closes bounded leaf #3588 on merge.",
+  "owner_level": "slice",
+  "parent": {
+    "issue": "https://github.com/rickardvh/agentic-workspace/issues/3588"
+  },
+  "phase": "validation",
+  "proof": {
+    "current": [
+      "62 handoff/startup/source-request/catalogue tests passed in 156.52 seconds",
+      "Paired native build and Clippy passed",
+      "Request diagnostic privacy Rust unit test passed",
+      "Generated interface/catalogue and language facade parity passed",
+      "Configured public-carriage reproduction rejected before effect before fix and revalidated unchanged after fix",
+      "Configured Terra read-only inventory returned and was owner-admitted; no review or proof authority"
+    ],
+    "limits": "One worker transport observed 12.731 seconds and 26352 packet bytes. Token use and total successful-completion cost are unknown; no provider ranking, review acceptance or parent-lane completion claim.",
+    "pending": [
+      "Independent PR review and acceptance"
+    ],
+    "required_commit_checks": "Normal repository format/lint/typecheck/no-absolute-path hooks; no bypass authorised.",
+    "stop_rationale": "The current reproduced missing class is fixed at public carriage. Current positive/negative owner evidence covers exact admission, genuine drift, unrelated control, privacy and no-effect truth. No unresolved host uncertainty requires another provider probe or a matrix; original deleted packet is not claimed reconstructed."
+  },
+  "references": [],
+  "relationships": {
+    "dependencies": {
+      "refs": []
+    }
+  },
+  "revision": 3,
+  "scope": {
+    "excluded": "Provider quality, economics, new orchestration, proxy review.",
+    "included": "Controlled reproduction, smallest responsible-owner correction, focused positive/negative proof and one PR."
+  },
+  "title": "#3588 dispatch currentness and bounded diagnostics",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/47e61ad3fa6bc644d2f37913698ae287dca4955dcc5cb16673e1f4823e2cdd76.attempt.json",
+        "revision": "sha256:a3542a33a8bc9b3b3fc2abdc922d7339a5f01a2b6f325ff39bd93a4e15de000e",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/47e61ad3fa6bc644d2f37913698ae287dca4955dcc5cb16673e1f4823e2cdd76.result.json",
+        "revision": "sha256:fbb45c7e0259d06a6a23dfe542cc153c25d77ea1588956507f67fffabf1fe99b",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:8234c3cc2b4eb7ad2063c218a4a21d5399cc08e8ddcf37bbb38f006ff8e06d60",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:9a3db2b980e34168f970bff4d8033bc1e651bf776db0a830dd4fcc1294f0265c",
+        "owner_id": "work-83f5d9b3bae1c9d0b9a64dfe08d132dfe93599b574c80bc411bc8bc18d64a8bf",
+        "owner_path": ".agentic-workspace/planning/execplans/work-83f5d9b3bae1c9d0b9a64dfe08d132dfe93599b574c80bc411bc8bc18d64a8bf.plan.json"
+      }
+    }
+  }
+}

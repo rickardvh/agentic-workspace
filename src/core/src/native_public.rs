@@ -1,5 +1,6 @@
 //! Public native ingress. Callers express work and public requests; repository
 //! facts and owner admission are derived here, never accepted as debug inputs.
+use crate::native_delegation::DispatchMismatch;
 use crate::native_frontier::Resolution;
 use crate::{
     CoreError, compile_value, decision_source, digest, native_config, native_instructions,
@@ -89,7 +90,8 @@ fn resolve_selected(
             .and_then(|invocation| invocation.get("source_requests"))
     } else {
         input.request.as_ref()
-    })?;
+    })
+    .map_err(|error| error.dispatch_mismatch(DispatchMismatch::Carriage))?;
     // Resource policy uses the same current semantic route dependency as direct
     // entry. Promote only this typed owner's declared dependency, never search
     // arbitrary semantic material for envelopes.
@@ -468,6 +470,13 @@ fn resolve_selected(
         &independent.contract,
         &resource_contract,
     ])?;
+    if input
+        .invocation
+        .as_ref()
+        .is_some_and(|i| i["operation_id"] == "delegation.dispatch")
+    {
+        crate::native_delegation::validate_dispatch_context(&work, &requests, &contract)?;
+    }
     for request in &requests {
         // Route selection has its own independently bound read-only contract and
         // is already validated by its responsible owner above.
@@ -507,7 +516,8 @@ fn resolve_selected(
             &configuration,
             Some(request),
             Some(&contract),
-        )?;
+        )
+        .map_err(|error| error.dispatch_mismatch(DispatchMismatch::StartupSource))?;
     } else {
         startup_adapter = crate::native_startup::deliver_required(
             startup_adapter,
@@ -517,6 +527,18 @@ fn resolve_selected(
             &contract,
         );
     }
+    // Automatic delivery is a source dependency, just like an explicitly
+    // carried read. Include it before owners seal handoffs or continuations;
+    // appending it only to the final action changes those packets on invoke.
+    let mut requests = std::borrow::Cow::Borrowed(&requests);
+    if startup_adapter["status"] == "source-context-delivered"
+        && !requests.iter().any(|r| r["owner"] == "startup-adapter")
+    {
+        requests
+            .to_mut()
+            .push(startup_adapter["requests"][0].clone());
+    }
+    let request_for = |owner: &str| requests.iter().find(|request| request["owner"] == owner);
     if let Some(request) = request_for("system-intent") {
         system_intent = crate::native_intent::view(
             target,
@@ -1205,7 +1227,15 @@ fn resolve_selected(
         }),
         &contract,
         baseline,
-    )?;
+    )
+    .map_err(|error| error.dispatch_mismatch(DispatchMismatch::CurrentWork))?;
+    if let Some(invocation) = input
+        .invocation
+        .as_ref()
+        .filter(|i| i["operation_id"] == "delegation.dispatch")
+    {
+        crate::native_delegation::validate_execution_context(invocation, &requirements)?;
+    }
     contributions.push(startup_adapter["contribution"].clone());
     requirements["bounded_outcome_evidence"] =
         if configuration["assignment_requirements"]["configured"] == true {
@@ -1222,7 +1252,8 @@ fn resolve_selected(
         }),
         &requests,
         &contract,
-    )?;
+    )
+    .map_err(|error| error.dispatch_mismatch(DispatchMismatch::AssignmentHandoff))?;
     let mut assignment_contribution = assignment["contribution"].clone();
     assignment.as_object_mut().unwrap().remove("contribution");
     requirements["assignment"] = assignment;
@@ -1235,7 +1266,8 @@ fn resolve_selected(
         &requests,
         &contract,
         baseline,
-    )?;
+    )
+    .map_err(|error| error.dispatch_mismatch(DispatchMismatch::AssignmentHandoff))?;
     let mut delegation = crate::native_delegation::view(
         target,
         &work,
@@ -1810,7 +1842,19 @@ pub(crate) fn invoke_selected(value: Value, resolution: &Resolution) -> Value {
     };
     match invoke_inner(value.clone(), &mut progress) {
         Ok(result) => result,
-        Err(error) => invocation_failure(&value, &error.to_string(), &progress),
+        Err(error) => {
+            if value["invocation"]["operation_id"] == "delegation.dispatch"
+                && !progress.entered_effect_owner
+            {
+                let diagnostic = error.1.unwrap_or(DispatchMismatch::Resolution).diagnostic();
+                let mut result =
+                    invocation_failure(&value, diagnostic["message"].as_str().unwrap(), &progress);
+                result["error"] = diagnostic;
+                result
+            } else {
+                invocation_failure(&value, &error.to_string(), &progress)
+            }
+        }
     }
 }
 

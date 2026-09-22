@@ -175,7 +175,10 @@ pub(crate) fn view(
         input_request,
         contract,
         baseline,
-    )?;
+    )
+    .map_err(|error| {
+        error.dispatch_mismatch(crate::native_delegation::DispatchMismatch::AssignmentHandoff)
+    })?;
     let mut input_requests = Vec::new();
     if result["status"] == "resolved"
         && let Some(task_request) = request
@@ -198,7 +201,10 @@ pub(crate) fn view(
         transport_work,
         &handoff_inputs,
         &target_scope,
-    )?;
+    )
+    .map_err(|error| {
+        error.dispatch_mismatch(crate::native_delegation::DispatchMismatch::ExecutionConfiguration)
+    })?;
     for question in execution["target_scope_questions"]
         .as_array()
         .into_iter()
