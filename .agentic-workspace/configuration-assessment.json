@@ -1,9 +1,9 @@
 {
   "basis": "configuration-setup-v1",
   "continuation": {
-    "task": "Implement #3550 and #3551 in stacked PRs"
+    "task": "Fix #3588 native delegation dispatch currentness and actionable rejection diagnostics"
   },
-  "coverage": "Assessed current native setup procedure against existing repository policy for the authorised topology and retention migration. Paired native build and installed artefact proof establish launch and owner behaviour on this Windows host, not another machine. Compatible payload provenance refreshed. Preserve existing instruction/decision admissions and optional configuration; do not infer new policy consent from migration.",
+  "coverage": "Assessed current delivered setup procedure and existing configuration against standing repository intent. The changed README describes the merged first-contact install/setup journey; this source checkout already has the native invocation, startup source, modules and required-best-fit Assignment. No new setup policy is needed for #3588. Preserve source admissions, optional choices and local transport/privacy policy. Current source-checkout build, startup delivery, native Planning and actual configured Terra dispatch were observed; public-release first-contact acceptance remains owned by #3558.",
   "dependencies": [
     {
       "identity": ".agentic-workspace/config.toml",
@@ -19,7 +19,7 @@
     },
     {
       "identity": "README.md",
-      "revision": "sha256:1c74e97cf6286437adc09d5416650af8dcfa6b924dba2d6ce469c03df02f94f5",
+      "revision": "sha256:756932059516e5146ed570b5c4650a4bb358c13a9719c875f944a940af3c5fb1",
       "scheme": "universal-newline-utf8",
       "status": "current"
     },
@@ -52,8 +52,8 @@
       "subject": "preferences"
     },
     {
-      "reason": "Planning, Memory and Verification execute through native owners; existing system-intent source-currentness and Assignment admission remain unresolved. Migration proof does not settle these admissions.",
-      "resume": "System-intent and Assignment source owners must resolve their existing exact admission requests before dependent integration or completion claims.",
+      "reason": "Native Planning and configured Assignment are exercised for #3588. Existing system-intent source-currentness remains unresolved; these observations do not settle its source admission.",
+      "resume": "System-intent owner must reconcile its exact retained interpretation before dependent system-direction or whole-integration claims.",
       "status": "blocked",
       "subject": "Native module and source admissions"
     },

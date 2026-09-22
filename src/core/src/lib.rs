@@ -96,11 +96,16 @@ const TASK: &str = "task";
 const CONSEQUENCE_PREFIXES: [&str; 5] = ["action:", "decision:", "effect:", "claim:", "outcome:"];
 
 #[derive(Debug, Clone)]
-pub struct CoreError(String);
+pub struct CoreError(String, Option<native_delegation::DispatchMismatch>);
 
 impl CoreError {
     fn new(message: impl Into<String>) -> Self {
-        Self(message.into())
+        Self(message.into(), None)
+    }
+
+    fn dispatch_mismatch(mut self, mismatch: native_delegation::DispatchMismatch) -> Self {
+        self.1.get_or_insert(mismatch);
+        self
     }
 }
 

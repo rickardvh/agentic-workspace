@@ -320,6 +320,13 @@
     }
   },
   "execution_continuity": {
+    "dispatch_revalidation": {
+      "dependency_carriage": "Include delivered startup source requests before sealing handoffs and Planning continuations; invoke revalidates the exact returned dependency set.",
+      "rejection_code": "delegation-dispatch-revalidation-failed",
+      "dependency_classes": ["current-work", "assignment-handoff", "execution-configuration", "capability-owner", "startup-source", "request-carriage", "dependency-resolution"],
+      "recovery": "Bounded error.dependency and error.recovery_owner identify the first failing boundary. Resolve fresh owner requests through start; never blindly retry a dispatch or infer absent effects after effect-owner entry.",
+      "privacy": "Diagnostic fields contain no submitted or expected packet, prompt, path or provider values. Existing caller-supplied recovery custody remains separate."
+    },
     "binding_dispatch": "Carry exact ready dispatch only for binding nonlocal current Assignment and supported selected transport; no automatic invoke. Exact in-flight custody blocks relaunch.",
     "planning_continuity": "Current admitted owner custody carries exact sealed-handoff retention, admitted integrated return adoption and same-owner pending-update recovery. Semantic relation, selector permission and new plan material remain explicit.",
     "no_op": "Identical retained handoff or consumed result does not synthesize a new durable update.",

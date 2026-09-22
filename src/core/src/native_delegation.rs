@@ -8,6 +8,88 @@ const KIND: &str = "delegation/dispatch/v1";
 pub(crate) const PRIOR: &str = "delegation/reconcile-prior-result/v1";
 pub(crate) const READ: &str = "delegation/read-result/v1";
 const OP: &str = "delegation.dispatch";
+
+/// Bounded owner diagnostics, never expected/actual packets or worker context.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum DispatchMismatch {
+    CurrentWork,
+    AssignmentHandoff,
+    ExecutionConfiguration,
+    CapabilityOwner,
+    StartupSource,
+    Carriage,
+    Resolution,
+}
+
+impl DispatchMismatch {
+    pub(crate) fn diagnostic(self) -> Value {
+        let (family, owner) = match self {
+            Self::CurrentWork => ("current-work", "assignment"),
+            Self::AssignmentHandoff => ("assignment-handoff", "assignment"),
+            Self::ExecutionConfiguration => ("execution-configuration", "assignment"),
+            Self::CapabilityOwner => ("capability-owner", "delegation"),
+            Self::StartupSource => ("startup-source", "startup-adapter"),
+            Self::Carriage => ("request-carriage", "delegation"),
+            Self::Resolution => ("dependency-resolution", "delegation"),
+        };
+        json!({"code":"delegation-dispatch-revalidation-failed","dependency":family,
+            "recovery_owner":owner,"message":format!("Dispatch {family} is changed, inconsistent or unavailable; resolve fresh current owner requests through start before obtaining a new dispatch action.")})
+    }
+}
+
+pub(crate) fn validate_dispatch_context(
+    work: &Value,
+    requests: &[Value],
+    contract: &Value,
+) -> Result<(), CoreError> {
+    for request in requests {
+        let mismatch = if request["task_identity"] != *work {
+            Some(DispatchMismatch::CurrentWork)
+        // Route selection has its own contract, revalidated by that owner
+        // before this composed capability contract is constructed.
+        } else if request["owner"] != "semantic-routes"
+            && (request["capability_revision"] != contract["revision"]
+                || !contract["owners"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|owner| {
+                        owner["owner"] == request["owner"]
+                            && owner["revision"] == request["owner_revision"]
+                    }))
+        {
+            Some(DispatchMismatch::CapabilityOwner)
+        } else {
+            None
+        };
+        if let Some(mismatch) = mismatch {
+            return Err(error("dispatch dependency changed").dispatch_mismatch(mismatch));
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_execution_context(
+    invocation: &Value,
+    requirements: &Value,
+) -> Result<(), CoreError> {
+    let selected = &invocation["arguments"]["packet"]["assignment_identity"]["current_assignment"]
+        ["selected"]["configuration"];
+    let current = requirements["execution_configurations"]["configurations"]["candidates"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|row| row["configuration"]["id"] == selected["id"]);
+    if current
+        .is_none_or(|row| row["configuration"]["execution"] != invocation["arguments"]["execution"])
+    {
+        return Err(error("selected execution configuration changed")
+            .dispatch_mismatch(DispatchMismatch::ExecutionConfiguration));
+    }
+    // This comparison only diagnoses rejection. Full Assignment, sealed packet,
+    // exact action and attempt custody admission still run before any launch.
+    Ok(())
+}
 /// Custody recovers only the original mutation baseline. Current work, policy,
 /// dependencies and exact packet identity are still re-derived by the owners.
 pub(crate) fn retained_packet(
@@ -189,11 +271,18 @@ pub(crate) fn view(
         if let Some(request) = submitted_request {
             crate::prepare_request_value(
                 json!({"request":request,"current_work":work,"capability_contract":contract}),
-            )?;
+            )
+            .map_err(|error| error.dispatch_mismatch(DispatchMismatch::Carriage))?;
             if *request != template {
-                return Err(error(
-                    "delegation handoff or execution configuration changed",
-                ));
+                let mismatch = if request["arguments"]["handoff_revision"]
+                    != template["arguments"]["handoff_revision"]
+                {
+                    DispatchMismatch::AssignmentHandoff
+                } else {
+                    DispatchMismatch::Carriage
+                };
+                return Err(error(mismatch.diagnostic()["message"].as_str().unwrap())
+                    .dispatch_mismatch(mismatch));
             }
             actions.push(json!({"operation_id":OP,"dependency_revision":source,"arguments":{"target":target,"packet":packet,"execution":selected["execution"]},"effects":["delegation-execution"],"source_requests":submitted}));
         } else {
@@ -209,9 +298,10 @@ pub(crate) fn view(
             }
         }
     } else if submitted_request.is_some() {
-        return Err(error(
-            "current sealed process handoff required before delegation execution",
-        ));
+        return Err(
+            error("current sealed process handoff required before delegation execution")
+                .dispatch_mismatch(DispatchMismatch::AssignmentHandoff),
+        );
     }
     if ready && prior_request.is_none() {
         let mut packet = submitted.to_vec();

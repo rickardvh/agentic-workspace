@@ -97,7 +97,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         worker.write_text(
             "import json,sys\nfrom pathlib import Path\n"
             "from agentic_workspace import sealed_codex_transport as host\n"
-            "host.native_transport.discover=lambda *a,**k: {'revision':'fixture','expires_at':99999999999,'modes':['fresh'],'parameters':['model'],'models':[{'model':'fixture'}]}\n"
+            "host.native_transport.discover=lambda *a,**k: {'revision':Path('capability-revision').read_text() if Path('capability-revision').exists() else 'fixture','expires_at':99999999999,'modes':['fresh'],'parameters':['model'],'models':[{'model':'fixture'}]}\n"
             "def execute(root,snapshot,selection,prompt,schema,**kw):\n"
             " assert selection['parameters']=={'model':'fixture'} and selection['mode']=='fresh'\n"
             " assert set(schema['properties'])=={'summary','patch','changed_paths','stop_conditions_hit','result_delivery'}\n"
@@ -108,6 +108,11 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
             "host.native_transport.execute=execute\n"
             "host.main()\n"
         )
+    if surface == "native" and fault is None and not host and not repair_evaluation:
+        # Automatic startup context is an action dependency. It must be present
+        # before sealing a handoff, not appended only after its identity is bound.
+        (source.parent / "config.toml").write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
+        (tmp_path / "AGENTS.md").write_text("Preserve source custody and return observations only.\n")
     source.write_text(config)
     config_revision = hashlib.sha256(source.read_bytes()).hexdigest()
     dependency = tmp_path / "dependency.md"
@@ -230,6 +235,58 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     action = next(action for action in dispatch_view["decision_packet"]["ready_actions"] if action["operation_id"] == "delegation.dispatch")
     assert action["operation_id"] == "delegation.dispatch"
     assert not (tmp_path / "launches.txt").exists()
+    if surface == "native" and fault is None and not repair_evaluation:
+
+        def rejected(carried=action, family="request-carriage", **updates):
+            result = consume(
+                surface,
+                shared_core_binary,
+                native_cli,
+                {**context, **updates, "invocation": carried},
+                allow_failure=True,
+            )
+            assert result["effect_outcome"]["status"] == "rejected-before-effect"
+            assert result["effects"] == [] and result["continuation"]["retry_effect"] is False
+            assert result["error"]["code"] == "delegation-dispatch-revalidation-failed"
+            assert result["error"]["dependency"] == family
+            diagnostic = json.dumps(result["error"])
+            assert len(diagnostic) < 512 and str(tmp_path) not in diagnostic
+            assert "PRIVATE_CARRIAGE_MARKER" not in diagnostic
+            assert "start" in result["error"]["message"] and result["error"]["recovery_owner"]
+            assert not (tmp_path / "launches.txt").exists()
+
+        if host:
+            capability_revision = tmp_path / "capability-revision"
+            capability_revision.write_text("changed-host-capability")
+            rejected(family="execution-configuration")
+            capability_revision.unlink()
+        else:
+            rejected(family="current-work", task=context["task"] + " changed")
+            original_input = dependency.read_bytes()
+            dependency.write_text("Changed sealed input.")
+            rejected(family="assignment-handoff")
+            dependency.write_bytes(original_input)
+            startup = tmp_path / "AGENTS.md"
+            original_startup = startup.read_bytes()
+            startup.write_text("Changed startup source.")
+            rejected(family="startup-source")
+            startup.write_bytes(original_startup)
+            for field, family in [
+                ("owner_revision", "capability-owner"),
+                ("capability_revision", "capability-owner"),
+                ("id", "request-carriage"),
+            ]:
+                forged = copy.deepcopy(action)
+                request = next(r for r in forged["source_requests"] if r["request_kind"] == "delegation/dispatch/v1")
+                request[field] = "sha256:" + "0" * 64 if field == "capability_revision" else "PRIVATE_CARRIAGE_MARKER"
+                rejected(forged, family)
+            malformed = copy.deepcopy(action)
+            malformed["source_requests"].append({"PRIVATE_CARRIAGE_MARKER": "not a request"})
+            rejected(malformed)
+            # Unrelated file bytes are outside the sealed dependency basis.
+            unrelated.write_text("An unrelated edit before dispatch.\n")
+            assert next(a for a in call(export)["decision_packet"]["ready_actions"] if a["operation_id"] == "delegation.dispatch") == action
+            unrelated.write_text("Preserve concurrent work.\n")
     result = call(invocation=action)
     cost = result["value"]["context_cost"]
     assert cost["assignment_packet_bytes"] == len(
