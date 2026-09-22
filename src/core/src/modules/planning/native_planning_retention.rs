@@ -115,8 +115,13 @@ fn terminal(path: &str, bytes: &[u8]) -> bool {
 
 fn observe_sources(root: &Dir) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
     let mut sources = BTreeMap::new();
+    files(root, ".agentic-workspace/planning", &mut sources)?;
+    observe_consumers(root, &mut sources)?;
+    Ok(sources)
+}
+
+fn observe_consumers(root: &Dir, sources: &mut BTreeMap<String, Vec<u8>>) -> Result<(), CoreError> {
     for path in [
-        ".agentic-workspace/planning",
         ".agentic-workspace/proof",
         ".agentic-workspace/memory",
         ".agentic-workspace/verification",
@@ -126,7 +131,7 @@ fn observe_sources(root: &Dir) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
         ".agentic-workspace/instructions",
         ".agentic-workspace/local/decision-point-intent",
     ] {
-        files(root, path, &mut sources)?;
+        files(root, path, sources)?;
     }
     // Local selection and work continuation are consumers, not disposable history.
     for path in [
@@ -144,7 +149,7 @@ fn observe_sources(root: &Dir) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
             sources.insert(path.into(), bytes);
         }
     }
-    Ok(sources)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -157,7 +162,17 @@ fn inventory_for(
     preferred: &[String],
 ) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let sources = observe_sources(&root)?;
+    let mut sources = BTreeMap::new();
+    files(&root, ".agentic-workspace/planning", &mut sources)?;
+    // Ordinary reads need no cross-owner graph unless Planning has a terminal
+    // candidate. Reuse this scan when group analysis is actually required.
+    if !sources
+        .iter()
+        .any(|(path, bytes)| terminal(path, bytes) && selected["ref"] != path.as_str())
+    {
+        return Ok(json!({"sources":{},"required":{},"selected":selected["ref"],"protected":[]}));
+    }
+    observe_consumers(&root, &mut sources)?;
     let mut eligible = BTreeSet::new();
     let mut provenance = BTreeSet::new();
     let mut proof_subjects = BTreeMap::new();
@@ -990,6 +1005,27 @@ mod tests {
         junction::create(&outside.0, &link).unwrap();
         #[cfg(unix)]
         std::os::unix::fs::symlink(&outside.0, &link).unwrap();
+        assert!(inventory(&f.0, &Value::Null).is_err());
+        assert!(outside.0.join("terminal.json").exists());
+        #[cfg(windows)]
+        junction::delete(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
+
+        // Unrelated consumer trees are not a dependency of a no-candidate read.
+        // A linked tree makes accidental eager enumeration observable without
+        // a timing threshold. Once a candidate exists, confinement still applies.
+        let link = f.0.join(".agentic-workspace/proof");
+        #[cfg(windows)]
+        junction::create(&outside.0, &link).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&outside.0, &link).unwrap();
+        assert_eq!(inventory(&f.0, &Value::Null).unwrap()["sources"], json!({}));
+        let selected = f.archive("selected");
+        assert_eq!(
+            inventory(&f.0, &json!({"ref":selected})).unwrap()["sources"],
+            json!({})
+        );
         assert!(inventory(&f.0, &Value::Null).is_err());
         assert!(outside.0.join("terminal.json").exists());
         #[cfg(windows)]
