@@ -131,6 +131,8 @@ fn resolve_selected(
                 && i["operation_id"] != "configuration.skill-exposure"
                 && i["operation_id"] != "configuration.repository-adoption"
                 && i["operation_id"] != "configuration.recover-write"
+                && i["operation_id"] != crate::native_planning_retention::OP
+                && i["operation_id"] != crate::native_planning_retention::RECOVERY
                 && i["operation_id"] != "memory.dispose"
                 && i["operation_id"] != "memory.recover-disposition"
                 && i["operation_id"] != "memory.capture-decision"
@@ -931,6 +933,31 @@ fn resolve_selected(
             "Direct task posture cannot request planning.create; use independent with planned posture.",
         ));
     }
+    if available("planning") {
+        let request = requests.iter().find(|r| {
+            matches!(
+                r["request_kind"].as_str(),
+                Some(
+                    crate::native_planning_retention::REQUEST
+                        | crate::native_planning_retention::RECOVER
+                )
+            )
+        });
+        let retention =
+            crate::native_planning_retention::view(target, &work, &contract, &planning, request)?;
+        if retention["action"].is_object() {
+            let owner = contributions
+                .iter_mut()
+                .find(|c| c["owner"] == "planning")
+                .unwrap();
+            let mut actions = owner["actions"].as_array().cloned().unwrap_or_default();
+            actions.push(retention["action"].clone());
+            owner["actions"] = json!(actions);
+            owner["settled"] = json!(false);
+            owner["revision"] = json!(digest(&json!([owner["revision"], retention["action"]]))?);
+        }
+        planning["terminal_retention"] = retention;
+    }
     let mut creation = crate::native_planning_create::view(
         target,
         &work,
@@ -1355,6 +1382,8 @@ fn resolve_selected(
                     action["operation_id"].as_str(),
                     Some(
                         "proof.report"
+                            | crate::native_planning_retention::OP
+                            | crate::native_planning_retention::RECOVERY
                             | "configuration.write"
                             | "configuration.recover-write"
                             | "configuration.defer-choice"
@@ -1844,6 +1873,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && !crate::native_resource_owner::operation(&invocation["operation_id"])
         && invocation["operation_id"] != "planning.reconcile"
         && invocation["operation_id"] != "proof.report"
+        && invocation["operation_id"] != crate::native_planning_retention::OP
+        && invocation["operation_id"] != crate::native_planning_retention::RECOVERY
         && invocation["operation_id"] != "planning.create"
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
@@ -2049,6 +2080,28 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         result["value"]["reentry"] =
             crate::native_delegation::result_reentry(&executed, invocation)?;
         return Ok(result);
+    }
+    if matches!(
+        invocation["operation_id"].as_str(),
+        Some(crate::native_planning_retention::OP | crate::native_planning_retention::RECOVERY)
+    ) {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        progress.entered_effect_owner = true;
+        let executed = crate::native_planning_retention::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
     }
     if invocation["operation_id"] == "planning.update-recover" {
         crate::admit_invocation_value(

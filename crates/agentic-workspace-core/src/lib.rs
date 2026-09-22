@@ -42,6 +42,7 @@ pub(crate) mod native_patch;
 mod native_payload;
 mod native_planning;
 mod native_planning_create;
+mod native_planning_retention;
 mod native_planning_update;
 mod native_procedure;
 mod native_procedure_answer;

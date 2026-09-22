@@ -389,13 +389,20 @@ pub fn restrict_pending(
                 action["operation_id"].as_str(),
                 Some(
                     "planning.reconcile"
+                        | crate::native_planning_retention::OP
+                        | crate::native_planning_retention::RECOVERY
                         | "planning.create"
                         | "planning.update"
                         | "planning.update-recover"
                 )
             )
     }) {
-        let writes = if action["operation_id"] == "planning.update-recover" {
+        let writes = if matches!(
+            action["operation_id"].as_str(),
+            Some(crate::native_planning_retention::OP | crate::native_planning_retention::RECOVERY)
+        ) {
+            crate::native_planning_retention::write_scope(action)?
+        } else if action["operation_id"] == "planning.update-recover" {
             let mut writes = crate::attempt_store::write_paths(
                 &json!({"idempotency_key":action["logical_effect_id"]}),
             )?;

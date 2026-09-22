@@ -633,7 +633,9 @@ fn resolve_context(
         update_declaration,
         recovery_declaration,
         adoption_declaration,
-        handoff_declaration
+        handoff_declaration,
+        crate::native_planning_retention::declarations(),
+        crate::native_planning_retention::operations()
     ]))?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,posture_declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task","effect:planning-state","claim:complete"]}]});
     {
@@ -667,6 +669,14 @@ fn resolve_context(
             crate::native_planning_update::operation(),
             crate::native_planning_update::recovery_operation(),
         ]);
+    contract["owners"][0]["requests"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_planning_retention::declarations());
+    contract["owners"][0]["operations"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_planning_retention::operations());
     contract["revision"] = json!(digest(&contract)?);
     let validation_contract = current_full_contract.unwrap_or(&contract);
     let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":"planning/continuation/v1","owner":"planning","owner_revision":owner_revision,"source_revision":revision,"capability_revision":validation_contract["revision"],"task_identity":current_work,"request_kind":"planning/continuation/v1","arguments":{"answer":"continue-selected"}});
