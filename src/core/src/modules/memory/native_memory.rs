@@ -551,6 +551,24 @@ pub(crate) fn public_view(
         contract["restriction_authorities"] =
             json!([{"owner":"memory","affects":["task","effect:memory-state","claim:complete"]}]);
     }
+    let owner = &mut contract["owners"][0];
+    owner["domains"] = json!(["memory"]);
+    owner["effects"] = json!([{"id":"memory-state","domain":"memory"}]);
+    if !owner["operations"].is_array() {
+        owner["operations"] = json!([]);
+    }
+    owner["operations"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_memory_retention::operations());
+    owner["requests"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_memory_retention::declarations());
+    owner["revision"] = json!(crate::digest(&json!([
+        owner["requests"],
+        owner["operations"]
+    ]))?);
     let owner_revision = contract["owners"][0]["revision"].clone();
     contract["revision"] = json!(crate::digest(&contract)?);
     let validation = full_contract.unwrap_or(&contract);

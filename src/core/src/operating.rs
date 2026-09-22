@@ -297,6 +297,18 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
+    let retention = &full["memory"]["terminal_retention"];
+    if matches!(
+        retention["status"].as_str(),
+        Some("judgment-required" | "recovery-required")
+    ) {
+        result["memory_retention"] = json!({
+            "status":retention["status"],
+            "candidate_count":retention["sources"].as_object().map_or(0, |s| s.len()),
+            "reference":result["detail_refs"]["/memory"],
+            "authority":"Current Memory disposition required; discovery grants no deletion authority."
+        });
+    }
     let retention = &full["planning"]["terminal_retention"];
     if matches!(
         retention["status"].as_str(),

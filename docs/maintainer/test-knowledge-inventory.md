@@ -160,3 +160,14 @@ native proof, Planning closeout and proof expiry, with an unresolved-owner contr
 and a bounded tracked footprint. Closed-group, outside-consumer and read-only
 nomination cases cover the new selection boundaries. Long cycle counts remain an
 explicit proof run, rather than a permanent expensive default for every test run.
+
+## Memory terminal lifetime (#3552, #3576)
+
+Native terminal-disposition cases cover manifest/source interruption recovery,
+consumer arrival, exact manifest siblings and line endings, linked-source
+confinement, and readonly value nomination. The three-cycle default captures and
+retires real native advisory notes; an explicit 200-cycle run demonstrates bounded
+checked-in state without imposing that cost on every ordinary test invocation.
+Existing cross-language Memory capture/disposition/declaration cases retain the
+transport and human-answer boundaries. The actual corpus's retained value is
+recorded in [Memory lifetime](memory-lifetime-boundary.md).

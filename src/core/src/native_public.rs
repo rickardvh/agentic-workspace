@@ -131,6 +131,8 @@ fn resolve_selected(
                 && i["operation_id"] != "configuration.skill-exposure"
                 && i["operation_id"] != "configuration.repository-adoption"
                 && i["operation_id"] != "configuration.recover-write"
+                && i["operation_id"] != crate::native_memory_retention::OP
+                && i["operation_id"] != crate::native_memory_retention::RECOVERY
                 && i["operation_id"] != crate::native_planning_retention::OP
                 && i["operation_id"] != crate::native_planning_retention::RECOVERY
                 && i["operation_id"] != crate::native_proof_retention::OP
@@ -935,6 +937,28 @@ fn resolve_selected(
             "Direct task posture cannot request planning.create; use independent with planned posture.",
         ));
     }
+    if available("memory") {
+        let request = requests.iter().find(|r| {
+            matches!(
+                r["request_kind"].as_str(),
+                Some(
+                    crate::native_memory_retention::REQUEST
+                        | crate::native_memory_retention::RECOVER
+                )
+            )
+        });
+        let retention = crate::native_memory_retention::view(target, &work, &contract, request)?;
+        if retention["action"].is_object() {
+            let owner = &mut memory["contribution"];
+            let mut actions = owner["actions"].as_array().cloned().unwrap_or_default();
+            actions.push(retention["action"].clone());
+            owner["actions"] = json!(actions);
+            owner["settled"] = json!(false);
+            owner["relevant"] = json!(true);
+            owner["revision"] = json!(digest(&json!([owner["revision"], retention["action"]]))?);
+        }
+        memory["terminal_retention"] = retention;
+    }
     if available("planning") {
         let request = requests.iter().find(|r| {
             matches!(
@@ -1400,6 +1424,8 @@ fn resolve_selected(
                     action["operation_id"].as_str(),
                     Some(
                         "proof.report"
+                            | crate::native_memory_retention::OP
+                            | crate::native_memory_retention::RECOVERY
                             | crate::native_planning_retention::OP
                             | crate::native_planning_retention::RECOVERY
                             | crate::native_proof_retention::OP
@@ -1893,6 +1919,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && !crate::native_resource_owner::operation(&invocation["operation_id"])
         && invocation["operation_id"] != "planning.reconcile"
         && invocation["operation_id"] != "proof.report"
+        && invocation["operation_id"] != crate::native_memory_retention::OP
+        && invocation["operation_id"] != crate::native_memory_retention::RECOVERY
         && invocation["operation_id"] != crate::native_planning_retention::OP
         && invocation["operation_id"] != crate::native_planning_retention::RECOVERY
         && invocation["operation_id"] != crate::native_proof_retention::OP
@@ -2112,6 +2140,28 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         )?;
         progress.entered_effect_owner = true;
         let executed = crate::native_proof_retention::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
+    }
+    if matches!(
+        invocation["operation_id"].as_str(),
+        Some(crate::native_memory_retention::OP | crate::native_memory_retention::RECOVERY)
+    ) {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        progress.entered_effect_owner = true;
+        let executed = crate::native_memory_retention::execute(
             &target,
             &current["decision_packet"],
             invocation,

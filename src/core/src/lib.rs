@@ -2398,3 +2398,6 @@ mod retention_sources;
 
 #[path = "modules/verification/native_proof_retention.rs"]
 mod native_proof_retention;
+
+#[path = "modules/memory/native_memory_retention.rs"]
+mod native_memory_retention;

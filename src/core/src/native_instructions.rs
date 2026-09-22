@@ -387,11 +387,18 @@ pub fn restrict_pending(
     }
 
     for action in pending.iter().filter(|action| {
-        (action["source_owner"] == "verification"
+        (action["source_owner"] == "memory"
             && matches!(
                 action["operation_id"].as_str(),
-                Some(crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY)
+                Some(crate::native_memory_retention::OP | crate::native_memory_retention::RECOVERY)
             ))
+            || (action["source_owner"] == "verification"
+                && matches!(
+                    action["operation_id"].as_str(),
+                    Some(
+                        crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY
+                    )
+                ))
             || (action["source_owner"] == "planning"
                 && matches!(
                     action["operation_id"].as_str(),
@@ -406,6 +413,11 @@ pub fn restrict_pending(
                 ))
     }) {
         let writes = if matches!(
+            action["operation_id"].as_str(),
+            Some(crate::native_memory_retention::OP | crate::native_memory_retention::RECOVERY)
+        ) {
+            crate::native_memory_retention::write_scope(action)?
+        } else if matches!(
             action["operation_id"].as_str(),
             Some(crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY)
         ) {
