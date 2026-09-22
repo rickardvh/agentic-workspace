@@ -53,7 +53,10 @@ def stage_crate(root, crate, destination, source):
         def relocate(match):
             dependency = (source_file.parent / match[2]).resolve()
             if dependency.is_relative_to(origin.resolve()) and dependency.suffix != ".rs":
-                return match[0]
+                # Only src/ is copied wholesale. Crate-local contracts outside
+                # that subtree still need an explicit compile-input projection.
+                if (destination / dependency.relative_to(origin.resolve())).is_file():
+                    return match[0]
             target = copy_input(dependency)
             relocated = os.path.relpath(target, (destination / relative).parent).replace("\\", "/")
             return match[1] + json.dumps(relocated) + match[3]
