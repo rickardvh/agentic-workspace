@@ -1,0 +1,91 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "agent_may_decide": "Thin setup UX, bounded decomposition, source-owned docs contraction and lowest sufficient proof.",
+    "escalate_when": "Real owner authority gap, required unavailable published product, or irreducible human choice.",
+    "hard_constraints": "Preserve human policy, custom content, pointer-only fence and exact owner custody; fail closed on conflicts or stale approval; no self-review or proxy reviewer."
+  },
+  "continuation": {
+    "owner": "first-contact-lane",
+    "residual_intent": "Complete all three authorised layers. Configured Terra inventory dispatch rejected before effect: handoff or execution configuration changed; no child ran. Preserve recovery and assess local fallback."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/520bcf003a83fb171096d66cb87dde3f4ae90c02a28523631514a91121dd5f41.attempt.json",
+        "revision": "sha256:f214c78aa74dc07d4b248df4636848ae5c7df8c83b516c23e2a68617a0f9d39a",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/520bcf003a83fb171096d66cb87dde3f4ae90c02a28523631514a91121dd5f41.result.json",
+        "revision": "sha256:a41c7e51fe2c5bca046f04c8adb3135e7bb6658eaf8380281985cce9133dfefb",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:b2212382494a610b3c50c5743d32144aa6856934ef40ca9a8231a835f299bf99",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:c5b585bb3632c6fb65a7dff8526bc6412b43f2934a439afc9074c0338aad3de7"
+  },
+  "id": "work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8",
+  "intent": {
+    "non_goals": [
+      "No independent approval or merge. No alternate adoption writer, optional-module setup mandate, or documentation framework."
+    ],
+    "outcome": "Implement #3559 -> #3558 -> #3562 in coherent stacked PRs: install, authorise repository adoption, then ordinary agent work; concise guides with exact reference preserved."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Implement #3559 setup through existing owner; then #3558 onboarding/currentness; then #3562 style and mixed-role corpus contraction. Reassess each ready independent child for configured delegation.",
+  "owner_level": "lane",
+  "parent": {
+    "closure_boundary": "Implementation and bounded proof; public release journey and independent acceptance stay separately reported.",
+    "contribution": "First-contact product and documentation lane",
+    "owner_id": "github-3562"
+  },
+  "phase": "shaping",
+  "proof": {
+    "claims": [
+      "Implementation not yet complete. Native adoption semantics reused; public package acceptance needs a published command."
+    ],
+    "refs": [],
+    "requirements": [
+      "Existing native adoption owner tests plus bounded installed CLI journey",
+      "Current release identity and installed startup route negatives",
+      "Documentation links, subtraction inventory and fresh-reader procedure walkthrough"
+    ]
+  },
+  "references": [],
+  "relationships": {
+    "dependencies": {
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/3559",
+        "https://github.com/rickardvh/agentic-workspace/issues/3558",
+        "https://github.com/rickardvh/agentic-workspace/issues/3562"
+      ]
+    }
+  },
+  "revision": 1,
+  "scope": {
+    "effects": [
+      "Native setup composition, generated contracts, guide contraction, installed journey validation and stacked PRs."
+    ],
+    "owned": [
+      "src/cli",
+      "src/core/contracts",
+      "src/tooling",
+      "tests",
+      "README.md",
+      "docs",
+      ".agentic-workspace/skills",
+      ".release/changes"
+    ]
+  },
+  "title": "First-contact lane: human setup, current onboarding, concise guides"
+}

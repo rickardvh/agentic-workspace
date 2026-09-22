@@ -4,14 +4,28 @@ Use this reference when implementing a client that manages AW's repository integ
 
 Installation supplies the executable. **Adoption** establishes its small repository integration. **Refresh** reconciles that integration with the installed package. **Removal** relinquishes the package integration without deleting independent project data.
 
+## Human setup entry point
+
+From the Git working-tree root, `agentic-workspace setup` proposes adoption or
+refresh and asks before applying it. It preserves surrounding `AGENTS.md` prose
+and independently owned state. `--dry-run --format json` shows the exact proposed
+file changes; `--yes` authorises that bounded proposal for automation. JSON mode
+does not prompt. `--recover` explicitly selects an interrupted owner transaction
+for inspection and authorisation. A stale proposal fails closed; inspect a fresh
+proposal before retrying. Successful setup ends with ordinary agent work.
+
+This command is in the development version; published 1.2.0 does not contain it.
+The composition below remains the integration protocol and the only repository
+writer. Python, npm and Cargo launch the same Rust CLI composition.
+
 ## Automatic setup assessment
 
 Ordinary native `start` exposes Configuration's `setup_assessment` independently
 of task wording and payload-target policy. Compact entry provides a consequence
 route to the same owner. The main skill obtains that observation at session entry
 and after a possible dependency change, reusing a sufficient current observation.
-Existing users may run AW/setup manually once to establish the stable entry
-through ordinary adoption/refresh. This updates only the existing managed fence.
+Existing users may run `agentic-workspace setup` to refresh the installed package
+integration, including the managed fence.
 Subsequent compatible changes are observed at ordinary entry. Installation only
 supplies the executable: there are no package-manager or interpreter hooks.
 Without runtime observation an external update is unknown.

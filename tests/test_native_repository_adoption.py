@@ -12,6 +12,40 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_human_setup_authorisation_preservation_and_recovery(tmp_path, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    agents = tmp_path / "AGENTS.md"
+    agents.write_text("Repository-owned instructions.\n", encoding="utf-8")
+
+    def setup(*args, success=True):
+        result = subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), *args], capture_output=True, text=True)
+        assert (result.returncode == 0) is success, result.stderr
+        return result
+
+    proposal = json.loads(setup("--dry-run", "--format", "json").stdout)
+    assert proposal["status"] == "authorization-required"
+    assert "AGENTS.md" in proposal["updated"]
+    assert not (tmp_path / ".agentic-workspace").exists()
+    setup("--format", "json", success=False)
+    assert not (tmp_path / ".agentic-workspace").exists()
+    result = json.loads(setup("--yes", "--format", "json").stdout)
+    assert result["effect_outcome"]["status"] == "committed"
+    assert agents.read_text().startswith("Repository-owned instructions.\n")
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file() and ".git" not in p.parts}
+    assert "already-current" in setup().stdout
+    assert before == {p: p.read_bytes() for p in before}
+    # Withhold the real committed receipt: the same owner must recover its exact
+    # interrupted publication, and ordinary setup must never silently replay it.
+    (tmp_path / result["custody"]["committed"]["path"]).unlink()
+    assert "recovery-required" in setup("--yes", success=False).stdout
+    recovered = json.loads(setup("--recover", "--yes", "--format", "json").stdout)
+    assert recovered["effect_outcome"]["status"] == "committed"
+    skill = tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    skill.write_text("Custom body must survive.\n", encoding="utf-8")
+    assert "preserved-blocked" in setup("--yes", success=False).stdout
+    assert skill.read_text() == "Custom body must survive.\n"
+
+
 def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_path, shared_core_binary, native_cli):
     source = json.loads((ROOT / "src/tooling/contracts/source_maintenance_surfaces.json").read_text())
     host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())

@@ -4,14 +4,15 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:9cc026ce1db170575f7aac2b1723430e585e4d347e48a50e52dfb5e5e204a78f`
+- Contract digest: `sha256:6360604047c96bf4cb3e583c22b707e994b0e8762c8dcdf8f8d889302a5d2813`
 - Program: `agentic-workspace`
-- Command count: 4
+- Command count: 5
 
 ## Commands
 
 | Command | Requires JSON input | Purpose |
 | --- | --- | --- |
+| `agentic-workspace setup` | no | Add or refresh AW in this repository; show the proposal and ask before writing. |
 | `agentic-workspace worker` | yes | Project bounded worker entry, expand an exact captured input, or assemble unproven return re-entry from a sealed Assignment packet. |
 | `agentic-workspace resources` | yes | Propose with a resource request; execute by passing the exact returned action envelope unchanged to --input. Explicit context flags must match; omitted context comes from the envelope. |
 | `agentic-workspace start` | no | Resolve the current operating decision. |
@@ -24,12 +25,15 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--target` | . | — | Repository target (default: current directory). |
 | `--task` | — | — | Current task text; semantics remain agent-owned. |
 | `--changed` | — | — | Changed paths; accepts multiple values and repetition. |
-| `--format` | json | json | Output format (json). |
+| `--format` | json | json, text | Output format: setup defaults to text; machine commands use json. |
 | `--projection` | — | compact, full, carried | Compact executable decision (default), full detail, or view plus disposable exact carriage for a thin host. |
 | `--reference` | — | — | Exact immutable reference from carried output; --input supplies the machine-carried object. |
 | `--answer` | — | — | JSON bounded answer for an exact carried decision reference; all owner material remains unchanged. |
 | `--delivered` | — | — | Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations. |
 | `--input` | — | — | JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action. |
+| `--yes` | — | — | Authorise the exact setup proposal (setup only). |
+| `--dry-run` | — | — | Show the setup proposal without changes (setup only). |
+| `--recover` | — | — | Inspect and authorise an interrupted setup (setup only). |
 
 Use `--help` for the installed artefact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.
 

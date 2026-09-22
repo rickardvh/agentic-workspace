@@ -11,6 +11,7 @@ public command and option declarations come from `source_decision_contract.json`
 
 | Command | Current purpose |
 | --- | --- |
+| `setup` | Propose repository adoption/refresh and obtain explicit authorisation; `--recover` selects interrupted custody. |
 | `start` | Resolve current owner information, requests and available effects. |
 | `invoke` | Execute an exact action returned by its current owner. |
 | `worker` | Project sealed Assignment input or assemble unproven return re-entry. |
