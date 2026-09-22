@@ -1002,7 +1002,7 @@ def test_public_read_real_repository_decision_preserves_currentness(
     context = {
         "target": str(tmp_path),
         "task": "Review the public semantic boundary",
-        "changed": ["src/core/src/lib.rs"],
+        "changed": [record["scope"][0].removeprefix("path:")],
     }
 
     def call(value: dict) -> dict:
