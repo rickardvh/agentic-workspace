@@ -230,3 +230,21 @@ def test_trusted_loader_never_executes_worktree_replacement_and_eligibility_stay
     assert result.returncode == 2
     assert "unreviewed replacement" not in result.stderr
     assert "eligibility must be established" in json.loads(result.stdout)["reason"]
+
+
+def test_review_owner_identity_uses_native_planning_selection(tmp_path, shared_core_binary, monkeypatch):
+    from aw_maintainer.review_topology import current_review_owner_identity
+
+    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
+    assert current_review_owner_identity(tmp_path) == {}
+    ref = ".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json"
+    plan = tmp_path / ref
+    plan.parent.mkdir(parents=True)
+    plan.write_bytes((ROOT / ref).read_bytes())
+    (plan.parent.parent / "state.toml").write_text(
+        f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{ref}"\nstatus="active"\n', encoding="utf-8"
+    )
+    assert current_review_owner_identity(tmp_path) == {
+        "owner_ref": ref,
+        "owner_revision": "sha256:" + hashlib.sha256(plan.read_bytes()).hexdigest(),
+    }

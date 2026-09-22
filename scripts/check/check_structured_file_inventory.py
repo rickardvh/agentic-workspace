@@ -25,12 +25,6 @@ SCHEMA_RELATIVE_PATH = Path("src/agentic_workspace/contracts/schemas/structured_
 INVENTORY_PATH = REPO_ROOT / INVENTORY_RELATIVE_PATH
 SCHEMA_PATH = REPO_ROOT / SCHEMA_RELATIVE_PATH
 STRUCTURED_SUFFIXES = frozenset({".json", ".toml", ".yaml", ".yml"})
-GENERATED_MIRROR_REQUIRED_PATHS = frozenset(
-    {
-        "tools/AGENT_QUICKSTART.md",
-        "tools/AGENT_ROUTING.md",
-    }
-)
 RECONSTRUCTABLE_CLASSES = frozenset(
     {
         "generated-required-adapter",
@@ -510,7 +504,11 @@ def merge_safety_findings(paths: list[str], inventory: dict[str, Any], *, root: 
         if entry.get("editable_by_agents") and pattern.startswith(".agentic-workspace/"):
             for path in matched:
                 payload, error = _load_json_file(root / path)
-                if error is None and isinstance(payload, dict) and any(isinstance(payload.get(key), list) for key in BRANCH_COLLECTION_KEYS):
+                if (
+                    error is None
+                    and isinstance(payload, dict)
+                    and any(isinstance(payload.get(key), list) for key in BRANCH_COLLECTION_KEYS)
+                ):
                     relevant = True
                     break
         if relevant and not isinstance(policy, dict):
@@ -535,9 +533,7 @@ def merge_safety_findings(paths: list[str], inventory: dict[str, Any], *, root: 
     return findings
 
 
-def generated_mirror_policy_findings(
-    paths: list[str], inventory: dict[str, Any], *, root: Path = REPO_ROOT
-) -> list[Finding]:
+def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any], *, root: Path = REPO_ROOT) -> list[Finding]:
     mirrors = inventory.get("generated_mirrors", [])
     findings: list[Finding] = []
     if not isinstance(mirrors, list):
@@ -564,21 +560,12 @@ def generated_mirror_policy_findings(
                 if full_path.exists() and full_path.stat().st_size > max_bytes:
                     findings.append(Finding(path=path, message=f"generated mirror exceeds max_bytes={max_bytes}"))
 
-    tracked_required_paths = GENERATED_MIRROR_REQUIRED_PATHS.intersection(paths)
-    missing_required = sorted(path for path in tracked_required_paths if path not in covered_paths)
-    findings.extend(
-        Finding(path=path, message="generated mirror must declare source command, named consumer, freshness check, and demotion path")
-        for path in missing_required
-    )
-
     structured_generated_paths: set[str] = set()
     for entry in inventory["entries"]:
         if entry["storage_class"] != "generated-required-adapter":
             continue
         structured_generated_paths.update(_matched_files(paths, entry))
-    missing_structured = sorted(
-        path for path in structured_generated_paths if path not in covered_paths and path not in tracked_required_paths
-    )
+    missing_structured = sorted(path for path in structured_generated_paths if path not in covered_paths)
     findings.extend(
         Finding(path=path, message="generated-required-adapter inventory entry needs matching generated_mirrors metadata")
         for path in missing_structured
@@ -631,9 +618,7 @@ def _safe_subject_path(subject_root: Path, path: str) -> Path:
 
 
 @contextmanager
-def isolated_patch_subject(
-    *, base_ref: str, changed_paths: list[str], root: Path = REPO_ROOT
-) -> Iterator[tuple[Path, list[str]]]:
+def isolated_patch_subject(*, base_ref: str, changed_paths: list[str], root: Path = REPO_ROOT) -> Iterator[tuple[Path, list[str]]]:
     archive = subprocess.run(
         ["git", "archive", "--format=tar", base_ref],
         cwd=root,
@@ -715,7 +700,9 @@ def inventory_findings(
         if precondition_findings:
             return precondition_findings
     checked_paths = tracked_structured_files(root) if paths is None else paths
-    checked_all_paths = _tracked_files(root) if all_paths is None and paths is None else all_paths if all_paths is not None else checked_paths
+    checked_all_paths = (
+        _tracked_files(root) if all_paths is None and paths is None else all_paths if all_paths is not None else checked_paths
+    )
     return (
         unmatched_structured_files(checked_paths, inventory)
         + claim_validation_findings(checked_paths, inventory, root=root)
@@ -725,9 +712,7 @@ def inventory_findings(
     )
 
 
-def changed_path_inventory_findings(
-    paths: list[str], *, base_ref: str = "", root: Path = REPO_ROOT
-) -> list[Finding]:
+def changed_path_inventory_findings(paths: list[str], *, base_ref: str = "", root: Path = REPO_ROOT) -> list[Finding]:
     changed_paths = _normalize_changed_paths(paths)
     if _requires_full_inventory_audit(changed_paths):
         if base_ref:
@@ -758,11 +743,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.base_ref and args.changed is None:
         print("--base-ref requires --changed so the proposed patch subject is explicit", file=sys.stderr)
         return 2
-    findings = (
-        changed_path_inventory_findings(args.changed, base_ref=args.base_ref)
-        if args.changed is not None
-        else inventory_findings()
-    )
+    findings = changed_path_inventory_findings(args.changed, base_ref=args.base_ref) if args.changed is not None else inventory_findings()
     ambient = ambient_structured_state_findings(args.changed) if args.base_ref and args.changed is not None else []
     if findings:
         print("Structured file inventory check failed:", file=sys.stderr)

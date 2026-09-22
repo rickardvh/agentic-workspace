@@ -60,7 +60,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     native = output / "src/native/bin"
     native.mkdir(parents=True)
     for name in ("_transport.mjs", "operating.mjs", "operating.d.mts"):
-        shutil.copy2(ROOT / "bindings/node" / name, native.parent / name)
+        shutil.copy2(ROOT / "bindings/node/native" / name, native.parent / name)
     shutil.copy2(ROOT / "bindings/node/cli.mjs", output / "src/cli.mjs")
     shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
     shutil.copy2(ROOT / "README.md", output / "README.md")

@@ -11,7 +11,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 @pytest.mark.parametrize("projection", ["full", "compact", "carried"])
 def test_invoke_returns_current_projection_without_another_entry(tmp_path, shared_core_binary, native_cli, surface, projection):
-    from tests.test_scoped_instructions import _admit, _write
+    from tests.native_instruction_support import _admit, _write
 
     guidance = "Review the configuration source after it changes."
     _write(

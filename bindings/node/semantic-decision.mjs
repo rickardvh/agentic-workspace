@@ -1,5 +1,5 @@
-import { request } from "./_transport.mjs";
-export { runNativeCli } from "./_transport.mjs";
+import { request } from "./native/_transport.mjs";
+export { runNativeCli } from "./native/_transport.mjs";
 
 export function compileSourceDecision(contributions, intent = {}, capabilityContract = null, decisionContext = null) {
   const payload = { contributions: [...contributions], intent: { ...(intent || {}) } };

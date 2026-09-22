@@ -745,7 +745,7 @@
     "generated_source_authorities": [
       {
         "installed_source": ".agentic-workspace/config.toml",
-        "repo_path": "src/agentic_workspace/workspace_runtime_core.py",
+        "repo_path": "crates/agentic-workspace-core/src/native_config.rs",
         "targets": [
           ".agentic-workspace/docs/workspace-config-contract.md"
         ]

@@ -281,3 +281,20 @@ def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref()
     assert 'default="HEAD"' not in helper
     assert "freshly fetched master head" in helper
     assert '"merge-base", "--is-ancestor", source_commit, remote_ref' in helper
+
+
+def test_native_npm_source_uses_canonical_version_without_a_mirror(tmp_path, monkeypatch):
+    module = _load_module()
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    (tmp_path / "pyproject.toml").write_text('[project]\nname="agentic-workspace"\nversion = "1.2.0"\n')
+    binding = tmp_path / "package.json"
+    binding.write_text('{"name":"@agentic-workspace/workspace-cli","private":true}\n')
+    original = binding.read_bytes()
+    ownership = {
+        "packages": [{"name": "agentic-workspace", "pyproject": "pyproject.toml"}],
+        "typescript_packages": [{"package_json": "package.json"}],
+    }
+    assert module.current_workspace_version(ownership) == "1.2.0"
+    module.set_workspace_version(ownership, "1.2.1")
+    assert module.current_workspace_version(ownership) == "1.2.1"
+    assert binding.read_bytes() == original

@@ -45,7 +45,7 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     sibling = tmp_path / "src/sibling.txt"
     sibling.write_bytes(b"before\n")
     (tmp_path / "dependency.txt").write_text("Current exact task constraint.\n")
-    from tests.test_scoped_instructions import _admit, _write
+    from tests.native_instruction_support import _admit, _write
 
     guidance = "Review the concrete sibling postimage before claiming completion."
     _write(tmp_path, "sibling", "---\npaths: [src/sibling.txt]\nchecks:\n  - run: echo sibling-reviewed\n---\n" + guidance)

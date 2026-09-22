@@ -349,7 +349,10 @@ def test_native_proof_builtin_command_does_not_require_python(tmp_path: Path, sh
 
 
 def test_shared_publication_identity_preserves_legacy_unicode_and_defaults(shared_core_binary: Path) -> None:
-    from agentic_workspace.workspace_runtime_core import _proof_publication_identity
+    from aw_maintainer.native_conformance import proof_receipt
+
+    def _proof_publication_identity(receipt):
+        return proof_receipt({"action": "publication-identity", "receipt": receipt})["identity"]
 
     receipt = {
         "command": "check",

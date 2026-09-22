@@ -70,9 +70,7 @@ Dry-run remains the default for harness invocations. Checked-in tests use fixtur
 - `operational-decision-trace.md`: shareable protocol for observable operational decisions without chain-of-thought disclosure.
 - `configured-orchestration-scenario-matrix.json`: no-keyword route, manual return lifecycle, recovery/failure, and total successful-completion cost matrix for #2696/#2700.
 - `provider-availability-2026-08-24.json`: current CLI discovery and explicit live-proof gaps; availability alone is not a behavioural pass.
-- `prepare_configured_orchestration_fixture.py`: copied-fixture-only local posture preparation for maintained orchestration scenarios.
 - `codex_context_cost_bridge.py`: provider-owned JSONL projection into the portable assignment transport-metrics sidecar; it retains no transcript.
-- `capture_issue_2818_context_cost.py`: reproducible supported-host capture for the bounded #2818 validation and conservative strong/local baseline.
 - `assignment-context-cost-dogfood-2026-08-30.json`: measured #2818 context inflation, decision replay, and explicit no-savings comparison.
 
 ## Closure Rule
@@ -89,3 +87,5 @@ The lane is ready for parent closure only when the generated report can show:
 - safe claim boundaries and closeout residue are represented.
 - partial slice progress is not reported as full parent-lane closure without explicit evidence.
 - completion-cost observations can distinguish static/schema suspicion from behaviour-cost evidence.
+
+Historical orchestration and context-cost observations describe the former Python host. Their retired capture programs are available in Git history; these records do not establish support or current native execution evidence.

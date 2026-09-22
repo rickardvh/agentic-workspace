@@ -65,3 +65,38 @@ candidate test-knowledge inventory source with `authority:
 uninterpreted-source`. It should ask the agent what behaviour claim, owner, and
 replacement evidence apply to each candidate. It must not treat these rows as a
 policy engine, infer dispositions from prose, or mark tests safe to delete.
+
+## Native host contraction (#3550, #3565)
+
+The former Python host and generated runtime tests no longer establish the product
+contract. Their durable failure classes now belong to these current owners:
+
+| Failure class | Current executable evidence / disposition |
+| --- | --- |
+| Python/Node fallback or source/install divergence | `test_native_public_cli`, `test_native_npm_routes`, `test_language_facade`, and isolated wheel lifecycle in `test_workspace_packaging` |
+| Lost Planning selection, provenance or material | `test_native_planning_create`, `test_native_planning_lifetime`, and native shared-core vectors |
+| Proof laundering, wrong source identity or stale publication | `test_native_proof_producer`, `test_native_proof_scope`, `test_proof_publication`, `test_proof_receipt_owner`, and `test_source_request_dependencies` |
+| Provider timeout, process cleanup, lineage or transcript privacy | Provider-mechanics cases in `test_native_transport`; assignment admission stays in the native assignment suites |
+| Diagnostic source selection, raw-byte preservation or unsafe export | `test_native_maintainer_logging`, using the tooling-owned reader/exporter |
+| Wrong distribution identity or release normalization | `test_package_identity`, `test_coordinated_release`, and release workflow guards against actual packed npm metadata |
+| Python module entrypoint discovery and generated operation composition | Retired implementation mechanisms. Current extensibility is native independent-owner ingress; no compatibility promise is inferred for Python plugins. |
+| Historical consequence tuples and Python final-response auto-resume | Retired host semantics. A tuple-shaped file or model transport exit cannot attest current native custody or task completion. Harness observations preserve that distinction. |
+
+Old installer, duplicate generated-schema, generated fingerprint and Python/native
+comparison fixtures are removed where the current owner cases above establish the
+relevant contract. This disposition does not establish independent PR acceptance
+or completion of the topology and bounded-residue work in #3551/#3552.
+
+The #2435 fixed package/generator validation graph is retired as a current gate.
+Its historical timing records are not rewritten as present-day evidence. Current
+Makefile/CI boundary tests and compact-runner run/join/retry/conflict cases preserve
+the reusable failure classes without requiring deleted package targets or an
+old measured graph to match today's source tree.
+
+The former Python startup variable-name marker ratchet and optional legacy
+recurring-friction ledger checker are also retired. The former semantic host is
+absent, and this repository has no current ledger at that old optional path.
+Current route admission and Memory note validity remain native owner contracts;
+these deletions do not assert that the legacy ledger format has native support.
+Shared Git/instruction fixture builders used by native invocation and delegation
+cases remain in `tests/native_instruction_support.py` without a Python interpreter.

@@ -12,7 +12,7 @@ from typing import Any
 
 import run_model_cli_harness as harness
 
-from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+from aw_maintainer.evaluation_projection import specialist_evaluation_projection
 
 EPISODE_KIND = "agentic-workspace/long-horizon-episode/v1"
 EVALUATION_KIND = "agentic-workspace/long-horizon-evaluation/v1"

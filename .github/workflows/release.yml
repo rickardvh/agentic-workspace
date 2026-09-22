@@ -282,20 +282,13 @@ jobs:
           import os
           import re
           import subprocess
+          import tarfile
           import tomllib
           from pathlib import Path
 
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           version = os.environ["RELEASE_TAG"].removeprefix("v")
           root_pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-          command_generation_dependency = ""
-          for dependency in root_pyproject.get("dependency-groups", {}).get("dev", []):
-              if str(dependency).startswith("command-generation @ "):
-                  command_generation_dependency = str(dependency)
-                  break
-          match = re.search(r"command_generation-(?P<version>[0-9][^-/]*)-py3-none-any\\.whl", command_generation_dependency)
-          command_generation_version = match.group("version") if match else ""
-
           def sha256(path: Path) -> str:
               return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -322,12 +315,15 @@ jobs:
                       "sdist": {"asset": sdist.name, "sha256": sha256(sdist)},
                       "payload_schema": package["payload_schema"],
                       "payload_provenance": package["payload_provenance"],
-                      "generated_command_contract": package["generated_command_contract"],
                       "license_spdx": ownership["project_identity"]["license_spdx"],
                   }
               )
           for package in ownership["typescript_packages"]:
-              package_json = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
+              tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
+              if tarball is None:
+                  raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
+              with tarfile.open(tarball, "r:gz") as archive:
+                  package_json = json.load(archive.extractfile("package/package.json"))
               declared = package_json["version"]
               if declared != version:
                   raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
@@ -351,7 +347,6 @@ jobs:
                       "runtime_requirement": package["runtime_requirement"],
                       "release_policy": package["release_policy"],
                       "registry_status": package["registry_status"],
-                      "generated_command_contract": package["generated_command_contract"],
                       "license_spdx": ownership["project_identity"]["license_spdx"],
                   }
               )
@@ -407,11 +402,6 @@ jobs:
               "distribution_identity": ownership["distribution_identity"],
               "packages": package_entries,
               "native_archive": native_archive,
-              "command_generation": {
-                  "dependency": command_generation_dependency,
-                  "version": command_generation_version,
-                  "runtime_required": False,
-              },
               "release_ownership": {
                   "path": ".github/release-ownership.json",
                   "schema_version": ownership["schema_version"],

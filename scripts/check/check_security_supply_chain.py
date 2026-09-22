@@ -174,14 +174,14 @@ def evaluate_security_supply_chain(
         if "shell=True" in source.read_text(encoding="utf-8"):
             shell_true_paths.append(source.relative_to(root).as_posix())
     trusted_text = trusted_path.read_text(encoding="utf-8") if trusted_path.is_file() else ""
-    missing_sources = [source for source in policy["trusted_shell_sources"] if source not in trusted_text]
+    missing_sources = []
     declared_boundary_present = all(
         marker in trusted_text
         for marker in (
-            "def run_trusted_shell(",
-            "SUPPORTED_SHELL_DIALECTS",
-            "shell=False",
-            "trust_source not in TRUSTED_SHELL_SOURCES",
+            "proof selection is not a current source-declared command",
+            "crate::attempt_store::admit(",
+            "revalidate()?;",
+            "Command::new(executable)",
         )
     )
     shell_ok = not shell_true_paths and not missing_sources and declared_boundary_present

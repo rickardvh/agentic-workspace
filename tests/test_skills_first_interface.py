@@ -16,11 +16,11 @@ import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
-from agentic_workspace.config import workspace_pointer_block
 from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+STARTUP_POINTER = "<!-- agentic-workspace:workflow:start -->\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.\n<!-- agentic-workspace:workflow:end -->"
 spec = importlib.util.spec_from_file_location("agent_interface_generator", ROOT / "scripts/generate/generate_agent_interface.py")
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
@@ -54,11 +54,7 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     shipped = (ROOT / "src/agentic_workspace/_payload" / LEDGER).read_text()
     assert shipped == portable and shipped != (ROOT / LEDGER).read_text()
     assert (ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text() == render(portable, target=ROOT)
-    for module in ("memory", "planning"):
-        fallback = tomllib.loads((ROOT / f"packages/{module}/src/repo_{module}_bootstrap/_ownership.toml").read_text())
-        assert set(fallback) == {"schema_version", "module_roots"}
-        assert fallback["module_roots"] == tomllib.loads(portable)["module_roots"]
-    pointer = workspace_pointer_block("different-host-tool")
+    pointer = STARTUP_POINTER
     agents = (ROOT / "AGENTS.md").read_text()
     assert pointer in agents
     assert len(pointer.encode()) < 800
@@ -184,8 +180,6 @@ def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypat
         PROFILE,
         *host["derivation"]["portable_sources"],
         *maintenance["payload_files"],
-        "packages/memory/src/repo_memory_bootstrap/_ownership.toml",
-        "packages/planning/src/repo_planning_bootstrap/_ownership.toml",
         "packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md",
     }
     for reference in references:
@@ -305,39 +299,9 @@ def test_canonical_procedure_preserves_correction_retention_boundary():
         assert obligation in section
 
 
-def test_source_lifecycle_retires_only_exact_package_bytes(tmp_path):
-    # Source maintenance lifecycle is tested here; it is not an installed Python host.
-    from agentic_workspace import workspace_runtime_core as owner
-
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    retired = owner._WORKSPACE_SURFACES_MANIFEST["retired_surface_files"][0]
-    previous = subprocess.check_output(
-        ["git", "show", "efc18f52719bb69f652ef4bf2fa2c4826f05619b:src/agentic_workspace/_payload/" + retired["path"]], cwd=ROOT
-    )
-    path = tmp_path / retired["path"]
-    path.parent.mkdir(parents=True)
-    path.write_bytes(previous)
-    assert owner._retired_workspace_surface_actions(target_root=tmp_path, dry_run=True)[0]["kind"] == "would remove"
-    assert path.exists()
-    assert owner._retired_workspace_surface_actions(target_root=tmp_path, dry_run=False)[0]["kind"] == "removed"
-    path.write_text("Repository-owned procedure edits")
-    assert owner._retired_workspace_surface_actions(target_root=tmp_path, dry_run=False)[0]["kind"] == "manual review"
-    assert path.read_text() == "Repository-owned procedure edits"
-    path.write_bytes(b"\xff\xfe")
-    assert owner._retired_workspace_surface_actions(target_root=tmp_path, dry_run=False)[0]["kind"] == "manual review"
-    assert path.read_bytes() == b"\xff\xfe"
-    owner._workspace_required_payload_actions(target_root=tmp_path, dry_run=False)
-    assert (tmp_path / MAIN).read_text() == (ROOT / MAIN).read_text()
-    ledger = tomllib.loads(owner._host_ownership_ledger_text())
-    assert ledger["workspace"]["main_skill_path"] == MAIN
-    installed = json.loads((tmp_path / PROFILE).read_text())
-    assert installed == json.loads(render((tmp_path / LEDGER).read_bytes().decode(), target=tmp_path))
-    assert len((tmp_path / PROFILE).read_bytes()) < 8_000
-
-
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_fresh_skill_consumer_queries_then_performs_bounded_write(tmp_path, shared_core_binary, native_cli, surface):
-    (tmp_path / "AGENTS.md").write_text(workspace_pointer_block())
+    (tmp_path / "AGENTS.md").write_text(STARTUP_POINTER)
     main = tmp_path / MAIN
     main.parent.mkdir(parents=True)
     main.write_text((ROOT / MAIN).read_text())
@@ -370,64 +334,8 @@ def test_fresh_skill_consumer_queries_then_performs_bounded_write(tmp_path, shar
     result = consume(surface, shared_core_binary, native_cli, {"invocation": answered["carriage"], "reference": action["reference"]})
     assert result["effect_outcome"]["status"] == "committed"
     assert result["continuation"]["retry_effect"] is False
-    assert (tmp_path / "AGENTS.md").read_text() == workspace_pointer_block()
+    assert (tmp_path / "AGENTS.md").read_text() == STARTUP_POINTER
     assert (tmp_path / MAIN).read_text() == (ROOT / MAIN).read_text()
-
-
-@pytest.mark.parametrize("mirror", [False, True])
-def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path, capsys, shared_core_binary, monkeypatch, mirror):
-    from tests.workspace_cli_support import cli
-
-    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
-    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
-    agents = tmp_path / "AGENTS.md"
-    agents.write_text("Repository instruction: preserve this line.\n")
-    retained = {}
-    for reference in (
-        ".agentic-workspace/memory/repo/retained.md",
-        ".agentic-workspace/planning/retained.md",
-        ".agentic-workspace/local/instructions/retained.md",
-    ):
-        path = tmp_path / reference
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("Current owner state; preserve this meaning.\n")
-        retained[reference] = path.read_bytes()
-    for operation in ("init", "upgrade", "upgrade"):
-        options = ["--mirror-payload"] if operation == "init" and mirror else []
-        assert cli.main([operation, "--target", str(tmp_path), *options, "--format", "json"]) == 0
-        capsys.readouterr()
-        assert agents.read_text().startswith("Repository instruction: preserve this line.")
-        assert agents.read_text().count(workspace_pointer_block()) == 1
-        assert (tmp_path / MAIN).read_text() == (ROOT / MAIN).read_text()
-        assert not (tmp_path / ".agentic-workspace/skills/workspace-operating-loop/SKILL.md").exists()
-        for reference in ("AGENTS.md", MAIN, ".agentic-workspace/config.toml"):
-            assert_current_command_examples((tmp_path / reference).read_text())
-    from agentic_workspace import resources
-
-    context = {"target": str(tmp_path), "task": "Installed resource procedure"}
-    proposal = resources({**context, "request": {"operation": "scratch-create"}})
-    created = resources(proposal["action"])
-    assert created["effect_outcome"] == "committed"
-    removal = resources({**context, "request": {"operation": "scratch-remove", "path": proposal["action"]["request"]["path"]}})
-    removed = resources(removal["action"])
-    assert removed["effect_outcome"] == "committed"
-    assert cli.main(["uninstall", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    assert agents.read_text().strip() == "Repository instruction: preserve this line."
-    assert not (tmp_path / MAIN).exists()
-    # Optional skill removal does not remove the direct native owner's capability.
-    assert "action" in resources({**context, "request": {"operation": "scratch-create"}})
-    for reference, original in retained.items():
-        assert (tmp_path / reference).read_bytes() == original
-
-
-def test_generated_fresh_bootstrap_is_only_an_activation_pointer():
-    from agentic_workspace import workspace_runtime_core as owner
-
-    rendered = owner._workspace_agents_template(selected_modules=[], descriptors={})
-    assert rendered.count(workspace_pointer_block()) == 1
-    assert "start --target" not in rendered
-    assert len(rendered.encode()) < 900
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -497,52 +405,3 @@ def test_known_leaf_returns_current_procedure_and_shared_applicability(tmp_path,
         assert not stale["memory"]["selected_notes"]
         assert "detail" not in stale["semantic_routes"]["discovery"]
     assert not (tmp_path / ".agentic-workspace/local").exists()
-
-
-@pytest.mark.parametrize("module", ["memory", "planning"])
-def test_shipped_package_lifecycle_preserves_domain_state_and_current_guidance(tmp_path, monkeypatch, module):
-    import importlib
-
-    owner = importlib.import_module(f"repo_{module}_bootstrap.installer")
-    ownership = importlib.import_module(f"repo_{module}_bootstrap._ownership")
-    monkeypatch.setattr(ownership, "_workspace_manifest_path", lambda: None)
-    ownership._ownership_data.cache_clear()
-    try:
-        ledger = ownership._ownership_data()
-        for row in ledger["module_roots"]:
-            if row["module"] in {"memory", "planning"}:
-                assert row["ownership"] == "repo_owned"
-                assert row["uninstall_policy"] == "preserve-current-owner-state"
-        template = (ROOT / f"packages/{module}/bootstrap/AGENTS.template.md").read_text(encoding="utf-8")
-        assert_current_command_examples(template.replace("<effective-cli>", "agentic-workspace"))
-        assert "skills/workspace-startup/SKILL.md" in template
-        assert "repository-owned and must be preserved" in template
-        if module == "planning":
-            projected = owner._ownership_review(tmp_path)
-            assert ".agentic-workspace/planning/" not in projected["package_owned_roots"]
-            assert ".agentic-workspace/memory/" not in projected["package_owned_roots"]
-        else:
-            shared = importlib.import_module("repo_memory_bootstrap._installer_shared")
-            assert_current_command_examples(shared.WORKSPACE_POINTER_BLOCK)
-        (tmp_path / ".git").mkdir()
-        retained = {}
-        for reference in (
-            "AGENTS.md",
-            ".agentic-workspace/memory/repo/retained.md",
-            ".agentic-workspace/planning/retained.md",
-            ".agentic-workspace/local/instructions/retained.md",
-        ):
-            path = tmp_path / reference
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("Repository-owned meaning must survive.\n", encoding="utf-8", newline="\n")
-            retained[reference] = path.read_bytes()
-        for operation in (owner.install_bootstrap, owner.upgrade_bootstrap, owner.upgrade_bootstrap):
-            operation(target=tmp_path)
-            agents = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
-            assert_current_command_examples(agents.replace("<effective-cli>", "agentic-workspace"))
-            assert agents.startswith(retained["AGENTS.md"].decode())
-        owner.uninstall_bootstrap(target=tmp_path)
-        for reference, expected in retained.items():
-            assert (tmp_path / reference).read_bytes() == expected
-    finally:
-        ownership._ownership_data.cache_clear()

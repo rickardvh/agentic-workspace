@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import tarfile
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,7 @@ def _unique_artifact(dist: Path, pattern: str) -> Path:
     matches = sorted(dist.glob(pattern))
     if len(matches) > 1 and (dist / "platform-release-manifest.json").exists():
         from platform_release import primary
+
         return primary(matches)
     if len(matches) != 1:
         raise SystemExit(f"Expected exactly one preview artifact matching {pattern!r}, got {[path.name for path in matches]}")
@@ -170,18 +172,18 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
                 "sdist": {"asset": sdist.name, "sha256": _sha256(sdist)},
                 "payload_schema": package["payload_schema"],
                 "payload_provenance": package["payload_provenance"],
-                "generated_command_contract": package["generated_command_contract"],
                 "license_spdx": ownership["project_identity"]["license_spdx"],
             }
         )
 
     for package in ownership["typescript_packages"]:
-        package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
+        tarball = _unique_artifact(dist, f"{package['tarball_prefix']}-{coordinated_release.npm_version(version)}.tgz")
+        with tarfile.open(tarball, "r:gz") as archive:
+            package_json = json.load(archive.extractfile("package/package.json"))
         if package_json.get("version") != coordinated_release.npm_version(version):
             raise SystemExit(f"{package['package_json']} has version {package_json.get('version')}, expected {version}")
         if package_json.get("private") is not False or package.get("release_policy") != "coordinated-public-registry":
             raise SystemExit(f"{package['package_json']} must declare the coordinated public registry package identity")
-        tarball = _unique_artifact(dist, f"{package['tarball_prefix']}-{coordinated_release.npm_version(version)}.tgz")
         expected_assets.add(tarball.name)
         package_entries.append(
             {
@@ -197,7 +199,6 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
                 "runtime_requirement": package["runtime_requirement"],
                 "release_policy": package["release_policy"],
                 "registry_status": package["registry_status"],
-                "generated_command_contract": package["generated_command_contract"],
                 "license_spdx": ownership["project_identity"]["license_spdx"],
             }
         )

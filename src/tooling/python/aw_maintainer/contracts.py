@@ -288,31 +288,12 @@ def conformance_contracts_manifest() -> dict[str, Any]:
     return load_validated_contract_json("conformance_contracts.json", "conformance_contracts.schema.json")
 
 
-def command_adapter_generation_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("command_adapter_generation.json", "command_adapter_generation.schema.json")
-
-
-def command_package_ir_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("command_package_ir.json", "command_package_ir.schema.json")
-
-
 def operation_conformance_test_ir_manifest() -> dict[str, Any]:
     return load_validated_contract_json("operation_conformance_test_ir.json", "operation_conformance_test_ir.schema.json")
 
 
 def operation_artifact_registry_manifest() -> dict[str, Any]:
     return load_validated_contract_json("operation_artifact_registry.json", "operation_artifact_registry.schema.json")
-
-
-def generated_behavior_stratification_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("generated_behavior_stratification.json", "generated_behavior_stratification.schema.json")
-
-
-def generated_command_check_inventory_manifest() -> dict[str, Any]:
-    return load_validated_contract_json(
-        "generated_command_check_inventory.json",
-        "generated_command_check_inventory.schema.json",
-    )
 
 
 def target_support_manifest() -> dict[str, Any]:
@@ -327,43 +308,12 @@ def conformance_contract_manifest(relative_path: str) -> dict[str, Any]:
     return load_validated_contract_json(relative_path, "conformance.schema.json")
 
 
-def operation_primitives_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("operation_primitives.json", "operation_primitives.schema.json")
-
-
 def operation_manifest(relative_path: str) -> dict[str, Any]:
     return load_contract_json(relative_path)
 
 
-def python_extraction_map_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("python_extraction_map.json", "python_extraction_map.schema.json")
-
-
-def python_contract_consumption_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("python_contract_consumption.json", "python_contract_consumption.schema.json")
-
-
 def context_templates_manifest() -> dict[str, Any]:
     return load_validated_contract_json("context_templates.json", "context_templates.schema.json")
-
-
-def python_runtime_boundary_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("python_runtime_boundary.json", "python_runtime_boundary.schema.json")
-
-
-def python_runtime_projection_inventory_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("python_runtime_projection_inventory.json", "python_runtime_projection_inventory.schema.json")
-
-
-def runtime_semantic_exceptions_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("runtime_semantic_exceptions.json", "runtime_semantic_exceptions.schema.json")
-
-
-def workspace_runtime_primitive_families_manifest() -> dict[str, Any]:
-    return load_validated_contract_json(
-        "workspace_runtime_primitive_families.json",
-        "workspace_runtime_primitive_families.schema.json",
-    )
 
 
 def contract_schema(relative_path: str) -> dict[str, Any]:

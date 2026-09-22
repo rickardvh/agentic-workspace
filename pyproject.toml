@@ -41,10 +41,6 @@ agentic-workspace = "agentic_workspace.cli:main"
 
 [dependency-groups]
 dev = [
-  "agentic-workspace-memory",
-  "agentic-workspace-planning",
-  "agentic-workspace-verification",
-  "command-generation @ git+https://github.com/rickardvh/command-generation.git@ac1b9c00bf41352010929de196e7d45e20014615",
   "jsonschema",
   "pre-commit",
   "pytest",
@@ -57,18 +53,6 @@ dev = [
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-agentic-workspace-memory = { workspace = true }
-agentic-workspace-planning = { workspace = true }
-agentic-workspace-verification = { workspace = true }
-
-[tool.uv.workspace]
-members = [
-  "packages/memory",
-  "packages/planning",
-  "packages/verification",
-]
 
 [tool.hatch.build.targets.wheel]
 only-include = [

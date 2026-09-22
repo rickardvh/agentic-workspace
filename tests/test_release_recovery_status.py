@@ -38,19 +38,19 @@ def test_semver_repair_only_pr_reports_that_it_will_not_publish() -> None:
     assert "will not open a release PR" in packet["next_action"]
 
 
-def test_fingerprint_only_pr_does_not_require_semver_release() -> None:
+def test_documentation_only_pr_does_not_require_semver_release() -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
     packet = module.semver_pr_status(
         labels=[],
-        changed_files=["generated/workspace/.agentic-workspace-cli-fingerprint.json", "docs/maintenance.md"],
+        changed_files=["docs/maintenance.md", "docs/maintenance.md"],
         ownership=ownership,
     )
 
     assert packet["status"] == "no-release-needed"
     assert packet["package_affecting"] is False
-    assert packet["path_classification"]["integrity_metadata_paths"] == ["generated/workspace/.agentic-workspace-cli-fingerprint.json"]
+    assert packet["path_classification"]["integrity_metadata_paths"] == []
 
 
 def test_github_automation_only_pr_does_not_require_semver_release() -> None:
@@ -69,15 +69,15 @@ def test_github_automation_only_pr_does_not_require_semver_release() -> None:
     assert packet["path_classification"]["unclassified_paths"] == changed_files
 
 
-def test_fingerprint_cannot_lower_a_generated_package_change() -> None:
+def test_documentation_cannot_lower_a_binding_change() -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
     packet = module.semver_pr_status(
         labels=[],
         changed_files=[
-            "generated/workspace/.agentic-workspace-cli-fingerprint.json",
-            "generated/workspace/typescript/cli.mjs",
+            "docs/maintenance.md",
+            "bindings/node/cli.mjs",
         ],
         ownership=ownership,
     )

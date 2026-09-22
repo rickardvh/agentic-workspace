@@ -20,11 +20,7 @@
     "config": "deny.toml",
     "runner": "scripts/check/check_rust_dependencies.py"
   },
-  "trusted_shell_sources": [
-    "checked-repository-proof-route",
-    "explicit-user-executor-command"
-  ],
-  "trusted_shell_implementation": "src/agentic_workspace/trusted_execution.py",
+  "trusted_shell_implementation": "crates/agentic-workspace-core/src/native_proof.rs",
   "release_requirements": [
     "locked-dependency-resolution",
     "security-readiness-receipt",
@@ -35,9 +31,19 @@
   ],
   "action_pin_policy": "full-commit-sha",
   "allowed_write_permissions": {
-    ".github/workflows/release.yml": ["attestations", "contents", "id-token"],
-    ".github/workflows/release-from-semver-label.yml": ["actions", "contents", "pull-requests"],
-    ".github/workflows/security.yml": ["security-events"]
+    ".github/workflows/release.yml": [
+      "attestations",
+      "contents",
+      "id-token"
+    ],
+    ".github/workflows/release-from-semver-label.yml": [
+      "actions",
+      "contents",
+      "pull-requests"
+    ],
+    ".github/workflows/security.yml": [
+      "security-events"
+    ]
   },
   "branch_enforcement_owner": "#2454"
 }

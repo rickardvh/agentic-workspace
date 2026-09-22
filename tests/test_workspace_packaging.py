@@ -186,7 +186,7 @@ def test_workspace_package_declares_semver_identity() -> None:
 
 def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() -> None:
     ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    artifact_job = ci_text.partition("  workspace-package-artifacts:\n")[2].partition("\n  package-checks:\n")[0]
+    artifact_job = ci_text.partition("  workspace-package-artifacts:\n")[2].partition("\n  declared-runtime-matrix:\n")[0]
 
     assert "ready_for_review" in ci_text
     assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in artifact_job
@@ -200,12 +200,11 @@ def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() ->
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in artifact_job
 
 
-def test_typescript_instruction_runtime_has_no_source_checkout_python_dependency() -> None:
-    support = (WORKSPACE_ROOT / "src/agentic_workspace/contracts/typescript_primitive_support.mjs").read_text(encoding="utf-8")
-    instruction_runtime = support[support.index("function instructionsExecute") : support.index("function reportMemory")]
-
-    assert "scripts/run_agentic_workspace.py" not in instruction_runtime
-    assert "authoritative-python-boundary-unavailable" not in instruction_runtime
+def test_node_binding_has_no_source_checkout_python_dependency() -> None:
+    for path in (WORKSPACE_ROOT / "bindings/node").glob("*.mjs"):
+        source = path.read_text(encoding="utf-8")
+        assert "scripts/run_agentic_workspace.py" not in source
+        assert "authoritative-python-boundary-unavailable" not in source
 
 
 def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None:
@@ -231,9 +230,9 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     assert 'coordinated_release.py verify --tag "${RELEASE_TAG}"' in release_text
     assert "must point at a commit reachable from origin/master" in release_text
     assert ".github/release-ownership.json" in release_text
-    assert "uv build --wheel --sdist --out-dir dist" in release_text
-    assert "tests/test_native_release_topology.py" in release_text
-    assert "scripts/release/stage_native_npm.py" in release_text
+    assert "uses: ./.github/workflows/platform-release.yml" in release_text
+    platform = (WORKSPACE_ROOT / ".github/workflows/platform-release.yml").read_text(encoding="utf-8")
+    assert "platform_release.py" in platform
     assert "agentic-workspace-release-manifest.json" in release_text
     assert "source_commit" in release_text
     assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in release_text

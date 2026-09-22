@@ -40,9 +40,8 @@ def test_active_executable_examples_agree_with_native_command_authority():
         *REPO_ROOT.glob("crates/*/src/**/*.rs"),
         *REPO_ROOT.glob("packages/**/Makefile"),
         REPO_ROOT / "Makefile",
-        REPO_ROOT / "src/agentic_workspace/session_logging.py",
-        REPO_ROOT / "src/agentic_workspace/proof_execution_projection.py",
-        REPO_ROOT / "tests/test_maintainer_surfaces.py",
+        REPO_ROOT / "src/tooling/python/aw_maintainer/session_diagnostics.py",
+        REPO_ROOT / "tests/test_native_public_cli.py",
     }
     files.update(producers)
     unsupported = []
@@ -74,39 +73,6 @@ def test_active_executable_examples_agree_with_native_command_authority():
     for fixture in registry["contracts"]:
         path = contract_path(fixture["path"])
         assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
-
-
-@pytest.mark.parametrize(
-    ("command_status", "aggregate", "blocked", "local", "action"),
-    [
-        ("passed", True, False, False, "reconcile-closeout"),
-        ("passed", True, False, True, "continue-with-verified-local-config"),
-        ("passed", False, False, False, "resume-selected-proof"),
-        ("passed", True, True, False, "repair-proof-route"),
-        ("failed", False, False, False, "diagnose-failed-proof"),
-        ("cancelled", False, False, False, "resume-selected-proof"),
-    ],
-)
-def test_maintenance_proof_projection_preserves_action_without_executable_authority(command_status, aggregate, blocked, local, action):
-    from agentic_workspace.proof_execution_projection import proof_execution_result_payload
-
-    result = proof_execution_result_payload(
-        run={
-            "run_id": "maintenance-run",
-            "required_commands": ["pytest"],
-            "commands": [{"command": "pytest", "status": command_status}],
-            "aggregate_receipt": {"status": "written" if aggregate else "missing", "admission": {"proof_sufficient": aggregate}},
-            "subject": {"claim_scope": "machine-local-effective-config" if local else "repository"},
-        },
-        selection={"route_refinement_required": {"status": "required" if blocked else "none"}},
-        status="completed",
-    )
-    assert result["next_action"]["action"] == action
-    assert result["next_action"]["owner"] == "verification"
-    assert result["next_action"]["run_id"] == "maintenance-run"
-    assert result["next_action"]["command"] is None
-    assert result["detail_routes"]["resume"] is result["detail_routes"]["revalidation"] is None
-    assert result["safe_to_retry"] is (command_status == "cancelled" or not aggregate and command_status != "failed" or blocked)
 
 
 def _module():

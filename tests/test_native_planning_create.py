@@ -16,8 +16,6 @@ from tests.test_native_public_cli import native_cli as native_cli
     [
         ".agentic-workspace",
         "packages/planning/bootstrap/.agentic-workspace",
-        "generated/planning/python/_payload/.agentic-workspace",
-        "generated/planning/typescript/resources/_payload/.agentic-workspace",
     ],
 )
 def test_native_update_observation_schema(schema_root: str) -> None:
@@ -1011,78 +1009,3 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
         assert current["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] == subject["revision"]
         assert current["decision_packet"]["status"] != "terminal"
         assert "update_provenance" not in json.loads(path.read_bytes())["update_provenance"]
-
-
-@pytest.mark.parametrize("attempt", ["mutation", "typescript-overwrite", "rollback-existing", "rollback-arrival"])
-def test_retained_planning_adapter_preserves_native_plan(tmp_path: Path, shared_core_binary: Path, native_cli: Path, attempt: str) -> None:
-    from repo_planning_bootstrap import installer
-
-    context = {"target": str(tmp_path), "task": "Create one native owner for retained-adapter boundaries"}
-
-    def call(value: dict) -> dict:
-        return consume("native", shared_core_binary, native_cli, value)
-
-    request = call(context)["planning"]["creation_requests"][0]
-    request["arguments"] = {"material": material()}
-    action = call({**context, "request": request})["decision_packet"]["primary_action"]
-    path = tmp_path / action["arguments"]["owner_path"]
-    if attempt == "rollback-arrival":
-
-        def legacy_operation() -> None:
-            call({**context, "invocation": action})
-            raise RuntimeError("legacy operation interrupted after native arrival")
-
-        with pytest.raises(ValueError, match="Native Planning owner preserved"):
-            installer._apply_planning_writes_atomically([path], legacy_operation)
-        assert call(context)["planning"]["created_owner"]["path"] == action["arguments"]["owner_path"]
-        return
-    created = call({**context, "invocation": action})
-    before = path.read_bytes()
-    if attempt == "typescript-overwrite":
-        import shutil
-        import subprocess
-
-        process = subprocess.run(
-            [
-                shutil.which("node"),
-                str(ROOT / "generated/planning/typescript/src/cli.mjs"),
-                "new-plan",
-                "--id",
-                json.loads(before)["id"],
-                "--title",
-                "Legacy overwrite",
-                "--target",
-                str(tmp_path),
-                "--overwrite",
-                "--format",
-                "json",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert process.returncode != 0
-        assert "Native Planning owner preserved" in process.stderr + process.stdout
-        # The same retained transport can still create a legitimate legacy plan.
-        fresh = tmp_path / "legacy-consumer"
-        fresh.mkdir()
-        args = list(process.args)
-        args[args.index("--target") + 1] = str(fresh)
-        args[args.index("--id") + 1] = "legitimate-create"
-        positive = subprocess.run(args, capture_output=True, text=True, timeout=30)
-        assert positive.returncode == 0, positive.stderr + positive.stdout
-        assert list(fresh.rglob("legitimate-create.plan.json"))
-    elif attempt == "mutation":
-        refused = installer.targeted_execplan_write(target=tmp_path, plan=str(path), patch={"next_action": "legacy overwrite"}, apply=True)
-        assert refused["status"] == "native-owner-required", refused
-        with pytest.raises(ValueError, match="Native Planning owner preserved"):
-            installer._write_execplan_record(record_path=path, record=json.loads(before))
-    else:
-
-        def legacy_operation() -> None:
-            pytest.fail("existing native custody must refuse before the old writer runs")
-
-        with pytest.raises(ValueError, match="Native Planning owner preserved"):
-            installer._apply_planning_writes_atomically([path], legacy_operation)
-    assert path.read_bytes() == before
-    assert call(context)["planning"]["created_owner"]["path"] == created["value"]["owner_path"]

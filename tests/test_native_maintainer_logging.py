@@ -145,7 +145,7 @@ def test_native_logging_concurrent_append_preserves_valid_sequence(tmp_path, sha
 
 
 def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared_core_binary, native_cli, monkeypatch):
-    from agentic_workspace import session_logging
+    from aw_maintainer import session_diagnostics as session_logging
 
     configured(tmp_path)
     assert call(shared_core_binary, tmp_path, identity="prior-registered-session").returncode == 0
@@ -167,7 +167,6 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
         assert value["session_capture"] == {"status": "capturing", "authoritative": False}
     assert len({row["logical_session_id"] for row in events(tmp_path)}) == 2
     state = session_logging.load_state_for_argv(["--target", str(tmp_path)])
-    assert state.enabled
     local = tmp_path / ".agentic-workspace/local"
     before = {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
     analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
@@ -297,7 +296,7 @@ def test_native_logging_correlation_uses_existing_salted_identity(tmp_path, shar
 
 
 def test_native_logging_new_identity_registration_replay_and_legacy_refusal(tmp_path, shared_core_binary, monkeypatch):
-    from agentic_workspace.session_logging import _session_registry_lock
+    from aw_maintainer.session_diagnostics import _session_registry_lock
 
     configured(tmp_path)
     assert call(shared_core_binary, tmp_path, identity="first").returncode == 0

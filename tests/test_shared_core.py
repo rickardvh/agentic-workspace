@@ -104,16 +104,6 @@ def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path
     context["selection"] = {"revision": result["revision"], "candidate": candidate["id"]}
     selected = execution_configurations(context)["selected"]
     comparison = selected["execution"].pop("comparison_context")
-    from agentic_workspace.config import normalize_delegation_context_cost
-    from agentic_workspace.contracts.python_primitive_support import _assignment_context_cost
-
-    packet = {"assignment_identity": {"dispatch_adapter": {"execution_configuration": {"execution": {"comparison_context": comparison}}}}}
-    measured = _assignment_context_cost(
-        packet=packet, prompt="bounded", transport="cli", adapter_revision="adapter-1", elapsed_ms=1, observed={}
-    )
-    cost_schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text())
-    Draft202012Validator(cost_schema).validate(measured)
-    assert normalize_delegation_context_cost(measured, surface_name="test")["configuration_context"] == comparison
     assert selected == {**candidate, "execution_guarantees": []}
     other_lineage = deepcopy(context)
     other_lineage["selection"] = None
@@ -146,92 +136,6 @@ def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path
         assert execution_configurations({**context, field: value})["status"] == "blocked"
     with pytest.raises(DecisionContractError, match="unknown field"):
         execution_configurations({**context, "policy_bypass": True})
-
-
-def test_ordinary_route_feasibility_keeps_manual_peer_and_safety_independent(tmp_path: Path) -> None:
-    from types import SimpleNamespace
-
-    from agentic_workspace.assignment_source import current_route_configurations
-    from agentic_workspace.target_evidence import assignment_decision_from_policy
-
-    profiles = [
-        {
-            "name": "worker",
-            "target_revision": "1",
-            "location": "external",
-            "score": 99,
-            "execution_methods": ["cli"],
-            "transports": [{"kind": "process", "method": "cli", "command": ["missing-aw-test-executable"]}],
-        }
-    ]
-    policy = SimpleNamespace(
-        current_target="orchestrator", manual_transport_policy="allowed", transport_authority="automatic", safe_to_auto_run_commands=False
-    )
-    routes = current_route_configurations(
-        tmp_path,
-        profiles,
-        policy,
-        {"id": "work", "revision": "1"},
-        requirements={
-            "required_result_classes": [],
-            "required_proof_classes": [],
-            "independent_context": False,
-            "required_execution_guarantees": [],
-        },
-    )
-    assert routes["candidates"][0]["eligible"] is False
-    assert "independent-safety-ceiling" in routes["candidates"][0]["reasons"]
-    assert routes["candidates"][1]["eligible"] is True
-    profiles[0]["execution_configurations"] = routes["candidates"]
-    decision = assignment_decision_from_policy(
-        assignment_policy={"assignment_policy": {"value": "required-best-fit"}, "binding": {"enforceable": True}},
-        runtime_resolution={"profile_recommendations": profiles, "capability_context": {"task_class": "implementation"}},
-        target_evidence={},
-        human_intent="Fix a bounded parser defect",
-    )
-    assert decision["selected_target"] == "worker"
-    assert decision["selected_transport"] == "manual"
-    policy.manual_transport_policy = "disabled"
-    unavailable = current_route_configurations(
-        tmp_path,
-        profiles,
-        policy,
-        {"id": "work", "revision": "1"},
-        requirements={
-            "required_result_classes": [],
-            "required_proof_classes": [],
-            "independent_context": False,
-            "required_execution_guarantees": [],
-        },
-    )
-    profiles[0]["execution_configurations"] = unavailable["candidates"]
-    blocked = assignment_decision_from_policy(
-        assignment_policy={}, runtime_resolution={"profile_recommendations": profiles}, target_evidence={}
-    )
-    # Canonical authority still wins over the deprecated disabled alias.
-    assert blocked["candidate_scores"][0]["eligible"] is True
-    assert unavailable["candidates"][1]["eligible"] is True
-    # A retired alias cannot change the native default manual authority.
-    # Automatic execution remains independently unsafe above.
-    policy.transport_authority = None
-    unavailable = current_route_configurations(
-        tmp_path,
-        profiles,
-        policy,
-        {"id": "work", "revision": "1"},
-        requirements={
-            "required_result_classes": [],
-            "required_proof_classes": [],
-            "independent_context": False,
-            "required_execution_guarantees": [],
-        },
-    )
-    profiles[0]["execution_configurations"] = unavailable["candidates"]
-    blocked = assignment_decision_from_policy(
-        assignment_policy={}, runtime_resolution={"profile_recommendations": profiles}, target_evidence={}
-    )
-    assert blocked["candidate_scores"][0]["eligible"]
-    assert "independent-safety-ceiling" in unavailable["candidates"][0]["reasons"]
 
 
 def _select(value: object, path: str) -> object:
@@ -960,57 +864,6 @@ def test_stored_effect_cannot_move_to_another_target(shared_core_binary: Path, t
     with pytest.raises(DecisionContractError, match="storage target differs"):
         admit_stored_attempt(str(other), decision, decision["primary_action"])
     assert list(other.iterdir()) == []
-
-
-@pytest.mark.parametrize("modified_ledger", [False, True])
-def test_local_only_uninstall_preserves_usable_effect_custody(shared_core_binary: Path, tmp_path: Path, modified_ledger: bool) -> None:
-    from agentic_workspace.config import load_workspace_config
-    from agentic_workspace.workspace_runtime_core import (
-        LOCAL_ONLY_IGNORE_BLOCK,
-        _workspace_payload_bytes_for_target,
-        _workspace_uninstall_report,
-    )
-
-    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
-    ignore_files = [tmp_path / ".git/info/exclude", tmp_path / ".gitignore"]
-    for path in ignore_files:
-        path.write_text(LOCAL_ONLY_IGNORE_BLOCK)
-    ignored_before = {path: path.read_bytes() for path in ignore_files}
-    decision = _compile(_stored_payload(tmp_path))
-    action = decision["primary_action"]
-    admitted = admit_stored_attempt(str(tmp_path), decision, action)
-    committed = commit_stored_attempt(str(tmp_path), admitted["custody"], {"status": "applied", "effects": action["effects"], "value": 1})
-    owner_reference = tmp_path / ".agentic-workspace/local/owner-custody.json"
-    owner_reference.write_text(json.dumps(committed["custody"]))
-    retained = {path: path.read_bytes() for path in (tmp_path / ".agentic-workspace/local").rglob("*") if path.is_file()}
-    relative = Path(".agentic-workspace/WORKFLOW.md")
-    package_file = tmp_path / relative
-    package_file.write_bytes(_workspace_payload_bytes_for_target(relative, target_root=tmp_path))
-    ledger_relative = Path(".agentic-workspace/OWNERSHIP.toml")
-    ledger = tmp_path / ledger_relative
-    ledger_bytes = _workspace_payload_bytes_for_target(ledger_relative, target_root=tmp_path)
-    if modified_ledger:
-        ledger_bytes += b"\n# repository-owned amendment\n"
-    ledger.write_bytes(ledger_bytes)
-    config = load_workspace_config(target_root=tmp_path)
-    preview = _workspace_uninstall_report(
-        target_root=tmp_path, selected_modules=[], descriptors={}, dry_run=True, config=config, local_only_repo_root=tmp_path
-    )
-    assert any(a["kind"] == "preserved" and a["path"] == ".agentic-workspace" for a in preview["actions"])
-    assert package_file.exists()
-    report = _workspace_uninstall_report(
-        target_root=tmp_path, selected_modules=[], descriptors={}, dry_run=False, config=config, local_only_repo_root=tmp_path
-    )
-    expected = "skipped" if modified_ledger else "removed"
-    assert any(a["kind"] == expected and a["path"] == relative.as_posix() for a in report["actions"])
-    assert package_file.exists() is modified_ledger
-    assert ledger.read_bytes() == ledger_bytes
-    assert any(a["kind"] == "preserved" and a["path"] == ledger_relative.as_posix() for a in report["actions"])
-    assert all(path.read_bytes() == value for path, value in retained.items())
-    assert all(path.read_bytes() == value for path, value in ignored_before.items())
-    subprocess.run(["git", "check-ignore", "--quiet", str(owner_reference)], cwd=tmp_path, check=True)
-    custody = json.loads(owner_reference.read_text())
-    assert admit_stored_attempt(str(tmp_path), decision, action, custody)["disposition"] == "replay"
 
 
 def _planning_context(tmp_path: Path, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1913,64 +1766,6 @@ def test_source_node_transport_requires_explicit_development_binary(shared_core_
     assert json.loads(result.stdout) == compile_source_decision([])
 
 
-def test_source_context_is_bound_before_finalization(shared_core_binary: Path, tmp_path: Path) -> None:
-    """#2909: isolate source currentness from aggregate worktree/cache churn."""
-    from agentic_workspace.operating_decision import (
-        admit_projection_surface_decision_input,
-        consume_projection_surface_decision_input,
-        finalize_projection_surface_operating_decision,
-        revalidate_projection_surface_decision_input,
-    )
-    from agentic_workspace.projection_reuse import _operating_decision_revisions, admitted_projection_revisions
-    from aw_maintainer.native_conformance import repository_decision_view
-
-    source, _ = _native_archive(tmp_path)
-    baseline, _, _ = admitted_projection_revisions(root=tmp_path, operation="start", query={"task": "edit"})
-
-    def admit(view: dict[str, Any]) -> dict[str, Any]:
-        revisions = dict(baseline)
-        material: dict[str, Any] = {"task": "edit"}
-        if "decision_context" in view:
-            revisions["decision_context_revision"] = view["input_revision"]
-            material["decision_context"] = view["decision_context"]
-        return admit_projection_surface_decision_input(
-            input_revisions=_operating_decision_revisions(revisions), consumer="start", material_inputs=material
-        )
-
-    def finish(admission: dict[str, Any], current: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-        payload = consume_projection_surface_decision_input(
-            payload={"decision_packet": {"kind": "agentic-workspace/ordinary-start-decision/v1"}},
-            admitted_input=admission,
-            consumer="start",
-        )
-        payload = revalidate_projection_surface_decision_input(
-            payload=payload, admitted_input=admission, current_input_revisions=current["input_revisions"], consumer="start"
-        )
-        return finalize_projection_surface_operating_decision(payload=payload, admitted_input=admission, consumer="start")
-
-    view = repository_decision_view(**source)
-    admitted = admit(view)
-    payload, decision = finish(admitted, admitted)
-    assert decision["decision_context"] == view["decision_context"]
-    assert payload["decision_packet"]["identity"]["decision_id"] == decision["decision_id"]
-    assert decision["admitted_input_revision"] == admitted["admitted_input_revision"]
-    (tmp_path / "unrelated.txt").write_text("unrelated source churn", encoding="utf-8")
-    unchanged = admit(repository_decision_view(**source))
-    assert finish(unchanged, unchanged)[1]["decision_id"] == decision["decision_id"]
-    quiet = admit(repository_decision_view(**{**source, "applicable_scope": ["path:unrelated.txt"]}))
-    assert quiet == admit({})
-    assert "decision_context" not in finish(quiet, quiet)[1]
-    (tmp_path / "authority.md").write_text("changed authority basis", encoding="utf-8")
-    stale = admit(repository_decision_view(**source))
-    stale_decision = finish(stale, stale)[1]
-    assert stale_decision["decision_id"] != decision["decision_id"]
-    assert stale_decision["decision_context"]["consequences"] == []
-    # A dependency change during materialization cannot finalize the old input.
-    rejected_payload, rejected = finish(admitted, stale)
-    assert rejected == {}
-    assert "decision_context" not in rejected_payload["decision_packet"]
-
-
 @pytest.mark.parametrize("destination", ["absent", "unadmitted", "different-value", "current", "changed-after-promotion"])
 def test_memory_decision_fallback_promotes_only_to_exact_current_native_source(
     shared_core_binary: Path, tmp_path: Path, destination: str
@@ -2187,31 +1982,6 @@ def test_repo_decision_consumes_public_route_without_path_match(shared_core_bina
     assert repository_decision_view(**context, semantic_routes=host)["decision_context"]["consequences"]
 
 
-def test_generated_node_start_does_not_fake_host_route_admission(shared_core_binary: Path, tmp_path: Path) -> None:
-    import os
-    import shutil
-
-    package = tmp_path / "isolated"
-    shutil.copytree(ROOT / "generated/workspace/typescript", package)
-    environment = {key: value for key, value in os.environ.items() if key not in {"VIRTUAL_ENV", "PYTHONPATH"}}
-    environment["PATH"] = ""
-    for command in ("start", "implement"):
-        result = subprocess.run(
-            [str(shutil.which("node")), str(package / "src/cli.mjs"), command, "--target", str(tmp_path), "--format", "json"],
-            cwd=tmp_path,
-            env=environment,
-            text=True,
-            capture_output=True,
-        )
-        assert result.returncode == 2, result.stdout + result.stderr
-        payload = json.loads(result.stdout)
-        assert payload["reason_code"] == "ordinary-owner-unavailable"
-        assert payload["completion_claim_allowed"] is False
-        assert payload["mutation_applied"] is False
-        assert "decision_packet" not in payload
-    assert not (tmp_path / ".agentic-workspace").exists()
-
-
 def _instruction_host(root: Path, text: str) -> tuple[dict[str, Any], Path]:
     import hashlib
 
@@ -2303,22 +2073,6 @@ def test_instruction_binding_scopes_are_distinct(shared_core_binary: Path, tmp_p
 
     host, _ = _instruction_host(tmp_path, "---\n" + body + "---\n# Scope\n")
     assert instruction_source_admission(host)["sources"][0]["authority"]["effects"] == effects
-
-
-def test_generated_node_instruction_declarations_are_not_binding(tmp_path: Path) -> None:
-    source = tmp_path / ".agentic-workspace/instructions/lookalike.md"
-    source.parent.mkdir(parents=True)
-    source.write_text("---\nchecks:\n  - run: pytest -q\nprotect:\n  - generated/**\n---\n# Declaration\n", encoding="utf-8")
-    result = subprocess.run(
-        ["node", "generated/workspace/typescript/src/cli.mjs", "instructions", "list", "--target", str(tmp_path), "--format", "json"],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    row = json.loads(result.stdout)["instructions"][0]
-    assert row["checks"] == row["protect"] == []
-    assert row["binding_admission"]["status"] == "unavailable-in-generated-typescript-host"
 
 
 @pytest.mark.parametrize("transport", ["manual", "internal"])
@@ -2433,37 +2187,3 @@ def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path
         rejected = {**context, "eligibility": {**context["eligibility"], key: value}}
         assert replace_assignment(rejected)["status"] == "blocked"
     assert replace_assignment({**context, "eligibility": None})["reason_code"] == "assignment-replacement-eligibility-unavailable"
-
-
-@pytest.mark.parametrize("constraint", ["capability", "proof", "human-control", "continuation"])
-def test_replacement_consumes_full_assignment_owner_eligibility(constraint: str) -> None:
-    """#2909: a constructible target is still subject to every owner hard gate."""
-    from agentic_workspace.target_evidence import assignment_decision_from_policy, replacement_eligibility
-
-    profile = {"name": "worker", "target_id": "host:worker", "target_revision": "v1", "location": "local", "execution_methods": ["cli"]}
-    if constraint == "capability":
-        profile["capability_mismatch"] = True
-    if constraint == "proof":
-        profile["proof_requirements"] = ["required-proof-missing"]
-    if constraint == "human-control":
-        profile["human_control_modes"] = ["off"]
-    decision = assignment_decision_from_policy(
-        assignment_policy={}, runtime_resolution={"profile_recommendations": [profile]}, target_evidence={}
-    )
-    if constraint == "continuation":
-        decision["candidate_scores"][0]["permitted_continuation"] = "unsupported-result-class"
-    execution = {"target": "worker", "target_identity_ref": "host:worker", "target_revision": "v1", "transport": "cli"}
-    admission = replacement_eligibility(
-        decision=decision, work={"id": "work", "revision": "v1"}, execution=execution, packet_integrity="seal"
-    )
-    assert admission["eligible"] is False
-    assert admission["candidate"]["eligibility"] == decision["candidate_scores"][0]["eligibility"]
-
-    changed_ranking = deepcopy(decision)
-    changed_ranking["candidate_scores"][0]["score"] = 100000
-    assert (
-        replacement_eligibility(
-            decision=changed_ranking, work={"id": "work", "revision": "v1"}, execution=execution, packet_integrity="seal"
-        )
-        == admission
-    )

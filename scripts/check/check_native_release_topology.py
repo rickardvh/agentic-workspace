@@ -21,8 +21,7 @@ def digest(path: Path) -> str:
 
 def inventory(directory: Path) -> list[dict[str, str]]:
     entries = []
-    # Coordinated CI output also contains module packages. This proof binds
-    # the root release set; module installation has its own consumer proof.
+    # Bind the complete native product set, including each declared host variant.
     for pattern in (
         "agentic_workspace-*.whl",
         "agentic_workspace-*.tar.gz",

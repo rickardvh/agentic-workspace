@@ -150,7 +150,7 @@ def _copy_source_fixture(target_root: Path) -> None:
         shutil.copy2(ROOT / relative, target)
     ownership = json.loads((ROOT / ".github/release-ownership.json").read_text(encoding="utf-8"))
     for package in ownership["typescript_packages"]:
-        for relative in (package["package_json"], str(Path(package["package_json"]).parent / "LICENSE")):
+        for relative in (package["package_json"],):
             target = target_root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
@@ -162,8 +162,11 @@ def test_source_package_identity_is_coordinated() -> None:
 
 def test_source_package_identity_rejects_conflicting_license(tmp_path: Path) -> None:
     _copy_source_fixture(tmp_path)
-    (tmp_path / "generated/workspace/typescript/LICENSE").write_text("not MIT\n", encoding="utf-8")
-    assert any("generated/workspace/typescript/package.json does not carry" in error for error in CHECKER.source_identity_errors(tmp_path))
+    path = tmp_path / "bindings/node/package.json"
+    body = json.loads(path.read_text(encoding="utf-8"))
+    body["license"] = "Unlicense"
+    path.write_text(json.dumps(body), encoding="utf-8")
+    assert any("bindings/node/package.json license" in error for error in CHECKER.source_identity_errors(tmp_path))
 
 
 @pytest.fixture(scope="module")

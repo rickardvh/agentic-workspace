@@ -16,8 +16,6 @@ def workspace_blockers(packet: dict) -> list:
 
 
 def test_unsupported_config_is_rejected_before_state_without_fallback(tmp_path, shared_core_binary, native_cli):
-    from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
-
     context = {"target": str(tmp_path), "task": "Inspect a link", "changed": []}
     quiet = consume("json", shared_core_binary, native_cli, context)
     assert quiet["decision_packet"]["status"] == "direct"
@@ -36,8 +34,6 @@ def test_unsupported_config_is_rejected_before_state_without_fallback(tmp_path, 
         assert "decision_packet" not in result
         assert source.read_text() == text
         assert not (tmp_path / ".agentic-workspace/local").exists()
-        with pytest.raises(WorkspaceUsageError, match="Invalid configuration"):
-            load_workspace_config(target_root=tmp_path)
         rejected = consume(
             "json", shared_core_binary, native_cli, {**context, "invocation": {"operation_id": "planning.reconcile"}}, allow_failure=True
         )

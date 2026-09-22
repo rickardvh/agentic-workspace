@@ -1,9 +1,0 @@
-# Retain, retire or promote selected material
-
-1. Use the delivered `advisory_context` and selected owner detail for relevant material. Source identity is not factual currentness.
-2. Select one entry from `memory.disposition.requests`. Preserve its source and optional fact identity. Supply the bounded disposition and reason: retain useful advisory value; retire only with a current obsolete/no-future-value judgment; promote only after a stronger owner has absorbed the complete selected lesson.
-3. For promotion, select an exact entry from `memory.receiving_admissions`. Copy its `receiving_admission` into the request's `receiver`. A whole note requires its complete lesson in a current admitted repository decision plus an exact source-context reference. An advisory fact additionally preserves its stable identity in that decision. A path, hash, matching excerpt, test result or agent assertion is insufficient.
-4. Resolve the request to obtain the exact proposed write and bounded human question. The human supplies the authorization answer; capability availability is not approval of a particular note. Do not answer for the human or reuse an unrelated authorization. Defer preserves all sources.
-5. Invoke only the returned `primary_action`, with the same target/task/changed context and JSON format. Resolve again. On interruption the current frontier carries an exact safe recovery action when one is established. Invoke only that action; preserve unresolved custody and never replay the original write.
-
-The write changes only the selected entry's disposition metadata in the existing manifest. Notes, other entries, comments and external authorship remain preserved. It grants no continuing corpus custody, factual truth, Planning progress, proof, completion, target quality or policy authority.

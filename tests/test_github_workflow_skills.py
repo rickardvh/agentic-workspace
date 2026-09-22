@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SHAPING = ROOT / "tools" / "skills" / "github-issue-shaping" / "SKILL.md"
 CREATION = ROOT / "tools" / "skills" / "github-issue-creation" / "SKILL.md"
-REVIEW = ROOT / "tools" / "skills" / "pr-review-recheck" / "SKILL.md"
+REVIEW = ROOT / "tools" / "skills" / "pr-review-recheck" / "references" / "closure.md"
 
 
 def _text(path: Path) -> str:
@@ -32,7 +32,7 @@ def test_bounded_leaf_is_one_coherent_pr_with_immediate_proof() -> None:
     assert "split" in shaping and "before implementation" in shaping
     assert "one coherent bounded PR" in creation
     assert "whole bounded leaf" in review
-    assert "after-the-fact" in review
+    assert "after the fact" in review
 
 
 def test_later_evidence_does_not_become_implementation_backlog_or_leaf_blocker() -> None:
@@ -43,7 +43,7 @@ def test_later_evidence_does_not_become_implementation_backlog_or_leaf_blocker()
     assert "evidence issues do not become implementation backlogs" in shaping.lower()
     assert "no product-code" in creation
     assert "route concrete defects" in creation
-    assert "Do not hold a complete bounded implementation leaf open" in review
+    assert "absence of that future observation is not a blocker for a bounded implementation leaf" in review
 
 
 def test_parent_closes_administratively_without_giant_pr() -> None:

@@ -19,12 +19,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE, WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
-from agentic_workspace.evaluation_projection import specialist_evaluation_projection
-from agentic_workspace.improvement_consequence import consequence_receipt_contract
+from aw_maintainer.evaluation_projection import specialist_evaluation_projection
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
+DEFAULT_AGENT_INSTRUCTIONS_FILE = "AGENTS.md"
+WORKSPACE_LOCAL_SCRATCH_ROOT_PATH = Path(".agentic-workspace/local/scratch")
+
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs"
 EPHEMERAL_MUTATION_PATHS = (
     ".git/",
@@ -941,7 +942,9 @@ def _snapshot_diff(
         if path not in ignored_paths and _is_harness_setup_mutation_path(path, patterns=harness_setup_patterns)
     ]
     candidate_source_paths = [path for path in changed_paths if path not in set(ignored_paths) and path not in set(setup_paths)]
-    runtime_receipt_paths = [path for path in candidate_source_paths if root is not None and _is_admitted_aw_runtime_receipt(root, path)]
+    # Historical record shape is not native producer custody. No source mutation
+    # is exempted merely because it resembles the retired consequence ledger.
+    runtime_receipt_paths: list[str] = []
     non_receipt_paths = [path for path in candidate_source_paths if path not in set(runtime_receipt_paths)]
     allowed_patterns = list(allowed_write_patterns or [])
     expected_paths = [path for path in non_receipt_paths if allowed_patterns and _matches_any(path, allowed_patterns)]
@@ -987,25 +990,6 @@ def _snapshot_diff(
         "runtime_receipt_refs": runtime_receipt_paths[:8],
     }
 
-
-def _is_admitted_aw_runtime_receipt(root: Path, relative_path: str) -> bool:
-    """Admit only producer-owned AW receipts with their expected record identity."""
-    contract = consequence_receipt_contract()
-    normalized = relative_path.replace("\\", "/")
-    if normalized != contract["relative_path"]:
-        return False
-    path = root / normalized
-    try:
-        records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    except (OSError, json.JSONDecodeError):
-        return False
-    return bool(records) and all(
-        isinstance(record, dict)
-        and record.get("kind") == contract["record_kind"]
-        and record.get("source")
-        and record.get("owner_kind") == "workspace-improvement-pressure/v1"
-        for record in records
-    )
 
 
 def _candidate_path(value: str, *, replacements: dict[str, str]) -> str:
@@ -1243,6 +1227,8 @@ def _fixture_runtime_environment(env: dict[str, str], *, repo_path: Path) -> dic
     """Bind local-wheelhouse runs to the fixture instead of an ambient checkout venv."""
     isolated = dict(env)
     isolated.pop("VIRTUAL_ENV", None)
+    isolated.pop("AGENTIC_WORKSPACE_CORE_BINARY", None)
+    isolated.pop("AW_NATIVE_ARTIFACT_DIR", None)
     isolated["UV_PROJECT_ENVIRONMENT"] = str(repo_path / ".venv")
     isolated["UV_CACHE_DIR"] = str(repo_path / ".uv-cache")
     isolated["UV_LINK_MODE"] = "copy"

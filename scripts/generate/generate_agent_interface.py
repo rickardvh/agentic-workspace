@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -101,18 +100,6 @@ def synchronize(*, check: bool = False) -> list[str]:
             drift.append(reference)
             if not check:
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_text(expected, encoding="utf-8", newline="\n")
-    # Standalone first-party packages fall back to these shipped declarations.
-    # These consumers need module roots only, never repository policy.
-    for module in ("memory", "planning"):
-        destination = ROOT / f"packages/{module}/src/repo_{module}_bootstrap/_ownership.toml"
-        roots = tomllib.loads(host_outputs[LEDGER])["module_roots"]
-        expected = "schema_version = 1\n" + "".join(
-            "\n[[module_roots]]\n" + "".join(f"{key} = {json.dumps(value)}\n" for key, value in row.items()) for row in roots
-        )
-        if destination.read_text(encoding="utf-8") != expected:
-            drift.append(destination.relative_to(ROOT).as_posix())
-            if not check:
                 destination.write_text(expected, encoding="utf-8", newline="\n")
     # Planning's compatibility installer shares this path with Workspace.
     # Derive identical bytes so alternating upgrades cannot overwrite each

@@ -298,14 +298,12 @@ def test_planning_profile_source_gap_and_subject_reentry_are_explicit(
     assert result["strategy_control"]["selected_profiles"] == []
 
 
-def test_reader_loads_current_verification_manifest_without_shared_config(tmp_path):
-    from agentic_workspace.config import load_workspace_config
-
-    setup(tmp_path, binding=True)
+def test_native_loads_current_verification_manifest_without_shared_config(tmp_path, shared_core_binary, native_cli):
+    context = setup(tmp_path, binding=True)
     (tmp_path / ".agentic-workspace/config.toml").unlink()
-    result = load_workspace_config(target_root=tmp_path)
-    assert not result.exists
-    assert "required" in {profile.id for profile in result.assurance.proof_profiles}
+    current = consume("native", shared_core_binary, native_cli, context, host_path=os.environ["PATH"])
+    assert "required" in {row["id"] for row in current["verification"]["strategy_control"]["selected_profiles"]}
+    assert current["verification"]["strategy_control"]["obligations"]
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

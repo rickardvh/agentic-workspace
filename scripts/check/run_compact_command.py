@@ -22,7 +22,6 @@ if not OUTPUT_ROOT.is_relative_to(REPO_ROOT.resolve()):
     raise SystemExit("AW_VALIDATION_OUTPUT_ROOT must resolve inside the current repository")
 LOG_ROOT = OUTPUT_ROOT / "command-logs"
 RESULT_ROOT = OUTPUT_ROOT / "validation-results"
-PLAN_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
 DEFAULT_FAILURE_TAIL_LINES = 80
 DEFAULT_PROGRESS_INTERVAL_SECONDS = 30.0
 DEFAULT_PROGRESS_THRESHOLD_SECONDS = 30.0
@@ -149,16 +148,6 @@ def _release_lock(lock_path: Path, fd: int) -> None:
         pass
 
 
-def _load_plan() -> dict[str, object] | None:
-    if not PLAN_PATH.is_file():
-        return None
-    try:
-        plan = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return plan if isinstance(plan, dict) else None
-
-
 def _repo_relative(path: Path) -> str:
     try:
         return path.relative_to(REPO_ROOT).as_posix()
@@ -166,48 +155,8 @@ def _repo_relative(path: Path) -> str:
         return path.as_posix()
 
 
-def _plan_graph_payload(plan: dict[str, object]) -> dict[str, object]:
-    trace_fixtures = []
-    for trace in plan.get("trace_fixtures", []):
-        if not isinstance(trace, dict):
-            continue
-        events = [
-            {
-                "constituent_id": str(event.get("constituent_id", "")),
-                "outcome": str(event.get("outcome", "")),
-                **({"repeat_allowed": True} if event.get("repeat_allowed") else {}),
-            }
-            for event in trace.get("events", [])
-            if isinstance(event, dict)
-        ]
-        trace_fixtures.append({"id": trace.get("id"), "command": trace.get("command"), "events": events})
-    return {
-        "kind": plan.get("kind"),
-        "schema_version": plan.get("schema_version"),
-        "issue": plan.get("issue"),
-        "parallel_modes": plan.get("parallel_modes", []),
-        "compact_label_map": plan.get("compact_label_map", {}),
-        "constituents": plan.get("constituents", []),
-        "duplicate_dispositions": plan.get("duplicate_dispositions", []),
-        "trace_fixtures": trace_fixtures,
-    }
-
-
 def _sha256_json(payload: object) -> str:
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
-
-
-def _plan_identity(plan: dict[str, object]) -> dict[str, object]:
-    raw = PLAN_PATH.read_bytes() if PLAN_PATH.is_file() else b""
-    graph_payload = _plan_graph_payload(plan)
-    return {
-        "kind": "agentic-workspace/validation-plan-identity/v1",
-        "path": _repo_relative(PLAN_PATH),
-        "schema_version": plan.get("schema_version"),
-        "issue": plan.get("issue"),
-        "file_sha256": hashlib.sha256(raw).hexdigest(),
-        "graph_sha256": _sha256_json(graph_payload),
-    }
 
 
 def _git_value(*args: str) -> str:
@@ -233,7 +182,10 @@ def _repository_identity() -> dict[str, object]:
             path = path.split(" -> ", 1)[1]
         if path:
             tracked_paths.append(path.replace("\\", "/"))
-    tracked_diff = _git_value("diff", "HEAD", "--binary", "--", *sorted(set(tracked_paths))) if tracked_paths else ""
+    # Git already limits diff to tracked content. Enumerating changed paths here
+    # exceeds Windows' command-line limit for large removals and misses rename
+    # sources; ask for the whole tracked diff directly.
+    tracked_diff = _git_value("diff", "HEAD", "--binary", "--") if tracked_paths else ""
     try:
         runtime = json.loads(os.environ.get("AW_RUNTIME_IDENTITY", "{}"))
     except json.JSONDecodeError:
@@ -252,25 +204,6 @@ def _repository_identity() -> dict[str, object]:
         "tracked_diff_sha256": hashlib.sha256(tracked_diff.encode("utf-8")).hexdigest() if tracked_diff else "",
         "runtime": runtime,
     }
-
-
-def _load_plan_metadata(label: str) -> dict[str, object]:
-    plan = _load_plan()
-    if plan is None:
-        return {}
-    label_map = plan.get("compact_label_map")
-    if not isinstance(label_map, dict):
-        return {}
-    metadata = label_map.get(label)
-    if not isinstance(metadata, dict):
-        return {}
-    constituent_id = str(metadata.get("id") or "")
-    constituents = {str(item.get("id")): item for item in plan.get("constituents", []) if isinstance(item, dict) and item.get("id")}
-    constituent = constituents.get(constituent_id, {})
-    merged = dict(constituent)
-    merged.update(metadata)
-    merged["plan_identity"] = _plan_identity(plan)
-    return merged
 
 
 def _record_paths_for_run(run_root: Path) -> list[Path]:
@@ -776,13 +709,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     run_id = str(run_identity["run_id"])
     working_directory = (REPO_ROOT / args.cwd).resolve()
-    plan_metadata = _load_plan_metadata(str(args.label))
-    constituent_id = args.id or str(plan_metadata.get("id") or _slugify(args.label))
-    dependencies = [str(item) for item in args.depends_on] or [str(item) for item in plan_metadata.get("dependencies", [])]
-    proof_purpose = str(args.proof_purpose or plan_metadata.get("proof_purpose") or args.label)
-    execution_posture = str(plan_metadata.get("execution_posture") or "")
-    owner_boundary = str(plan_metadata.get("owner_boundary") or "")
-    plan_identity = plan_metadata.get("plan_identity") if isinstance(plan_metadata.get("plan_identity"), dict) else {}
+    constituent_id = args.id or _slugify(args.label)
+    dependencies = [str(item) for item in args.depends_on] or []
+    proof_purpose = str(args.proof_purpose or args.label)
+    execution_posture = ""
+    owner_boundary = ""
+    plan_identity = {}
     repository_identity = _repository_identity()
     explicit_subject_paths = sorted({_repo_relative((REPO_ROOT / path).resolve()) for path in args.subject_path})
     declared_subject_paths = explicit_subject_paths or [str(path) for path in repository_identity.get("tracked_paths", [])]

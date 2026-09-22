@@ -229,7 +229,9 @@ def consume(
         ]
         stdin = encoded
         if reference_helper:
-            module = ((installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/operating.mjs")).as_uri()
+            module = (
+                (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/native/operating.mjs")
+            ).as_uri()
             command[-1] = (
                 f"import {{selectReference}} from {json.dumps(module)}; import {{readFileSync}} from 'node:fs'; "
                 "const c=JSON.parse(readFileSync(0,'utf8')); const r=c.reference; delete c.reference; "
@@ -714,7 +716,10 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
 ) -> None:
     # Retained historical source fixture tests exact identity recognition only.
     # It acquires no publication custody and supplies no human/domain acceptance.
-    from agentic_workspace.workspace_runtime_core import _proof_publication_identity
+    from aw_maintainer.native_conformance import proof_receipt
+
+    def _proof_publication_identity(receipt):
+        return proof_receipt({"action": "publication-identity", "receipt": receipt})["identity"]
 
     (tmp_path / "a.txt").write_text("one")
     context = {"target": str(tmp_path), "task": "Establish the current document claim", "changed": ["a.txt"]}

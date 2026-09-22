@@ -88,7 +88,9 @@ def cargo_lockfiles(ownership: dict[str, Any]) -> list[Path]:
 
 
 def version_file_paths(ownership: dict[str, Any]) -> list[Path]:
-    return [*package_pyprojects(ownership), *typescript_package_jsons(ownership)]
+    # Source bindings without a version derive their artifact identity from pyproject.
+    node_mirrors = [path for path in typescript_package_jsons(ownership) if "version" in json.loads(path.read_text(encoding="utf-8"))]
+    return [*package_pyprojects(ownership), *node_mirrors]
 
 
 def release_notes_dir(ownership: dict[str, Any]) -> Path:
@@ -341,18 +343,6 @@ def verify_normalization_delta(
             for package in before.get("package", []):
                 if package.get("name") in names and package.get("source", {}).get("editable") is not None:
                     package["version"] = version
-        elif path in {f"generated/workspace/{lang}/external_contract_bundle.json" for lang in ("python", "typescript")}:
-            before, after = json.loads(before_text), json.loads(after_text)
-            before["versions"]["client_package"] = version
-            before["versions"]["python_package"]["version"] = version
-            before["versions"]["typescript_package"]["version"] = npm_version(version)
-        elif path in {
-            f"generated/{owner}/.agentic-workspace-cli-fingerprint.json" for owner in ("workspace", "memory", "planning", "verification")
-        }:
-            before, after = json.loads(before_text), json.loads(after_text)
-            if not re.fullmatch(r"[0-9a-f]{64}", str(after.get("fingerprint", ""))):
-                raise SystemExit(f"Invalid regenerated fingerprint: {path}")
-            before["fingerprint"] = after["fingerprint"]
         else:
             raise SystemExit(f"Product-semantic delta is not release normalization: {path}")
         if before != after:
@@ -499,8 +489,9 @@ def current_package_versions(ownership: dict[str, Any]) -> list[Version]:
         declared = tomllib.loads(path.read_text(encoding="utf-8"))["project"]["version"]
         versions.append(Version.parse(declared))
     for path in typescript_package_jsons(ownership):
-        declared = json.loads(path.read_text(encoding="utf-8"))["version"]
-        versions.append(Version.parse(declared))
+        declared = json.loads(path.read_text(encoding="utf-8")).get("version")
+        if declared is not None:
+            versions.append(Version.parse(declared))
     return versions
 
 
@@ -528,7 +519,10 @@ def _tag_declares_coordinated_release_version(ownership: dict[str, Any], *, tag:
             return False
         try:
             if path.name == "package.json":
-                declared = str(json.loads(result.stdout)["version"])
+                metadata = json.loads(result.stdout)
+                if "version" not in metadata:
+                    continue
+                declared = str(metadata["version"])
             else:
                 payload = tomllib.loads(result.stdout)
                 package_name = str(payload.get("project", {}).get("name") or "").strip()
@@ -625,6 +619,8 @@ def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
         path.write_text(updated, encoding="utf-8")
     for path in typescript_package_jsons(ownership):
         payload = json.loads(path.read_text(encoding="utf-8"))
+        if "version" not in payload:
+            continue
         payload["version"] = node_version
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
     for path in cargo_manifests(ownership):
@@ -817,7 +813,7 @@ def verify_preview_release(
         raise SystemExit(f"Preview verification requires a {PREVIEW_TAG_PREFIX}MAJOR.MINOR.PATCH tag")
     version = release_identity(tag)["version"]
     versions = [tomllib.loads(read(path))["project"]["version"] for path in package_pyprojects(ownership)]
-    node_versions = [json.loads(read(path))["version"] for path in typescript_package_jsons(ownership)]
+    node_versions = [payload["version"] for path in typescript_package_jsons(ownership) if "version" in (payload := json.loads(read(path)))]
     cargo_versions = [tomllib.loads(read(path))["package"]["version"] for path in cargo_manifests(ownership)]
     if any(v != npm_version(version) for v in cargo_versions):
         raise SystemExit("Cargo versions do not match the canonical release mapping")
@@ -874,7 +870,8 @@ def verify_preview_release(
             raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
     for path in typescript_package_jsons(ownership):
         before = json.loads(_run(["git", "show", f"{expected_source}:{_repo_path(path)}"]).stdout)
-        before["version"] = npm_version(version)
+        if "version" in before:
+            before["version"] = npm_version(version)
         if before != json.loads(read(path)):
             raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
     for path in cargo_manifests(ownership):
@@ -895,16 +892,6 @@ def verify_preview_release(
     before = normalized_payload_provenance(before, str(version))
     if before != json.loads(read(ROOT / provenance_ref)):
         raise SystemExit("Preview changed non-release payload provenance")
-    for language in ("python", "typescript"):
-        relative = f"generated/workspace/{language}/external_contract_bundle.json"
-        if relative not in allowed:
-            continue
-        before = json.loads(_run(["git", "show", f"{expected_source}:{relative}"]).stdout)
-        before["versions"]["client_package"] = str(version)
-        before["versions"]["python_package"]["version"] = str(version)
-        before["versions"]["typescript_package"]["version"] = npm_version(version)
-        if before != json.loads(read(ROOT / relative)):
-            raise SystemExit(f"Preview changed non-version external contract: {relative}")
     note_path = preview_release_note_path(ownership, tag)
     if expected_source not in read(note_path):
         raise SystemExit(f"Preview release note {_repo_path(note_path)} must identify reconstruction source {expected_source}")

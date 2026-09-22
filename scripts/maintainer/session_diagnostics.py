@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from agentic_workspace.session_logging import analyze_session_log, export_session_log, load_state_for_argv
+from aw_maintainer.session_diagnostics import analyze_session_log, export_session_log, load_state_for_argv
 
 
 def main() -> int:

@@ -30,15 +30,16 @@ Repository-only Python helpers live in `src/tooling/python/aw_maintainer`.
 `native_conformance` exposes internal Rust vector/contract operations for tests;
 public consumers import `agentic_workspace` directly. `contracts`,
 `ownership_profile` and `review_topology` serve source generation and GitHub
-maintainer workflows. Editable development includes this tooling path; wheels
+maintainer workflows. `session_diagnostics` reads and exports existing native
+logs; it does not implement capture or workflow authority. Editable development includes this tooling path; wheels
 exclude it. Former helper imports under `agentic_workspace` have no aliases.
 
-Legacy Python clients, operations, generated command trees, and the three module
-distributions remain source development and migration fixtures. They are not
-wheel contents, installed dependencies, npm contents, or release assets. The
-source archive contains binding sources and exact Rust compile inputs, including
-canonical contracts and bundled operating resources; those resources are not a
-second language runtime. Release ownership records this disposition explicitly.
+The former Python clients, domain host, compatibility aliases and generated
+Python/TypeScript execution trees are removed. Planning, Memory and Verification
+execute in the native core. Their retained bootstrap data and schemas are Rust
+compile inputs; they do not provide separately runnable Python distributions.
+The source archive contains binding sources and exact Rust compile inputs,
+including canonical contracts and bundled operating resources.
 
 Build the wheel/source archive with `uv build --wheel --sdist`. Stage npm and
 the native archive with `scripts/release/stage_native_npm.py --output <new-dir>
@@ -61,7 +62,8 @@ the standalone pair. It does not rebuild artefacts. Its receipt binds exact
 asset hashes, source commit, proof implementation, Node version and execution
 context; verification rejects stale inputs. Historical receipt filenames remain
 for release manifest compatibility, with the new `native-release-conformance/v1`
-kind. Historical generated-command proofs remain source-only checks.
+kind. Current native owner tests, public binding conformance and isolated artifact
+consumers replace the retired generated-command runners.
 
 The final promotion composer uses this same receipt validator for the exact
 source and artefact set. Only intact hosted proofs from clean source may satisfy
@@ -265,3 +267,7 @@ and [authentication action](https://github.com/rust-lang/crates-io-auth-action).
 Account bootstrap, trusted-publisher configuration and live registry receipts are
 external acceptance steps. Local staging/build/install proof does not establish
 their completion or authorise the final RC/stable release.
+
+The sandbox model harness captures one Codex execution and its output artifact.
+It does not invoke the retired Python final-response admission/auto-resume route.
+Evaluation and native owner evidence remain separate from transport exit status.

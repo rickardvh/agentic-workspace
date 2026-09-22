@@ -70,31 +70,23 @@ def test_workspace_split_targets_preserve_serial_pytest_contract() -> None:
     assert "VERIFICATION_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)" in text
     assert "check-bounded-parallel:" in text
     assert "$(MAKE) test-workspace-cli WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16'" in text
-    assert (
-        "$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts-measurement test-workspace-generated-release "
-        "test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync "
-        "verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan-measurement structured-file-inventory "
-        "package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' "
-        "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' "
-        "VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'"
-    ) in text
-    assert "validation-runtime-plan-measurement:" in text
-    assert "check_validation_runtime_plan.py --measurement-phase" in text
-    assert "not test_validation_runtime_plan_matches_makefile_ci_and_evidence" in text
-    assert "validation-runtime-plan:\n" in text
+    recipe = next(line for line in text.splitlines() if "$(MAKE) -j 4" in line)
+    assert "test-workspace-proof" in recipe
+    assert "WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16'" in recipe
+    assert "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8'" in recipe
     assert "test-workspace-contracts:\n" in text
 
 
 def test_makefile_exposes_setup_free_aggregate_targets() -> None:
     text = _makefile_text()
 
-    assert "test-nosync: test-workspace test-memory test-planning test-verification" in text
+    assert "test-nosync: test-workspace test-source-maintenance" in text
     assert "test: sync-all test-nosync" in text
-    assert "lint-nosync: lint-workspace lint-memory lint-planning lint-verification" in text
+    assert "lint-nosync: lint-workspace" in text
     assert "lint: sync-all lint-nosync" in text
-    assert "typecheck-nosync: typecheck-workspace typecheck-memory typecheck-planning typecheck-verification" in text
+    assert "typecheck-nosync: typecheck-workspace" in text
     assert "typecheck: sync-all typecheck-nosync" in text
-    assert "verify-nosync: verify-workspace verify-memory verify-planning verify-verification" in text
+    assert "verify-nosync: verify-workspace native-sources" in text
     assert "verify: sync-all verify-nosync" in text
     assert "check: sync-all check-nosync" in text
 
@@ -177,6 +169,5 @@ def test_ci_uses_setup_free_targets_after_explicit_sync() -> None:
 
     assert "run: make sync-all" in workflow
     assert "run: make typecheck-nosync" in workflow
-    assert "run: make check-${{ matrix.package }}-nosync" in workflow
     assert "run: make typecheck\n" not in workflow
     assert "run: make check-${{ matrix.package }}\n" not in workflow

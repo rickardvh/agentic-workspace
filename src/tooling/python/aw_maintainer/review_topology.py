@@ -95,9 +95,14 @@ def _observation_digest(observation: dict[str, Any]) -> str:
 def current_review_owner_identity(target_root: Path) -> dict[str, str]:
     """Resolve the selected source-owned Planning record and its exact content revision."""
 
-    from agentic_workspace.current_work_context import _selected_planning_owner
+    from agentic_workspace import DecisionContractError, start
 
-    owner_id, owner_ref = _selected_planning_owner(target_root)
+    try:
+        view = start({"target": str(target_root), "task": "Observe the current Planning review owner", "projection": "full"})
+    except DecisionContractError:
+        return {}
+    owner = view.get("planning", {}).get("incumbent_owner") or {}
+    owner_id, owner_ref = owner.get("id"), owner.get("ref")
     if not owner_id or not owner_ref:
         return {}
     candidate = (target_root / owner_ref).resolve()

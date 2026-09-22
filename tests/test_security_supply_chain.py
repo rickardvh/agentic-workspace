@@ -13,8 +13,6 @@ sys.path.insert(0, str(REPO_ROOT / "scripts/check"))
 from check_rust_dependencies import check as check_rust_dependencies  # noqa: E402
 from check_security_supply_chain import evaluate_security_supply_chain  # noqa: E402
 
-from agentic_workspace import workspace_runtime_core  # noqa: E402
-
 
 def _copy_security_surface(target: Path) -> None:
     paths = [
@@ -22,7 +20,7 @@ def _copy_security_surface(target: Path) -> None:
         "docs/security/threat-model.md",
         "uv.lock",
         "pyproject.toml",
-        "src/agentic_workspace/trusted_execution.py",
+        "crates/agentic-workspace-core/src/native_proof.rs",
         "src/agentic_workspace/contracts/security_supply_chain_policy.json",
         "scripts/check/check_security_supply_chain.py",
         ".github/workflow-write-permissions.json",
@@ -50,14 +48,6 @@ def test_repository_security_supply_chain_readiness_is_exact_and_ready() -> None
     assert receipt["release_promotion_allowed"] is True
     assert receipt["subject_fingerprint"].startswith("sha256:")
     assert {control["status"] for control in receipt["controls"]} == {"pass"}
-
-
-def test_workspace_report_projects_exact_security_readiness() -> None:
-    receipt = workspace_runtime_core._security_supply_chain_readiness_payload(target_root=REPO_ROOT)
-
-    assert receipt["kind"] == "agentic-workspace/security-supply-chain-readiness/v1"
-    assert receipt["status"] == "ready"
-    assert receipt["release_promotion_allowed"] is True
 
 
 def test_unpinned_action_blocks_release_readiness(tmp_path: Path) -> None:
@@ -132,14 +122,6 @@ def test_semantic_permission_scanner_and_locked_sync_fail_closed(tmp_path: Path)
         assert receipt["status"] == "blocked"
         assert any(failure["control"] == control for failure in receipt["failures"])
     security.write_text(original, encoding="utf-8")
-    shadow = tmp_path / "packages/memory/uv.lock"
-    shadow.parent.mkdir(parents=True)
-    shadow.write_text("# obsolete standalone lock\n", encoding="utf-8")
-    receipt = evaluate_security_supply_chain(tmp_path)
-    lock = next(control for control in receipt["controls"] if control["id"] == "locked-generator-and-runtime-dependencies")
-    assert lock["status"] == "fail"
-    assert lock["shadow_workspace_locks"] == ["packages/memory/uv.lock"]
-    assert receipt["release_promotion_allowed"] is False
 
 
 def test_repo_local_workflow_write_admission_is_required_and_fingerprinted(tmp_path: Path) -> None:
@@ -154,24 +136,6 @@ def test_repo_local_workflow_write_admission_is_required_and_fingerprinted(tmp_p
     assert blocked["status"] == "blocked"
     assert blocked["subject_fingerprint"] != baseline["subject_fingerprint"]
     assert any(failure["control"] == "immutable-least-privilege-actions" for failure in blocked["failures"])
-
-
-def test_release_promotion_requires_matching_current_security_receipt() -> None:
-    receipt = evaluate_security_supply_chain(REPO_ROOT)
-    accepted = workspace_runtime_core._security_readiness_promotion_input(
-        receipt=receipt, expected_subject_fingerprint=receipt["subject_fingerprint"]
-    )
-    assert accepted["status"] == "accepted"
-    for candidate, reason in (
-        (None, "missing-security-readiness"),
-        ({**receipt, "subject_fingerprint": "sha256:stale"}, "stale-or-mismatched-security-readiness"),
-        ({**receipt, "status": "blocked", "release_promotion_allowed": False}, "failed-security-readiness"),
-    ):
-        blocked = workspace_runtime_core._security_readiness_promotion_input(
-            receipt=candidate, expected_subject_fingerprint=receipt["subject_fingerprint"]
-        )
-        assert blocked["status"] == "blocked"
-        assert blocked["reason"] == reason
 
 
 def test_rust_policy_runner_enforces_version_lock_and_propagates_failure(monkeypatch: pytest.MonkeyPatch) -> None:

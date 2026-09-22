@@ -20,9 +20,7 @@ LANE_DIR = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluatio
 SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
 HARNESS_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
 SBX_ADAPTER_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_sbx_codex_adapter.py"
-CONFIGURED_FIXTURE_SCRIPT = LANE_DIR / "prepare_configured_orchestration_fixture.py"
 CONTEXT_COST_BRIDGE_SCRIPT = LANE_DIR / "codex_context_cost_bridge.py"
-CONTEXT_COST_CAPTURE_SCRIPT = LANE_DIR / "capture_issue_2818_context_cost.py"
 
 
 def _load_module():
@@ -47,16 +45,6 @@ def _load_harness_module():
 
 def _load_sbx_adapter_module():
     spec = importlib.util.spec_from_file_location("run_sbx_codex_adapter", SBX_ADAPTER_SCRIPT)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def _load_configured_fixture_module():
-    spec = importlib.util.spec_from_file_location("prepare_configured_orchestration_fixture", CONFIGURED_FIXTURE_SCRIPT)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -121,7 +109,6 @@ def test_issue_2818_supported_host_cost_evidence_is_bounded_honest_and_actionabl
     assert host["raw_transcript_checked_in"] is False
     assert host["workspace_mutation_observed"] is False
     assert host["provider_event_projection_sha256"] == hashlib.sha256(CONTEXT_COST_BRIDGE_SCRIPT.read_bytes()).hexdigest()
-    assert CONTEXT_COST_CAPTURE_SCRIPT.is_file()
 
     schema = json.loads(
         (REPO_ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text(encoding="utf-8")
@@ -952,97 +939,6 @@ def test_configured_orchestration_evaluation_matrix_covers_receipts_failures_cos
     assert report["provider_availability"]["unavailable_or_unobserved"]
 
 
-def test_configured_orchestration_fixture_preparation_is_copy_local(tmp_path: Path) -> None:
-    module = _load_configured_fixture_module()
-    config = tmp_path / ".agentic-workspace" / "config.local.toml"
-    config.parent.mkdir(parents=True)
-    config.write_text('\n[delegation]\ntransport_authority = "automatic"\n', encoding="utf-8")
-
-    module.configure(tmp_path, task="Make a bounded mechanical documentation edit to add one compact README troubleshooting example.")
-
-    payload = tomllib.loads(config.read_text(encoding="utf-8"))
-    assert payload["delegation"] == {
-        "transport_authority": "automatic",
-        "assignment_policy": "required-best-fit",
-        "current_target": "strong_planner",
-    }
-    assert (tmp_path / ".agentic-workspace/planning/execplans/configured-orchestration-fixture.plan.json").is_file()
-    assert (tmp_path / ".agentic-workspace/planning/assignments/configured-orchestration-assignment.assignment.json").is_file()
-
-
-def test_configured_orchestration_ordinary_start_executes_revision_bound_export(tmp_path: Path) -> None:
-    fixture = REPO_ROOT / "tools/model-cli-harness/fixtures/aw-configured-host-repo"
-    repo = tmp_path / "repo"
-    shutil.copytree(fixture, repo)
-    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
-    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "commit", "-m", "fixture baseline"], cwd=repo, check=True, capture_output=True, text=True)
-    task = "Make a bounded mechanical documentation edit that adds one compact troubleshooting example to the setup guide."
-    _load_configured_fixture_module().configure(repo, task=task)
-
-    start = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts/run_agentic_workspace.py"),
-            "start",
-            "--target",
-            str(repo),
-            "--task",
-            task,
-            "--format",
-            "json",
-        ],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    decision = json.loads(start.stdout)["decision_packet"]
-    assert decision["action"]["id"] == "export-assigned-handoff"
-    assert decision["action"]["operation"] == {"operation_id": "assignment.export"}
-    assert decision["action"]["command_effect"] == "mutating"
-    assert decision["effects"]["implementation_allowed"] is False
-    assert "implement the selected worker slice locally" in decision["effects"]["forbidden_actions"]
-
-    assignment = json.loads(
-        (repo / ".agentic-workspace/planning/assignments/configured-orchestration-assignment.assignment.json").read_text(encoding="utf-8")
-    )
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts/run_agentic_workspace.py"),
-            "assignment",
-            "export",
-            "--target",
-            str(repo),
-            "--assignment-id",
-            assignment["assignment_id"],
-            "--assignment-revision",
-            assignment["current_revision"],
-            "--run-id",
-            assignment["current_attempt"]["run_id"],
-            "--target-name",
-            assignment["target_name"],
-            "--transport",
-            "manual",
-            "--format",
-            "json",
-        ],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    receipt = json.loads(result.stdout)
-    assert receipt["operation_id"] == "assignment.export"
-    assert receipt["status"] == "handoff-prepared"
-    assert receipt["outcome"] == "applied"
-    assert (repo / ".agentic-workspace/local/assignment-runs/configured-orchestration-run-1/export/packet.json").is_file()
-    assert (repo / ".agentic-workspace/local/assignment-runs/configured-orchestration-run-1/export/prompt.md").is_file()
-
-
 def test_future_context_live_evaluation_is_head_bound_and_cost_complete() -> None:
     evidence = json.loads((REPO_ROOT / "docs" / "reviews" / "future-context-live-evaluation-2026-08-24.json").read_text(encoding="utf-8"))
 
@@ -1206,11 +1102,8 @@ def test_model_cli_harness_defines_compact_startup_weak_agent_probes(tmp_path: P
 
     for fixture in ("aw-minimal-host-repo", "aw-memory-host-repo"):
         guidance = (REPO_ROOT / "tools" / "model-cli-harness" / "fixtures" / fixture / "AGENTS.md").read_text(encoding="utf-8")
-        assert "authoritative `decision_packet`" in guidance
-        assert "do not omit `--format json`" in guidance
-        assert "do not open raw config files to rediscover it" in guidance
-        assert "`communication_contract` as optional selector-backed" in guidance
-        assert "Use the returned `communication_contract`" not in guidance
+        assert ".agentic-workspace/skills/workspace-startup/SKILL.md" in guidance
+        assert "read it directly" in guidance
 
     memory_scenario = scenarios["memory-consult-before-edit"]
     variants = {item["id"]: item["prompt"] for item in memory_scenario["prompt_variants"]}
@@ -1420,18 +1313,7 @@ def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
             share_path.write_text("Done.", encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
-    def fake_subprocess_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        assert "--attempt-file" in command
-        assert command[command.index("--attempt-file") + 1] == str(share_path)
-        return subprocess.CompletedProcess(
-            command,
-            0,
-            stdout=json.dumps({"kind": "agentic-workspace/final-response-admission-result/v1", "status": "accepted_terminal_final"}),
-            stderr="",
-        )
-
     monkeypatch.setattr(module, "_run", fake_run)
-    monkeypatch.setattr(module.subprocess, "run", fake_subprocess_run)
     monkeypatch.setattr(module.sys, "platform", "win32")
     monkeypatch.setattr(module, "WINDOWS_COMMAND_LINE_LIMIT", 1000)
 
@@ -1479,163 +1361,7 @@ def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
     assert "large prompt" not in subprocess.list2cmdline(commands[3])
     assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
     assert share_path.read_text(encoding="utf-8") == "Done."
-    assert json.loads(Path(f"{share_path}.admission.json").read_text(encoding="utf-8"))["status"] == "accepted_terminal_final"
-
-
-def test_sbx_codex_adapter_reinvokes_after_rejected_final_and_preserves_admission_sidecar(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    module = _load_sbx_adapter_module()
-    commands: list[list[str]] = []
-    share_path = tmp_path / "session.md"
-    admission_payloads = [
-        {
-            "kind": "agentic-workspace/final-response-admission-result/v1",
-            "status": "rejected_auto_resumed",
-            "continuation_operation": {
-                "invoked_operation": "proof.report",
-                "exit_code": 0,
-            },
-        },
-        {
-            "kind": "agentic-workspace/final-response-admission-result/v1",
-            "status": "accepted_terminal_final",
-        },
-    ]
-    admission_attempts: list[str] = []
-
-    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
-        commands.append(command)
-        if command[:5] == ["sbx", "exec", "aw-test", "codex", "exec"]:
-            share_path.write_text("Done too early.", encoding="utf-8")
-        if command[:5] == ["sbx", "exec", "aw-test", "sh", "-lc"] and "codex exec" in command[-1]:
-            share_path.write_text("Actually delivered.", encoding="utf-8")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
-    def fake_subprocess_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        assert command[3:5] == ["final-response", "admit"]
-        assert command[command.index("--target") + 1] == str(tmp_path / "repo")
-        assert command[command.index("--attempt-file") + 1] == str(share_path)
-        admission_attempts.append(share_path.read_text(encoding="utf-8"))
-        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(admission_payloads[len(admission_attempts) - 1]), stderr="")
-
-    monkeypatch.setattr(module, "_run", fake_run)
-    monkeypatch.setattr(module.subprocess, "run", fake_subprocess_run)
-
-    result = module.main(
-        [
-            "--sbx",
-            "sbx",
-            "--sandbox-name",
-            "aw-test",
-            "--repo",
-            str(tmp_path / "repo"),
-            "--model",
-            "gpt-test",
-            "--share-path",
-            str(share_path),
-            "--prompt",
-            "do work",
-        ]
-    )
-
-    captured = capsys.readouterr()
-    assert result == 0
-    assert "rejected terminal output" in captured.err
-    assert admission_attempts == ["Done too early.", "Actually delivered."]
-    assert share_path.read_text(encoding="utf-8") == "Actually delivered."
-    assert json.loads(Path(f"{share_path}.admission.json").read_text(encoding="utf-8")) == admission_payloads[-1]
-    assert any(command[:3] == ["sbx", "cp", str(share_path) + ".continuation-2.txt"] for command in commands)
-    assert (
-        sum(1 for command in commands if command[:3] == ["sbx", "exec", "aw-test"] and "codex exec" in subprocess.list2cmdline(command))
-        == 2
-    )
-    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
-
-
-def test_sbx_codex_adapter_keeps_custody_after_compatibility_slice_budget(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    module = _load_sbx_adapter_module()
-    commands: list[list[str]] = []
-    share_path = tmp_path / "session.md"
-    final_messages = ["Done too early 1.", "Done too early 2.", "Actually delivered."]
-    admission_payloads = [
-        {
-            "kind": "agentic-workspace/final-response-admission-result/v1",
-            "status": "rejected_auto_resumed",
-            "continuation_operation": {
-                "invoked_operation": "proof.report",
-                "exit_code": 0,
-            },
-        },
-        {
-            "kind": "agentic-workspace/final-response-admission-result/v1",
-            "status": "rejected_auto_resumed",
-            "continuation_operation": {
-                "invoked_operation": "proof.report",
-                "exit_code": 0,
-            },
-        },
-        {
-            "kind": "agentic-workspace/final-response-admission-result/v1",
-            "status": "accepted_terminal_final",
-        },
-    ]
-    admission_attempts: list[str] = []
-    codex_invocations = 0
-
-    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
-        nonlocal codex_invocations
-        commands.append(command)
-        if command[:5] == ["sbx", "exec", "aw-test", "codex", "exec"] or (
-            command[:5] == ["sbx", "exec", "aw-test", "sh", "-lc"] and "codex exec" in command[-1]
-        ):
-            share_path.write_text(final_messages[codex_invocations], encoding="utf-8")
-            codex_invocations += 1
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
-    def fake_subprocess_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        admission_attempts.append(share_path.read_text(encoding="utf-8"))
-        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(admission_payloads[len(admission_attempts) - 1]), stderr="")
-
-    monkeypatch.setattr(module, "_run", fake_run)
-    monkeypatch.setattr(module.subprocess, "run", fake_subprocess_run)
-
-    result = module.main(
-        [
-            "--sbx",
-            "sbx",
-            "--sandbox-name",
-            "aw-test",
-            "--repo",
-            str(tmp_path / "repo"),
-            "--model",
-            "gpt-test",
-            "--share-path",
-            str(share_path),
-            "--prompt",
-            "do work",
-            "--max-admission-slices",
-            "1",
-        ]
-    )
-
-    captured = capsys.readouterr()
-    assert result == 0
-    assert "slice budget" in captured.err
-    assert "not an authorized terminal outcome" in captured.err
-    assert admission_attempts == final_messages
-    assert share_path.read_text(encoding="utf-8") == "Actually delivered."
-    assert json.loads(Path(f"{share_path}.admission.json").read_text(encoding="utf-8")) == admission_payloads[-1]
-    assert codex_invocations == 3
-    assert sum(1 for command in commands if command[:3] == ["sbx", "cp", str(share_path) + ".continuation-2.txt"]) == 1
-    assert sum(1 for command in commands if command[:3] == ["sbx", "cp", str(share_path) + ".continuation-3.txt"]) == 1
-    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
+    assert not Path(f"{share_path}.admission.json").exists()
 
 
 def test_sbx_codex_adapter_removes_named_sandbox_after_failed_run(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1704,7 +1430,7 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     assert "releases/download/v0.4.3" not in pyproject_text
 
 
-def test_model_cli_harness_classifies_owned_runtime_receipt_without_weakening_mutation_checks(tmp_path: Path) -> None:
+def test_model_cli_harness_does_not_admit_historical_shape_as_native_custody(tmp_path: Path) -> None:
     module = _load_harness_module()
     receipt = tmp_path / ".agentic-workspace" / "local" / "improvement-pressure" / "consequence-history.jsonl"
     receipt.parent.mkdir(parents=True)
@@ -1734,11 +1460,12 @@ def test_model_cli_harness_classifies_owned_runtime_receipt_without_weakening_mu
     )
 
     assert result["mutation_classes"]["expected_task_or_product_mutations"] == ["README.md"]
-    assert result["mutation_classes"]["admitted_runtime_receipts"] == [
-        ".agentic-workspace/local/improvement-pressure/consequence-history.jsonl"
+    assert result["mutation_classes"]["admitted_runtime_receipts"] == []
+    assert result["runtime_receipt_count"] == 0
+    assert result["mutation_classes"]["forbidden_or_unclassified_mutations"] == [
+        ".agentic-workspace/local/improvement-pressure/consequence-history.jsonl",
+        "src/unexpected.py",
     ]
-    assert result["runtime_receipt_count"] == 1
-    assert result["mutation_classes"]["forbidden_or_unclassified_mutations"] == ["src/unexpected.py"]
 
 
 def test_model_cli_harness_does_not_admit_unowned_local_mutation(tmp_path: Path) -> None:
@@ -1749,34 +1476,6 @@ def test_model_cli_harness_does_not_admit_unowned_local_mutation(tmp_path: Path)
     assert result["mutation_classes"]["admitted_runtime_receipts"] == []
     assert result["mutation_classes"]["expected_task_or_product_mutations"] == []
     assert result["mutation_classes"]["forbidden_or_unclassified_mutations"] == [random_path]
-
-
-def test_model_cli_harness_runtime_receipt_path_comes_from_owner_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    module = _load_harness_module()
-    receipt = tmp_path / ".agentic-workspace" / "local" / "alternate" / "events.jsonl"
-    receipt.parent.mkdir(parents=True)
-    receipt.write_text(
-        json.dumps(
-            {
-                "kind": "owner-event/v1",
-                "owner_kind": "workspace-improvement-pressure/v1",
-                "source": "fixture-owner",
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        module,
-        "consequence_receipt_contract",
-        lambda: {
-            "relative_path": ".agentic-workspace/local/alternate/events.jsonl",
-            "record_kind": "owner-event/v1",
-            "producer": "fixture-owner",
-        },
-    )
-
-    assert module._is_admitted_aw_runtime_receipt(tmp_path, receipt.relative_to(tmp_path).as_posix()) is True
 
 
 def test_model_cli_harness_local_wheelhouse_environment_is_fixture_bound(tmp_path: Path) -> None:
@@ -1967,7 +1666,7 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_fixture_runs_host_val
     assert sources[0]["path"].startswith(".agentic-workspace/local/model-cli-harness/wheelhouse/host/")
     assert sources[1]["path"].startswith(".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/")
 
-    env = dict(module.os.environ)
+    env = module._fixture_runtime_environment(dict(module.os.environ), repo_path=paths.repo_path)
     env["UV_CACHE_DIR"] = str(tmp_path / "uv-cache")
     env["UV_LINK_MODE"] = "copy"
     env["UV_PROJECT_ENVIRONMENT"] = str(tmp_path / "fixture-venv")

@@ -53,7 +53,7 @@ def test_issue_creation_semantic_route_resolves_canonical_skills_and_current_tem
     routed = []
     for skill in registry["skills"]:
         for declaration in skill.get("semantic_routes", []):
-            if declaration.get("id") == "github/issues/create":
+            if isinstance(declaration, dict) and declaration.get("id") == "github/issues/create":
                 routed.append((declaration["priority"], skill["id"]))
     assert sorted(routed) == [(10, "github-issue-shaping"), (20, "github-issue-creation")]
 

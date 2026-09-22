@@ -15,7 +15,6 @@ WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
 RULESET_PATH = ROOT / ".github" / "rulesets" / "master-support-bearing.json"
 SUPPORT_POLICY_PATH = ROOT / ".github" / "support-bearing-promotion.json"
-GENERATOR_PATH = ROOT / "scripts" / "generate" / "workspace_command_generation.py"
 RELEASE_OWNERSHIP_CLASSIFIER_PATH = ROOT / "scripts" / "release" / "release_ownership.py"
 
 
@@ -52,16 +51,6 @@ def _step_run_block(workflow: str, step_name: str) -> str:
     return "\n".join(block_lines)
 
 
-def _load_workspace_command_generation():
-    spec = importlib.util.spec_from_file_location("workspace_command_generation_under_test", GENERATOR_PATH)
-    assert spec is not None
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def _load_release_ownership_classifier():
     spec = importlib.util.spec_from_file_location("release_ownership_under_test", RELEASE_OWNERSHIP_CLASSIFIER_PATH)
     assert spec is not None
@@ -94,14 +83,14 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
         assert package["sdist_prefix"]
         assert package["payload_schema"]
         assert package["payload_provenance"]
-        assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
 
     typescript_package_names = [package["name"] for package in ownership["typescript_packages"]]
     assert typescript_package_names == ["@agentic-workspace/workspace-cli"]
     for package in ownership["typescript_packages"]:
         package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
         assert package_json["name"] == package["name"]
-        assert package_json["private"] is False
+        assert package_json["private"] is True
+        assert "version" not in package_json
         assert package_json["publishConfig"] == {"access": "public"}
         assert package_json["license"] == "MIT"
         assert "LICENSE" in package_json["files"]
@@ -109,7 +98,6 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
         assert package["runtime_requirement"] == "node>=20"
         assert package["release_policy"] == "coordinated-public-registry"
         assert package["registry_status"] == "trusted-publication-required"
-        assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
 
 
 @pytest.mark.parametrize(
@@ -147,33 +135,23 @@ def test_package_affecting_scope_excludes_github_automation() -> None:
     assert ".release/changes/" in paths
     assert ".release/releases/" in paths
     assert "docs/release-and-versioning.md" in paths
-    assert "generated/" in paths
+    assert "bindings/" in paths
     assert "packages/" in paths
     assert "scripts/release/" in paths
     assert "src/" in paths
     assert "uv.lock" in paths
 
-    metadata = _ownership()["non_semver_generated_metadata"]
-    assert [item["path"] for item in metadata] == [
-        "generated/workspace/.agentic-workspace-cli-fingerprint.json",
-        "generated/planning/.agentic-workspace-cli-fingerprint.json",
-        "generated/memory/.agentic-workspace-cli-fingerprint.json",
-        "generated/verification/.agentic-workspace-cli-fingerprint.json",
-    ]
-    assert all(item["role"] == "generated-command-freshness-integrity" for item in metadata)
+    assert ownership["non_semver_generated_metadata"] == []
 
 
-def test_release_path_classification_exempts_only_exact_integrity_metadata() -> None:
+def test_release_path_classification_covers_native_sources_and_bindings() -> None:
     classify = _load_release_ownership_classifier().classify_changed_paths
     ownership = _ownership()
-    fingerprint = "generated/workspace/.agentic-workspace-cli-fingerprint.json"
-
-    assert classify([fingerprint, "docs/maintenance.md"], ownership)["package_affecting"] is False
-    assert classify([fingerprint, "src/agentic_workspace/__init__.py"], ownership)["package_affecting"] is True
-    assert classify([fingerprint, "generated/workspace/typescript/cli.mjs"], ownership)["package_affecting"] is True
-    arbitrary = classify(["generated/not-an-exempt-projection.json"], ownership)
-    assert arbitrary["package_affecting"] is True
-    assert arbitrary["package_affecting_paths"] == ["generated/not-an-exempt-projection.json"]
+    assert classify(["docs/maintenance.md"], ownership)["package_affecting"] is False
+    for path in ("src/agentic_workspace/__init__.py", "bindings/node/package.json", "crates/agentic-workspace-core/src/lib.rs"):
+        result = classify([path], ownership)
+        assert result["package_affecting"] is True
+        assert result["package_affecting_paths"] == [path]
 
 
 def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
@@ -215,13 +193,9 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert "coordinated_release.py plan" in workflow
     assert "coordinated_release.py prepare" in workflow
     assert "coordinated_release.py verify" in workflow
-    assert "scripts/generate/generate_command_packages.py" in workflow
-    assert workflow.index("coordinated_release.py prepare") < workflow.index("scripts/generate/generate_external_consumer_profile.py")
-    assert workflow.index("scripts/generate/generate_external_consumer_profile.py") < workflow.index(
-        "scripts/generate/generate_command_packages.py"
-    )
-    assert workflow.index("coordinated_release.py prepare") < workflow.index("scripts/generate/generate_command_packages.py")
-    assert workflow.index("scripts/generate/generate_command_packages.py") < workflow.index("coordinated_release.py verify")
+    assert workflow.index("coordinated_release.py prepare") < workflow.index("uv lock", workflow.index("coordinated_release.py prepare"))
+    assert workflow.index("uv lock", workflow.index("coordinated_release.py prepare")) < workflow.index("coordinated_release.py verify")
+    assert "generate_command_packages.py" not in workflow
     assert "coordinated_release.py tag-plan" in workflow
     assert "uv lock" in workflow
     assert "peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1" in workflow
@@ -265,24 +239,6 @@ def test_release_publisher_dispatch_heredoc_terminates_at_shell_column_zero() ->
     assert "\nPY\n" in run_block
     assert "\n  PY\n" not in run_block
     assert "\n    PY\n" not in run_block
-
-
-def test_releaseable_typescript_package_generation_preserves_release_owned_versions() -> None:
-    generator = _load_workspace_command_generation()
-    rendered_by_path = {
-        output.path.relative_to(ROOT).as_posix(): json.loads(output.content)
-        for output in generator.render_workspace_command_package_outputs(repo_root=ROOT)
-        if output.path.name == "package.json" and "typescript" in output.path.as_posix()
-    }
-
-    for package in _ownership()["typescript_packages"]:
-        package_json_path = package["package_json"]
-        current = json.loads((ROOT / package_json_path).read_text(encoding="utf-8"))
-        rendered = rendered_by_path[package_json_path]
-        assert rendered["version"] == current["version"]
-        assert rendered["private"] is False
-        assert rendered["publishConfig"] == {"access": "public"}
-        assert rendered["license"] == "MIT"
 
 
 def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> None:
@@ -418,11 +374,11 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     ):
         assert release_only not in merge
 
-    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 6
+    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 5
     assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in exhaustive
     assert "name: Support-bearing promotion" in exhaustive
     assert (
-        "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]"
+        "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, declared-runtime-matrix]"
         in exhaustive
     )
     assert "uv build --wheel --sdist --out-dir dist" in exhaustive
@@ -464,7 +420,7 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
     assert "if: github.event_name == 'workflow_dispatch'" in admission
     assert "${{ inputs.reason }}" in admission
     assert "requires a non-empty reason" in admission
-    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 6
+    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 5
     assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in workflow
 
 
@@ -496,13 +452,6 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
         "Cargo.lock",
         "crates/agentic-workspace-cli/Cargo.toml",
         "crates/agentic-workspace-core/Cargo.toml",
-        "generated/memory/.agentic-workspace-cli-fingerprint.json",
-        "generated/planning/.agentic-workspace-cli-fingerprint.json",
-        "generated/verification/.agentic-workspace-cli-fingerprint.json",
-        "generated/workspace/.agentic-workspace-cli-fingerprint.json",
-        "generated/workspace/python/external_contract_bundle.json",
-        "generated/workspace/typescript/external_contract_bundle.json",
-        "generated/workspace/typescript/package.json",
         "pyproject.toml",
         "tests/fixtures/native-independent-owner/Cargo.lock",
         "uv.lock",

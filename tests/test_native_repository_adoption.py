@@ -109,12 +109,10 @@ def test_payload_inventory_reconciliation_preserves_content_and_custody(tmp_path
 
 def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared_core_binary, native_cli):
     """Committed source projections work on a new machine, without writer custody."""
-    from tests.test_source_payload_operational_install import _checker_script_path, _load_module
 
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    _committed_payload_alignment = _load_module(_checker_script_path(), "fresh_source_alignment")._committed_payload_alignment
     host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
     for ref in [*host["payload_files"], ".agentic-workspace/payload-provenance.json"]:
         destination = tmp_path / ref
@@ -151,19 +149,6 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
     choice = next(row for row in discovery["configuration_write"]["payload_choices"] if row["source"] == LEDGER)
     assert choice["status"] == "preserved-blocked"
     assert "conflicting package ownership fact" in choice["reason"]
-    # Maintenance validation guards the same source relationship without
-    # creating a second runtime admission or migration mechanism.
-    for ref in [
-        "pyproject.toml",
-        "src/agentic_workspace/contracts/workspace_surfaces.json",
-        "src/agentic_workspace/contracts/portable_ownership.toml",
-    ]:
-        destination = tmp_path / ref
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes((ROOT / ref).read_bytes())
-    assert LEDGER in {row["path"] for row in _committed_payload_alignment(repo_root=tmp_path)["drift"]}
-    ledger.write_bytes(before)
-    assert _committed_payload_alignment(repo_root=tmp_path)["status"] == "current"
 
 
 @pytest.mark.parametrize("change", ["unchanged", "customized", "conflict", "unknown-history"])

@@ -92,8 +92,6 @@ jobs:
           if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
           python scripts/release/coordinated_release.py prepare "${args[@]}"
           uv lock
-          uv run python scripts/generate/generate_external_consumer_profile.py
-          uv run python scripts/generate/generate_command_packages.py
           python scripts/release/coordinated_release.py verify
 
       - name: Open or update coordinated release PR

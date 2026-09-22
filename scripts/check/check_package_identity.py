@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 import tarfile
 import tomllib
 from pathlib import Path
@@ -11,6 +12,9 @@ from typing import Any
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts/release"))
+from coordinated_release import npm_version  # noqa: E402
+
 OWNERSHIP_PATH = Path(".github/release-ownership.json")
 FORBIDDEN_DISTRIBUTIONS = {"agentic-memory", "agentic-planning"}
 PUBLIC_REHEARSAL_PATH = Path("docs/maintainer/public-install-rehearsal-v0.40.1.json")
@@ -191,7 +195,7 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
         prefix = package_path.relative_to(root).as_posix()
         expected = {
             "name": package["name"],
-            "private": False,
+            "private": True,
             "license": identity.get("license_spdx"),
             "author": identity.get("author"),
             "homepage": identity.get("homepage"),
@@ -209,9 +213,6 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
             errors.append(f"{prefix} must declare coordinated trusted public registry publication")
         if "LICENSE" not in payload.get("files", []):
             errors.append(f"{prefix} does not package LICENSE")
-        generated_license = package_path.parent / "LICENSE"
-        if not generated_license.is_file() or generated_license.read_text(encoding="utf-8") != license_text:
-            errors.append(f"{prefix} does not carry the canonical LICENSE")
     errors.extend(public_install_rehearsal_errors(root))
     return errors
 
@@ -273,7 +274,7 @@ def artifact_identity_errors(root: Path, dist: Path, *, require_exact_urls: bool
 
     for package in ownership["typescript_packages"]:
         try:
-            node_version = _load_json(root / package["package_json"])["version"]
+            node_version = npm_version(_load_pyproject(root / "pyproject.toml")["project"]["version"])
             tarball = _find_one(dist, f"{package['tarball_prefix']}-{node_version}.tgz")
         except ValueError as exc:
             errors.append(str(exc))

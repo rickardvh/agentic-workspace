@@ -1,7 +1,0 @@
-FROM python:3.12
-
-WORKDIR /work
-
-RUN python -m pip install --no-cache-dir "command-generation @ git+https://github.com/rickardvh/command-generation.git@ac1b9c00bf41352010929de196e7d45e20014615"
-
-CMD ["python", "-m", "command_generation.primitive_conformance"]
