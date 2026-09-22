@@ -78,8 +78,8 @@ print(json.dumps(result, indent=2))
 
 Functions accept mappings containing JSON-compatible values and return dictionaries.
 `DecisionContractError` reports native lookup or request rejection. See the
-[installed exports](../../src/agentic_workspace/__init__.py) and their
-[signatures](../../src/agentic_workspace/_binding.py).
+[installed exports](../../src/cli/python/agentic_workspace/__init__.py) and their
+[signatures](../../src/cli/python/agentic_workspace/_binding.py).
 
 ### TypeScript / Node.js
 
@@ -102,7 +102,7 @@ try {
 ```
 
 These calls are synchronous and return JSON objects. The package includes
-[TypeScript declarations](../../bindings/node/operating.d.mts); they describe the
+[TypeScript declarations](../../src/cli/typescript/operating.d.mts); they describe the
 transport, while Rust validates requests. The same exports are available from
 `@agentic-workspace/workspace-cli/operating`.
 

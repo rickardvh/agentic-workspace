@@ -154,11 +154,11 @@ def test_source_package_identity_is_coordinated() -> None:
 
 def test_source_package_identity_rejects_conflicting_license(tmp_path: Path) -> None:
     _copy_source_fixture(tmp_path)
-    path = tmp_path / "bindings/node/package.json"
+    path = tmp_path / "src/cli/typescript/package.json"
     body = json.loads(path.read_text(encoding="utf-8"))
     body["license"] = "Unlicense"
     path.write_text(json.dumps(body), encoding="utf-8")
-    assert any("bindings/node/package.json license" in error for error in CHECKER.source_identity_errors(tmp_path))
+    assert any("src/cli/typescript/package.json license" in error for error in CHECKER.source_identity_errors(tmp_path))
 
 
 @pytest.fixture(scope="module")

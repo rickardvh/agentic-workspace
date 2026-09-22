@@ -258,9 +258,9 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
         "rust-toolchain.toml",
         "scripts/release/native_toolchain.py",
         "src/core/src/native_routes.rs",
-        "bindings/node/semantic-decision.mjs",
+        "src/cli/typescript/semantic-decision.mjs",
         "scripts/release/stage_native_npm.py",
-        "bindings/node/package.json",
+        "src/cli/typescript/package.json",
         "scripts/release/coordinated_release.py",
     ]:
         assert any(name.endswith("/" + reference) for name in names), reference
@@ -309,7 +309,7 @@ def test_source_cli_uses_explicit_development_core(tmp_path: Path, shared_core_b
     result = subprocess.run(
         [
             shutil.which("node"),
-            str(ROOT / "bindings/node/cli.mjs"),
+            str(ROOT / "src/cli/typescript/cli.mjs"),
             "start",
             "--task",
             "Inspect the current route contract",

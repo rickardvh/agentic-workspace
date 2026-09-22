@@ -50,7 +50,8 @@ def test_wheel_contains_only_binding_host_adapter_and_paired_core(wheel):
             for name in ("__init__", "cli", "_binding", "native_core", "codex_provider", "sealed_codex_transport")
         }
         for name in code:
-            assert archive.read(name).decode().replace("\r\n", "\n") == (ROOT / "src" / name).read_text(encoding="utf-8")
+            source = "src/adapters/codex" if Path(name).stem in {"codex_provider", "sealed_codex_transport"} else "src/cli/python"
+            assert archive.read(name).decode().replace("\r\n", "\n") == (ROOT / source / name).read_text(encoding="utf-8")
         # The host adapter has provider I/O, not the old Python policy/runtime host.
         provider = ast.parse(archive.read("agentic_workspace/codex_provider.py"))
         for node in ast.walk(provider):
@@ -83,7 +84,7 @@ assert not hasattr(aw, 'invoke_operation')
 assert not hasattr(aw, 'compile_source_decision')
 print(json.dumps(aw.start({'target': '.', 'task': 'Inspect this consumer'})))
 """
-    environment = {**os.environ, "PYTHONPATH": str(ROOT / "src"), "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)}
+    environment = {**os.environ, "PYTHONPATH": str(ROOT / "src/cli/python"), "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)}
     result = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env=environment, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert "decision_packet" in json.loads(result.stdout)

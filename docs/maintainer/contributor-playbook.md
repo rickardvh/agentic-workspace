@@ -34,7 +34,7 @@ Start with the behaviour being changed, then locate its responsible component:
 | --- | --- |
 | Current context, authorisation, state or effects | `src/core/` |
 | CLI options or forwarding | `src/cli/rust/` and the native CLI contract |
-| Python / TypeScript transport | `src/agentic_workspace/` / `bindings/node/` |
+| Python / TypeScript transport | `src/cli/python/` / `src/cli/typescript/` |
 | Human instructions and examples | The relevant user, reference or contributor page |
 | Generated schemas or catalogues | Their named source contract, not the generated output |
 | Repository-maintainer workflow | `tools/skills/` and its current procedure |

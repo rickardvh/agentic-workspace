@@ -218,7 +218,7 @@ def consume(
             )
     else:
         module = (
-            (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/semantic-decision.mjs")
+            (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "src/cli/typescript/semantic-decision.mjs")
         ).as_uri()
         command = [
             str(installed["node"]) if installed else "node",
@@ -230,7 +230,7 @@ def consume(
         stdin = encoded
         if reference_helper:
             module = (
-                (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/native/operating.mjs")
+                (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "src/cli/typescript/native/operating.mjs")
             ).as_uri()
             command[-1] = (
                 f"import {{selectReference}} from {json.dumps(module)}; import {{readFileSync}} from 'node:fs'; "
@@ -805,7 +805,11 @@ def test_real_memory_note_is_selective_advisory_and_read_through_current_request
     assert quiet["memory"]["selected_notes"] == []
     assert quiet["memory"]["requests"] == []
     assert quiet["decision_packet"]["status"] == "direct"
-    context = {"target": str(tmp_path), "task": "Inspect the runtime boundary", "changed": ["src/agentic_workspace/native_core.py"]}
+    context = {
+        "target": str(tmp_path),
+        "task": "Inspect the runtime boundary",
+        "changed": ["src/cli/python/agentic_workspace/native_core.py"],
+    }
     selected = consume(surface, shared_core_binary, native_cli, context)
     assert selected["decision_packet"]["status"] == "direct"
     assert all("body" not in item for item in selected["memory"]["selected_notes"])

@@ -16,7 +16,7 @@ AW_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
 def _dispatch_to_source_cli(argv: Sequence[str]) -> int:
     # Load only this checkout's artifact resolver. Installed/editable Python
     # package identity cannot choose the product implementation for this source.
-    path = REPO_ROOT / "src/agentic_workspace/native_core.py"
+    path = REPO_ROOT / "src/cli/python/agentic_workspace/native_core.py"
     spec = importlib.util.spec_from_file_location("aw_source_native_artifacts", path)
     if spec is None or spec.loader is None:
         raise RuntimeError("source native artifact resolver unavailable")

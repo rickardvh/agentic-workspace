@@ -9,13 +9,14 @@ from pathlib import Path
 from check_language_facade import check_python
 
 ROOT = Path(__file__).resolve().parents[2]
-PRODUCT = ROOT / "src/agentic_workspace"
+PRODUCT = ROOT / "src/cli/python/agentic_workspace"
 MODULES = {"__init__", "_binding", "cli", "native_core", "codex_provider", "sealed_codex_transport"}
 
 
 def check(root: Path = ROOT) -> None:
-    product = root / "src/agentic_workspace"
-    actual = {path.stem for path in product.glob("*.py")}
+    product = root / "src/cli/python/agentic_workspace"
+    adapter = root / "src/adapters/codex/agentic_workspace"
+    actual = {path.stem for directory in (product, adapter) for path in directory.glob("*.py")}
     if actual != MODULES:
         raise ValueError(f"Python product source differs from its native binding/provider boundary: {actual ^ MODULES}")
     # Tooling may use the public binding and provider mechanics, but cannot keep

@@ -56,15 +56,15 @@ package = true
 
 [tool.hatch.build.targets.wheel]
 only-include = [
-  "src/agentic_workspace/__init__.py",
-  "src/agentic_workspace/_binding.py",
-  "src/agentic_workspace/native_core.py",
-  "src/agentic_workspace/cli.py",
-  "src/agentic_workspace/codex_provider.py",
-  "src/agentic_workspace/sealed_codex_transport.py",
+  "src/cli/python/agentic_workspace/__init__.py",
+  "src/cli/python/agentic_workspace/_binding.py",
+  "src/cli/python/agentic_workspace/native_core.py",
+  "src/cli/python/agentic_workspace/cli.py",
+  "src/adapters/codex/agentic_workspace/codex_provider.py",
+  "src/adapters/codex/agentic_workspace/sealed_codex_transport.py",
 ]
-sources = ["src"]
-dev-mode-dirs = ["src", "src/tooling/python"]
+sources = { "src/cli/python" = "", "src/adapters/codex" = "" }
+dev-mode-dirs = ["src/cli/python", "src/adapters/codex", "src/tooling/python"]
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
@@ -77,9 +77,9 @@ include = [
   "/scripts/check/check_rust_dependencies.py",
   "/scripts/release/native_toolchain.py",
   "/.github/release-platforms.json",
-  "/src/agentic_workspace/__init__.py",
-  "/src/agentic_workspace/_binding.py",
-  "/bindings/node",
+  "/src/cli/python/agentic_workspace/__init__.py",
+  "/src/cli/python/agentic_workspace/_binding.py",
+  "/src/cli/typescript",
   "/scripts/release/stage_native_npm.py",
   "/scripts/release/coordinated_release.py",
   "/Cargo.toml",
@@ -88,10 +88,10 @@ include = [
   "/src/cli/rust",
   "/README.md",
   "/LICENSE",
-  "/src/agentic_workspace/native_core.py",
-  "/src/agentic_workspace/cli.py",
-  "/src/agentic_workspace/codex_provider.py",
-  "/src/agentic_workspace/sealed_codex_transport.py",
+  "/src/cli/python/agentic_workspace/native_core.py",
+  "/src/cli/python/agentic_workspace/cli.py",
+  "/src/adapters/codex/agentic_workspace/codex_provider.py",
+  "/src/adapters/codex/agentic_workspace/sealed_codex_transport.py",
   "/src/agentic_workspace/contracts",
   "/src/core/payload",
 ]
@@ -103,7 +103,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 140
 target-version = "py311"
-src = ["src", "src/tooling/python", "tests"]
+src = ["src/cli/python", "src/adapters/codex", "src/tooling/python", "tests"]
 
 [tool.ruff.lint]
 ignore = ["E501"]

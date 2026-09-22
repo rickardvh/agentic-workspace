@@ -7,6 +7,13 @@ one host-labelled archive containing `agentic-workspace` and
 Both language packages carry the identical executable pair. The Rust core owns
 decisions, answer admission, effects and continuations.
 
+Canonical language source lives under `src/cli/python` and `src/cli/typescript`.
+Codex protocol I/O lives under `src/adapters/codex`. Wheel source mappings join
+the Python facade and provider portions into the existing `agentic_workspace`
+package; editable development uses the same portions through its package path.
+The six installed modules and `agentic_workspace.sealed_codex_transport` command
+remain unchanged. No duplicate source implementation is retained.
+
 The installed Python API exports `start`, `invoke`, `resources`, `select_reference`,
 `answer_carried` and `invoke_carried`; npm exports their camel-case equivalents
 from the package root and `./operating`, with TypeScript declarations. `./native`
@@ -48,7 +55,7 @@ the native archive with `scripts/release/stage_native_npm.py --output <new-dir>
 --native-archive-dir <artifact-dir>`, then `npm pack` that staging directory.
 The staging directory and native archive must be absent before creation.
 
-The npm manifest is authored in `bindings/node/package.json`; staging supplies
+The npm manifest is authored in `src/cli/typescript/package.json`; staging supplies
 the version and description from `pyproject.toml`, the host constraints and paired
 native artefacts. The source manifest is private until staging installs those
 artefacts. Staging reads the binding files directly and does not consume

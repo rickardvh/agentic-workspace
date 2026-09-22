@@ -59,7 +59,7 @@ def test_attribution_has_one_typed_authority(shared_core_binary: Path, evidence:
     result = attribute_assignment_outcome(evidence)
     assert result["responsibility"] == responsibility
     assert json.loads(_direct(shared_core_binary, {"attribute_assignment_outcome": evidence}).stdout) == result
-    script = f"import {{attributeAssignmentOutcome}} from {json.dumps((ROOT / 'bindings/node/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(attributeAssignmentOutcome(JSON.parse(process.argv[1]))));"
+    script = f"import {{attributeAssignmentOutcome}} from {json.dumps((ROOT / 'src/cli/typescript/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(attributeAssignmentOutcome(JSON.parse(process.argv[1]))));"
     node = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(evidence)], capture_output=True, text=True, check=False)
     assert node.returncode == 0, node.stderr
     assert json.loads(node.stdout) == result
@@ -97,7 +97,7 @@ def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path
     assert result["candidates"][0]["eligible"]
     direct = _direct(shared_core_binary, {"execution_configurations": context})
     assert json.loads(direct.stdout) == result
-    script = f"import {{executionConfigurations}} from {json.dumps((ROOT / 'bindings/node/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(executionConfigurations(JSON.parse(process.argv[1]))));"
+    script = f"import {{executionConfigurations}} from {json.dumps((ROOT / 'src/cli/typescript/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(executionConfigurations(JSON.parse(process.argv[1]))));"
     node = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(context)], capture_output=True, text=True, check=False)
     assert node.returncode == 0, node.stderr
     assert json.loads(node.stdout) == result
@@ -285,7 +285,7 @@ def test_semantic_routes_do_not_infer_from_task_text_or_widen_authority(shared_c
 
 def test_node_binding_executes_the_same_core(shared_core_binary: Path) -> None:
     subprocess.run(
-        ["node", "--test", "bindings/node/test/semantic-decision.test.mjs"],
+        ["node", "--test", "src/cli/typescript/test/semantic-decision.test.mjs"],
         cwd=ROOT,
         env={**os.environ, "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)},
         check=True,
@@ -296,8 +296,8 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (
         ROOT / "src/tooling/python/aw_maintainer/native_conformance.py",
-        ROOT / "src/agentic_workspace/native_core.py",
-        ROOT / "bindings/node/semantic-decision.mjs",
+        ROOT / "src/cli/python/agentic_workspace/native_core.py",
+        ROOT / "src/cli/typescript/semantic-decision.mjs",
     ):
         source = path.read_text(encoding="utf-8")
         assert not any(token in source for token in forbidden)
@@ -914,7 +914,7 @@ def _planning_call(binary: Path, surface: str, context: dict[str, Any], transpor
         result = _direct(binary, {surface: context})
     else:
         export = "planningView" if surface == "planning_view" else "reconcilePlanning"
-        program = f"import {{ {export} }} from './bindings/node/semantic-decision.mjs'; import fs from 'node:fs'; console.log(JSON.stringify({export}(JSON.parse(fs.readFileSync(0,'utf8')))));"
+        program = f"import {{ {export} }} from './src/cli/typescript/semantic-decision.mjs'; import fs from 'node:fs'; console.log(JSON.stringify({export}(JSON.parse(fs.readFileSync(0,'utf8')))));"
         result = subprocess.run(
             ["node", "--input-type=module", "-e", program], input=json.dumps(context), capture_output=True, text=True, cwd=ROOT
         )
@@ -1267,7 +1267,7 @@ def test_decision_authorship_authority_and_context_remain_distinct(shared_core_b
     Draft202012Validator(SCHEMA).validate(payload)
     python = _compile(payload)
     raw = _direct(shared_core_binary, payload)
-    program = "import {compileSourceDecision} from './bindings/node/semantic-decision.mjs'; import fs from 'node:fs'; const p=JSON.parse(fs.readFileSync(0,'utf8')); console.log(JSON.stringify(compileSourceDecision(p.contributions,{},null,p.decision_context)));"
+    program = "import {compileSourceDecision} from './src/cli/typescript/semantic-decision.mjs'; import fs from 'node:fs'; const p=JSON.parse(fs.readFileSync(0,'utf8')); console.log(JSON.stringify(compileSourceDecision(p.contributions,{},null,p.decision_context)));"
     node = subprocess.run(
         ["node", "--input-type=module", "-e", program], input=json.dumps(payload), capture_output=True, text=True, cwd=ROOT
     )
@@ -1590,7 +1590,7 @@ def test_repo_native_source_is_current_relevant_and_transport_equivalent(shared_
             "node",
             "--input-type=module",
             "-e",
-            "import { repositoryDecisionView } from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(repositoryDecisionView(JSON.parse(process.argv[1]))));",
+            "import { repositoryDecisionView } from './src/cli/typescript/semantic-decision.mjs'; console.log(JSON.stringify(repositoryDecisionView(JSON.parse(process.argv[1]))));",
             json.dumps(context),
         ],
         cwd=ROOT,
@@ -1744,7 +1744,7 @@ def test_source_node_transport_requires_explicit_development_binary(shared_core_
             "node",
             "--input-type=module",
             "-e",
-            "import { compileSourceDecision } from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(compileSourceDecision([])));",
+            "import { compileSourceDecision } from './src/cli/typescript/semantic-decision.mjs'; console.log(JSON.stringify(compileSourceDecision([])));",
         ],
         cwd=ROOT,
         env={key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
@@ -1884,7 +1884,7 @@ def test_public_semantic_route_roundtrip_is_cross_surface(shared_core_binary: Pa
             "node",
             "--input-type=module",
             "-e",
-            "import {semanticRouteView} from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(semanticRouteView(JSON.parse(process.argv[1]))));",
+            "import {semanticRouteView} from './src/cli/typescript/semantic-decision.mjs'; console.log(JSON.stringify(semanticRouteView(JSON.parse(process.argv[1]))));",
             json.dumps(host),
         ],
         cwd=ROOT,
@@ -2011,7 +2011,7 @@ def test_instruction_source_admission_cross_surface_and_authority_separation(sha
             "node",
             "--input-type=module",
             "-e",
-            "import {instructionSourceAdmission} from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(instructionSourceAdmission(JSON.parse(process.argv[1]))));",
+            "import {instructionSourceAdmission} from './src/cli/typescript/semantic-decision.mjs'; console.log(JSON.stringify(instructionSourceAdmission(JSON.parse(process.argv[1]))));",
             json.dumps(host),
         ],
         cwd=ROOT,
@@ -2142,7 +2142,7 @@ def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path
     direct = _direct(shared_core_binary, {"replace_assignment": context})
     assert direct.returncode == 0, direct.stderr
     assert json.loads(direct.stdout) == result
-    script = f"import {{replaceAssignment}} from {json.dumps((ROOT / 'bindings/node/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(replaceAssignment(JSON.parse(process.argv[1]))));"
+    script = f"import {{replaceAssignment}} from {json.dumps((ROOT / 'src/cli/typescript/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(replaceAssignment(JSON.parse(process.argv[1]))));"
     node = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(context)], capture_output=True, text=True, check=False)
     assert node.returncode == 0, node.stderr
     assert json.loads(node.stdout) == result

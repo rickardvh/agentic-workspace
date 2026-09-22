@@ -1588,7 +1588,10 @@ def test_model_cli_harness_fixture_runtime_mismatch_is_fallback_only(tmp_path: P
             {
                 "returncode": 0,
                 "stdout": json.dumps(
-                    {"executable": str(tmp_path / "ambient/python.exe"), "package": str(REPO_ROOT / "src/agentic_workspace/__init__.py")}
+                    {
+                        "executable": str(tmp_path / "ambient/python.exe"),
+                        "package": str(REPO_ROOT / "src/cli/python/agentic_workspace/__init__.py"),
+                    }
                 ),
             },
             {"returncode": 0, "stdout": "{}"},

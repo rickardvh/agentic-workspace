@@ -100,8 +100,7 @@
     "src/",
     "uv.lock",
     "Cargo.toml",
-    "Cargo.lock",
-    "bindings/"
+    "Cargo.lock"
   ],
   "non_semver_generated_metadata": [],
   "packages": [
@@ -121,8 +120,8 @@
   "typescript_packages": [
     {
       "name": "@agentic-workspace/workspace-cli",
-      "package_json": "bindings/node/package.json",
-      "package_root": "bindings/node",
+      "package_json": "src/cli/typescript/package.json",
+      "package_root": "src/cli/typescript",
       "tarball_prefix": "agentic-workspace-workspace-cli",
       "entrypoints": [
         "agentic-workspace"

@@ -30,8 +30,8 @@ def test_source_launcher_uses_documented_pair_and_preserves_explicit_selection(t
     module = _load_module()
     monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     monkeypatch.delenv("AGENTIC_WORKSPACE_CORE_BINARY", raising=False)
-    resolver = tmp_path / "src/agentic_workspace/native_core.py"
-    _write(resolver, (SCRIPT_PATH.parent.parent / "src/agentic_workspace/native_core.py").read_text())
+    resolver = tmp_path / "src/cli/python/agentic_workspace/native_core.py"
+    _write(resolver, (SCRIPT_PATH.parent.parent / "src/cli/python/agentic_workspace/native_core.py").read_text())
     for marker in ("Cargo.lock", "src/core/Cargo.toml", "src/cli/rust/Cargo.toml"):
         _write(tmp_path / marker, "source fixture")
     suffix = ".exe" if os.name == "nt" else ""

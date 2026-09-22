@@ -99,7 +99,7 @@ def test_runtime_and_payload_have_no_external_adapter_reverse_dependency() -> No
             for name in package.get(field, {})
         }
         assert not any("adapter" in name or "external-consumer" in name for name in dependencies), (manifest, dependencies)
-    packaged = json.loads((ROOT / "bindings/node/package.json").read_text(encoding="utf-8"))["files"]
+    packaged = json.loads((ROOT / "src/cli/typescript/package.json").read_text(encoding="utf-8"))["files"]
     assert not any("adapter" in item.lower() for item in packaged)
     for source in [*ROOT.glob("src/**/*.py"), *ROOT.glob("generated/workspace/**/*.*")]:
         if source.suffix not in {".py", ".mjs", ".js"}:

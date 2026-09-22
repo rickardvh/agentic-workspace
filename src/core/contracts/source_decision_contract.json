@@ -275,7 +275,7 @@
     "executable_semantics": "src/core",
     "bindings": [
       "src/tooling/python/aw_maintainer/native_conformance.py",
-      "bindings/node/semantic-decision.mjs"
+      "src/cli/typescript/semantic-decision.mjs"
     ],
     "json_transport": "agentic-workspace-core binary stdin/stdout"
   },

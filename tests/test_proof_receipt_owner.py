@@ -36,7 +36,7 @@ def test_original_receipt_admission_fixture_through_shared_owner(shared_core_bin
             [str(shared_core_binary)], input=json.dumps({"proof_receipt": request}), text=True, capture_output=True, check=True
         )
     else:
-        module = (ROOT / "bindings/node/semantic-decision.mjs").as_uri()
+        module = (ROOT / "src/cli/typescript/semantic-decision.mjs").as_uri()
         result = subprocess.run(
             [
                 "node",

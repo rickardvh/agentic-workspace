@@ -77,7 +77,7 @@ def test_documentation_cannot_lower_a_binding_change() -> None:
         labels=[],
         changed_files=[
             "docs/maintenance.md",
-            "bindings/node/cli.mjs",
+            "src/cli/typescript/cli.mjs",
         ],
         ownership=ownership,
     )

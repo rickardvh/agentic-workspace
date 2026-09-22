@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def stage(output: Path, *, profile: str = "release") -> Path:
-    package = json.loads((ROOT / "bindings/node/package.json").read_text(encoding="utf-8"))
+    package = json.loads((ROOT / "src/cli/typescript/package.json").read_text(encoding="utf-8"))
     product = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     package["version"] = coordinated_release.npm_version(product["project"]["version"])
     package["description"] = product["project"]["description"]
@@ -60,8 +60,8 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     native = output / "src/native/bin"
     native.mkdir(parents=True)
     for name in ("_transport.mjs", "operating.mjs", "operating.d.mts"):
-        shutil.copy2(ROOT / "bindings/node/native" / name, native.parent / name)
-    shutil.copy2(ROOT / "bindings/node/cli.mjs", output / "src/cli.mjs")
+        shutil.copy2(ROOT / "src/cli/typescript/native" / name, native.parent / name)
+    shutil.copy2(ROOT / "src/cli/typescript/cli.mjs", output / "src/cli.mjs")
     shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
     shutil.copy2(ROOT / "README.md", output / "README.md")
     binary = binaries["agentic-workspace-core"]

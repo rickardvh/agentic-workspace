@@ -9,7 +9,7 @@ on:
       - scripts/release/platform_release.py
       - scripts/release/stage_native_npm.py
       - scripts/release/admit_linux_wheel.py
-      - bindings/node/native/_transport.mjs
+      - src/cli/typescript/native/_transport.mjs
       - hatch_build.py
   workflow_call:
     inputs:

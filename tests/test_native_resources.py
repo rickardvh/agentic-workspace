@@ -34,7 +34,7 @@ def resource(surface, binary, native, context):
         ]
         payload = context
     else:
-        url = (ROOT / "bindings/node/semantic-decision.mjs").as_uri()
+        url = (ROOT / "src/cli/typescript/semantic-decision.mjs").as_uri()
         args = [
             "node",
             "--input-type=module",

@@ -201,7 +201,7 @@ def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() ->
 
 
 def test_node_binding_has_no_source_checkout_python_dependency() -> None:
-    for path in (WORKSPACE_ROOT / "bindings/node").glob("*.mjs"):
+    for path in (WORKSPACE_ROOT / "src/cli/typescript").glob("*.mjs"):
         source = path.read_text(encoding="utf-8")
         assert "scripts/run_agentic_workspace.py" not in source
         assert "authoritative-python-boundary-unavailable" not in source
@@ -267,9 +267,9 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
         "src/core/src/main.rs",
         "src/cli/rust/Cargo.toml",
         "src/core/contracts/schemas/separation_of_duty.schema.json",
-        "src/agentic_workspace/_binding.py",
-        "src/agentic_workspace/codex_provider.py",
-        "src/agentic_workspace/sealed_codex_transport.py",
+        "src/cli/python/agentic_workspace/_binding.py",
+        "src/adapters/codex/agentic_workspace/codex_provider.py",
+        "src/adapters/codex/agentic_workspace/sealed_codex_transport.py",
     ):
         assert any(name.endswith(f"/{path}") for name in inventory), path
 

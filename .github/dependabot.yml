@@ -12,7 +12,7 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: npm
-    directory: /bindings/node
+    directory: /src/cli/typescript
     schedule:
       interval: weekly
   - package-ecosystem: npm

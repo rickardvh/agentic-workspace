@@ -29,11 +29,11 @@ def core_binary() -> Path:
     path = Path(configured) if configured else packaged / name
     # Only this module's source tree can supply an implicit development build.
     # Never search cwd/PATH or fall back from a present packaged distribution.
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[4]
     if (
         not configured
         and not packaged.exists()
-        and Path(__file__).resolve().parent.parent == root / "src"
+        and Path(__file__).resolve().parent.parent == root / "src/cli/python"
         and (root / "Cargo.lock").is_file()
         and (root / "src/core/Cargo.toml").is_file()
         and (root / "src/cli/rust/Cargo.toml").is_file()

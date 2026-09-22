@@ -1398,7 +1398,7 @@
       "generated": false,
       "notes": "The manifest exposes only the thin hand-maintained process binding permitted at the shared-core boundary.",
       "owner": "workspace-runtime",
-      "pattern": "bindings/node/package.json",
+      "pattern": "src/cli/typescript/package.json",
       "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
