@@ -19,11 +19,18 @@ builds them. Your project's language does not restrict the choice.
 | npm, user-wide | `npm install --global @agentic-workspace/workspace-cli` | `agentic-workspace` |
 | npm, this repository | `npm install --save-dev @agentic-workspace/workspace-cli` | `npm exec --no -- agentic-workspace` |
 | Python tool | `uv tool install agentic-workspace` | `agentic-workspace` |
-| Cargo | `cargo install --locked agentic-workspace-core agentic-workspace-cli --version <stable-version>` | `agentic-workspace` |
+| Cargo | Two exact-version installs below, core first | `agentic-workspace` |
 
 For Cargo, replace `<stable-version>` with the version in the
-[stable reference](reference/support-bearing-install.md); keep both binaries at
-that version. For a standalone archive or exact reproducible install, use that
+[stable reference](reference/support-bearing-install.md), then run these commands
+in order so both binaries use that exact version:
+
+```sh
+cargo install --locked agentic-workspace-core --version '=<stable-version>'
+cargo install --locked agentic-workspace-cli --version '=<stable-version>'
+```
+
+For a standalone archive or exact reproducible install, use that
 reference's platform-specific assets and checksums. [Compatibility and support](evidence-and-support.md)
 describes supported environments.
 
