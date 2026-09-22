@@ -27,7 +27,7 @@
     "mandatory_selector_calls": 0,
     "mandatory_raw_workspace_reads": 0,
     "interaction_trace": {
-      "guidance_source": "src/agentic_workspace/contracts/operations/proof.report.json#guards",
+      "guidance_source": "src/tooling/contracts/operations/proof.report.json#guards",
       "guidance": "For ordinary changed-path proof, proof_next_decision is authoritative: use its execute-selected action for an admitted command set, preserve manual/runtime/receipt blockers and claim_boundary, and use selectors or verbose output only for optional explanation.",
       "workspace_commands": ["agentic-workspace proof --changed fixtures/multi-command.py --format json"],
       "required_commands_enumerated": ["uv run pytest tests/test_workspace_cli.py -q", "make lint-workspace", "make typecheck"],

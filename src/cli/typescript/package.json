@@ -1,0 +1,45 @@
+{
+  "name": "@agentic-workspace/workspace-cli",
+  "author": "Rickard von Haugwitz",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rickardvh/agentic-workspace"
+  },
+  "homepage": "https://github.com/rickardvh/agentic-workspace",
+  "bugs": {
+    "url": "https://github.com/rickardvh/agentic-workspace/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "agentic-workspace": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/native/operating.d.mts",
+      "import": "./src/native/operating.mjs"
+    },
+    "./operating": {
+      "types": "./src/native/operating.d.mts",
+      "import": "./src/native/operating.mjs"
+    }
+  },
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/semantic-decision.test.mjs"
+  },
+  "agenticWorkspace": {
+    "runtimeBinding": {}
+  }
+}

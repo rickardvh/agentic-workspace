@@ -34,7 +34,7 @@ Evidence: [#3044](https://github.com/rickardvh/agentic-workspace/pull/3044), [#3
     ]
   },
   "scope": [
-    "path:crates/agentic-workspace-core/src/decision_source.rs"
+    "path:src/core/src/decision_source.rs"
   ],
   "dependencies": [],
   "context": [],

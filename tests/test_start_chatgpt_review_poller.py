@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-_SCRIPT = Path(__file__).resolve().parents[1] / "tools" / "start_chatgpt_review_poller.py"
+_SCRIPT = Path(__file__).resolve().parents[1] / "src" / "tooling" / "github" / "start_chatgpt_review_poller.py"
 _SPEC = importlib.util.spec_from_file_location("start_chatgpt_review_poller", _SCRIPT)
 assert _SPEC and _SPEC.loader
 poller = importlib.util.module_from_spec(_SPEC)

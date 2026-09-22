@@ -1,0 +1,505 @@
+//! Scoped instruction consumption. Source admission, applicability and evidence
+//! remain separate; a preferred procedure does not become a hard requirement.
+use crate::{
+    CoreError, digest, instruction_applicability, instruction_source, native_planning,
+    native_verification,
+};
+use serde_json::{Value, json};
+use std::{collections::BTreeSet, path::Path};
+
+fn strings(value: &Value) -> Vec<String> {
+    value
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect()
+}
+
+fn applicability(
+    metadata: &Value,
+    changed: &[String],
+    route: &Value,
+    targets: &[String],
+) -> Result<Value, CoreError> {
+    instruction_applicability::view(json!({
+        "paths":strings(&metadata["paths"]), "routes":strings(&metadata["routes"]),
+        "changed_paths":changed, "target_patterns":targets, "selected_routes":strings(&route["routes"]),
+        "route_posture":if route["status"] == "current" {route["posture"].as_str().unwrap_or("unresolved")} else {"unresolved"}
+    }))
+}
+
+fn hard(metadata: &Value) -> bool {
+    !strings(&metadata["protect"]).is_empty()
+        || !strings(&metadata["reconcile"]).is_empty()
+        || !strings(&metadata["governed_by"]).is_empty()
+        || metadata["checks"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|check| {
+                !check
+                    .as_str()
+                    .is_some_and(|value| value.starts_with("requirement:"))
+            })
+}
+
+fn blocker(source: &str, code: &str, message: &str, affects: Vec<String>) -> Value {
+    json!({"code":format!("instruction:{source}:{code}"),"message":message,"affects":affects})
+}
+
+pub fn resolve(
+    target: &Path,
+    changed: &[String],
+    route: &Value,
+    pin: &str,
+) -> Result<Value, CoreError> {
+    resolve_with_targets(target, changed, route, pin, &[])
+}
+
+pub(crate) fn resolve_with_targets(
+    target: &Path,
+    changed: &[String],
+    route: &Value,
+    pin: &str,
+    targets: &[String],
+) -> Result<Value, CoreError> {
+    let observed = instruction_source::current_sources(target)?;
+    let (documents, discovery_gap) =
+        match instruction_source::preserve_governance(target, pin, observed.clone()) {
+            Ok(documents) => (documents, None),
+            Err(error) => (observed, Some(error.to_string())),
+        };
+    let mut rows = Vec::new();
+    let mut blockers = Vec::new();
+    if let Some(reason) = &discovery_gap {
+        blockers.push(blocker(
+            "governance",
+            "admitted-source-discovery-unavailable",
+            reason,
+            vec!["claim:complete".into()],
+        ));
+    }
+    let mut scopes: BTreeSet<String> = [
+        "task",
+        "claim:complete",
+        "effect:planning-state",
+        "effect:proof-execution",
+        "effect:memory-state",
+        "effect:decision-source",
+        "effect:configuration-source",
+        "effect:system-intent-source",
+    ]
+    .map(str::to_owned)
+    .into();
+    for document in documents {
+        let reference = document["source"]["reference"].as_str().unwrap();
+        let metadata = &document["metadata"];
+        let valid = document["valid"] == true;
+        let mut scope = applicability(metadata, changed, route, targets)?;
+        let upstream = strings(&metadata["governed_by"]);
+        let source_change = upstream.iter().any(|source| changed.contains(source));
+        if source_change && scope["route_applies"] == true {
+            scope["applies"] = json!(true);
+            scope["status"] = json!("applicable");
+            scope["reason"] = json!("explicit-governing-source-change");
+        }
+        let applicable = valid && scope["applies"] == true;
+        let unresolved = valid && scope["status"] == "unresolved";
+        let binding = if valid && hard(metadata) {
+            match instruction_source::view(json!({"target":target,"admitted_revision":pin,
+                "sources":[{"reference":reference,"revision":document["source"]["revision"]}]}))
+            {
+                Ok(value) => value["sources"][0].clone(),
+                Err(error) => {
+                    json!({"status":"unavailable","diagnostic":error.to_string(),"checks":[],"protect":[]})
+                }
+            }
+        } else {
+            json!({"status":"not-required","checks":[],"protect":[]})
+        };
+        if !valid {
+            blockers.push(blocker(reference,"source-unresolved","Current instruction syntax/scope cannot be safely consumed; preserve the source and resolve its owner.",vec!["task".into()]));
+        }
+        for pattern in strings(&metadata["protect"]) {
+            scopes.insert(format!("effect:write:{pattern}"));
+            for path in changed
+                .iter()
+                .filter(|path| native_verification::matches(&pattern, path))
+            {
+                scopes.insert(format!("effect:write:{path}"));
+            }
+        }
+        if (applicable || unresolved) && hard(metadata) {
+            let mut affects = Vec::new();
+            if unresolved && (!strings(&metadata["reconcile"]).is_empty() || !upstream.is_empty()) {
+                affects.push("claim:complete".into());
+            }
+            if metadata["checks"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|check| {
+                    !check
+                        .as_str()
+                        .is_some_and(|value| value.starts_with("requirement:"))
+                })
+            {
+                affects.push("claim:complete".into());
+            }
+            if applicable && (!strings(&metadata["reconcile"]).is_empty() || !upstream.is_empty()) {
+                blockers.push(blocker(reference, "source-reconciliation-required",
+                    "Canonical sources require a current authorized updated or reviewed-current judgment against the resulting work.",
+                    vec!["claim:complete".into()]));
+            }
+            for pattern in strings(&metadata["protect"]) {
+                affects.push(format!("effect:write:{pattern}"));
+                affects.extend(
+                    changed
+                        .iter()
+                        .filter(|path| native_verification::matches(&pattern, path))
+                        .map(|path| format!("effect:write:{path}")),
+                );
+            }
+            affects.sort();
+            affects.dedup();
+            if !affects.is_empty() {
+                blockers.push(blocker(reference,if unresolved {"applicability-unresolved"} else if binding["status"]=="current" {"current-binding"} else {"binding-unadmitted"},
+                    if unresolved {"Current semantic route applicability remains unresolved for this affected consequence."} else if binding["status"]=="current" {"Current repository protection/check obligations remain binding; no proof success is inferred."} else {"Current hard instruction intent requires source admission before affected behavior."},affects));
+            }
+        }
+        let guidance = if applicable && document["retained_governance"] != true {
+            instruction_source::current_document(target, reference, true)?["body"].clone()
+        } else {
+            json!("")
+        };
+        let procedures = if applicable {
+            strings(&metadata["use"])
+                .iter()
+                .map(|name| crate::native_routes::procedure(target, name))
+                .collect::<Result<Vec<_>, _>>()?
+        } else {
+            vec![]
+        };
+        rows.push(json!({"source":document["source"],"metadata":metadata,"valid":valid,"applicable":applicable,"applicability":scope,
+            "guidance":guidance,"read":if applicable {json!(strings(&metadata["read"]).into_iter().chain(upstream.clone()).collect::<BTreeSet<_>>())} else {json!([])},
+            "governed_by":if applicable {json!(upstream)} else {json!([])},
+            "reconcile":if applicable {metadata["reconcile"].clone()} else {json!([])},
+            "procedure_resolution":procedures,"preferred_procedures":if applicable {metadata["use"].clone()} else {json!([])},
+            "requirement_references":if applicable {json!(strings(&metadata["checks"]).into_iter().filter(|value| value.starts_with("requirement:")).collect::<Vec<_>>())} else {json!([])},
+            "binding_admission":binding,"retained_governance":document["retained_governance"]}));
+    }
+    let revision = digest(&json!({"sources":rows,"route":route,"changed":changed}))?;
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
+        "owners":[{"owner":"scoped-instructions","revision":"native-scoped-instructions/v1"}],
+        "restriction_authorities":[{"owner":"scoped-instructions","affects":scopes}]});
+    contract["revision"] = json!(digest(&contract)?);
+    crate::native_instruction_write::extend_contract(&mut contract)?;
+    let material: Vec<_> = rows
+        .iter()
+        .filter(|row| row["applicable"] == true)
+        .collect();
+    let mut result = json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
+        "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers,
+            "material":if material.is_empty(){Value::Null}else{json!(material)}},
+        "authority_boundary":"read supplies context; admitted reconcile/governed_by require current judgment; use suggests procedure; checks/protect and requirements retain owner authority; none grants proof or effects"});
+    if let Some(reason) = discovery_gap {
+        result["governance_discovery"] = json!({"status":"unavailable","reason":reason});
+    }
+    Ok(result)
+}
+
+/// The instruction owner retains its existing protection authority over newly
+/// admitted effects. Extensions cannot grant this authority to themselves.
+pub(crate) fn restrict_operations(view: &mut Value, contract: &Value) -> Result<(), CoreError> {
+    let scopes = view["capability_contract"]["restriction_authorities"][0]["affects"]
+        .as_array_mut()
+        .unwrap();
+    for effect in contract["owners"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|owner| owner["effects"].as_array().into_iter().flatten())
+    {
+        let scope = json!(format!("effect:{}", effect["id"].as_str().unwrap()));
+        if !scopes.contains(&scope) {
+            scopes.push(scope);
+        }
+    }
+    view["capability_contract"]["revision"] = json!("pending");
+    view["capability_contract"]["revision"] = json!(digest(&view["capability_contract"])?);
+    Ok(())
+}
+
+pub fn restrict_pending(
+    view: &mut Value,
+    pending: &[Value],
+    route: &Value,
+) -> Result<(), CoreError> {
+    let mut additions = Vec::new();
+    for action in pending.iter().filter(|action| {
+        action["source_owner"]
+            .as_str()
+            .is_some_and(crate::native_independent::linked)
+    }) {
+        let writes = crate::native_independent_publication::write_scope(action)?;
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            if source["valid"] == true
+                && applicability(metadata, &[], route, &[])?["route_applies"] == true
+                && (source["applicable"] == true
+                    || strings(&metadata["paths"]).is_empty()
+                    || strings(&metadata["paths"]).iter().any(|pattern| {
+                        writes
+                            .iter()
+                            .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                    }))
+                && strings(&metadata["protect"]).iter().any(|pattern| {
+                    writes
+                        .iter()
+                        .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-independent-write",
+                    "Current protection forbids this independent owner's exact publication or custody write.",
+                    action["effects"].as_array().into_iter().flatten().filter_map(Value::as_str).map(|effect|format!("effect:{effect}")).collect()));
+            }
+        }
+    }
+    for action in pending.iter().filter(|a| {
+        matches!(
+            a["operation_id"].as_str(),
+            Some(
+                "memory.capture-decision"
+                    | "memory.recover-decision"
+                    | "memory.capture-advisory"
+                    | "memory.recover-advisory"
+                    | "decision-continuity.capture-decision"
+                    | "decision-continuity.recover-decision"
+            )
+        )
+    }) {
+        let writes = crate::native_memory_capture::write_scope(action)?;
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            let patterns = strings(&metadata["paths"]);
+            if source["valid"] == true
+                && (source["applicable"] == true
+                    || (applicability(metadata, &[], route, &[])?["route_applies"] == true
+                        && (patterns.is_empty()
+                            || patterns.iter().any(|p| {
+                                writes
+                                    .iter()
+                                    .any(|w| instruction_applicability::patterns_overlap(p, w))
+                            }))))
+                && strings(&metadata["protect"]).iter().any(|p| {
+                    writes
+                        .iter()
+                        .any(|w| instruction_applicability::patterns_overlap(p, w))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-decision-write",
+                    "Current source protection forbids this exact decision publication or custody write.", action["effects"].as_array().unwrap().iter().map(|e| format!("effect:{}",e.as_str().unwrap())).collect()));
+            }
+        }
+    }
+    for action in pending
+        .iter()
+        .filter(|a| a["operation_id"] == crate::native_source_reconciliation::OP)
+    {
+        let mut writes = crate::attempt_store::write_paths(
+            &json!({"idempotency_key":action["logical_effect_id"]}),
+        )?;
+        writes.extend(crate::native_source_reconciliation::retention_write_scope(
+            action,
+        )?);
+        let destination = action["arguments"]["receipt_ref"].as_str().unwrap();
+        writes.extend([
+            destination.to_owned(),
+            format!("{destination}.tmp"),
+            ".agentic-workspace/local/effects/source-reconciliation.lock".into(),
+            crate::native_source_reconciliation::projection_path(&action["arguments"]["binding"])?,
+            format!(
+                "{}.tmp",
+                crate::native_source_reconciliation::projection_path(
+                    &action["arguments"]["binding"]
+                )?
+            ),
+        ]);
+        for source in view["sources"].as_array().into_iter().flatten() {
+            if source["applicable"] == true
+                && strings(&source["metadata"]["protect"]).iter().any(|p| {
+                    writes
+                        .iter()
+                        .any(|w| instruction_applicability::patterns_overlap(p, w))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-proof-write",
+                    "Current protection forbids source judgment publication to its exact destination.", vec!["effect:proof-execution".into()]));
+            }
+        }
+    }
+    for action in pending.iter().filter(|a| {
+        a["source_owner"] == "scoped-instructions"
+            || a["source_owner"] == "configuration"
+            || a["source_owner"] == "system-intent"
+    }) {
+        let writes = if action["source_owner"] == "system-intent" {
+            crate::native_intent_write::write_scope(action)?
+        } else if action["source_owner"] == "configuration" {
+            crate::native_config_write::write_scope(action)?
+        } else {
+            crate::native_instruction_write::write_scope(action)?
+        };
+        for source in view["sources"].as_array().into_iter().flatten() {
+            if source["valid"] == true
+                && (source["applicable"] == true
+                    || strings(&source["metadata"]["paths"]).is_empty()
+                    || strings(&source["metadata"]["paths"]).iter().any(|p| {
+                        writes
+                            .iter()
+                            .any(|w| instruction_applicability::patterns_overlap(p, w))
+                    }))
+                && strings(&source["metadata"]["protect"]).iter().any(|p| {
+                    writes
+                        .iter()
+                        .any(|w| instruction_applicability::patterns_overlap(p, w))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-instruction-write", "Current protection forbids this instruction publication; source authority cannot waive another restriction.", vec![format!("effect:{}",if action["source_owner"]=="configuration"{"configuration-source"}else if action["source_owner"]=="system-intent"{"system-intent-source"}else{"instruction-source"})]));
+            }
+        }
+    }
+    if pending.iter().any(|action| {
+        action["source_owner"] == "verification" && action["operation_id"] == "proof.report"
+    }) {
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            if source["valid"] == true
+                && applicability(metadata, &[], route, &[])?["route_applies"] == true
+                && (!strings(&metadata["protect"]).is_empty())
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"proof-execution-scope-unresolved",
+                    "The declared shell command has no bounded write scope proving these current protections and checks are preserved.",vec!["effect:proof-execution".into()]));
+            }
+        }
+    }
+
+    for action in pending.iter().filter(|action| {
+        (action["source_owner"] == "memory"
+            && matches!(
+                action["operation_id"].as_str(),
+                Some(crate::native_memory_retention::OP | crate::native_memory_retention::RECOVERY)
+            ))
+            || (action["source_owner"] == "verification"
+                && matches!(
+                    action["operation_id"].as_str(),
+                    Some(
+                        crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY
+                    )
+                ))
+            || (action["source_owner"] == "planning"
+                && matches!(
+                    action["operation_id"].as_str(),
+                    Some(
+                        "planning.reconcile"
+                            | crate::native_planning_retention::OP
+                            | crate::native_planning_retention::RECOVERY
+                            | "planning.create"
+                            | "planning.update"
+                            | "planning.update-recover"
+                    )
+                ))
+    }) {
+        let writes = if matches!(
+            action["operation_id"].as_str(),
+            Some(crate::native_memory_retention::OP | crate::native_memory_retention::RECOVERY)
+        ) {
+            crate::native_memory_retention::write_scope(action)?
+        } else if matches!(
+            action["operation_id"].as_str(),
+            Some(crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY)
+        ) {
+            crate::native_proof_retention::write_scope(action)?
+        } else if matches!(
+            action["operation_id"].as_str(),
+            Some(crate::native_planning_retention::OP | crate::native_planning_retention::RECOVERY)
+        ) {
+            crate::native_planning_retention::write_scope(action)?
+        } else if action["operation_id"] == "planning.update-recover" {
+            let mut writes = crate::attempt_store::write_paths(
+                &json!({"idempotency_key":action["logical_effect_id"]}),
+            )?;
+            writes.extend(crate::attempt_store::write_paths(
+                &action["arguments"]["retained_invocation"],
+            )?);
+            writes.push(".agentic-workspace/local/planning/owner-selection.lock".to_owned());
+            writes
+        } else if matches!(
+            action["operation_id"].as_str(),
+            Some("planning.create" | "planning.update")
+        ) {
+            let mut writes = crate::attempt_store::write_paths(
+                &json!({"idempotency_key":action["logical_effect_id"]}),
+            )?;
+            writes.push(
+                action["arguments"]["owner_path"]
+                    .as_str()
+                    .ok_or_else(|| CoreError::new("Planning creation path missing"))?
+                    .to_owned(),
+            );
+            if action["operation_id"] == "planning.update" {
+                writes.push(".agentic-workspace/local/planning/owner-selection.lock".to_owned());
+                writes.push(format!(
+                    "{}.*.tmp",
+                    action["arguments"]["owner_path"].as_str().unwrap()
+                ));
+            }
+            writes
+        } else {
+            native_planning::write_scope(action)?
+        };
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            let patterns = strings(&metadata["paths"]);
+            if source["valid"] != true
+                || applicability(metadata, &[], route, &[])?["route_applies"] != true
+                || !(patterns.is_empty()
+                    || patterns.iter().any(|pattern| {
+                        writes
+                            .iter()
+                            .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                    }))
+            {
+                continue;
+            }
+            if strings(&metadata["protect"]).iter().any(|pattern| {
+                writes
+                    .iter()
+                    .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+            }) {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"protected-planning-write",
+                    "The current Planning operation would write protected repository state; preserve the source and resolve that restriction before execution.",vec!["effect:planning-state".into()]));
+            }
+            if metadata["checks"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|check| {
+                    !check
+                        .as_str()
+                        .is_some_and(|value| value.starts_with("requirement:"))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"planning-write-checks",
+                    "Current repository checks apply to this Planning write and still require Verification evidence.",vec!["claim:complete".into()]));
+            }
+        }
+    }
+    view["contribution"]["blockers"]
+        .as_array_mut()
+        .unwrap()
+        .extend(additions);
+    Ok(())
+}

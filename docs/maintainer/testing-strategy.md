@@ -90,7 +90,7 @@ a passing narrow check does not automatically require all broader suites.
   stop once argument fidelity and binding floors are proven, or escalate to an
   affected platform only if its encoding behaviour remains materially unresolved.
 
-## Current Inventory
+## Historical reduction evidence
 
 The June 15, 2026 inventory for #1521 was refreshed after the first reduction slices with:
 
@@ -102,7 +102,7 @@ The June 15, 2026 inventory for #1521 was refreshed after the first reduction sl
 
 Collection is fast, so the immediate problem is not raw collection time. A full root duration pass exceeded 10 minutes during #1521 measurement, so the current pressure is both runtime hotspots and a growing pile of narrow regression tests around broad workflow surfaces.
 
-The largest current executable clusters by collected test count are:
+The largest executable clusters in that historical Python-host inventory were:
 
 - `tests/test_generated_tool_conformance.py` (91)
 - `packages/memory/tests/test_install.py` (79)
@@ -116,11 +116,11 @@ The largest current executable clusters by collected test count are:
 - `packages/memory/tests/test_routing.py` (44)
 - `packages/planning/tests/test_check_planning_surfaces.py` (43)
 
-These current clusters are not automatically bad. Treat them as the first places to look for scenario consolidation, table-driven structure, or contract-owned conformance cases when related work changes them.
+Those package/host clusters are retired. Current owner scenarios are under `tests/test_native_*.py` and native Rust tests; do not revive the former layout to reproduce these counts. Use current collection and targeted duration evidence for new work.
 
 Retired legacy clusters from the #1536/#1537/#1538/#1539/#1540/#1541 finish-lane slice are no longer current executable hotspots: `tests/test_model_cli_harness.py`, `tests/test_workspace_report_cli.py`, `tests/test_workspace_start_preflight_cli.py`, `packages/planning/tests/test_summary.py`, `tests/test_contract_tooling.py`, and `tests/test_workspace_lifecycle_cli.py`. Their migration records live in `docs/maintainer/test-knowledge-inventory.md`; new work should use focused current evidence rather than reviving those broad files.
 
-The first #1521 reduction slice consolidated repeated packaging builds in `tests/test_workspace_packaging.py`, `packages/memory/tests/test_packaging.py`, and `packages/planning/tests/test_packaging.py`. Those tests now reuse module-scoped wheel and sdist artefacts while preserving the same inventory, import, workflow, and install assertions. The packaging subset passes in about 20 seconds on the local Windows checkout.
+The first #1521 reduction slice consolidated repeated packaging builds in `tests/test_workspace_packaging.py`, `packages/memory/tests/test_packaging.py`, and `packages/planning/tests/test_packaging.py`. Those tests then reused module-scoped wheel and sdist artefacts while preserving the same inventory, import, workflow, and install assertions. That packaging subset passed in about 20 seconds on the local Windows checkout.
 
 The #1524 workflow-cluster slice merged the live-checkout active-only and verbose preflight mode checks in `tests/test_workspace_start_preflight_cli.py` into one scenario-matrix test. The affected `tests/test_workspace_report_cli.py` plus `tests/test_workspace_start_preflight_cli.py` subset moved from 234 collected tests / 139.18 seconds to 233 collected tests / 133.93 seconds while retaining the active-state, full-takeover, startup-guidance, and resolved-config assertions.
 
@@ -179,29 +179,25 @@ This keeps validation observable without silently repeating dependency setup:
   constituent before waiting. Timeouts and failures must name the constituent
   and durable log/result locations.
 
-Use `scripts/check/check_structured_file_inventory.py --changed <paths...>`
+Use `src/tooling/check/check_structured_file_inventory.py --changed <paths...>`
 for focused changed-path proof. It escalates to the full inventory audit when
 the inventory, schema, or matching implementation changes. The full
 `make structured-file-inventory` audit remains the broad no-prune proof for
 inventory coverage, schema validation, guardrails, generated mirror policy, and
 staged-deletion safety.
 
-`make validation-runtime-plan` is the closeout gate for repository validation
-composition. It checks the versioned plan and evidence under
-`docs/maintainer/validation-runtime-2435/`, including setup-bearing versus
-setup-free target boundaries, CI/local drift, duplicate constituent execution,
-runtime budget evidence, and the composed-operation duplicate-proof disposition.
-This is not a proof-selection authority; it verifies what happens after a route
-or explicit broad command has already been selected.
+Current validation composition is the Makefile and CI workflow. The Makefile
+contract tests prove setup boundaries and complete, nonduplicated root test
+partitioning; compact-runner tests prove fresh run identities, explicit joins,
+retry reasons, timeout/failure results and rejection of conflicting writers.
+The former #2435 package/generator graph and its timing evidence are historical,
+not a current closeout gate. Do not silently attach that graph to new commands.
+Explicit command identity, dependencies and proof purpose may be supplied to the
+compact runner; its records do not themselves grant native proof authority.
 
-`make memory-freshness-strict` is a consequential current-state assertion, not
-a report-rendering smoke test. It runs `report --fail-on strict-current`, whose
-versioned policy fails current executable and installed/configuration defects
-while keeping maintenance debt and archive history non-blocking. The compact
-result records the policy fingerprint, subject fingerprint, blocking owners,
-and progress-making drill-down commands. A feature-branch Planning integration
-proposal is non-blocking only on the branch it admits; default-branch health
-still requires the integration transition to be applied.
+`make memory-freshness-strict` audits retained Memory metadata and selected
+freshness categories. It is a maintainer check; it does not admit native proof,
+resolve semantic currentness or establish task completion.
 
 Use `make check-bounded-parallel` for explicit full broad validation when the
 runtime budget matters. It runs the same broad constituents as `check-nosync`
@@ -218,16 +214,17 @@ Use this compact inventory when changing these clusters:
 | --- | --- | --- |
 | Keep ordinary | Report closeout trust, startup/preflight routing, proof selection, lifecycle mutation safety, package install behaviour | Keep standalone when the behaviour is high-risk semantic workflow coverage or transport-specific adapter behaviour. |
 | Merge | Repeated mode, section, or branch-shape checks with shared setup | Prefer scenario matrices or shared fixtures when assertions prove the same contract. |
-| Convert | Stable generated command output, deterministic primitive behaviour, reusable operation output examples | Move to conformance only when the replacement case names the owner and Python/TypeScript generated target proof runs it. |
+| Convert | Stable generated command output, deterministic primitive behaviour, reusable operation output examples | Move to native owner cases, retaining public transport proof where it establishes a distinct boundary. |
 | Delete | Obsolete compatibility fallbacks, duplicate generated-output assertions, dead fixture-shape regressions | Delete only after equivalent coverage is recorded in the replacement inventory. |
 
-## Root Versus Package Ownership
+## Native and binding ownership
 
-Root workspace tests prove AW product orchestration: root lifecycle front doors, module selection, report/start/doctor routing, installed-state compatibility, cross-module integration, generated-target proof routing, and user-visible adapter behaviour.
-
-Package-local tests prove module-owned behaviour: install/update/remove mechanics, package payload boundaries, module state mutation, schema/report primitives, package-local doctor/status behaviour, and migration or residue checks that belong to that module. Do not duplicate module internals in root tests except through one representative orchestration path.
-
-When root and package tests appear to cover the same behaviour, keep the lower-level package test for module internals and keep only the smallest root test that proves integration through the AW front door. If both are retained, name the reason as one of: root orchestration, package boundary, high-risk workflow, migration residue, or adapter compatibility.
+Rust owner tests prove portable semantics and effects. Root Python tests exercise
+the native public boundary, artifact isolation and maintainer/provider mechanics.
+Planning, Memory and Verification are core modules, not separately installed
+Python distributions. Use their native owner scenarios for state preservation,
+mutation safety and migration evidence. Generated operation parity and former
+Python dispatch are not alternative product authorities.
 
 ## Contract Ladder
 
@@ -245,8 +242,8 @@ When a bug belongs to a reusable fragment, add or extend a fragment or operation
 The preferred long-term direction is contract-owned conformance:
 
 - Operational contracts own canonical input/output or input/error cases.
-- Python owns the single authoritative conformance runner.
-- CLI, generated package, MCP, and future targets provide thin adapters.
+- Rust owns semantic admission, outcomes and effects; tooling only invokes it.
+- Rust CLI, Python and Node provide the current public transport surfaces.
 - Adapters normalise invocation, result extraction, exit or error shape, and capability reporting.
 
 The runner should remain simple: load contract cases, select a target adapter, run the declared operation with declared input and fixtures, normalise the result, and compare it with expected output or expected error.
@@ -269,7 +266,7 @@ Treat these areas as high-risk until a stronger replacement exists:
 
 - Planning archive, closeout, and active-state mutation safety.
 - Startup, preflight, implementation, proof, and report routing.
-- Generated command package freshness, conformance, and target parity.
+- Native artifact identity, generated interface freshness and public transport parity.
 - Schema/reference docs and structured inventory checks.
 - Package install and payload boundary behaviour.
 
@@ -284,9 +281,8 @@ direction and the AW-side generated-command inventory. Treat
 as retained records, not open ownership claims.
 
 New reductions should use the current owner map: keep high-risk root workflow
-proof where it is the narrowest evidence, move stable generated behaviour to
-contract-owned conformance when both Python and TypeScript generated targets can
-consume it, and use Verification proof decisions or dispositions when changing
+proof where it is the narrowest evidence, keep portable semantic cases with the Rust owner and use thin public-binding
+cases for transport parity, and use Verification proof decisions or dispositions when changing
 ordinary tests would otherwise leave the reasoning in chat or PR prose.
 
 ## Lazy frontier regression boundary

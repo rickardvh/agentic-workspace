@@ -13,8 +13,8 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 
 def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_path, shared_core_binary, native_cli):
-    source = json.loads((ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
-    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    source = json.loads((ROOT / "src/tooling/contracts/source_maintenance_surfaces.json").read_text())
+    host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     required = set(source["payload_files"] + source["necessary_surface_files"])
     required.update(path for paths in source["module_surface_files"].values() for path in paths)
 
@@ -45,7 +45,7 @@ def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes((ROOT / path).read_bytes())
     ledger = tmp_path / ".agentic-workspace/OWNERSHIP.toml"
-    ledger.write_bytes((ROOT / "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml").read_bytes())
+    ledger.write_bytes((ROOT / "src/core/payload/.agentic-workspace/OWNERSHIP.toml").read_bytes())
     ordinary = inventory(tmp_path)
     assert source_only <= ordinary["removals"].keys()
 
@@ -109,13 +109,11 @@ def test_payload_inventory_reconciliation_preserves_content_and_custody(tmp_path
 
 def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared_core_binary, native_cli):
     """Committed source projections work on a new machine, without writer custody."""
-    from tests.test_source_payload_operational_install import _checker_script_path, _load_module
 
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    _committed_payload_alignment = _load_module(_checker_script_path(), "fresh_source_alignment")._committed_payload_alignment
-    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     for ref in [*host["payload_files"], ".agentic-workspace/payload-provenance.json"]:
         destination = tmp_path / ref
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -131,7 +129,7 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
     reading = json.loads((tmp_path / PROFILE).read_text())
     assert (tmp_path / PROFILE).read_text() == render(ledger.read_bytes().decode(), target=tmp_path)
     assert "tools/skills/REGISTRY.json" in [ref for row in reading["entries"] for ref in row["refs"]]
-    portable = json.loads((ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text())
+    portable = json.loads((ROOT / "src/core/payload" / PROFILE).read_text())
     assert "tools/skills/REGISTRY.json" not in [ref for row in portable["entries"] for ref in row["refs"]]
     provenance = json.loads((tmp_path / ".agentic-workspace/payload-provenance.json").read_text())
     assert provenance["payload_files"] == host["payload_files"]
@@ -151,26 +149,13 @@ def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared
     choice = next(row for row in discovery["configuration_write"]["payload_choices"] if row["source"] == LEDGER)
     assert choice["status"] == "preserved-blocked"
     assert "conflicting package ownership fact" in choice["reason"]
-    # Maintenance validation guards the same source relationship without
-    # creating a second runtime admission or migration mechanism.
-    for ref in [
-        "pyproject.toml",
-        "src/agentic_workspace/contracts/workspace_surfaces.json",
-        "src/agentic_workspace/contracts/portable_ownership.toml",
-    ]:
-        destination = tmp_path / ref
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes((ROOT / ref).read_bytes())
-    assert LEDGER in {row["path"] for row in _committed_payload_alignment(repo_root=tmp_path)["drift"]}
-    ledger.write_bytes(before)
-    assert _committed_payload_alignment(repo_root=tmp_path)["status"] == "current"
 
 
 @pytest.mark.parametrize("change", ["unchanged", "customized", "conflict", "unknown-history"])
 def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_binary, native_cli, change):
     """A legacy producer held installed hashes, not a structured baseline."""
-    from agentic_workspace.decision import admit_stored_attempt, commit_stored_attempt
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.native_conformance import admit_stored_attempt, commit_stored_attempt
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     context = {"target": str(tmp_path), "task": "Refresh legacy repository ownership"}
@@ -252,7 +237,7 @@ def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_
         assert ledger.read_bytes() == before
         return
     assert call(invocation=authorize(propose()))["effect_outcome"]["status"] == "committed"
-    portable = tomllib.loads((ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text())
+    portable = tomllib.loads((ROOT / "src/core/contracts/portable_ownership.toml").read_text())
     expected = copy.deepcopy(portable)
     if host_subsystems:
         expected["subsystems"] = host_subsystems
@@ -276,7 +261,7 @@ def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_
 @pytest.mark.parametrize("customized", [False, True])
 def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_binary, native_cli, customized):
     """One native journey also runs unchanged against installed release artifacts."""
-    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+    from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     root = tmp_path / ".agentic-workspace"

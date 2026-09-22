@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def _load_generator():
-    script_path = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_schema_reference.py"
+    script_path = Path(__file__).resolve().parents[1] / "src" / "tooling" / "generate" / "generate_schema_reference.py"
     spec = importlib.util.spec_from_file_location("generate_schema_reference", script_path)
     assert spec is not None
     assert spec.loader is not None
@@ -21,7 +21,7 @@ def test_schema_reference_generator_renders_workspace_config_annotations() -> No
 
     text = module.render_schema_reference(module.DEFAULT_SCHEMA)
 
-    assert "Source schema: `src/agentic_workspace/contracts/schemas/workspace_config.schema.json`" in text
+    assert "Source schema: `src/core/contracts/schemas/workspace_config.schema.json`" in text
     assert "`modules.enabled`" in text
     assert '`["planning", "memory"]`' in text
     assert "`workspace.agent_instructions_file`" in text
@@ -39,7 +39,9 @@ def test_schema_reference_annotation_check_covers_workspace_config() -> None:
 
 def test_schema_reference_default_targets_cover_all_contract_schemas() -> None:
     module = _load_generator()
-    schemas = sorted(path.relative_to(module.REPO_ROOT) for path in (module.REPO_ROOT / module.SCHEMA_ROOT).glob("*.schema.json"))
+    schemas = sorted(
+        path.relative_to(module.REPO_ROOT) for root in module.SCHEMA_ROOTS for path in (module.REPO_ROOT / root).glob("*.schema.json")
+    )
 
     assert sorted(target.schema_path for target in module.DEFAULT_TARGETS) == schemas
 
@@ -107,7 +109,7 @@ def test_schema_reference_generator_still_detects_semantic_staleness(tmp_path: P
 
 def test_schema_reference_scaffold_includes_required_doc_metadata(tmp_path: Path) -> None:
     module = _load_generator()
-    schema_path = Path("src/agentic_workspace/contracts/schemas/example.schema.json")
+    schema_path = Path("src/tooling/contracts/schemas/example.schema.json")
 
     module.write_schema_scaffold(
         schema_path=schema_path,
@@ -125,7 +127,7 @@ def test_schema_reference_scaffold_includes_required_doc_metadata(tmp_path: Path
 
 def test_schema_reference_scaffold_refuses_existing_file_without_force(tmp_path: Path) -> None:
     module = _load_generator()
-    schema_path = Path("src/agentic_workspace/contracts/schemas/example.schema.json")
+    schema_path = Path("src/tooling/contracts/schemas/example.schema.json")
     (tmp_path / schema_path).parent.mkdir(parents=True)
     (tmp_path / schema_path).write_text("{}\n", encoding="utf-8")
 
@@ -146,9 +148,9 @@ def test_schema_reference_scaffold_refuses_existing_file_without_force(tmp_path:
 def test_schema_reference_curated_descriptions_cover_high_value_schemas() -> None:
     module = _load_generator()
 
-    startup = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/startup_context.schema.json"))
-    report = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/workspace_report.schema.json"))
-    aid = module.render_schema_reference(Path("src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"))
+    startup = module.render_schema_reference(Path("src/tooling/contracts/schemas/startup_context.schema.json"))
+    report = module.render_schema_reference(Path("src/tooling/contracts/schemas/workspace_report.schema.json"))
+    aid = module.render_schema_reference(Path("src/core/contracts/schemas/agent_aid_manifest.schema.json"))
 
     assert "minimum safe context for entering or resuming work" in startup
     assert "Ordered surfaces and commands an agent should use" in startup

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Place canonical language facades under src/cli and Codex protocol transport under src/adapters while preserving installed package interfaces."

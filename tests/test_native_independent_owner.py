@@ -55,7 +55,7 @@ def test_multiple_ready_actions_need_no_detail_fetch(tmp_path, independent_binar
     config.write_text(config.read_text() + other[other.index("[modules.independent.") :])
 
     def call(**extra):
-        return consume(surface, independent_binary, independent_cli, {**context, **extra}, host_path=os.environ["PATH"])
+        return consume(surface, independent_binary, independent_cli, {**context, **extra}, host_path=os.environ["PATH"], custom_core=True)
 
     first = call()
     requests = [first["independent_owners"][owner]["requests"][0] for owner in ("fixture-lens", "fixture-notebook")]
@@ -97,7 +97,7 @@ def test_independent_native_owner_discovery_request_action_result(
     context = setup(tmp_path, independent_binary, owner)
 
     def call(**extra):
-        return consume(surface, independent_binary, independent_cli, {**context, **extra}, host_path=os.environ["PATH"])
+        return consume(surface, independent_binary, independent_cli, {**context, **extra}, host_path=os.environ["PATH"], custom_core=True)
 
     first = call()
     assert set(first["independent_owners"]) == {owner}
@@ -376,7 +376,7 @@ def test_facts_only_owner_needs_no_action_or_custody(tmp_path, independent_binar
     monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(independent_binary))
     context = setup(tmp_path, independent_binary, "fixture-facts")
     before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    value = consume(surface, independent_binary, independent_cli, context, host_path=os.environ["PATH"])
+    value = consume(surface, independent_binary, independent_cli, context, host_path=os.environ["PATH"], custom_core=True)
     owner = value["independent_owners"]["fixture-facts"]
     assert owner["facts"]["source"]["text"] == "Current bounded input."
     assert owner["requests"] == []

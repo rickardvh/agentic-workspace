@@ -76,6 +76,27 @@ there is no merged=true or passing-command shortcut.
 
 ## Validation
 
+Terminal disposition offers bounded closed groups of completed plans and supported
+legacy review, integration, assignment and closeout records. Historical location
+only nominates a judgment; the agent must establish terminal intent and no
+continuing value. The returned groups identify all required members. Selecting
+only part of a group, an outside consumer, current selection or uncertain native
+custody prevents removal.
+
+An unanswered disposition request can nominate exact paths for a fresh read-only
+frontier. Its returned request binds the current source and consumer bytes before
+any judgment can admit removal. This lets unresolved earlier candidates remain
+without hiding later completed work. No persistent deferral or retirement ledger
+is created.
+
+Historical proof provenance is followed to actual consumers. A current Memory
+claim through a receipt still protects its Planning owner; the receipt's mere
+existence does not keep a completed owner forever. Planning-bound proof reuse
+ends when its exact owner subject disappears or materially changes. Direct-task
+proof reuse and current selected owners retain their separate protections.
+Local decision-point intent and pending Verification disposition participate in
+the consumer guards.
+
 The public lifetime fixture exercises native, JSON, Python and TypeScript:
 lower review/CI/head/merge and provider/issue observations move without changing
 upper tracked Planning bytes; actual residual meaning changes require an update;

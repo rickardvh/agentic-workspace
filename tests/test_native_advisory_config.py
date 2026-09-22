@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -16,8 +17,6 @@ def workspace_blockers(packet: dict) -> list:
 
 
 def test_unsupported_config_is_rejected_before_state_without_fallback(tmp_path, shared_core_binary, native_cli):
-    from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
-
     context = {"target": str(tmp_path), "task": "Inspect a link", "changed": []}
     quiet = consume("json", shared_core_binary, native_cli, context)
     assert quiet["decision_packet"]["status"] == "direct"
@@ -36,8 +35,6 @@ def test_unsupported_config_is_rejected_before_state_without_fallback(tmp_path, 
         assert "decision_packet" not in result
         assert source.read_text() == text
         assert not (tmp_path / ".agentic-workspace/local").exists()
-        with pytest.raises(WorkspaceUsageError, match="Invalid configuration"):
-            load_workspace_config(target_root=tmp_path)
         rejected = consume(
             "json", shared_core_binary, native_cli, {**context, "invocation": {"operation_id": "planning.reconcile"}}, allow_failure=True
         )
@@ -117,7 +114,7 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
         plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
         plan = tmp_path / plan_ref
         plan.parent.mkdir(parents=True)
-        plan.write_bytes((Path(__file__).resolve().parents[1] / plan_ref).read_bytes())
+        plan.write_bytes(fixture_source(plan_ref).read_bytes())
         (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
             f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
         )

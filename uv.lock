@@ -2,14 +2,6 @@ version = 1
 revision = 3
 requires-python = ">=3.11"
 
-[manifest]
-members = [
-    "agentic-workspace",
-    "agentic-workspace-memory",
-    "agentic-workspace-planning",
-    "agentic-workspace-verification",
-]
-
 [[package]]
 name = "agentic-workspace"
 version = "1.2.0"
@@ -17,10 +9,6 @@ source = { editable = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "agentic-workspace-memory" },
-    { name = "agentic-workspace-planning" },
-    { name = "agentic-workspace-verification" },
-    { name = "command-generation" },
     { name = "jsonschema" },
     { name = "pre-commit" },
     { name = "pymarkdownlnt" },
@@ -35,10 +23,6 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "agentic-workspace-memory", editable = "packages/memory" },
-    { name = "agentic-workspace-planning", editable = "packages/planning" },
-    { name = "agentic-workspace-verification", editable = "packages/verification" },
-    { name = "command-generation", git = "https://github.com/rickardvh/command-generation.git?rev=ac1b9c00bf41352010929de196e7d45e20014615" },
     { name = "jsonschema" },
     { name = "pre-commit" },
     { name = "pymarkdownlnt" },
@@ -48,27 +32,6 @@ dev = [
     { name = "ruff" },
     { name = "ty" },
 ]
-
-[[package]]
-name = "agentic-workspace-memory"
-version = "0.51.0"
-source = { editable = "packages/memory" }
-
-[[package]]
-name = "agentic-workspace-planning"
-version = "0.51.0"
-source = { editable = "packages/planning" }
-dependencies = [
-    { name = "jsonschema" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
-
-[[package]]
-name = "agentic-workspace-verification"
-version = "0.51.0"
-source = { editable = "packages/verification" }
 
 [[package]]
 name = "application-file-scanner"
@@ -136,14 +99,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5e/0d/a0b2fd781050d29c9df64ac6df30b5f18b775724b79779f56fc5a8298fe9/Columnar-1.4.1.tar.gz", hash = "sha256:c3cb57273333b2ff9cfaafc86f09307419330c97faa88dcfe23df05e6fbb9c72", size = 11386, upload-time = "2021-12-27T21:58:56.123Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/06/00/a17a5657bf090b9dffdb310ac273c553a38f9252f60224da9fe62d9b60e9/Columnar-1.4.1-py3-none-any.whl", hash = "sha256:8efb692a7e6ca07dcc8f4ea889960421331a5dffa8e5af81f0a67ad8ea1fc798", size = 11845, upload-time = "2021-12-27T21:58:54.388Z" },
-]
-
-[[package]]
-name = "command-generation"
-version = "2.0.0"
-source = { git = "https://github.com/rickardvh/command-generation.git?rev=ac1b9c00bf41352010929de196e7d45e20014615#ac1b9c00bf41352010929de196e7d45e20014615" }
-dependencies = [
-    { name = "jsonschema" },
 ]
 
 [[package]]

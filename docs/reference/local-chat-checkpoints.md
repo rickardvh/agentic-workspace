@@ -31,7 +31,7 @@ Example:
   "last_proof": ["make maintainer-surfaces"],
   "open_blockers": [],
   "dirty_state_summary": "No uncommitted durable state beyond the current slice.",
-  "next_safe_command": "uv run python scripts/run_agentic_workspace.py start --target . --format json",
+  "next_safe_command": "uv run python src/tooling/run_agentic_workspace.py start --target . --format json",
   "volatile_observations": {
     "repo_root": {
       "value": "<repo-root>",

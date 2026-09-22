@@ -28,21 +28,31 @@ rather than refreshing dependencies as a side effect of unrelated work.
 
 ## Find the right implementation
 
-Start with the behaviour being changed, then locate its responsible component:
+The [repository map](repository-layout.md) explains authored source, generated material
+and operating-state lifetimes. Start with the behaviour being changed, then locate
+its responsible component:
 
 | Change | Start here |
 | --- | --- |
-| Current context, authorisation, state or effects | `crates/agentic-workspace-core/` |
-| CLI options or forwarding | `crates/agentic-workspace-cli/` and the native CLI contract |
-| Python / TypeScript transport | `bindings/python/` / `bindings/node/` |
+| Current context, authorisation, state or effects | `src/core/` |
+| CLI options or forwarding | `src/cli/rust/` and the native CLI contract |
+| Python / TypeScript transport | `src/cli/python/` / `src/cli/typescript/` |
 | Human instructions and examples | The relevant user, reference or contributor page |
 | Generated schemas or catalogues | Their named source contract, not the generated output |
 | Repository-maintainer workflow | `tools/skills/` and its current procedure |
 
 Read the [architecture](../architecture.md) when a change crosses those boundaries.
-The `packages/` trees and other Python source retain maintenance/development work;
-do not infer installed APIs from their presence. Current package topology is
-specified in the [distribution reference](native-release-topology.md).
+Planning, Memory and Verification implementation and native schemas live under
+`src/core/src/modules/`. Shared native contracts live in `src/core/contracts/`;
+the core embeds its generated operating payload from `src/core/payload/`.
+Current package topology is specified in the [distribution reference](native-release-topology.md).
+
+Maintainer execution lives under `src/tooling/`: `check/` validates sources,
+`generate/` derives adapters, `release/` builds and publishes artifacts, and
+`model-cli-harness/` contains the evaluation runners and their inputs. GitHub
+workflow helpers live in `github/`; shared development-only Python helpers live
+in `python/aw_maintainer/`. `contracts/` contains maintainer contracts, separate
+from native contracts under `src/core/`. `tools/skills/` retains procedure Markdown.
 
 Repository state under `.agentic-workspace/` is not freehand implementation scratch.
 Use the responsible AW operation for interpreted state and use the canonical source

@@ -13,8 +13,6 @@ BASE = '[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
 
 @pytest.mark.parametrize("external", ["expert", "alternate"])
 def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_binary, native_cli, external):
-    from agentic_workspace.config import load_workspace_config
-
     registry = tmp_path / "tools/skills/REGISTRY.json"
     registry.parent.mkdir(parents=True)
     registry.write_text(json.dumps({"skills": [{"id": "work", "semantic_routes": ["custom/design", "custom/edit"]}]}))
@@ -34,9 +32,6 @@ def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_bin
         return call("native", shared_core_binary, native_cli, tmp_path, request)
 
     initial = resolve()
-    profiles = load_workspace_config(target_root=tmp_path).local_override.delegation_targets
-    assert all(profile.strength == "unknown" for profile in profiles)
-    assert next(profile for profile in profiles if profile.name == "local").execution_guarantees == ("cost.bounded",)
     route = next(r for r in initial["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
     route["arguments"].update(posture="selected", routes=["custom/design"])
     selected = resolve(route)
@@ -130,26 +125,18 @@ def test_declared_shared_local_overlay_is_current_and_missing_never_absent(tmp_p
     assert not (root / ".agentic-workspace/local").exists()
 
 
-def test_manual_owner_consumes_current_transport_authority(tmp_path, monkeypatch):
-    from agentic_workspace import native_transport
-    from agentic_workspace.assignment_source import current_route_configurations
-    from agentic_workspace.config import load_workspace_config
-
-    monkeypatch.setattr(native_transport, "discovered_transports", lambda *args: [])
+def test_manual_owner_consumes_current_transport_authority(tmp_path, shared_core_binary, native_cli):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
     source.write_text('[delegation]\ntransport_authority="manual"\n[delegation_targets.worker]\ntransports=[{kind="manual"}]\n')
-    config = load_workspace_config(target_root=tmp_path)
-    profile = config.local_override.delegation_targets[0]
-    result = current_route_configurations(
-        tmp_path,
-        [{"name": profile.name, "transports": list(profile.transports)}],
-        config.local_override,
-        {"id": "task", "revision": "1"},
-        requirements={"required_result_classes": ["read-only"], "required_proof_classes": [], "independent_context": False},
-    )
-    row = next(row for row in result["candidates"] if row["configuration"]["id"] == "worker:manual")
-    assert row["eligible"] is True
+    initial = call("native", shared_core_binary, native_cli, tmp_path)
+    request = initial["task_requirements"]["requests"][0]
+    request["arguments"]["required_result_classes"] = ["read-only"]
+    current = call("native", shared_core_binary, native_cli, tmp_path, request)
+    targets = current["task_requirements"]["execution_configurations"]["manual_targets"]
+    worker = next(row for row in targets if row["target"] == "worker")
+    assert worker["source_policy_eligible"] is True
+    assert worker["automatic_invocation"] is False
 
 
 def test_required_guarantee_has_one_eligibility_consumer(tmp_path, shared_core_binary, native_cli):

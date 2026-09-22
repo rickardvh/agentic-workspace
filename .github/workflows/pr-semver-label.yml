@@ -42,8 +42,9 @@ jobs:
           import tomllib
           from pathlib import Path
 
-          from scripts.release.release_ownership import classify_changed_paths
-          from scripts.release.pr_semver_integration import admit_exact_tree_integration, make_admission, MAX_ARTIFACT_BYTES
+          sys.path.insert(0, "src/tooling")
+          from release.release_ownership import classify_changed_paths
+          from release.pr_semver_integration import admit_exact_tree_integration, make_admission, MAX_ARTIFACT_BYTES
 
           with open(os.environ["EVENT_PATH"], encoding="utf-8") as handle:
               event = json.load(handle)
@@ -94,7 +95,7 @@ jobs:
               raise SystemExit(0)
 
           if os.environ["HEAD_REF"] == release_pr_branch:
-              subprocess.run(["python", "scripts/release/coordinated_release.py", "verify"], check=True)
+              subprocess.run(["python", "src/tooling/release/coordinated_release.py", "verify"], check=True)
               record_admission({}, None, "release")
               print("Release PR version state accepted.")
               raise SystemExit(0)

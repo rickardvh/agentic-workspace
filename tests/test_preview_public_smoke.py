@@ -14,11 +14,11 @@ import pytest
 from tests.test_native_public_cli import native_cli as native_cli
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "release" / "preview_public_smoke.py"
+SCRIPT = ROOT / "src" / "tooling" / "release" / "preview_public_smoke.py"
 
 
 def _load_module():
-    release_root = str(ROOT / "scripts" / "release")
+    release_root = str(ROOT / "src" / "tooling" / "release")
     if release_root not in sys.path:
         sys.path.insert(0, release_root)
     spec = importlib.util.spec_from_file_location("preview_public_smoke_under_test", SCRIPT)
@@ -117,7 +117,7 @@ def test_preview_workflow_smokes_public_bytes_after_publication() -> None:
     publish = workflow.index("name: Publish GitHub prerelease assets")
     smoke = workflow.index("name: Smoke published preview from public bytes")
     assert publish < smoke
-    assert "scripts/release/preview_public_smoke.py" in workflow[smoke:]
+    assert "src/tooling/release/preview_public_smoke.py" in workflow[smoke:]
     assert "preview-public-smoke.json" in workflow[smoke:]
 
 

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts/release"))
+sys.path.insert(0, str(ROOT / "src/tooling/release"))
 import cargo_release as cargo  # noqa: E402
 
 
@@ -40,8 +40,11 @@ def test_cargo_projection_carries_declared_portable_build_inputs(tmp_path, monke
     """The standalone build must retain the same closed derivation inputs."""
     monkeypatch.setattr(cargo.subprocess, "run", lambda *a, **k: None)
     destination = tmp_path / "staged"
-    cargo.stage_crate(ROOT, {"path": "crates/agentic-workspace-core", "name": "agentic-workspace-core"}, destination, "a" * 40)
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    cargo.stage_crate(ROOT, {"path": "src/core", "name": "agentic-workspace-core"}, destination, "a" * 40)
+    for source in (destination / "src").rglob("*.rs"):
+        for match in cargo.INCLUDE.finditer(source.read_text(encoding="utf-8")):
+            assert (source.parent / match[2]).is_file(), f"Missing staged compile input in {source}: {match[2]}"
+    contract = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     provenance = json.loads((destination / "release-source.json").read_text())
     assert not any("/skills/" in path and path.endswith(".py") for path in provenance["compile_inputs"])
     for module in ("memory", "planning", "verification"):

@@ -163,3 +163,37 @@ This advances proportional #2970/#2947 continuation without claiming complete
 independent-owner ingress, all transport/cancellation outcomes, or cumulative
 #2909/#2990 acceptance. Existing Planning creation, material maintenance and
 postimage recovery remain the same owner paths.
+
+
+## Terminal retention
+
+Ordinary entry exposes a bounded `planning_retention` hint when Planning history
+needs current judgment or an interrupted retirement needs recovery. Its detail
+reference resolves `planning.terminal_retention`, including an exact
+`planning/terminal-disposition/v1` request. Read the offered records before
+asserting terminal intent, absence of unresolved work and absence of continuing
+value. Archive location merely discovers legacy candidates; it grants no custody.
+The native operation admits the exact source preimages and current request.
+
+The owner preserves current selection and explicit consumers in Planning, proof,
+Memory, Verification, evaluation, reconstruction and system-intent sources.
+Source changes or newly appearing consumers stale disposition. Each batch offers
+at most 32 unreferenced records. Source traversal is confined, rejects links and
+reparse points, and bounds depth, file count and bytes; interpreter caches are not
+owner sources. Historical consumers must be disposed by their own owners first.
+
+Retirement retains exact immutable attempt custody in a temporary local Planning
+carrier before removing any source. A fresh `planning/recover-terminal-disposition/v1`
+request can finish only the admitted deletion set, preserving changed or newly
+referenced remaining sources. The last recovery attempt is retained separately
+from the original attempt, allowing another fresh recovery after interruption.
+Settled disposition clears its carrier and creates no tracked tombstone. Generic
+local effect receipts retain their existing lifecycle; this operation does not
+claim to bound that separate owner or to complete the underlying work.
+
+The cooperative Planning lock and immediate source checks provide process
+interruption safety, not power-loss durability or exclusion of arbitrary external
+editors. A crash before the complete carrier is published preserves the sources
+and uncertain admission. Native lifecycle evidence covers creation, selection,
+closure and disposal while keeping only the current selected owner; archive
+migration still requires each record's current semantic disposition.

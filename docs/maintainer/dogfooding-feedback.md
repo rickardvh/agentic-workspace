@@ -52,8 +52,8 @@ Classify friction into one of these buckets before routing it:
 - monorepo-only friction
 
 For model-zoo and external-agent evaluations, use the Stage 1 feedback pack instead of prose-only notes.
-The schema is `tools/model-cli-harness/schemas/dogfooding-feedback.schema.json`.
-Checked-in packs live under `tools/model-cli-harness/feedback/`.
+The schema is `src/tooling/model-cli-harness/schemas/dogfooding-feedback.schema.json`.
+Checked-in packs live under `src/tooling/model-cli-harness/feedback/`.
 
 Each pack must include:
 
@@ -63,7 +63,7 @@ Each pack must include:
 - one or more captured records naming model, agent surface, task, failure class, severity, evidence, suggested lane, status, and issue refs;
 - an aggregation summary that turns repeated classes into prioritisation signal.
 
-Use the checked-in `tools/model-cli-harness/feedback/2026-06-04-codex-copilot-stage1.json` pack as the first template.
+Use the checked-in `src/tooling/model-cli-harness/feedback/2026-06-04-codex-copilot-stage1.json` pack as the first template.
 The local source transcripts can stay under `.agentic-workspace/local/evaluations`; the checked-in pack should carry only the durable, comparable evidence needed for prioritisation.
 
 ## Admission Rule

@@ -13,7 +13,7 @@ import pytest
 from tests import native_artifact_consumers
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("native_release_checker", ROOT / "scripts/check/check_native_release_topology.py")
+spec = importlib.util.spec_from_file_location("native_release_checker", ROOT / "src/tooling/check/check_native_release_topology.py")
 checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
 

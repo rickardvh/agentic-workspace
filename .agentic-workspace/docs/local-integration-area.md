@@ -48,56 +48,28 @@ Local shim output is never shared authority by itself. Promote useful results on
 
 ## Delegated-run protocol
 
-An external orchestrator consumes the released external-consumer profile and
-generated Python or TypeScript client. It must not read or edit Planning files.
-The small vendor-neutral sequence is:
+An external orchestrator consumes the native public facade and the exact worker
+entry or sealed packet returned for its selected assignment. It must preserve
+that packet and use the returned continuation for reentry. Transport success is
+neither worker success nor AW admission, proof, integration, or closeout.
 
-1. Query the current assignment/action decision and its revision.
-2. Use `assignment.export` to obtain the canonical packet and run identity.
-3. Invoke its own target and record only transport provenance; transport success
-   is neither worker success nor AW admission, proof, integration, or closeout.
-4. Use `assignment.import` to return structured success, failure, cancellation,
-   or blocked output. Duplicate or stale returns remain recoverable states.
-5. Query the assignment state and recovery action, then use `assignment.admit`,
-   reject/repair/reassign, or the authorised override operation as directed.
-6. Let AW-owned admission, integration, proof, intent satisfaction, and
-   closeout remain separate transitions. An adapter cannot mark any of them.
-
-Manual and automatic transport use this same packet/import/admission sequence.
 The adapter owns credentials, target discovery, invocation, cancellation, and
-disposable local logs; AW owns assignment selection, lifecycle, recovery,
-proof, and closeout. Unknown additive result fields must be preserved, and an
-incompatible profile or missing operation must fail closed rather than causing
-an adapter to reconstruct lifecycle semantics.
+disposable local logs. AW owns assignment selection, lifecycle, recovery, proof,
+and closeout. An adapter must not reconstruct lifecycle operations or edit
+Planning files. Missing capabilities and incompatible packets fail closed.
 
 ## External conformance
 
-Released clients expose the generated external conformance profile from the
-same operation-test authority used by AW. Python consumers call
-`external_conformance_profile([...])`; TypeScript consumers call
-`externalConformanceProfile([...])`. The returned package data names the
-transport matrix, readiness cases, operation-specific valid input, current
-runtime-exception revision, and any explicit non-applicable mutation vector.
+External consumers use the public `start` and `invoke` facade with current native
+capabilities. Returned references and carried requests retain their exact native
+revision and authority; an integration preserves structured results and errors.
+A process exit of zero alone does not establish a successful effect or claim.
 
-An integration should execute the selected cases through its own transport and
-preserve AW's structured result or error unchanged. Missing cases, unavailable
-targets, and failed vectors are not passing evidence. A process exit of zero is
-not enough for mutation conformance: the integration must retain the applied,
-rejected, failed, or explicitly excluded outcome named by the profile. AW
-maintainers publish the canonical executed receipts with:
-
-`uv run --active python scripts/check/run_operation_conformance_tests.py --target all --require-node`
-
-That command executes four distinct boundaries: ordinary direct CLI JSON, the
-generated Python client, the generated TypeScript client, and a public
-TypeScript client packed into an isolated temporary consumer. It exercises the
-IR-owned absent, disabled, incompatible, malformed, retryable, additive-field,
-and applicable mutation vectors and publishes revision-bound receipts only
-when every case records the expected executor provenance. #2198 owns semantic
-parity between necessary-surface and full-mirror installations for this bounded
-ready subset. #2200 retains the broader independent clean-install, consumer
-removal, no-residue, and general adapter-readiness closure proof; it does not
-substitute for the #2198 footprint matrix.
+Maintainers validate the installed artifact boundary with
+`uv run pytest tests/test_external_integration_boundary.py` and the
+public binding tests. These checks exercise isolated consumers without reviving
+the removed generated operation catalogue or Python semantic host. Direct test
+results remain distinct from owner-admitted proof and integration completion.
 
 ## Scratch Space
 

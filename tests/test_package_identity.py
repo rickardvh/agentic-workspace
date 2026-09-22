@@ -115,7 +115,9 @@ NPM = shutil.which("npm") or "npm"
 
 
 def _load_checker():
-    spec = importlib.util.spec_from_file_location("package_identity_checker_under_test", ROOT / "scripts/check/check_package_identity.py")
+    spec = importlib.util.spec_from_file_location(
+        "package_identity_checker_under_test", ROOT / "src/tooling/check/check_package_identity.py"
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -136,21 +138,13 @@ def _copy_source_fixture(target_root: Path) -> None:
         "README.md",
         "docs/agentic-workspace-install.md",
         "pyproject.toml",
-        "packages/memory/pyproject.toml",
-        "packages/memory/README.md",
-        "packages/memory/LICENSE",
-        "packages/planning/pyproject.toml",
-        "packages/planning/README.md",
-        "packages/planning/LICENSE",
-        "packages/verification/pyproject.toml",
-        "packages/verification/LICENSE",
     ):
         target = target_root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, target)
     ownership = json.loads((ROOT / ".github/release-ownership.json").read_text(encoding="utf-8"))
     for package in ownership["typescript_packages"]:
-        for relative in (package["package_json"], str(Path(package["package_json"]).parent / "LICENSE")):
+        for relative in (package["package_json"],):
             target = target_root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
@@ -162,8 +156,11 @@ def test_source_package_identity_is_coordinated() -> None:
 
 def test_source_package_identity_rejects_conflicting_license(tmp_path: Path) -> None:
     _copy_source_fixture(tmp_path)
-    (tmp_path / "generated/workspace/typescript/LICENSE").write_text("not MIT\n", encoding="utf-8")
-    assert any("generated/workspace/typescript/package.json does not carry" in error for error in CHECKER.source_identity_errors(tmp_path))
+    path = tmp_path / "src/cli/typescript/package.json"
+    body = json.loads(path.read_text(encoding="utf-8"))
+    body["license"] = "Unlicense"
+    path.write_text(json.dumps(body), encoding="utf-8")
+    assert any("src/cli/typescript/package.json license" in error for error in CHECKER.source_identity_errors(tmp_path))
 
 
 @pytest.fixture(scope="module")
@@ -180,7 +177,7 @@ def coordinated_artifacts(tmp_path_factory: pytest.TempPathFactory) -> tuple[Pat
     _run(
         [
             sys.executable,
-            "scripts/release/stage_native_npm.py",
+            "src/tooling/release/stage_native_npm.py",
             "--output",
             str(staged_npm),
             "--native-archive-dir",

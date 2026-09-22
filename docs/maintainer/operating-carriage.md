@@ -52,7 +52,7 @@ authorise an automatic sequence of actions. Carried invocation goes directly
 to native effect admission, including structured stale rejection and recovery;
 it must not require the committed action to reappear in a fresh pre-effect view.
 
-Python exposes `agentic_workspace.decision.select_reference(context, reference,
+Python exposes `agentic_workspace.select_reference(context, reference,
 answer=...)`. Node/TypeScript exposes `selectReference(context, reference,
 answer)` from the package's `./operating` export, together with `start`, `invoke`,
 `answerCarried`, and `invokeCarried`. The adjacent `.d.mts` file describes JSON
@@ -103,7 +103,7 @@ cannot use this helper to replace a supplied field or invent authority.
 Python, with the host retaining the object:
 
 ```python
-from agentic_workspace.decision import start, answer_carried, invoke_carried
+from agentic_workspace import start, answer_carried, invoke_carried
 
 offered = start({"target": target, "task": task, "request": proposal,
                  "projection": "carried"})

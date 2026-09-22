@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_SCRIPT = Path(__file__).resolve().parents[1] / "tools" / "review_stack_ops.py"
+_SCRIPT = Path(__file__).resolve().parents[1] / "src" / "tooling" / "github" / "review_stack_ops.py"
 _SPEC = importlib.util.spec_from_file_location("review_stack_ops", _SCRIPT)
 assert _SPEC and _SPEC.loader
 stack = importlib.util.module_from_spec(_SPEC)

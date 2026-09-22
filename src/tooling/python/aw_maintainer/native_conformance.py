@@ -1,0 +1,223 @@
+"""Source-only access to native conformance operations, never a product API."""
+
+from __future__ import annotations
+
+from collections.abc import Iterable, Mapping
+from typing import Any
+
+from agentic_workspace._binding import _request
+
+
+def route_discovery(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"native_route_discovery": context})
+
+
+def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
+    """Use the shared owner's established direct-task semantic identity."""
+    return _request({"direct_task_subject": {"task": task, "paths": paths}})
+
+
+def assurance_applicability(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assurance_applicability": context})
+
+
+def task_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"task_requirements": context})
+
+
+def verification_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"verification_requirements": context})
+
+
+def separation_of_duty(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"separation_of_duty": context})
+
+
+def task_judgment(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"task_judgment": context})
+
+
+def proof_subject(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Compute shared proof identity; runtime observations grant no authority."""
+    return _request({"proof_subject": context})
+
+
+def proof_receipt(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Shared shape admission; host codec observations grant no evidence authority."""
+    return _request({"proof_receipt": context})
+
+
+def attribute_assignment_outcome(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"attribute_assignment_outcome": evidence})
+
+
+def compile_source_decision(
+    contributions: Iterable[Mapping[str, Any]],
+    *,
+    intent: Mapping[str, Any] | None = None,
+    capability_contract: Mapping[str, Any] | None = None,
+    decision_context: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"contributions": list(contributions), "intent": dict(intent or {})}
+    if capability_contract is not None:
+        payload["capability_contract"] = dict(capability_contract)
+    if decision_context is not None:
+        payload["decision_context"] = dict(decision_context)
+    return _request(payload)
+
+
+def admit_invocation(
+    decision: Mapping[str, Any], invocation: Mapping[str, Any], previous: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    return _request({"admission": {"decision": decision, "invocation": invocation, "previous_invocation": previous}})
+
+
+def prepare_request(request: Mapping[str, Any], current_work: Mapping[str, Any], capability_contract: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"prepare_request": {"request": request, "current_work": current_work, "capability_contract": capability_contract}})
+
+
+def answer_decision(decision: Mapping[str, Any], consequence: str, answer: Any, capability_contract: Mapping[str, Any]) -> dict[str, Any]:
+    return _request(
+        {"answer_decision": {"decision": decision, "question": consequence, "answer": answer, "capability_contract": capability_contract}}
+    )
+
+
+def operation_result(invocation: Mapping[str, Any], outcome: Mapping[str, Any], decision: Mapping[str, Any] | None) -> dict[str, Any]:
+    return _request({"operation_result": {"invocation": invocation, "outcome": outcome, "decision": decision}})
+
+
+def admit_attempt(decision: Mapping[str, Any], invocation: Mapping[str, Any], record: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    return _request({"admit_attempt": {"decision": decision, "invocation": invocation, "record": record}})
+
+
+def commit_attempt(record: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"commit_attempt": {"record": record, "outcome": outcome}})
+
+
+def admit_stored_attempt(
+    target: str, decision: Mapping[str, Any], invocation: Mapping[str, Any], custody: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    return _request({"admit_stored_attempt": {"target": target, "decision": decision, "invocation": invocation, "custody": custody}})
+
+
+def commit_stored_attempt(target: str, custody: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"commit_stored_attempt": {"target": target, "custody": custody, "outcome": outcome}})
+
+
+def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/decision-view/v1",
+        "decision_id": decision.get("decision_id"),
+        "input_revision": decision.get("input_revision"),
+        "authoritative": False,
+        "values": {field: decision[field] for field in fields if field in decision},
+    }
+
+
+def planning_view(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"planning_view": context})
+
+
+def semantic_route_view(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"semantic_route_view": context})
+
+
+def instruction_source_admission(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"instruction_source_admission": context})
+
+
+def instruction_applicability(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"instruction_applicability": context})
+
+
+def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Trusted host API; ordinary commands cannot supply admitted source facts."""
+    return _request({"replace_assignment": context})
+
+
+def assignment_policy(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assignment_policy": context})
+
+
+def local_source_overlay(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"local_source_overlay": {"base": base, "override": override}})
+
+
+def transport_sources(profiles: Mapping[str, Any]) -> dict[str, Any]:
+    """Decode declarations only; no executable or provider capability authority."""
+    return _request({"transport_sources": profiles})
+
+
+def execution_configurations(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Trusted adapter facts, shared eligibility and revision-bound agent choice."""
+    return _request({"execution_configurations": context})
+
+
+def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"reconcile_planning": context})
+
+
+__all__ = [
+    "semantic_route_view",
+    "normalize_decision_record",
+    "compile_source_decision",
+    "select_decision_detail",
+    "admit_invocation",
+    "prepare_request",
+    "answer_decision",
+    "operation_result",
+    "admit_attempt",
+    "commit_attempt",
+    "admit_stored_attempt",
+    "commit_stored_attempt",
+    "planning_view",
+    "reconcile_planning",
+]
+
+
+def normalize_decision_record(record: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"normalize_decision_record": record})
+
+
+def repository_decision_view(
+    *,
+    target: str,
+    archive: str = "",
+    admitted_revision: str = "",
+    applicable_scope: list[str],
+    fallback: Mapping[str, Any] | None = None,
+    semantic_routes: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Trusted repository host/source-owner input, never public request fields."""
+    return _request(
+        {
+            "repository_decision_view": {
+                "target": target,
+                "archive": archive,
+                "admitted_revision": admitted_revision,
+                "applicable_scope": applicable_scope,
+                "fallback": dict(fallback) if fallback is not None else None,
+                "semantic_routes": semantic_routes,
+            }
+        }
+    )
+
+
+def admit_assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"admit_assignment_packet": context})
+
+
+def runtime_compatibility(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"runtime_compatibility": context})
+
+
+def review_authentication(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"review_authentication": context})
+
+
+def session_logging_policy(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"session_logging_policy": context})
+
+
+def assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assignment_packet": context})

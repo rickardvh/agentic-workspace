@@ -42,8 +42,8 @@ def repository(tmp_path, monkeypatch):
     )
     ownership["preview_release_commit_allowed_paths"].append("uv.lock")
     ownership["cargo_packages"] = [
-        {"name": "agentic-workspace-core", "path": "crates/agentic-workspace-core"},
-        {"name": "agentic-workspace-cli", "path": "crates/agentic-workspace-cli"},
+        {"name": "agentic-workspace-core", "path": "src/core"},
+        {"name": "agentic-workspace-cli", "path": "src/cli/rust"},
     ]
     for crate in ownership["cargo_packages"]:
         manifest = tmp_path / crate["path"] / "Cargo.toml"
@@ -210,7 +210,7 @@ def reconciled_repository(tmp_path, monkeypatch, proof_file="tests/test_proof.py
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "reviewed proof reconciliation")
     proof = _git(tmp_path, "rev-parse", "HEAD")
-    tool_path = tmp_path / "scripts/release/coordinated_release.py"
+    tool_path = tmp_path / "src/tooling/release/coordinated_release.py"
     tool_path.parent.mkdir(parents=True)
     tool_path.write_text("# Release-owner admission support.\n")
     _git(tmp_path, "add", ".")
@@ -224,7 +224,7 @@ def reconciled_repository(tmp_path, monkeypatch, proof_file="tests/test_proof.py
         "reconciliation_commit": proof,
         "release_tooling_commit": tooling,
         "reconciliation_paths": [proof_file],
-        "release_tooling_paths": ["scripts/release/coordinated_release.py"],
+        "release_tooling_paths": ["src/tooling/release/coordinated_release.py"],
         "acceptance_reference": "https://example.test/independent-review",
     }
     path = tmp_path / f".release/proof-reconciliations/{rc['tag']}.json"
@@ -250,7 +250,7 @@ def test_reconciled_promotion_keeps_rc_product_source_and_rejects_stable_drift(t
     stable = _git(tmp_path, "rev-parse", "HEAD")
     assert module.verify_rc_promotion(ownership)["source_commit"] == rc["reconstruction_source_commit"]
     assert module.plan_rc_promotion(ownership, rc_tag=rc["tag"])["release_required"] is False
-    for path in ("tests/test_proof.py", "product.txt", "scripts/release/coordinated_release.py"):
+    for path in ("tests/test_proof.py", "product.txt", "src/tooling/release/coordinated_release.py"):
         _git(tmp_path, "switch", "--detach", stable)
         (tmp_path / path).write_text("unadmitted change\n")
         _git(tmp_path, "add", ".")
@@ -317,7 +317,7 @@ def test_rc_receipts_use_release_tag_url_and_never_stable_support(tmp_path, monk
 
     helper = _load_helper()  # exposes the same release import directory as its CLI
     spec = importlib.util.spec_from_file_location(
-        "rc_manifest", Path(__file__).resolve().parents[1] / "scripts/release/preview_manifest.py"
+        "rc_manifest", Path(__file__).resolve().parents[1] / "src/tooling/release/preview_manifest.py"
     )
     manifest = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(manifest)

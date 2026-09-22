@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts/release"))
+sys.path.insert(0, str(ROOT / "src/tooling/release"))
 import platform_release as release  # noqa: E402
 
 

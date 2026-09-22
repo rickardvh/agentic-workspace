@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:62068a52c1b26cf03837d6a39f178331fef1cd60da609be4f0d2d431bd28995d`
+- Contract digest: `sha256:78df9adf3ddeaef35f7bab862e0fa578b4648573cadb9d05e636d30cbd63c43c`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ Public host derivation reads only explicitly promoted portable sources or anothe
 
 Portable source promotions:
 
-- `src/agentic_workspace/contracts/portable_ownership.toml`
+- `src/core/contracts/portable_ownership.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`

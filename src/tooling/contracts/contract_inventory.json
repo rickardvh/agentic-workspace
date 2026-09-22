@@ -1,0 +1,304 @@
+{
+  "schema_version": "workspace-contract-inventory/v1",
+  "canonical_doc": "docs/declarative-contract-boundary.md",
+  "owner_choice_model": {
+    "purpose": "Route each durable concern to one primary owner surface before adding or trusting another copy.",
+    "review_questions": [
+      "Is this a stable repo-wide policy, a behavior contract, current execution state, durable understanding, review evidence, generated mirror, package payload, or runtime primitive?",
+      "Which surface is allowed to be edited directly, and which surfaces must be regenerated, archived, or treated as derived?",
+      "Would putting this fact in a second visible place create duplicate authority instead of a useful adapter or proof?"
+    ],
+    "concern_classes": [
+      {
+        "id": "config_policy",
+        "owner_surface": ".agentic-workspace/config.toml",
+        "authority_class": "authoritative-policy",
+        "route_when": "The concern is a stable machine-readable repo default, posture, or workflow obligation.",
+        "avoid_when": "The concern is only active-slice state, historical evidence, or implementation behavior."
+      },
+      {
+        "id": "contract_schema_authority",
+        "owner_surface": "src/tooling/contracts/",
+        "authority_class": "authoritative-contract",
+        "route_when": "The concern defines a reusable payload, schema, command contract, proof route, or generation source.",
+        "avoid_when": "The concern needs live filesystem inspection or imperative runtime behavior."
+      },
+      {
+        "id": "planning_active_state",
+        "owner_surface": ".agentic-workspace/planning/execplans/ and relation-specific Planning records",
+        "authority_class": "bounded-owner-continuity",
+        "route_when": "The concern is expensive-to-reconstruct continuity for one bounded owner, relation, handoff, integration, or closeout.",
+        "avoid_when": "The concern should remain true after the active lane closes without promotion."
+      },
+      {
+        "id": "memory_durable_understanding",
+        "owner_surface": ".agentic-workspace/memory/repo/",
+        "authority_class": "interpretive-understanding",
+        "route_when": "The concern is reusable repo understanding or learned context that informs future interpretation.",
+        "avoid_when": "The concern is a binding policy, active task, or validation rule."
+      },
+      {
+        "id": "review_evidence",
+        "owner_surface": ".agentic-workspace/planning/reviews/",
+        "authority_class": "historical-evidence",
+        "route_when": "The concern is bounded review output, finding evidence, or issue-intake history.",
+        "avoid_when": "The concern has been accepted as current plan, durable memory, or enforceable contract."
+      },
+      {
+        "id": "generated_adapter_output",
+        "owner_surface": "generated/",
+        "authority_class": "derived-generated",
+        "route_when": "The concern is a generated mirror or runnable adapter derived from contracts.",
+        "avoid_when": "The concern is the source contract or hand-written runtime primitive."
+      },
+      {
+        "id": "package_payload",
+        "owner_surface": ".agentic-workspace/",
+        "authority_class": "installed-payload",
+        "route_when": "The concern is installed product-managed payload, managed fence content, or upgrade-replaceable module state.",
+        "avoid_when": "The concern belongs to repo-owned startup instructions or local runtime implementation."
+      },
+      {
+        "id": "runtime_primitive_implementation",
+        "owner_surface": "generated/workspace/python/cli.py",
+        "authority_class": "procedural-owned",
+        "route_when": "The concern needs imperative behavior, live repo inspection, subprocess execution, or mutation sequencing.",
+        "avoid_when": "The concern can be expressed as a declarative contract, schema, or package payload."
+      },
+      {
+        "id": "generated_behavior_stratification",
+        "owner_surface": "src/tooling/contracts/generated_behavior_stratification.json",
+        "authority_class": "authoritative-stratification",
+        "route_when": "The concern decides whether behavior belongs to primitive contracts, operation IR, generated artifacts, target-extension machinery, wrapper adapters, conformance cases, or retained ordinary tests.",
+        "avoid_when": "The concern is a specific operation behavior, generated artifact content, active lane state, or historical proof record."
+      }
+    ]
+  },
+  "areas": [
+    {
+      "area": "compact_contract_profile",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/compact_contract_profile.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_defaults_payload",
+        "generated/workspace/python/cli.py:_compact_contract_answer"
+      ],
+      "notes": "Stable compact answer envelope shape and selector metadata are manifest-backed."
+    },
+    {
+      "area": "proof_routes",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/proof_routes.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_defaults_payload",
+        "generated/workspace/python/cli.py:_proof_payload"
+      ],
+      "notes": "Stable proof route ids and commands are manifest-backed."
+    },
+    {
+      "area": "proof_selection_rules",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/proof_selection_rules.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_proof_selection_for_changed_paths",
+        "generated/workspace/python/cli.py:_implement_payload"
+      ],
+      "notes": "Changed-path proof classification rules and supplemental proof lanes are manifest-backed so bounded implementer proof selection does not depend on inline Python path-policy tables."
+    },
+    {
+      "area": "authority_marker_policy",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/authority_markers.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_authority_marker_for_path"
+      ],
+      "notes": "Authority marker labels, canonical source policy, safe-to-edit defaults, refresh commands, and representative parity paths are manifest-backed while runtime path normalization and matching stay Python-owned."
+    },
+    {
+      "area": "report_contract",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/report_contract.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_reporting_schema_payload"
+      ],
+      "notes": "Stable report schema metadata is manifest-backed."
+    },
+    {
+      "area": "workspace_config_schema",
+      "classification": "declarative",
+      "owner_surface": "src/core/contracts/schemas/workspace_config.schema.json",
+      "consumers": [
+        ".agentic-workspace/docs/workspace-config-contract.md"
+      ],
+      "notes": "Repo config shape is now documented as a formal schema in addition to parser enforcement."
+    },
+    {
+      "area": "workspace_local_override_schema",
+      "classification": "declarative",
+      "owner_surface": "src/core/contracts/schemas/workspace_local_override.schema.json",
+      "consumers": [
+        ".agentic-workspace/docs/workspace-config-contract.md"
+      ],
+      "notes": "Local mixed-agent override shape is now documented as a formal schema in addition to parser enforcement."
+    },
+    {
+      "area": "setup_findings_schema",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/schemas/setup_findings.schema.json",
+      "consumers": [
+        "docs/setup-findings-contract.md",
+        "generated/workspace/python/cli.py:_setup_findings_input_payload"
+      ],
+      "notes": "The optional setup/jumpstart findings artifact shape is formalized separately so the workspace can standardize promotion without owning the analysis method."
+    },
+    {
+      "area": "delegation_outcomes_schema",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/schemas/delegation_outcomes.schema.json",
+      "consumers": [
+        ".agentic-workspace/docs/workspace-config-contract.md"
+      ],
+      "notes": "Local delegation outcome evidence shape is formalized separately from the editable local override so accumulated tuning evidence stays quiet and machine-readable."
+    },
+    {
+      "area": "startup_context_schema",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/schemas/startup_context.schema.json",
+      "consumers": [
+        "agentic-workspace start --task \"<task>\" --format json",
+        "generated/workspace/python/cli.py:_start_payload"
+      ],
+      "notes": "The bounded startup context payload emitted by the CLI is schema-backed so adapter consumers can validate the shape without treating cli.py as the sole contract."
+    },
+    {
+      "area": "implementer_context_schema",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/schemas/implementer_context.schema.json",
+      "consumers": [
+        "Source-maintenance model: agentic-workspace implement --format json",
+        "generated/workspace/python/cli.py:_implement_payload"
+      ],
+      "notes": "The bounded implementer context payload emitted by the CLI is schema-backed so changed-path handoffs and proof requirements can be validated by non-Python adapters."
+    },
+    {
+      "area": "context_templates",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/context_templates.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_start_payload",
+        "generated/workspace/python/cli.py:_implement_payload"
+      ],
+      "notes": "Stable startup and implementer context text fragments are contract-backed so cli.py remains the renderer instead of the wording authority."
+    },
+    {
+      "area": "module_capability_contract",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/schemas/module_capability.schema.json",
+      "consumers": [
+        "docs/module-capability-contract.md"
+      ],
+      "notes": "The internal module capability contract is now formalized as a schema to reduce prose dependency."
+    },
+    {
+      "area": "workspace_surfaces_manifest",
+      "classification": "declarative",
+      "owner_surface": "src/core/contracts/workspace_surfaces.json",
+      "consumers": [],
+      "notes": "Stable workspace-owned path tables and setup artifact locations are manifest-backed instead of duplicated in cli.py."
+    },
+    {
+      "area": "setup_findings_policy",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/setup_findings_policy.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_setup_findings_input_payload",
+        "generated/workspace/python/cli.py:_setup_finding_class_payload"
+      ],
+      "notes": "Setup findings promotion thresholds and accepted class policy are manifest-backed instead of duplicated in cli.py."
+    },
+    {
+      "area": "workflow_artifact_profiles",
+      "classification": "declarative",
+      "owner_surface": "src/core/contracts/workflow_artifact_profiles.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_workflow_artifact_profile_payload",
+        "generated/workspace/python/cli.py:_defaults_payload"
+      ],
+      "notes": "Workflow artifact adapter profiles now come from checked-in contract JSON instead of inline Python tables."
+    },
+    {
+      "area": "improvement_latitude_policy",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/improvement_latitude_policy.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_improvement_latitude_payload",
+        "generated/workspace/python/cli.py:_defaults_payload"
+      ],
+      "notes": "Improvement latitude mode policy text and evidence metadata are manifest-backed instead of inline Python tables."
+    },
+    {
+      "area": "optimization_bias_policy",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/optimization_bias_policy.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_optimization_bias_payload",
+        "generated/workspace/python/cli.py:_defaults_payload"
+      ],
+      "notes": "Optimization bias mode policy text and surface-boundary metadata are manifest-backed instead of inline Python tables."
+    },
+    {
+      "area": "repo_friction_policy",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/repo_friction_policy.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_workspace_self_adaptation_payload",
+        "generated/workspace/python/cli.py:_friction_response_order_payload",
+        "generated/workspace/python/cli.py:_workspace_self_adaptation_guardrail_payload",
+        "generated/workspace/python/cli.py:_repo_directed_improvement_evidence_threshold_payload",
+        "generated/workspace/python/cli.py:_validation_friction_payload",
+        "generated/workspace/python/cli.py:_improvement_boundary_test_payload"
+      ],
+      "notes": "Repo-friction policy payloads and boundary tests are manifest-backed instead of inline Python tables."
+    },
+    {
+      "area": "preflight_policy",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/preflight_policy.json",
+      "consumers": [
+        "generated/workspace/python/cli.py:_enforce_preflight_gate",
+        "generated/workspace/python/cli.py:build_parser"
+      ],
+      "notes": "High-risk command gating, preflight token format, token freshness defaults, and strict-gate messages are manifest-backed instead of inline Python constants."
+    },
+    {
+      "area": "portable_operation_ir",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/operation_primitives.json and src/tooling/contracts/operations/*.json ir_plan",
+      "consumers": [
+        "future Python and TypeScript target executors"
+      ],
+      "notes": "The portable IR layer is limited to target-executor primitives over rooted paths, package payloads, JSON/TOML/Markdown, records, schemas, templates, and emitted output. Package-semantic primitives remain explicit runtime capabilities until they are decomposed behind this smaller substrate."
+    },
+    {
+      "area": "target_support",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/target_support.json",
+      "consumers": [
+        "command-generation target-extension contract",
+        "#1481 TypeScript direct-operation support"
+      ],
+      "notes": "AW target-support declarations consume command-generation target-extension contracts so implemented targets can enter the semantic conformance matrix without target-specific product semantics or per-operation feature maintenance."
+    },
+    {
+      "area": "skill_specs",
+      "classification": "declarative",
+      "owner_surface": "src/tooling/contracts/skill_specs.json",
+      "consumers": [
+        "hand-authored package skills",
+        "future generated skill renderers",
+        "tests/test_contract_tooling.py"
+      ],
+      "notes": "SkillSpec records define behavior, CLI affordances, interpreted output fields, owned surfaces, proportionality, fallback, proof, and closeout obligations without starting generated target work."
+    }
+  ]
+}

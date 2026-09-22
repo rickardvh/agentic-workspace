@@ -18,7 +18,7 @@ public conformance suite.
 
 The source for this disposition is the former implementation at
 `127950fa15a11efe5f73cd7cbbc86d3d7fd8b162`, including
-`src/agentic_workspace/contracts/operations/assignment.close.json` and
+`src/tooling/contracts/operations/assignment.close.json` and
 `assignment.reassign.json`, their
 process conformance vectors and the former public-client lifecycle tests. Git
 preserves that evidence; its successful former-host behaviour is not current native

@@ -3,7 +3,8 @@
 from pathlib import Path
 
 import pytest
-from tests.test_native_public_cli import ROOT, consume
+from tests.native_planning_fixtures import fixture_source
+from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
@@ -14,7 +15,7 @@ def test_repo_owned_profile_preserves_real_planning_custody(
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / reference
     plan.parent.mkdir(parents=True)
-    original = (ROOT / reference).read_bytes()
+    original = fixture_source(reference).read_bytes()
     plan.write_bytes(original)
     (plan.parent.parent / "state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'

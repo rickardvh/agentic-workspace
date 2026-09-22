@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume, native_cli  # noqa: F401
 
 
@@ -73,75 +74,12 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
     assert not (tmp_path / ".agentic-workspace/local").exists()
 
 
-def test_python_consumers_share_exact_applicability_without_marker_match() -> None:
-    from agentic_workspace import workspace_runtime_core as runtime
-
-    requirement = {"id": "review", "applies_to_task_markers": ["proof"], "applies_to_paths": ["src/**"]}
-    for task in ("proof", "unrelated words"):
-        assert (
-            runtime._assurance_requirement_match(requirement=requirement, changed_paths=[], task_text=task, planning_facts={})[0] is False
-        )
-    assert (
-        runtime._assurance_requirement_match(requirement=requirement, changed_paths=["src/a.rs"], task_text="", planning_facts={})[0]
-        is True
-    )
-
-
-def test_real_source_requirement_keeps_claim_boundary_when_scope_is_unknown(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path
-) -> None:
-    from agentic_workspace import decision
-    from agentic_workspace import workspace_runtime_core as runtime
-    from agentic_workspace.config import load_workspace_config
-
-    root = Path(__file__).resolve().parents[1]
-    text = (root / ".agentic-workspace/verification/manifest.toml").read_text(encoding="utf-8")
-    section = text.split("[assurance.requirements.test_evidence_change_decision]", 1)[1].split(
-        "[assurance.requirements.closeout_intent_satisfaction]", 1
-    )[0]
-    path = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    path.parent.mkdir(parents=True)
-    path.write_text(
-        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.requirements.test_evidence_change_decision]'
-        + section
-        + "\n[assurance.proof_profiles.test_evidence_change]\n"
-        + text.split("[assurance.proof_profiles.test_evidence_change]", 1)[1].split("\n[", 1)[0],
-        encoding="utf-8",
-    )
-    report = runtime._assurance_requirements_report_payload(
-        config=load_workspace_config(target_root=tmp_path),
-        target_root=tmp_path,
-        task_text="Mention an ordinary test in prose",
-        changed_paths=["docs/intro.md"],
-    )
-    assert report["active"] == []
-    status = report["evidence_status"][0]
-    assert status["state"] == "unknown"
-    assert status["blocking_claims"] == ["claim-work-complete", "close-parent-lane"]
-    query = status["next_action"]["public_query"]
-    current = decision.start({**query["input"], "projection": "full"})
-    request = current["verification"]["assurance_request"]
-    request["arguments"]["decisions"] = {"test_evidence_change_decision": "not-applicable"}
-    assert (
-        decision.start({**query["input"], "request": request, "projection": "full"})["verification"]["assurance_applicability"][
-            "requirements"
-        ][0]["status"]
-        == "not-applicable"
-    )
-    actual = consume(
-        "native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Small change", "changed": ["tests/example.py"]}
-    )
-    assert actual["verification"]["assurance_applicability"]["requirements"][0]["status"] == "applicable"
-    assert actual["verification"]["assurance_owner_gaps"][0]["status"] == "owner-evidence-not-admitted"
-
-
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_unreconciled_planning_owner_is_not_known_absence(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
-    root = Path(__file__).resolve().parents[1]
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((root / plan_ref).read_bytes())
+    plan.write_bytes(fixture_source(plan_ref).read_bytes())
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[todo]\nactive_items = [{{id="delegation-lane-sweep",status="in-progress",surface="{plan_ref.as_posix()}"}}]\nqueued_items=[]\n',
         encoding="utf-8",

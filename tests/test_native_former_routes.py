@@ -110,10 +110,50 @@ def test_former_selection_requires_exact_current_agent_request(
             authority for authority in contract["restriction_authorities"] if authority["owner"] != "workspace-resources"
         ],
     }
-    assert len(json.dumps(non_resource_contract)) < 81_000
-    assert len(json.dumps(contract)) < 86_000
+    retention_bytes = 0
+    for owner_name in ("planning", "memory", "verification"):
+        owner = next(row for row in contract["owners"] if row["owner"] == owner_name)
+        retention = [
+            row
+            for row in owner["requests"]
+            if "terminal-disposition" in row["kind"]
+            or row["kind"] in {"verification/retire-receipts/v1", "verification/recover-retirement/v1"}
+        ]
+        retention += [
+            row
+            for row in owner["operations"]
+            if row["id"].endswith((".retire-terminal", ".recover-terminal", ".retire-receipts", ".recover-retirement"))
+        ]
+        if not retention:
+            continue
+        size = sum(len(json.dumps(row)) for row in retention)
+        assert len(retention) == 4 and size < 2_200, (owner_name, size)
+        retention_bytes += size
+    assert len(json.dumps(non_resource_contract)) - retention_bytes < 81_000
+    assert len(json.dumps(contract)) - retention_bytes < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
+    assert len(json.dumps(first["planning"]["terminal_retention"])) < 500
     state = {key: value for key, value in first.items() if key != "capability_contract"}
+    for owner_name, field in (("planning", "terminal_retention"), ("memory", "terminal_retention"), ("verification", "retention")):
+        assert len(json.dumps(first[owner_name].get(field, {}))) < 1_600
+        state[owner_name] = {key: value for key, value in first[owner_name].items() if key != field}
+    # Each bounded retention owner contributes two effect revisions.
+    state["decision_packet"] = {
+        **first["decision_packet"],
+        "operation_revisions": {
+            key: value
+            for key, value in first["decision_packet"]["operation_revisions"].items()
+            if key
+            not in {
+                "planning.retire-terminal",
+                "planning.recover-terminal",
+                "memory.retire-terminal",
+                "memory.recover-terminal",
+                "verification.retire-receipts",
+                "verification.recover-retirement",
+            }
+        },
+    }
     assert len(json.dumps(state)) < 28_000, {key: len(json.dumps(value)) for key, value in state.items()}
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
     assert len(json.dumps(compact)) < 6_000

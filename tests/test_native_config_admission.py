@@ -8,7 +8,8 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from tests.test_native_public_cli import ROOT, consume
+from tests.native_planning_fixtures import fixture_source
+from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
@@ -35,7 +36,7 @@ def former_repository(target: Path, shared_core_binary: Path, native_cli: Path) 
     for ref in [*refs, plan_ref, ".agentic-workspace/verification/manifest.toml"]:
         path = target / ref
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes((ROOT / ref).read_bytes())
+        path.write_bytes(fixture_source(ref).read_bytes())
     selector = target / ".agentic-workspace/local/planning/owner-selection.json"
     selector.parent.mkdir(parents=True)
     selector.write_text(

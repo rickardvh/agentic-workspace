@@ -12,7 +12,7 @@
   "commands": [
     {
       "id": "generated-command-packages-static",
-      "command": "uv run python scripts/check/check_generated_command_packages.py",
+      "command": "uv run python src/tooling/check/check_generated_command_packages.py",
       "status": "runnable",
       "source_refs": [
         "docs/maintainer/test-knowledge-inventory.md"
@@ -20,7 +20,7 @@
     },
     {
       "id": "generated-command-python-conformance",
-      "command": "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "command": "uv run python src/tooling/check/check_generated_command_packages.py --python-conformance",
       "status": "runnable",
       "source_refs": [
         "docs/maintainer/maintainer-commands.md"
@@ -39,7 +39,7 @@
         "docs/maintainer/maintainer-commands.md",
         "docs/maintainer/test-knowledge-inventory.md"
       ],
-      "replacement": "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
+      "replacement": "uv run python src/tooling/check/check_generated_command_packages.py --python-conformance"
     }
   ]
 }

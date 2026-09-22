@@ -1,0 +1,70 @@
+{
+  "basis": "configuration-setup-v1",
+  "continuation": {
+    "task": "Implement #3550 and #3551 in stacked PRs"
+  },
+  "coverage": "Assessed current native setup procedure against existing repository policy for the authorised topology and retention migration. Paired native build and installed artefact proof establish launch and owner behaviour on this Windows host, not another machine. Compatible payload provenance refreshed. Preserve existing instruction/decision admissions and optional configuration; do not infer new policy consent from migration.",
+  "dependencies": [
+    {
+      "identity": ".agentic-workspace/config.toml",
+      "revision": "sha256:b843e3a6e751e2bb5d7277dfdf5e810a9d59bb949163c8ef26b74c256384dbcb",
+      "scheme": "universal-newline-utf8",
+      "status": "current"
+    },
+    {
+      "identity": "AGENTS.md",
+      "revision": "sha256:c4620be2c352fa54cb139f5695013b21f2524d596f60a7c0349eb346d5781688",
+      "scheme": "universal-newline-utf8",
+      "status": "current"
+    },
+    {
+      "identity": "README.md",
+      "revision": "sha256:1c74e97cf6286437adc09d5416650af8dcfa6b924dba2d6ce469c03df02f94f5",
+      "scheme": "universal-newline-utf8",
+      "status": "current"
+    },
+    {
+      "identity": "SYSTEM_INTENT.md",
+      "revision": "sha256:c5140c49b1d3a1214c97ea75833254a15182384beb3df9dfd234931c0d8264da",
+      "scheme": "universal-newline-utf8",
+      "status": "current"
+    }
+  ],
+  "dispositions": [
+    {
+      "concern": "instructions",
+      "observation": {
+        "owner": "startup-adapter",
+        "revision": "sha256:b6d35b063156720af6827f1ee5342787051e7ea9a0a3eb6c19779a1a591fd772"
+      },
+      "reason": "Existing source-selected consumer observation remains effective; no policy change.",
+      "status": "already-effective",
+      "subject": "instructions"
+    },
+    {
+      "concern": "preferences",
+      "observation": {
+        "owner": "configuration",
+        "revision": "sha256:f18e27e13a596b03de1453831796ea5a507075f768c269177caa52e642091b9a"
+      },
+      "reason": "Existing source-selected consumer observation remains effective; no policy change.",
+      "status": "already-effective",
+      "subject": "preferences"
+    },
+    {
+      "reason": "Planning, Memory and Verification execute through native owners; existing system-intent source-currentness and Assignment admission remain unresolved. Migration proof does not settle these admissions.",
+      "resume": "System-intent and Assignment source owners must resolve their existing exact admission requests before dependent integration or completion claims.",
+      "status": "blocked",
+      "subject": "Native module and source admissions"
+    },
+    {
+      "reason": "This repository assessment preserves existing local invocation/privacy choices. Native and installed launches are exercised in migration proof; a shared record cannot certify machine-local diagnostic capture.",
+      "status": "irrelevant",
+      "subject": "Shared invocation and machine diagnostics"
+    }
+  ],
+  "kind": "agentic-workspace/configuration-assessment/v1",
+  "runtime_version": "1.2.0",
+  "scope": "repository",
+  "selected_dependencies": []
+}

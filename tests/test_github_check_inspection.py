@@ -1,7 +1,7 @@
 import importlib.util
 from pathlib import Path
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "github" / "inspect_pr_checks.py"
+MODULE_PATH = Path(__file__).resolve().parents[1] / "src" / "tooling" / "github" / "inspect_pr_checks.py"
 SPEC = importlib.util.spec_from_file_location("inspect_pr_checks", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 inspect_pr_checks = importlib.util.module_from_spec(SPEC)

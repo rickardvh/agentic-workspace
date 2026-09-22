@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_structured_file_inventory.py"
+_MODULE_PATH = Path(__file__).resolve().parents[1] / "src" / "tooling" / "check" / "check_structured_file_inventory.py"
 _SPEC = importlib.util.spec_from_file_location("check_structured_file_inventory", _MODULE_PATH)
 assert _SPEC is not None and _SPEC.loader is not None
 check_structured_file_inventory = importlib.util.module_from_spec(_SPEC)
@@ -111,7 +111,7 @@ def test_inventory_authority_patch_subject_isolates_ambient_deletion_without_wea
                 "format": "json",
                 "owner": "fixture",
                 "status": "typed-validator-backed",
-                "schema_or_validator": "scripts/check/fixture_validator.py",
+                "schema_or_validator": "src/tooling/check/fixture_validator.py",
                 "storage_class": "source-of-truth",
                 "checked_in_justification": "fixture",
                 "editable_by_agents": True,
@@ -125,7 +125,7 @@ def test_inventory_authority_patch_subject_isolates_ambient_deletion_without_wea
     monkeypatch.setattr(check_structured_file_inventory, "validate_inventory_shape", lambda payload, root=tmp_path: [])
 
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
-    checker = tmp_path / "scripts/check/check_structured_file_inventory.py"
+    checker = tmp_path / "src/tooling/check/check_structured_file_inventory.py"
     checker.parent.mkdir(parents=True)
     checker.write_text("# baseline\n", encoding="utf-8")
     proposed = tmp_path / "known.json"
@@ -144,7 +144,7 @@ def test_inventory_authority_patch_subject_isolates_ambient_deletion_without_wea
     checker.write_text("# proposed authority change\n", encoding="utf-8")
     proposed.write_text('{"state":"proposed"}\n', encoding="utf-8")
     ambient.unlink()
-    changed = ["scripts/check/check_structured_file_inventory.py", "known.json"]
+    changed = ["src/tooling/check/check_structured_file_inventory.py", "known.json"]
     status_before = subprocess.run(["git", "status", "--porcelain=v1", "-z"], cwd=tmp_path, check=True, capture_output=True).stdout
 
     patch_findings = check_structured_file_inventory.changed_path_inventory_findings(changed, base_ref="HEAD", root=tmp_path)
@@ -179,7 +179,7 @@ def test_changed_path_inventory_checks_narrow_structured_paths(monkeypatch) -> N
                 "format": "json",
                 "owner": "test",
                 "status": "typed-validator-backed",
-                "schema_or_validator": "scripts/check/demo_validator.py",
+                "schema_or_validator": "src/tooling/check/demo_validator.py",
                 "storage_class": "source-of-truth",
                 "checked_in_justification": "test",
                 "editable_by_agents": True,
@@ -220,7 +220,7 @@ def test_agent_aid_manifest_is_schema_backed() -> None:
     entry = next(entry for entry in inventory["entries"] if entry["pattern"] == ".agentic-workspace/agent-aids/**/manifest.json")
 
     assert entry["status"] == "schema-backed"
-    assert entry["schema_or_validator"] == "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json"
+    assert entry["schema_or_validator"] == "src/core/contracts/schemas/agent_aid_manifest.schema.json"
     assert entry["storage_class"] == "source-of-truth"
 
 
@@ -244,7 +244,7 @@ def test_agent_aid_manifest_is_classified_but_other_structured_aid_files_are_not
 
 def test_root_contract_manifests_are_typed_validator_backed() -> None:
     inventory = check_structured_file_inventory.load_inventory()
-    entry = next(entry for entry in inventory["entries"] if entry["pattern"] == "src/agentic_workspace/contracts/*.json")
+    entry = next(entry for entry in inventory["entries"] if entry["pattern"] == "src/tooling/contracts/*.json")
 
     assert entry["status"] == "typed-validator-backed"
     assert "contract_tooling" in entry["schema_or_validator"]
@@ -254,15 +254,10 @@ def test_root_contract_manifests_are_typed_validator_backed() -> None:
 
 def test_memory_manifest_entries_are_typed_validator_backed() -> None:
     inventory = check_structured_file_inventory.load_inventory()
-    manifest_entries = [
-        entry
-        for entry in inventory["entries"]
-        if entry["pattern"] in {".agentic-workspace/memory/repo/manifest.toml", "packages/memory/**/manifest.toml"}
-    ]
+    manifest_entries = [entry for entry in inventory["entries"] if entry["pattern"] in {".agentic-workspace/memory/repo/manifest.toml"}]
 
     assert {entry["pattern"] for entry in manifest_entries} == {
         ".agentic-workspace/memory/repo/manifest.toml",
-        "packages/memory/**/manifest.toml",
     }
     for entry in manifest_entries:
         assert entry["status"] == "typed-validator-backed"
@@ -290,9 +285,6 @@ def test_planning_record_entries_are_schema_backed() -> None:
         ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json": "planning-integration-receipt.schema.json",
         ".agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
         ".agentic-workspace/proof/receipts/*.json": "validator:",
-        "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
-        "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/*.decomposition.json": "planning-decomposition.schema.json",
-        "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
     }
     entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in planning_patterns}
 
@@ -341,28 +333,6 @@ def test_planning_evidence_entries_are_schema_backed() -> None:
         assert entry["status"] == "schema-backed"
         assert schema_name in entry["schema_or_validator"]
         assert "routed_to" not in entry
-
-
-def test_package_local_planning_artifacts_are_schema_backed() -> None:
-    inventory = check_structured_file_inventory.load_inventory()
-    artifact_patterns = {
-        "packages/planning/payload-surface-classification.json": "payload-surface-classification.schema.json",
-        "packages/planning/extraction-candidates.json": "extraction-candidates.schema.json",
-    }
-    entries = {entry["pattern"]: entry for entry in inventory["entries"] if entry["pattern"] in artifact_patterns}
-
-    assert set(entries) == set(artifact_patterns)
-    for pattern, schema_name in artifact_patterns.items():
-        entry = entries[pattern]
-        assert entry["status"] == "schema-backed"
-        assert schema_name in entry["schema_or_validator"]
-        assert "routed_to" not in entry
-
-
-def test_inventory_routes_reconstructable_storage_cleanup_children() -> None:
-    inventory = check_structured_file_inventory.load_inventory()
-
-    assert check_structured_file_inventory.routed_storage_cleanup_issues(inventory) >= {"#538", "#539", "#540"}
 
 
 def test_schema_backed_claim_validates_matched_json_file(tmp_path: Path) -> None:
@@ -635,10 +605,10 @@ def test_generated_mirror_metadata_rejects_ordinary_routes_for_generated_outputs
         "generated_mirrors": [
             {
                 "pattern": "generated/workspace/python/cli.py",
-                "source_command": "uv run python scripts/generate/generate_command_packages.py",
+                "source_command": "uv run python src/tooling/generate/generate_command_packages.py",
                 "named_consumer": "generated package",
                 "checked_in_justification": "generated adapter",
-                "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+                "freshness_check": "uv run python src/tooling/generate/generate_command_packages.py --check",
                 "ordinary_agent_route": 'agentic-workspace start --task "<task>" --format json',
                 "removal_or_demotion_path": "demote when generated on demand",
                 "max_bytes": 500000,
@@ -707,3 +677,13 @@ def test_storage_guardrail_reports_matching_file_size_breach() -> None:
 
     assert len(findings) == 1
     assert "max_bytes=1" in findings[0].message
+
+
+def test_new_enclave_collection_requires_lifetime_before_history_can_grow() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    entry = dict(next(row for row in inventory["entries"] if row["pattern"] == ".agentic-workspace/evaluations/*.json"))
+    entry["pattern"] = ".agentic-workspace/new-owner/*.json"
+    entry.pop("lifetime")
+    inventory["entries"].append(entry)
+    findings = check_structured_file_inventory.storage_policy_findings([], inventory)
+    assert any("enclave collection must declare" in finding.message for finding in findings)

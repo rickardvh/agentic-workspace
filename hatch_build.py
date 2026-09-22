@@ -27,11 +27,11 @@ class CustomBuildHook(BuildHookInterface):
             build_data.setdefault("force_include", {})[str(projection)] = "pyproject.toml"
             # The build validates each package seed against its explicitly
             # portable input. Source-maintenance policy is not a build input.
-            host = json.loads((root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+            host = json.loads((root / "src/core/contracts/workspace_surfaces.json").read_text())
             for reference in host["derivation"]["portable_sources"]:
                 build_data.setdefault("force_include", {})[str(root / reference)] = reference
             # Preserve exact compile-time Rust inputs, not the former Python host.
-            for source in (root / "crates").rglob("*.rs"):
+            for source in [*(root / "src/core").rglob("*.rs"), *(root / "src/cli/rust").rglob("*.rs")]:
                 for reference in re.findall(r'include_(?:str|bytes)!\(\s*"([^"]+)"', source.read_text(encoding="utf-8")):
                     path = (source.parent / reference).resolve()
                     relative = path.relative_to(root)
@@ -44,11 +44,9 @@ class CustomBuildHook(BuildHookInterface):
         if self.target_name != "wheel" or version == "editable":
             return
         root = Path(self.root)
-        build_data.setdefault("force_include", {})[str(root / "bindings/python/__init__.py")] = "agentic_workspace/__init__.py"
-        build_data.setdefault("force_include", {})[str(root / "bindings/python/_binding.py")] = "agentic_workspace/_binding.py"
         # An explicit host target prevents an ambient cross-compilation target
         # from being silently labelled as a locally executable wheel.
-        spec = importlib.util.spec_from_file_location("native_toolchain", root / "scripts/release/native_toolchain.py")
+        spec = importlib.util.spec_from_file_location("native_toolchain", root / "src/tooling/release/native_toolchain.py")
         toolchain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(toolchain_module)
         toolchain = toolchain_module.observe(root)

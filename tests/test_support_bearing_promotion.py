@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/release/support_bearing_promotion.py"
+SCRIPT = ROOT / "src/tooling/release/support_bearing_promotion.py"
 spec = importlib.util.spec_from_file_location("support_bearing_promotion_under_test", SCRIPT)
 assert spec is not None and spec.loader is not None
 PROMOTION = importlib.util.module_from_spec(spec)
@@ -116,7 +116,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             entry = tarfile.TarInfo("package/src/native/bin/" + name)
             entry.size = len(binary)
             archive.addfile(entry, io.BytesIO(binary))
-    sys.path.insert(0, str(ROOT / "scripts/release"))
+    sys.path.insert(0, str(ROOT / "src/tooling/release"))
     import platform_release
 
     rows = []
@@ -292,12 +292,7 @@ def test_composed_promotion_fails_closed_on_stale_or_missing_evidence(tmp_path: 
 
 def test_python_support_policy_rejects_package_minimum_below_policy(tmp_path: Path) -> None:
     shutil.copytree(ROOT / ".github", tmp_path / ".github")
-    for relative in (
-        "pyproject.toml",
-        "packages/memory/pyproject.toml",
-        "packages/planning/pyproject.toml",
-        "packages/verification/pyproject.toml",
-    ):
+    for relative in ("pyproject.toml",):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, target)

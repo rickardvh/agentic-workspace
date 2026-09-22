@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Remove the former Python host and generated execution packages; route source consumers and release checks through the native product boundary."

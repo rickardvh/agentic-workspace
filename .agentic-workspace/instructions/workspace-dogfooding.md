@@ -1,9 +1,7 @@
 ---
 paths:
   - .agentic-workspace/**
-  - src/agentic_workspace/**
-  - packages/**
-  - scripts/**
+  - src/**
   - tests/**
   - docs/maintainer/**
 checks:

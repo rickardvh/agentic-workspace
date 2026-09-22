@@ -1,19 +1,65 @@
 # Proof publication custody
 
-The native process producer and retained Python manual recorder now enter the same Rust publication owner through a current Verification `proof.report` action. The typed `verification/record-receipt/v1` request retains an interoperability observation against current work and source identity. It does not execute the reported command or authenticate its claimed result. Global owner restrictions still apply before admission and immediately before publication.
+Native command execution and the typed `verification/record-receipt/v1` request
+enter the Rust publication owner through an admitted `proof.report` action.
+The latter retains an interoperability observation; it neither executes the
+reported command nor authenticates its claimed result. Python is a transport,
+not a second proof owner.
 
-The publisher serialises index updates under the existing receipt-store boundary. An index locator selects one receipt for custody validation; it has no authority without the exact retained commitment and index hash. Only singleton predecessor indices can use the locator-free compatibility path. Large or tampered unlocated indices require transfer rather than scanning historical receipt and attempt files. It retains an immutable receipt carrying the existing attempt admission and prepared commit reference before replacing the index. Replacement accepts only the exact retained preimage; recovery accepts only that preimage or the exact prepared postimage. A fresh process can finish the admitted publication without replaying a command. Unknown indices, unrelated receipts, changed bytes, and unretained results remain preserved with an explicit owner-transfer gap. Prior native publication can establish custody through its actual retained run and committed attempt; a recognisable legacy Python index cannot.
+An index locator selects one receipt for custody validation. The locator alone
+supplies no authority: the retained attempt, committed outcome and exact index
+hash must agree. An immutable publication carrier is retained before atomic index
+replacement. Recovery accepts only the exact preimage or prepared postimage and
+never reexecutes the command. Unknown indices and changed bytes are preserved.
 
-Absent publication installs complete durable bytes exclusively. Subsequent publication requires current retained custody. The index refuses new publication at 2,048 entries before writing a receipt or index; owner compaction remains unresolved. Recovery separately bounds receipt candidates to 4,096 and total directory entries to 8,192; either exceeded bound preserves state with an explicit blocker. Durability tests establish process-interruption recovery, not power-loss durability or directory-fsync guarantees. Interrupted temporary files are preserved; this layer makes no cleanup claim. The Python surrounding rollback no longer restores or deletes the shared index and immutable receipt after publication commits.
+## Retention
+
+Successful native publication supersedes prior authenticated observations for
+the same command, route, changed-path scope and Planning work identity. Direct
+tasks share the existing proof-reuse boundary across different prompt text. A failed result
+can supersede older failures but preserves an earlier pass. Different routes,
+scopes and Planning work identities remain separate useful evidence. Live consumer
+references and incomplete producer custody prevent removal.
+
+Source reconciliation retires authenticated groups that its existing relation
+semantics supersede. Disjoint current groups remain; another relation's current
+projection protects shared evidence. Both producers acquire the publication lock
+before the reconciliation lock and carry the exact retention plan in the new
+producer's authenticated outcome. Source and consumer changes refuse stale
+removal. Recovery completes publication and deletion without replaying external
+effects or a source judgment.
+
+The compact `proof_retention` hint exposes exact Verification detail for legacy
+or ambiguous history. Read the offered records before answering
+`verification/retire-receipts/v1` with supersession, no unresolved intent, no
+continuing value and a reason. Each batch is limited to 32 exact source preimages.
+Index membership and its custody carrier are provenance, not live consumers.
+Planning, proof projections, Memory, Verification, evaluation, reconstruction,
+system-intent and local selection/continuation sources remain consumer roots.
+Root evaluation and delegation records participate in those guards too.
+
+An admitted disposition transfers only exact index mutation custody. The bounded
+current `proof/current/index-custody.json` carrier proves the postimage through
+its committed native attempt; it authenticates no receipt's result or sufficiency.
+The carrier uses relative custody references and an exact target fingerprint;
+another checkout cannot acquire its local effect custody. A legacy index can
+transfer custody with an empty source selection while preserving every receipt.
+A local pending record carries partial index replacement and deletion recovery.
+Use the returned `verification/recover-retirement/v1` request after interruption.
+Settled disposition removes its pending record without a tracked retirement log.
+Existing local attempt/run artifacts retain their separate lifecycle.
+
+Traversal is confined and bounded; links, reparse points, malformed custody,
+new consumers and changed source/index/carrier bytes are preserved. The index
+retains its 2,048-entry capacity guard, and recovery bounds both receipt and total
+directory inventory. These boundaries establish process-interruption recovery,
+not power-loss durability or exclusion of arbitrary external writers.
 
 ## Evidence boundaries
 
-A manually asserted `passed` result, sufficiency judgement, provider name, or execution marker remains an unproven interoperability observation. Unknown strategy coverage stays unknown. Actual source-selected native execution retains its observed process results and current subject. The retained Python measured execution path still keeps its actual run evidence; it does not enter the manual-publication path. Neither publication nor process exit grants task completion or independent review.
-
-The prior public regression recorded claimed passes without executing any command and expected task acceptance. It now requires rejection of that false claim. Its real initialised configuration currently exposes native owner gaps for `workspace.agent_instructions_file` and `workspace.workflow_artifact_profile` (module enablement is now consumed by its native owner, which also correctly prevents record requests when Verification is disabled); the test preserves those controls and accepts only the exact current-owner publication blocker with unchanged index, or an explicitly unproven admitted observation. This is not proof of successful configured manual ingress or full closeout.
-
-Focused tests cover four public consumers, genuine native execution followed by subsequent publication, a concurrent retained Python observation and native execution, direct and Planning claim negatives, unknown index preservation, rollback preservation, and abrupt process exit before replacement, after replacement, and after commit. These are implementation-session tests, not independent acceptance. Existing-index acquisition or transfer without retained custody remains unresolved under the existing ownership owners.
-
-## Cost observations
-
-No provider inference or monetary estimate was used. The old manual fixture produced a useful failure exposing an invalid success expectation. A second failure exposed the test reading TypeScript diagnostics from stderr instead of its declared structured result; that implementation-agent mistake was corrected without product compatibility fields. Focused checks were rerun after those changes; earlier failures remain counterevidence, not successful runs.
+A reported pass, provider name or publication marker does not establish command
+execution, proof sufficiency, task completion or independent review. Current
+native execution retains observed process results and exact subject identity;
+legacy Python records keep their original runtime identity. Retention does not
+upgrade either kind of evidence. Direct tests, actual owner effects, independent
+acceptance and parent intent satisfaction must be reported separately.

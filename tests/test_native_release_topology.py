@@ -31,7 +31,7 @@ def wheel(tmp_path_factory):
     if len(wheels) > 1:
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location("platform_release", ROOT / "scripts/release/platform_release.py")
+        spec = importlib.util.spec_from_file_location("platform_release", ROOT / "src/tooling/release/platform_release.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         data = module.load(output)
@@ -49,6 +49,9 @@ def test_wheel_contains_only_binding_host_adapter_and_paired_core(wheel):
             f"agentic_workspace/{name}.py"
             for name in ("__init__", "cli", "_binding", "native_core", "codex_provider", "sealed_codex_transport")
         }
+        for name in code:
+            source = "src/adapters/codex" if Path(name).stem in {"codex_provider", "sealed_codex_transport"} else "src/cli/python"
+            assert archive.read(name).decode().replace("\r\n", "\n") == (ROOT / source / name).read_text(encoding="utf-8")
         # The host adapter has provider I/O, not the old Python policy/runtime host.
         provider = ast.parse(archive.read("agentic_workspace/codex_provider.py"))
         for node in ast.walk(provider):
@@ -66,6 +69,30 @@ def test_wheel_contains_only_binding_host_adapter_and_paired_core(wheel):
         assert toolchain["host"] == manifest["rust_host"] == manifest["rust_target"]
         assert toolchain["declaration_sha256"] == hashlib.sha256((ROOT / "rust-toolchain.toml").read_bytes()).hexdigest()
         assert not any("_payload" in name or "_generated" in name for name in files)
+
+
+def test_source_public_import_is_native_and_fails_closed(tmp_path, shared_core_binary):
+    script = """
+import importlib.util, json, sys
+import agentic_workspace as aw
+for module in ("decision", "contract_tooling", "static_read_profile", "review_stack_topology"):
+    assert importlib.util.find_spec("agentic_workspace." + module) is None
+assert not any(name in sys.modules for name in (
+    'agentic_workspace.client', 'aw_maintainer.native_conformance',
+    'agentic_workspace.workspace_runtime_core', 'agentic_workspace.modules'))
+assert not hasattr(aw, 'invoke_operation')
+assert not hasattr(aw, 'compile_source_decision')
+print(json.dumps(aw.start({'target': '.', 'task': 'Inspect this consumer'})))
+"""
+    environment = {**os.environ, "PYTHONPATH": str(ROOT / "src/cli/python"), "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)}
+    result = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env=environment, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "decision_packet" in json.loads(result.stdout)
+    environment["AGENTIC_WORKSPACE_CORE_BINARY"] = str(tmp_path / "missing-core")
+    rejected = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env=environment, capture_output=True, text=True)
+    assert rejected.returncode != 0
+    assert "core is unavailable" in rejected.stderr
+    assert not (tmp_path / ".agentic-workspace").exists()
 
 
 def test_isolated_python_owner_mutation_and_missing_core_rejection(wheel, tmp_path):
@@ -104,7 +131,7 @@ print(json.dumps({'effect':result['effect_outcome']['status']}))
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["effect"] == "committed"
     parity = subprocess.run(
-        [str(python), str(ROOT / "scripts/check/check_language_facade.py"), "--installed-python"],
+        [str(python), str(ROOT / "src/tooling/check/check_language_facade.py"), "--installed-python"],
         cwd=target,
         env=environment,
         capture_output=True,
@@ -161,7 +188,7 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
         archive = archives[0]
     else:
         subprocess.run(
-            [sys.executable, str(ROOT / "scripts/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
+            [sys.executable, str(ROOT / "src/tooling/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
             check=True,
             capture_output=True,
         )
@@ -202,7 +229,7 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     manifest = json.loads((native_dir / "artifact.json").read_text())
     from tests.test_language_facade import check_node
 
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["language_facade"]
+    contract = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text())["language_facade"]
     core = native_dir / ("agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core")
     check_node(contract, package / "src/native/operating.mjs", core)
     assert manifest["cli_sha256"]
@@ -278,5 +305,5 @@ def test_source_archive_has_no_development_host_or_workspace_dependencies():
         assert f"{root}/Cargo.lock" in names
         assert f"{root}/rust-toolchain.toml" in names
         assert f"{root}/deny.toml" in names
-        assert f"{root}/scripts/check/check_rust_dependencies.py" in names
-        assert f"{root}/scripts/release/native_toolchain.py" in names
+        assert f"{root}/src/tooling/check/check_rust_dependencies.py" in names
+        assert f"{root}/src/tooling/release/native_toolchain.py" in names

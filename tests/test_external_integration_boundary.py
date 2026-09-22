@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -11,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_necessary_surface_payload_has_no_adapter_lifecycle() -> None:
-    payload = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_defaults/payload.json").read_text(encoding="utf-8"))
+    payload = json.loads((ROOT / "src/tooling/contracts/workspace_defaults/payload.json").read_text(encoding="utf-8"))
     encoded = json.dumps(payload).lower()
     forbidden_paths = (
         ".agentic-workspace/adapters/",
@@ -22,12 +23,10 @@ def test_necessary_surface_payload_has_no_adapter_lifecycle() -> None:
     assert all(path not in encoded for path in forbidden_paths)
 
 
-def test_external_profile_is_package_owned_not_installed_payload() -> None:
-    payload = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_defaults/payload.json").read_text(encoding="utf-8"))
+def test_external_consumers_require_no_installed_profile() -> None:
+    payload = json.loads((ROOT / "src/tooling/contracts/workspace_defaults/payload.json").read_text(encoding="utf-8"))
     encoded = json.dumps(payload)
     assert "external_consumer_profile.json" not in encoded
-    assert (ROOT / "generated/workspace/python/external_consumer_profile.json").is_file()
-    assert (ROOT / "generated/workspace/typescript/external_consumer_profile.json").is_file()
 
 
 def test_lifecycle_preserves_zero_adapter_footprint_and_consumer_removal(tmp_path: Path) -> None:
@@ -69,6 +68,11 @@ def test_lifecycle_preserves_zero_adapter_footprint_and_consumer_removal(tmp_pat
         capture_output=True,
         text=True,
         cwd=target,
+        env={
+            key: value
+            for key, value in os.environ.items()
+            if key not in {"PYTHONPATH", "AGENTIC_WORKSPACE_CORE_BINARY", "AGENTIC_WORKSPACE_CLI_BINARY"}
+        },
     )
     assert json.loads(result.stdout)["planning"]["current_owner"]["current"] is True
     assert checker._snapshot(target) == before
@@ -88,7 +92,7 @@ def test_runtime_and_payload_have_no_external_adapter_reverse_dependency() -> No
             name = re.split(r"[ @<>=;\[]", dependency, maxsplit=1)[0].lower()
             if name.startswith(("agentic-", "agentic_")):
                 assert name in allowed_workspace_dependencies, (manifest, name)
-    payload = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_defaults/payload.json").read_text(encoding="utf-8"))
+    payload = json.loads((ROOT / "src/tooling/contracts/workspace_defaults/payload.json").read_text(encoding="utf-8"))
     encoded_payload = json.dumps(payload).lower()
     assert not any(token in encoded_payload for token in ("adapter_package", "plugin_package", "adapter_registry"))
     for manifest in ROOT.rglob("package.json"):
@@ -101,7 +105,7 @@ def test_runtime_and_payload_have_no_external_adapter_reverse_dependency() -> No
             for name in package.get(field, {})
         }
         assert not any("adapter" in name or "external-consumer" in name for name in dependencies), (manifest, dependencies)
-    packaged = json.loads((ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["files"]
+    packaged = json.loads((ROOT / "src/cli/typescript/package.json").read_text(encoding="utf-8"))["files"]
     assert not any("adapter" in item.lower() for item in packaged)
     for source in [*ROOT.glob("src/**/*.py"), *ROOT.glob("generated/workspace/**/*.*")]:
         if source.suffix not in {".py", ".mjs", ".js"}:

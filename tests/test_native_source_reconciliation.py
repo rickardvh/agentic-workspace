@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import subprocess
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -197,6 +199,20 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     assert evidence["completion_authority"] is False
     receipts = sorted((tmp_path / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json"))
 
+    # Checked-in evidence binds this checkout without retaining its machine path.
+    for receipt in receipts:
+        original = receipt.read_bytes()
+        record = json.loads(original)
+        assert record["invocation"]["arguments"]["target"] == "."
+        assert record["custody"]["attempt"]["target"] == "."
+        assert str(tmp_path).replace("\\", "\\\\") not in original.decode()
+        record["target_revisions"]["/custody/attempt/target"] = "sha256:" + "0" * 64
+        receipt.write_text(json.dumps(record), encoding="utf-8")
+        with pytest.raises(AssertionError, match="different target"):
+            call()
+        receipt.write_bytes(original)
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
+
     # An unrelated interpreted policy value must not stale accepted semantics.
     config.write_text(config.read_text() + '\n[workspace]\ncli_invoke="aw-current"\n')
     assert call()["verification"]["source_reconciliation"]["evidence"] == evidence
@@ -238,7 +254,7 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
 
 
-@pytest.mark.parametrize("stage", ["receipt", "temporary"])
+@pytest.mark.parametrize("stage", ["receipt", "temporary", "superseded"])
 def test_interrupted_publication_recovers_exact_owner_answer(tmp_path, shared_core_binary, native_cli, stage):
     import json
 
@@ -247,12 +263,23 @@ def test_interrupted_publication_recovers_exact_owner_answer(tmp_path, shared_co
     def call(extra=None):
         return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
 
+    old_receipt = None
+    old_bytes = None
+    if stage == "superseded":
+        first = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+        call({"invocation": first})
+        old_receipt = tmp_path / first["arguments"]["receipt_ref"]
+        old_bytes = old_receipt.read_bytes()
+        (tmp_path / "src/feature.txt").write_text("new behavior", encoding="utf-8")
     answer = answer_for(call)
     action = call({"request": answer})["decision_packet"]["primary_action"]
     done = call({"invocation": action})
     receipt = tmp_path / action["arguments"]["receipt_ref"]
     before = receipt.read_bytes()
     (tmp_path / done["custody"]["committed"]["path"]).unlink()
+    if old_receipt is not None:
+        assert not old_receipt.exists()
+        old_receipt.write_bytes(old_bytes)  # Exact preimage before superseded deletion.
     if stage == "temporary":
         receipt.rename(str(receipt) + ".tmp")
     recovered = call()
@@ -261,6 +288,8 @@ def test_interrupted_publication_recovers_exact_owner_answer(tmp_path, shared_co
     assert retry == action
     call({"invocation": retry})
     assert receipt.read_bytes() == before
+    if old_receipt is not None:
+        assert not old_receipt.exists()
     assert call()["verification"]["source_reconciliation"]["status"] == "current"
     assert json.loads(before)["value"]["authority_basis"]["kind"] == "exact-bounded-human-answer"
 
@@ -311,13 +340,11 @@ def test_non_document_source_and_duplicate_instruction(tmp_path, shared_core_bin
 def test_planning_reentry_preserves_pending_obligation(tmp_path, shared_core_binary, native_cli):
     import json
 
-    from tests.test_native_public_cli import ROOT
-
     context = repository(tmp_path)
     ref = Path(".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json")
     plan = tmp_path / ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / ref).read_bytes())
+    plan.write_bytes(fixture_source(ref).read_bytes())
     original = json.loads(plan.read_bytes())
     (plan.parent.parent / "state.toml").write_text(
         f'[[active.execplans]]\nid="{original["id"]}"\npath="{ref.as_posix()}"\nstatus="active"\n'
@@ -335,7 +362,7 @@ def test_planning_reentry_preserves_pending_obligation(tmp_path, shared_core_bin
     fresh = call()
     assert fresh["planning"]["source_reconciliation"]["obligations"] == ["docs/guide.md"]
     assert fresh["planning"]["source_reconciliation"]["status"] == "judgment-material-required"
-    assert plan.read_bytes() == (ROOT / ref).read_bytes()
+    assert plan.read_bytes() == fixture_source(ref).read_bytes()
 
 
 def test_protected_receipt_destination_never_publishes(tmp_path, shared_core_binary, native_cli):
@@ -520,7 +547,7 @@ def test_current_group_projection_ignores_history_and_preserves_missing_evidence
     call({"invocation": action})
     projection = next((tmp_path / ".agentic-workspace/proof/current").glob("source-reconciliation-*.json"))
     assert json.loads(projection.read_text()) == [action["arguments"]["receipt_ref"]]
-    assert receipt.exists()  # superseded immutable evidence is preserved
+    assert not receipt.exists()  # authenticated superseded evidence has no live consumer
     current_receipt = tmp_path / action["arguments"]["receipt_ref"]
     current_receipt.unlink()
     with pytest.raises(AssertionError, match="current reconciliation receipt unavailable"):

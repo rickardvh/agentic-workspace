@@ -17,7 +17,7 @@ from zipfile import ZipFile
 import pytest
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
-PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
+PAYLOAD_ROOT = WORKSPACE_ROOT / "src/core/payload"
 PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
 
 
@@ -120,7 +120,7 @@ def test_packed_host_derivation_excludes_poisoned_producer_policy(workspace_sdis
     outputs = generator.render_host_payload(producer)
     for reference, content in outputs.items():
         assert sentinel not in content
-        (producer / "src/agentic_workspace/_payload" / reference).write_text(content, encoding="utf-8", newline="\n")
+        (producer / "src/core/payload" / reference).write_text(content, encoding="utf-8", newline="\n")
     # Reuse the build cache, not source artifacts: the fixture has an independent
     # source tree, and Cargo revalidates every embedded input from that tree.
     output = tmp_path / "artifacts"
@@ -186,7 +186,7 @@ def test_workspace_package_declares_semver_identity() -> None:
 
 def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() -> None:
     ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    artifact_job = ci_text.partition("  workspace-package-artifacts:\n")[2].partition("\n  package-checks:\n")[0]
+    artifact_job = ci_text.partition("  workspace-package-artifacts:\n")[2].partition("\n  declared-runtime-matrix:\n")[0]
 
     assert "ready_for_review" in ci_text
     assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in artifact_job
@@ -200,12 +200,11 @@ def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() ->
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in artifact_job
 
 
-def test_typescript_instruction_runtime_has_no_source_checkout_python_dependency() -> None:
-    support = (WORKSPACE_ROOT / "src/agentic_workspace/contracts/typescript_primitive_support.mjs").read_text(encoding="utf-8")
-    instruction_runtime = support[support.index("function instructionsExecute") : support.index("function reportMemory")]
-
-    assert "scripts/run_agentic_workspace.py" not in instruction_runtime
-    assert "authoritative-python-boundary-unavailable" not in instruction_runtime
+def test_node_binding_has_no_source_checkout_python_dependency() -> None:
+    for path in (WORKSPACE_ROOT / "src/cli/typescript").glob("*.mjs"):
+        source = path.read_text(encoding="utf-8")
+        assert "src/tooling/run_agentic_workspace.py" not in source
+        assert "authoritative-python-boundary-unavailable" not in source
 
 
 def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None:
@@ -231,9 +230,9 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     assert 'coordinated_release.py verify --tag "${RELEASE_TAG}"' in release_text
     assert "must point at a commit reachable from origin/master" in release_text
     assert ".github/release-ownership.json" in release_text
-    assert "uv build --wheel --sdist --out-dir dist" in release_text
-    assert "tests/test_native_release_topology.py" in release_text
-    assert "scripts/release/stage_native_npm.py" in release_text
+    assert "uses: ./.github/workflows/platform-release.yml" in release_text
+    platform = (WORKSPACE_ROOT / ".github/workflows/platform-release.yml").read_text(encoding="utf-8")
+    assert "platform_release.py" in platform
     assert "agentic-workspace-release-manifest.json" in release_text
     assert "source_commit" in release_text
     assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in release_text
@@ -242,7 +241,7 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
-    manifest = json.loads((WORKSPACE_ROOT / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json").read_text())
+    manifest = json.loads((WORKSPACE_ROOT / "src" / "tooling" / "contracts" / "source_maintenance_surfaces.json").read_text())
 
     missing = [path for path in manifest["payload_files"] if not (PAYLOAD_ROOT / path).is_file()]
 
@@ -265,12 +264,12 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
         "hatch_build.py",
         "Cargo.toml",
         "Cargo.lock",
-        "crates/agentic-workspace-core/src/main.rs",
-        "crates/agentic-workspace-cli/Cargo.toml",
-        "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json",
-        "bindings/python/_binding.py",
-        "src/agentic_workspace/codex_provider.py",
-        "src/agentic_workspace/sealed_codex_transport.py",
+        "src/core/src/main.rs",
+        "src/cli/rust/Cargo.toml",
+        "src/core/contracts/schemas/separation_of_duty.schema.json",
+        "src/cli/python/agentic_workspace/_binding.py",
+        "src/adapters/codex/agentic_workspace/codex_provider.py",
+        "src/adapters/codex/agentic_workspace/sealed_codex_transport.py",
     ):
         assert any(name.endswith(f"/{path}") for name in inventory), path
 
@@ -361,7 +360,7 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
     answer = next(d for d in decisions if d["id"] == "repository-adoption-authorization")["response_request"]
     answer["arguments"]["answer"] = "authorize-write"
     assert call(invocation=call(answer)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
-    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    manifest = json.loads((WORKSPACE_ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     for reference in manifest["payload_files"]:
         assert (target / reference).is_file(), reference
 

@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_compact_command.py"
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "src" / "tooling" / "check" / "run_compact_command.py"
 
 
 def _load_runner():
@@ -21,7 +21,7 @@ def _load_runner():
 
 def test_compact_runner_rejects_output_escape_before_writing(tmp_path) -> None:
     root = tmp_path / "repo"
-    script = root / "scripts/check/run_compact_command.py"
+    script = root / "src/tooling/check/run_compact_command.py"
     script.parent.mkdir(parents=True)
     script.write_bytes(SCRIPT_PATH.read_bytes())
     outside = tmp_path / "outside"
@@ -375,29 +375,18 @@ def test_compact_runner_rejects_concurrent_writer_for_same_attempt(tmp_path, cap
     assert conflict["next_action"] == "wait for the running attempt or allocate a new top-level run"
 
 
-def test_compact_runner_uses_plan_metadata_and_keeps_repeat_attempts(tmp_path, capsys) -> None:
+def test_compact_runner_keeps_explicit_subject_and_repeat_attempts(tmp_path, capsys) -> None:
     runner = _load_runner()
     runner.REPO_ROOT = tmp_path
     runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
     runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
-    runner.PLAN_PATH = tmp_path / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
-    runner.PLAN_PATH.parent.mkdir(parents=True)
-    runner.PLAN_PATH.write_text(
-        json.dumps(
-            {
-                "compact_label_map": {
-                    "workspace lint": {
-                        "id": "lint.workspace",
-                        "dependencies": ["sync.all"],
-                        "proof_purpose": "workspace lint proof from plan",
-                    }
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-
     first_args = [
+        "--id",
+        "lint.workspace",
+        "--depends-on",
+        "sync.all",
+        "--proof-purpose",
+        "workspace lint proof from explicit invocation",
         "--label",
         "workspace lint",
         "--run-id",
@@ -408,6 +397,12 @@ def test_compact_runner_uses_plan_metadata_and_keeps_repeat_attempts(tmp_path, c
         "print('ok')",
     ]
     retry_args = [
+        "--id",
+        "lint.workspace",
+        "--depends-on",
+        "sync.all",
+        "--proof-purpose",
+        "workspace lint proof from explicit invocation",
         "--label",
         "workspace lint",
         "--join-run-id",
@@ -433,7 +428,7 @@ def test_compact_runner_uses_plan_metadata_and_keeps_repeat_attempts(tmp_path, c
     )
     manifest = json.loads((tmp_path / "scratch" / "validation-results" / "same-run" / "manifest.json").read_text(encoding="utf-8"))
     assert first["dependencies"] == ["sync.all"]
-    assert second["proof_purpose"] == "workspace lint proof from plan"
+    assert second["proof_purpose"] == "workspace lint proof from explicit invocation"
     assert first["run_identity"]["provenance"] == "allocated-here"
     assert second["attempt_identity"]["attempt_index"] == 2
     assert second["attempt_identity"]["retry_reason"] == "rerun after relevant input change"

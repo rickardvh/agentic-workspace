@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Use the same native-backed Python public API in source checkouts and installed wheels."

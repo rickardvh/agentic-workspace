@@ -10,7 +10,7 @@ from types import ModuleType
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-EXECUTOR_ROOT = ROOT / "tools" / "model-cli-harness" / "structured-executor"
+EXECUTOR_ROOT = ROOT / "src" / "tooling" / "model-cli-harness" / "structured-executor"
 
 
 @pytest.fixture

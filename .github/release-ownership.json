@@ -52,12 +52,12 @@
       24,
       25
     ],
-    "runner": "scripts/check/check_native_release_topology.py",
+    "runner": "src/tooling/check/check_native_release_topology.py",
     "failure_policy": "missing, stale, mismatched, failed, or unsupported receipts block publication"
   },
   "support_bearing_promotion": {
     "policy": ".github/support-bearing-promotion.json",
-    "checker": "scripts/release/support_bearing_promotion.py",
+    "checker": "src/tooling/release/support_bearing_promotion.py",
     "receipt_kind": "agentic-workspace/support-bearing-promotion/v1",
     "receipt": "support-bearing-promotion.json",
     "subject": "exact source commit and exact release artifact digests",
@@ -71,43 +71,23 @@
   "release_commit_allowed_paths": [
     "pyproject.toml",
     ".agentic-workspace/payload-provenance.json",
-    "generated/workspace/typescript/package.json",
     ".release/releases/",
     "uv.lock",
-    "generated/workspace/python/external_contract_bundle.json",
-    "generated/workspace/typescript/external_contract_bundle.json",
     ".release/changes/",
-    "generated/workspace/.agentic-workspace-cli-fingerprint.json",
-    "generated/memory/.agentic-workspace-cli-fingerprint.json",
-    "generated/planning/.agentic-workspace-cli-fingerprint.json",
-    "generated/verification/.agentic-workspace-cli-fingerprint.json",
     ".release/promotions/v1.0.0.json",
-    "crates/agentic-workspace-core/Cargo.toml",
-    "crates/agentic-workspace-cli/Cargo.toml",
+    "src/core/Cargo.toml",
+    "src/cli/rust/Cargo.toml",
     "Cargo.lock",
     "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
   "preview_release_commit_allowed_paths": [
     "pyproject.toml",
-    "packages/memory/pyproject.toml",
-    "packages/planning/pyproject.toml",
-    "packages/verification/pyproject.toml",
-    "generated/workspace/typescript/package.json",
-    "generated/memory/typescript/package.json",
-    "generated/planning/typescript/package.json",
-    "generated/verification/typescript/package.json",
     ".agentic-workspace/payload-provenance.json",
     ".release/releases/",
     ".release/previews/",
-    "generated/workspace/python/external_contract_bundle.json",
-    "generated/workspace/typescript/external_contract_bundle.json",
     "uv.lock",
-    "generated/workspace/.agentic-workspace-cli-fingerprint.json",
-    "generated/memory/.agentic-workspace-cli-fingerprint.json",
-    "generated/planning/.agentic-workspace-cli-fingerprint.json",
-    "generated/verification/.agentic-workspace-cli-fingerprint.json",
-    "crates/agentic-workspace-core/Cargo.toml",
-    "crates/agentic-workspace-cli/Cargo.toml",
+    "src/core/Cargo.toml",
+    "src/cli/rust/Cargo.toml",
     "Cargo.lock",
     "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
@@ -115,38 +95,14 @@
     ".release/changes/",
     ".release/releases/",
     "docs/release-and-versioning.md",
-    "generated/",
-    "packages/",
     "pyproject.toml",
-    "scripts/release/",
+    "src/tooling/release/",
     "src/",
     "uv.lock",
     "Cargo.toml",
-    "Cargo.lock",
-    "crates/"
+    "Cargo.lock"
   ],
-  "non_semver_generated_metadata": [
-    {
-      "path": "generated/workspace/.agentic-workspace-cli-fingerprint.json",
-      "role": "generated-command-freshness-integrity",
-      "freshness_owner": "scripts/check/check_generated_command_packages.py"
-    },
-    {
-      "path": "generated/planning/.agentic-workspace-cli-fingerprint.json",
-      "role": "generated-command-freshness-integrity",
-      "freshness_owner": "scripts/check/check_generated_command_packages.py"
-    },
-    {
-      "path": "generated/memory/.agentic-workspace-cli-fingerprint.json",
-      "role": "generated-command-freshness-integrity",
-      "freshness_owner": "scripts/check/check_generated_command_packages.py"
-    },
-    {
-      "path": "generated/verification/.agentic-workspace-cli-fingerprint.json",
-      "role": "generated-command-freshness-integrity",
-      "freshness_owner": "scripts/check/check_generated_command_packages.py"
-    }
-  ],
+  "non_semver_generated_metadata": [],
   "packages": [
     {
       "name": "agentic-workspace",
@@ -158,15 +114,14 @@
       "proof_commands": [
         "make test-workspace",
         "make lint-workspace"
-      ],
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      ]
     }
   ],
   "typescript_packages": [
     {
       "name": "@agentic-workspace/workspace-cli",
-      "package_json": "generated/workspace/typescript/package.json",
-      "package_root": "generated/workspace/typescript",
+      "package_json": "src/cli/typescript/package.json",
+      "package_root": "src/cli/typescript",
       "tarball_prefix": "agentic-workspace-workspace-cli",
       "entrypoints": [
         "agentic-workspace"
@@ -175,103 +130,10 @@
       "runtime": "node",
       "runtime_requirement": "node>=20",
       "release_policy": "coordinated-public-registry",
-      "registry_status": "trusted-publication-required",
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      "registry_status": "trusted-publication-required"
     }
   ],
   "version_floor_rule": "The next coordinated version must be greater than every shipped package version, every AW coordinated-release vMAJOR.MINOR.PATCH tag, and every preview-vMAJOR.MINOR.PATCH package identity; tags from other package domains do not set the AW release floor.",
-  "source_only_distributions": {
-    "typescript": [
-      {
-        "name": "@agentic-workspace/memory-cli",
-        "package_json": "generated/memory/typescript/package.json",
-        "package_root": "generated/memory/typescript",
-        "tarball_prefix": "agentic-workspace-memory-cli",
-        "entrypoints": [
-          "agentic-memory"
-        ],
-        "python_package": "agentic-workspace-memory",
-        "runtime": "node",
-        "runtime_requirement": "node>=20",
-        "release_policy": "release-asset-only",
-        "registry_status": "unpublished",
-        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-      },
-      {
-        "name": "@agentic-workspace/planning-cli",
-        "package_json": "generated/planning/typescript/package.json",
-        "package_root": "generated/planning/typescript",
-        "tarball_prefix": "agentic-workspace-planning-cli",
-        "entrypoints": [
-          "agentic-planning"
-        ],
-        "python_package": "agentic-workspace-planning",
-        "runtime": "node",
-        "runtime_requirement": "node>=20",
-        "release_policy": "release-asset-only",
-        "registry_status": "unpublished",
-        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-      },
-      {
-        "name": "@agentic-workspace/verification-cli",
-        "package_json": "generated/verification/typescript/package.json",
-        "package_root": "generated/verification/typescript",
-        "tarball_prefix": "agentic-workspace-verification-cli",
-        "entrypoints": [
-          "agentic-verification"
-        ],
-        "python_package": "agentic-workspace-verification",
-        "runtime": "node",
-        "runtime_requirement": "node>=20",
-        "release_policy": "release-asset-only",
-        "registry_status": "unpublished",
-        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-      }
-    ],
-    "disposition": "Retained development and migration fixtures; not shipped or installed dependencies.",
-    "python": [
-      {
-        "name": "agentic-workspace-memory",
-        "pyproject": "packages/memory/pyproject.toml",
-        "wheel_prefix": "agentic_workspace_memory",
-        "sdist_prefix": "agentic_workspace_memory",
-        "payload_schema": "agentic-memory/payload/v1",
-        "payload_provenance": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
-        "proof_commands": [
-          "make test-memory",
-          "make lint-memory"
-        ],
-        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-      },
-      {
-        "name": "agentic-workspace-planning",
-        "pyproject": "packages/planning/pyproject.toml",
-        "wheel_prefix": "agentic_workspace_planning",
-        "sdist_prefix": "agentic_workspace_planning",
-        "payload_schema": "agentic-planning/payload/v1",
-        "payload_provenance": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
-        "proof_commands": [
-          "make test-planning",
-          "make lint-planning",
-          "make typecheck-planning"
-        ],
-        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-      },
-      {
-        "name": "agentic-workspace-verification",
-        "pyproject": "packages/verification/pyproject.toml",
-        "wheel_prefix": "agentic_workspace_verification",
-        "sdist_prefix": "agentic_workspace_verification",
-        "payload_schema": "agentic-workspace/verification-manifest/v1",
-        "payload_provenance": ".agentic-workspace/verification/manifest.toml",
-        "proof_commands": [
-          "make test-verification",
-          "make lint-verification"
-        ],
-        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-      }
-    ]
-  },
   "release_candidate": {
     "tag_pattern": "v1.0.0-rc.N (N is a positive canonical integer)",
     "target_stable_tag": "v1.0.0",
@@ -302,12 +164,12 @@
   "cargo_packages": [
     {
       "name": "agentic-workspace-core",
-      "path": "crates/agentic-workspace-core",
+      "path": "src/core",
       "binary": "agentic-workspace-core"
     },
     {
       "name": "agentic-workspace-cli",
-      "path": "crates/agentic-workspace-cli",
+      "path": "src/cli/rust",
       "binary": "agentic-workspace"
     }
   ],
@@ -318,7 +180,7 @@
       "agentic-workspace-cli"
     ],
     "install": "Install both exact same-version crates, core first, into one Cargo root",
-    "staging": "scripts/release/cargo_release.py",
+    "staging": "src/tooling/release/cargo_release.py",
     "manifest": "cargo-release-manifest.json",
     "bootstrap": "First versions require bounded manual publication before OIDC can be configured",
     "support": "Same admitted release host; RC remains non-support-bearing"

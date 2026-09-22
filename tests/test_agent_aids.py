@@ -3,16 +3,14 @@ import json
 import sys
 from pathlib import Path
 
-_MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_agent_aids.py"
+_MODULE_PATH = Path(__file__).resolve().parents[1] / "src" / "tooling" / "check" / "check_agent_aids.py"
 _SPEC = importlib.util.spec_from_file_location("check_agent_aids", _MODULE_PATH)
 assert _SPEC is not None and _SPEC.loader is not None
 check_agent_aids = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = check_agent_aids
 _SPEC.loader.exec_module(check_agent_aids)
 
-_SCHEMA_SOURCE = (
-    Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / "agent_aid_manifest.schema.json"
-)
+_SCHEMA_SOURCE = Path(__file__).resolve().parents[1] / "src/core/contracts/schemas/agent_aid_manifest.schema.json"
 
 
 def _write(path: Path, text: str) -> None:
@@ -35,7 +33,7 @@ def test_selected_executable_static_closure_never_runs_helpers(tmp_path):
 
 
 def _prepare_schema(root: Path) -> None:
-    _write(root / "src" / "agentic_workspace" / "contracts" / "schemas" / "agent_aid_manifest.schema.json", _SCHEMA_SOURCE.read_text())
+    _write(root / "src/core/contracts/schemas/agent_aid_manifest.schema.json", _SCHEMA_SOURCE.read_text())
 
 
 def _valid_manifest(**overrides):
@@ -62,7 +60,7 @@ def _valid_manifest(**overrides):
         "validation": {"commands": ["uv run python .agentic-workspace/agent-aids/scripts/workspace-validation/workspace_validation.py"]},
         "promotion": {
             "target_kind": "check",
-            "target": "scripts/check/check_workspace_validation.py",
+            "target": "src/tooling/check/check_workspace_validation.py",
             "discovery_route": "repo-check",
             "trigger": "used successfully across multiple closeouts or required by proof routes",
             "retention_after_promotion": "delete",
@@ -87,15 +85,18 @@ def test_valid_agent_aid_manifest_passes(tmp_path: Path) -> None:
 
 
 def test_candidate_bundle_uses_passive_selected_procedure_currentness(tmp_path, shared_core_binary):
-    from agentic_workspace.decision import route_discovery, start
+    from agentic_workspace import start
+    from aw_maintainer.native_conformance import route_discovery
 
     _prepare_schema(tmp_path)
     base = ".agentic-workspace/agent-aids/skills/change-note"
     manifest, skill = f"{base}/manifest.json", f"{base}/SKILL.md"
     aid = _valid_manifest(id="change-note", type="skill", entrypoint=skill, procedure_resource="procedure.md")
     _write(tmp_path / manifest, json.dumps(aid))
-    _write(tmp_path / skill, "---\nname: change-note\ndescription: Draft a bounded change note.\n---\nRead [helper](scripts/helper.py).\n")
-    _write(tmp_path / base / "scripts/helper.py", "raise RuntimeError('discovery must not execute helpers')\n")
+    _write(
+        tmp_path / skill, "---\nname: change-note\ndescription: Draft a bounded change note.\n---\nRead [helper](src/tooling/helper.py).\n"
+    )
+    _write(tmp_path / base / "src/tooling/helper.py", "raise RuntimeError('discovery must not execute helpers')\n")
     form = {
         "kind": "agentic-workspace/procedure/v1",
         "id": "note",
@@ -122,7 +123,7 @@ def test_candidate_bundle_uses_passive_selected_procedure_currentness(tmp_path, 
     assert current["procedure"]["authority_effect"] == "none"
     _write(tmp_path / "unrelated.txt", "unrelated")
     assert start({**context, "request": answer})["procedure"]["status"] == "current"
-    for path in ["scripts/helper.py", "SKILL.md", "user.md"]:
+    for path in ["src/tooling/helper.py", "SKILL.md", "user.md"]:
         source = tmp_path / base / path
         before = source.read_text()
         source.write_text(before + "\nChanged material\n")
@@ -391,7 +392,7 @@ def test_repo_shared_executable_canonical_proof_aid_must_be_cross_platform(tmp_p
         checked_in_scope_justification="Kept for historical platform-specific proof.",
         promotion={
             "target_kind": "check",
-            "target": "scripts/check/check_workspace_validation.py",
+            "target": "src/tooling/check/check_workspace_validation.py",
             "discovery_route": "repo-check",
             "trigger": "used successfully across multiple closeouts or required by proof routes",
             "retention_after_promotion": "keep",
@@ -428,7 +429,7 @@ def test_module_component_agent_aid_manifest_passes(tmp_path: Path) -> None:
         entrypoint=entrypoint,
         promotion={
             "target_kind": "module-component",
-            "target": "src/agentic_workspace/contracts/module_components.json",
+            "target": "src/tooling/contracts/module_components.json",
             "discovery_route": "module-manifest",
             "trigger": "module component is useful across host repos",
             "retention_after_promotion": "delete",
@@ -457,7 +458,7 @@ def test_agent_aid_manifest_type_must_match_subdir(tmp_path: Path) -> None:
 def test_agent_aid_manifest_entrypoint_must_stay_inside_aid_directory(tmp_path: Path) -> None:
     _prepare_schema(tmp_path)
     manifest = ".agentic-workspace/agent-aids/scripts/workspace-validation/manifest.json"
-    entrypoint = "scripts/check/check_workspace_validation.py"
+    entrypoint = "src/tooling/check/check_workspace_validation.py"
     payload = _valid_manifest(entrypoint=entrypoint)
     _write(tmp_path / manifest, json.dumps(payload))
     _write(tmp_path / entrypoint, "print('ok')\n")

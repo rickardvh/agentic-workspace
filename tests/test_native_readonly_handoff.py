@@ -552,7 +552,7 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     if surface == "native":
         from tests.repo_procedure_fixture import install_method, question
 
-        from agentic_workspace.decision import start
+        from agentic_workspace import start
 
         input_refs += install_method(tmp_path, "delegation-handoff", "host/collaboration")
         selected, answer = question(context, "host/collaboration")
@@ -688,9 +688,9 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
         # reproducible source delivery, not a claim about hidden host injection.
         skill_refs = [
             ".agentic-workspace/skills/workspace-startup/SKILL.md",
-            "packages/planning/skills/planning-assignment/SKILL.md",
-            "packages/planning/skills/planning-assignment/references/manual.md",
-            "packages/planning/skills/planning-assignment/references/return.md",
+            ".agentic-workspace/planning/skills/planning-assignment/SKILL.md",
+            ".agentic-workspace/planning/skills/planning-assignment/references/manual.md",
+            ".agentic-workspace/planning/skills/planning-assignment/references/return.md",
         ]
         skills = sum(len((ROOT / ref).read_bytes()) for ref in skill_refs)
 
@@ -890,7 +890,7 @@ def test_real_packed_packet_owner_without_python_or_checkout(packed, tmp_path):
 
     node = shutil.which("node")
     assert node
-    from agentic_workspace.decision import assignment_packet
+    from aw_maintainer.native_conformance import assignment_packet
 
     payload = {
         "action": "seal",

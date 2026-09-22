@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from tests import native_artifact_consumers
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -55,6 +56,8 @@ def test_native_selected_command_publishes_and_replays_without_task_claim(
     value = applied["value"]
     assert value["process"]["status"] == "passed"
     assert value["publication"]["status"] == "published"
+    retirement = call(context)["verification"]["retention"]
+    assert retirement["status"] == "quiet"  # Current reusable proof is not a retirement candidate.
     assert value["claim_boundary"]["completion_claim_allowed"] is False
     replay = call({**context, "invocation": invocation})
     assert replay["value"] == value
@@ -349,7 +352,10 @@ def test_native_proof_builtin_command_does_not_require_python(tmp_path: Path, sh
 
 
 def test_shared_publication_identity_preserves_legacy_unicode_and_defaults(shared_core_binary: Path) -> None:
-    from agentic_workspace.workspace_runtime_core import _proof_publication_identity
+    from aw_maintainer.native_conformance import proof_receipt
+
+    def _proof_publication_identity(receipt):
+        return proof_receipt({"action": "publication-identity", "receipt": receipt})["identity"]
 
     receipt = {
         "command": "check",
@@ -376,14 +382,13 @@ def test_shared_publication_identity_preserves_legacy_unicode_and_defaults(share
 def test_native_proof_uses_actual_reconciled_planning_subject(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, consumer: str
 ) -> None:
-    from tests.test_native_public_cli import ROOT
 
     native_cli = native_artifact_consumers.paired_cli(consumer, native_cli)
     context = fixture(tmp_path)
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / reference
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / reference).read_bytes())
+    plan.write_bytes(fixture_source(reference).read_bytes())
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
     )

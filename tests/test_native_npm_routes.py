@@ -26,7 +26,7 @@ def packed(tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequ
     root = tmp_path_factory.mktemp("packed-native-routes")
     stage = root / "stage"
     staged = subprocess.run(
-        [sys.executable, str(ROOT / "scripts/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
+        [sys.executable, str(ROOT / "src/tooling/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
         cwd=ROOT,
         env={**os.environ, "CARGO_BUILD_TARGET": "unavailable-cross-target"},
         check=False,
@@ -256,15 +256,29 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
         "Cargo.toml",
         "Cargo.lock",
         "rust-toolchain.toml",
-        "scripts/release/native_toolchain.py",
-        "crates/agentic-workspace-core/src/native_routes.rs",
-        "bindings/node/semantic-decision.mjs",
-        "scripts/release/stage_native_npm.py",
-        "generated/workspace/typescript/package.json",
-        "generated/workspace/typescript/src/native/semantic-decision.mjs",
+        "src/tooling/release/native_toolchain.py",
+        "src/core/src/native_routes.rs",
+        "src/cli/typescript/semantic-decision.mjs",
+        "src/tooling/release/stage_native_npm.py",
+        "src/cli/typescript/package.json",
+        "src/tooling/release/coordinated_release.py",
     ]:
         assert any(name.endswith("/" + reference) for name in names), reference
-    assert not any("/src/native/bin/" in name for name in names)
+    assert not any("/src/native/bin/" in name or "/generated/workspace/" in name for name in names)
+    extracted = tmp_path / "source"
+    with tarfile.open(archive) as package:
+        package.extractall(extracted, filter="data")
+    (source,) = extracted.iterdir()
+    # Import the real entrypoint outside the checkout: filename inventory alone
+    # misses transitive Python imports required by an sdist rebuild.
+    result = subprocess.run(
+        [sys.executable, str(source / "src/tooling/release/stage_native_npm.py"), "--help"],
+        cwd=source,
+        env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize("mismatch", ["host", "compiler"])
@@ -272,8 +286,8 @@ def test_stage_rejects_rust_build_mismatch(tmp_path: Path, monkeypatch: pytest.M
     import runpy
     import tomllib
 
-    monkeypatch.syspath_prepend(str(ROOT / "scripts/release"))
-    stage_native_npm = runpy.run_path(str(ROOT / "scripts/release/stage_native_npm.py"))
+    monkeypatch.syspath_prepend(str(ROOT / "src/tooling/release"))
+    stage_native_npm = runpy.run_path(str(ROOT / "src/tooling/release/stage_native_npm.py"))
 
     def observe(command, **kwargs):
         assert command == ["rustc", "-vV"], "mismatched host must fail before Cargo build"
@@ -291,13 +305,14 @@ def test_stage_rejects_rust_build_mismatch(tmp_path: Path, monkeypatch: pytest.M
     assert not (tmp_path / "stage").exists()
 
 
-def test_source_generated_discovery_uses_explicit_development_core(tmp_path: Path, shared_core_binary: Path) -> None:
+def test_source_cli_uses_explicit_development_core(tmp_path: Path, shared_core_binary: Path) -> None:
     result = subprocess.run(
         [
             shutil.which("node"),
-            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
-            "instructions",
-            "routes",
+            str(ROOT / "src/cli/typescript/cli.mjs"),
+            "start",
+            "--task",
+            "Inspect the current route contract",
             "--target",
             str(tmp_path),
             "--format",
@@ -311,36 +326,5 @@ def test_source_generated_discovery_uses_explicit_development_core(tmp_path: Pat
     )
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["status"] == "current"
-    assert payload["routes"] == []
+    assert "decision_packet" in payload
     assert not (tmp_path / ".agentic-workspace").exists()
-
-
-def test_readiness_archive_survives_exact_conformance_reuse(tmp_path: Path) -> None:
-    import hashlib
-    import runpy
-
-    readiness = runpy.run_path(str(ROOT / "scripts/check/run_external_consumer_readiness.py"))
-    runner = runpy.run_path(str(ROOT / "scripts/check/run_generated_command_package_proof.py"))
-    dist = tmp_path / "dist"
-    dist.mkdir()
-    npm = shutil.which("npm")
-    assert npm
-    archive = readiness["_pack_typescript_artifact"](dist, npm)
-    original = hashlib.sha256(archive.read_bytes()).hexdigest()
-    # This is CI's order: readiness creates dist's root archive first, then the
-    # conformance packer fills missing peers and preserves the exact root bytes.
-    runner["_pack_packages"](dist)
-    assert hashlib.sha256(archive.read_bytes()).hexdigest() == original
-    package = tmp_path / "extracted"
-    runner["_extract_tarball"](archive, package)
-    target = tmp_path / "target"
-    target.mkdir()
-    registry = target / "tools/skills/REGISTRY.json"
-    registry.parent.mkdir(parents=True)
-    registry.write_bytes((ROOT / "tools/skills/REGISTRY.json").read_bytes())
-    result = run(package, target, "routes")
-    assert result["status"] == "current", result
-    assert result["discovery"]["children"]
-    assert (package / "src/native/bin/artifact.json").is_file()
-    assert not (target / ".agentic-workspace").exists()

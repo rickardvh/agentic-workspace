@@ -9,11 +9,9 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "scripts/check"))
+sys.path.insert(0, str(REPO_ROOT / "src/tooling/check"))
 from check_rust_dependencies import check as check_rust_dependencies  # noqa: E402
 from check_security_supply_chain import evaluate_security_supply_chain  # noqa: E402
-
-from agentic_workspace import workspace_runtime_core  # noqa: E402
 
 
 def _copy_security_surface(target: Path) -> None:
@@ -22,22 +20,22 @@ def _copy_security_surface(target: Path) -> None:
         "docs/security/threat-model.md",
         "uv.lock",
         "pyproject.toml",
-        "src/agentic_workspace/trusted_execution.py",
-        "src/agentic_workspace/contracts/security_supply_chain_policy.json",
-        "scripts/check/check_security_supply_chain.py",
+        "src/core/src/modules/verification/native_proof.rs",
+        "src/tooling/contracts/security_supply_chain_policy.json",
+        "src/tooling/check/check_security_supply_chain.py",
         ".github/workflow-write-permissions.json",
         "Cargo.toml",
         "Cargo.lock",
         "rust-toolchain.toml",
         "deny.toml",
-        "scripts/check/check_rust_dependencies.py",
+        "src/tooling/check/check_rust_dependencies.py",
     ]
     for relative in paths:
         destination = target / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO_ROOT / relative, destination)
     shutil.copytree(REPO_ROOT / ".github/workflows", target / ".github/workflows")
-    for manifest in (REPO_ROOT / "crates").glob("*/Cargo.toml"):
+    for manifest in (REPO_ROOT / "src/core/Cargo.toml", REPO_ROOT / "src/cli/rust/Cargo.toml"):
         destination = target / manifest.relative_to(REPO_ROOT)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(manifest, destination)
@@ -50,14 +48,6 @@ def test_repository_security_supply_chain_readiness_is_exact_and_ready() -> None
     assert receipt["release_promotion_allowed"] is True
     assert receipt["subject_fingerprint"].startswith("sha256:")
     assert {control["status"] for control in receipt["controls"]} == {"pass"}
-
-
-def test_workspace_report_projects_exact_security_readiness() -> None:
-    receipt = workspace_runtime_core._security_supply_chain_readiness_payload(target_root=REPO_ROOT)
-
-    assert receipt["kind"] == "agentic-workspace/security-supply-chain-readiness/v1"
-    assert receipt["status"] == "ready"
-    assert receipt["release_promotion_allowed"] is True
 
 
 def test_unpinned_action_blocks_release_readiness(tmp_path: Path) -> None:
@@ -77,14 +67,14 @@ def test_unpinned_action_blocks_release_readiness(tmp_path: Path) -> None:
 
 def test_new_unadmitted_shell_boundary_blocks_release_readiness(tmp_path: Path) -> None:
     _copy_security_surface(tmp_path)
-    extra = tmp_path / "src/agentic_workspace/unsafe.py"
+    extra = tmp_path / "src/unsafe.py"
     extra.write_text("import subprocess\nsubprocess.run('echo unsafe', shell=True)\n", encoding="utf-8")
 
     receipt = evaluate_security_supply_chain(tmp_path)
 
     assert receipt["status"] == "blocked"
     shell = next(control for control in receipt["controls"] if control["id"] == "trusted-shell-admission")
-    assert "src/agentic_workspace/unsafe.py" in shell["shell_true_paths"]
+    assert "src/unsafe.py" in shell["shell_true_paths"]
 
 
 def test_exact_subject_changes_with_lock_workflow_checker_and_source(tmp_path: Path) -> None:
@@ -94,11 +84,11 @@ def test_exact_subject_changes_with_lock_workflow_checker_and_source(tmp_path: P
         "uv.lock",
         "pyproject.toml",
         ".github/workflows/ci.yml",
-        "scripts/check/check_security_supply_chain.py",
+        "src/tooling/check/check_security_supply_chain.py",
         "Cargo.lock",
         "deny.toml",
-        "scripts/check/check_rust_dependencies.py",
-        "crates/agentic-workspace-core/Cargo.toml",
+        "src/tooling/check/check_rust_dependencies.py",
+        "src/core/Cargo.toml",
     ):
         path = tmp_path / relative
         original = path.read_text(encoding="utf-8")
@@ -132,14 +122,6 @@ def test_semantic_permission_scanner_and_locked_sync_fail_closed(tmp_path: Path)
         assert receipt["status"] == "blocked"
         assert any(failure["control"] == control for failure in receipt["failures"])
     security.write_text(original, encoding="utf-8")
-    shadow = tmp_path / "packages/memory/uv.lock"
-    shadow.parent.mkdir(parents=True)
-    shadow.write_text("# obsolete standalone lock\n", encoding="utf-8")
-    receipt = evaluate_security_supply_chain(tmp_path)
-    lock = next(control for control in receipt["controls"] if control["id"] == "locked-generator-and-runtime-dependencies")
-    assert lock["status"] == "fail"
-    assert lock["shadow_workspace_locks"] == ["packages/memory/uv.lock"]
-    assert receipt["release_promotion_allowed"] is False
 
 
 def test_repo_local_workflow_write_admission_is_required_and_fingerprinted(tmp_path: Path) -> None:
@@ -156,27 +138,9 @@ def test_repo_local_workflow_write_admission_is_required_and_fingerprinted(tmp_p
     assert any(failure["control"] == "immutable-least-privilege-actions" for failure in blocked["failures"])
 
 
-def test_release_promotion_requires_matching_current_security_receipt() -> None:
-    receipt = evaluate_security_supply_chain(REPO_ROOT)
-    accepted = workspace_runtime_core._security_readiness_promotion_input(
-        receipt=receipt, expected_subject_fingerprint=receipt["subject_fingerprint"]
-    )
-    assert accepted["status"] == "accepted"
-    for candidate, reason in (
-        (None, "missing-security-readiness"),
-        ({**receipt, "subject_fingerprint": "sha256:stale"}, "stale-or-mismatched-security-readiness"),
-        ({**receipt, "status": "blocked", "release_promotion_allowed": False}, "failed-security-readiness"),
-    ):
-        blocked = workspace_runtime_core._security_readiness_promotion_input(
-            receipt=candidate, expected_subject_fingerprint=receipt["subject_fingerprint"]
-        )
-        assert blocked["status"] == "blocked"
-        assert blocked["reason"] == reason
-
-
 def test_rust_policy_runner_enforces_version_lock_and_propagates_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = []
-    policy = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/security_supply_chain_policy.json").read_text(encoding="utf-8"))
+    policy = json.loads((REPO_ROOT / "src/tooling/contracts/security_supply_chain_policy.json").read_text(encoding="utf-8"))
     observed = f"cargo-deny {policy['rust_dependencies']['version']}"
     failed = False
 
@@ -205,7 +169,7 @@ def test_rust_gate_missing_from_either_publisher_blocks_readiness(tmp_path: Path
     for relative in (".github/workflows/security.yml", ".github/workflows/release.yml", ".github/workflows/preview-release.yml"):
         path = tmp_path / relative
         original = path.read_text(encoding="utf-8")
-        path.write_text(original.replace("python scripts/check/check_rust_dependencies.py --install", "echo skipped"), encoding="utf-8")
+        path.write_text(original.replace("python src/tooling/check/check_rust_dependencies.py --install", "echo skipped"), encoding="utf-8")
         receipt = evaluate_security_supply_chain(tmp_path)
         assert receipt["release_promotion_allowed"] is False
         assert any(failure["control"] == "rust-dependency-policy-wiring" for failure in receipt["failures"])

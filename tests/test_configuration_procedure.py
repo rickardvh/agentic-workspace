@@ -195,7 +195,11 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
         assert current["status"] == status
         assert "record_request" not in current
         payload = call()["configuration_write"]["payload_discovery_request"]
-        edit = call(request=payload)["configuration_write"]["payload_choices"][0]["request"]
+        edit = next(
+            row["request"]
+            for row in call(request=payload)["configuration_write"]["payload_choices"]
+            if row["source"] == ".agentic-workspace/OWNERSHIP.toml"
+        )
         with pytest.raises(AssertionError, match="preserve package integration"):
             call(request=edit)
         assert path.read_bytes() == before

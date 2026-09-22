@@ -6,7 +6,7 @@ import json
 import shutil
 from pathlib import Path
 
-from agentic_workspace.decision import start
+from agentic_workspace import start
 
 ROOT = Path(__file__).resolve().parents[1]
 

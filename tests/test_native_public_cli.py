@@ -13,12 +13,13 @@ from pathlib import Path
 
 import pytest
 from tests import native_artifact_consumers
+from tests.native_planning_fixtures import fixture_source
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_native_help_matches_declared_command_inventory(native_cli: Path) -> None:
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
+    contract = json.loads((ROOT / "src/core/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
     commands = {row["name"] for row in contract["native_cli"]["commands"]}
     result = subprocess.run([str(native_cli), "--help"], capture_output=True, text=True, check=True)
     assert set(re.findall(r"^  ([a-z][\w-]*)  ", result.stdout, re.M)) == commands
@@ -124,7 +125,7 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / plan_ref).read_bytes())
+    plan.write_bytes(fixture_source(plan_ref).read_bytes())
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
     )
@@ -179,9 +180,12 @@ def consume(
     host_path: str | None = None,
     allow_failure: bool = False,
     reference_helper: bool = False,
+    custom_core: bool = False,
 ) -> dict:
     context = {"projection": "full", **context}
-    installed = native_artifact_consumers.CURRENT
+    # A separately compiled independent-owner crate is a source composition,
+    # not the stock release pair. Installed manifests must reject its digest.
+    installed = None if custom_core else native_artifact_consumers.CURRENT
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
     if surface == "native":
@@ -202,7 +206,7 @@ def consume(
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":
-        binding = "agentic_workspace" if installed else "agentic_workspace.decision"
+        binding = "agentic_workspace"
         command = [
             *([str(installed["python"]), "-I"] if installed else [sys.executable]),
             "-c",
@@ -218,7 +222,7 @@ def consume(
             )
     else:
         module = (
-            (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/semantic-decision.mjs")
+            (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "src/cli/typescript/semantic-decision.mjs")
         ).as_uri()
         command = [
             str(installed["node"]) if installed else "node",
@@ -229,7 +233,9 @@ def consume(
         ]
         stdin = encoded
         if reference_helper:
-            module = ((installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/operating.mjs")).as_uri()
+            module = (
+                (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "src/cli/typescript/native/operating.mjs")
+            ).as_uri()
             command[-1] = (
                 f"import {{selectReference}} from {json.dumps(module)}; import {{readFileSync}} from 'node:fs'; "
                 "const c=JSON.parse(readFileSync(0,'utf8')); const r=c.reference; delete c.reference; "
@@ -305,7 +311,7 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
     plan.parent.mkdir(parents=True)
-    original = (ROOT / plan_ref).read_bytes()
+    original = fixture_source(plan_ref).read_bytes()
     plan.write_bytes(original)
     selection = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
     if selection_source == "local":
@@ -360,10 +366,10 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     path = tmp_path / reference
     path.parent.mkdir(parents=True)
-    body = json.loads((ROOT / reference).read_bytes())
+    body = json.loads(fixture_source(reference).read_bytes())
     # Real compact former owner plus exact existing typed assurance declarations
     # from the worker-context owner, and explicit fixture-owned risk/invariant refs.
-    richer = json.loads((ROOT / ".agentic-workspace/planning/execplans/issue-2818-worker-context-cost.plan.json").read_bytes())
+    richer = json.loads(fixture_source(".agentic-workspace/planning/execplans/issue-2818-worker-context-cost.plan.json").read_bytes())
     body["adaptive_assurance"] = richer["adaptive_assurance"]
     body["risk_registry_refs"] = ["risk:fixture"]
     body["invariant_refs"] = ["invariant:fixture"]
@@ -450,7 +456,7 @@ def test_real_former_planning_returned_continuation_preserves_semantic_owner(
     # Real former owner, with controlled owner-authored return observations.
     # This proves continuation, not an actual delegated worker or admitted result.
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
-    body = json.loads((ROOT / reference).read_bytes())
+    body = json.loads(fixture_source(reference).read_bytes())
     body["relationships"].update(
         dependencies={"subject": "verification", "revision": "fixture-obligation"},
         assignment={"subject": "bounded-work", "owner": "fixture-worker", "attempt": 1},
@@ -517,7 +523,7 @@ def test_unrelated_claim_request_keeps_planning_quiet_without_chat_state(
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / plan_ref).read_bytes())
+    plan.write_bytes(fixture_source(plan_ref).read_bytes())
     selection = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
     selection.parent.mkdir(parents=True)
     selection.write_text(
@@ -682,7 +688,7 @@ def test_instruction_protection_reaches_actual_planning_writes(
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / plan_ref).read_bytes())
+    plan.write_bytes(fixture_source(plan_ref).read_bytes())
     selection_ref = ".agentic-workspace/local/planning/owner-selection.json"
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
@@ -714,7 +720,10 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
 ) -> None:
     # Retained historical source fixture tests exact identity recognition only.
     # It acquires no publication custody and supplies no human/domain acceptance.
-    from agentic_workspace.workspace_runtime_core import _proof_publication_identity
+    from aw_maintainer.native_conformance import proof_receipt
+
+    def _proof_publication_identity(receipt):
+        return proof_receipt({"action": "publication-identity", "receipt": receipt})["identity"]
 
     (tmp_path / "a.txt").write_text("one")
     context = {"target": str(tmp_path), "task": "Establish the current document claim", "changed": ["a.txt"]}
@@ -722,7 +731,7 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
         plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
         plan = tmp_path / plan_ref
         plan.parent.mkdir(parents=True)
-        plan.write_bytes((ROOT / plan_ref).read_bytes())
+        plan.write_bytes(fixture_source(plan_ref).read_bytes())
         (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
             f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
         )
@@ -800,7 +809,11 @@ def test_real_memory_note_is_selective_advisory_and_read_through_current_request
     assert quiet["memory"]["selected_notes"] == []
     assert quiet["memory"]["requests"] == []
     assert quiet["decision_packet"]["status"] == "direct"
-    context = {"target": str(tmp_path), "task": "Inspect the runtime boundary", "changed": ["src/agentic_workspace/native_core.py"]}
+    context = {
+        "target": str(tmp_path),
+        "task": "Inspect the runtime boundary",
+        "changed": ["src/agentic_workspace/native_core.py"],  # Exact historical manifest scope, not current topology.
+    }
     selected = consume(surface, shared_core_binary, native_cli, context)
     assert selected["decision_packet"]["status"] == "direct"
     assert all("body" not in item for item in selected["memory"]["selected_notes"])
@@ -906,7 +919,7 @@ def test_native_enablement_change_stales_planning_request_and_action(
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / reference
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / reference).read_bytes())
+    plan.write_bytes(fixture_source(reference).read_bytes())
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
     )
@@ -972,7 +985,7 @@ def test_public_read_real_repository_decision_preserves_currentness(
 
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
     reference = "docs/decisions/shared-semantic-authority.md"
-    source = (ROOT / reference).read_bytes()
+    source = fixture_source(reference).read_bytes()
     if source_owner == "memory":
         reference = ".agentic-workspace/memory/repo/decisions/shared-semantic-authority.md"
     path = tmp_path / reference
@@ -997,7 +1010,7 @@ def test_public_read_real_repository_decision_preserves_currentness(
     context = {
         "target": str(tmp_path),
         "task": "Review the public semantic boundary",
-        "changed": ["crates/agentic-workspace-core/src/lib.rs"],
+        "changed": [record["scope"][0].removeprefix("path:")],
     }
 
     def call(value: dict) -> dict:

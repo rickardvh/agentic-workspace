@@ -7,6 +7,13 @@ one host-labelled archive containing `agentic-workspace` and
 Both language packages carry the identical executable pair. The Rust core owns
 decisions, answer admission, effects and continuations.
 
+Canonical language source lives under `src/cli/python` and `src/cli/typescript`.
+Codex protocol I/O lives under `src/adapters/codex`. Wheel source mappings join
+the Python facade and provider portions into the existing `agentic_workspace`
+package; editable development uses the same portions through its package path.
+The six installed modules and `agentic_workspace.sealed_codex_transport` command
+remain unchanged. No duplicate source implementation is retained.
+
 The installed Python API exports `start`, `invoke`, `resources`, `select_reference`,
 `answer_carried` and `invoke_carried`; npm exports their camel-case equivalents
 from the package root and `./operating`, with TypeScript declarations. `./native`
@@ -26,19 +33,36 @@ source-only conformance fixtures do not make them wheel compatibility promises.
 The isolated wheel consumer test checks the current API with development core
 overrides removed and checks that those retired surfaces remain absent.
 
-Legacy Python clients, operations, generated command trees, and the three module
-distributions remain source development and migration fixtures. They are not
-wheel contents, installed dependencies, npm contents, or release assets. The
-source archive contains binding sources and exact Rust compile inputs, including
-canonical contracts and bundled operating resources; those resources are not a
-second language runtime. Release ownership records this disposition explicitly.
+Repository-only Python helpers live in `src/tooling/python/aw_maintainer`.
+`native_conformance` exposes internal Rust vector/contract operations for tests;
+public consumers import `agentic_workspace` directly. `contracts`,
+`ownership_profile` and `review_topology` serve source generation and GitHub
+maintainer workflows. `session_diagnostics` reads and exports existing native
+logs; it does not implement capture or workflow authority. Editable development includes this tooling path; wheels
+exclude it. Former helper imports under `agentic_workspace` have no aliases.
+
+The former Python clients, domain host, compatibility aliases and generated
+Python/TypeScript execution trees are removed. Planning, Memory and Verification
+execute in `src/core/src/modules/`; their native schemas live beside their owner.
+The former `packages/` installer trees and generated operation catalogues are
+removed. Shared contracts live in `src/core/contracts/`, embedded operating
+resources in `src/core/payload/`, and the native CLI in `src/cli/rust/`.
+The source archive contains binding sources and exact Rust compile inputs,
+including canonical contracts and bundled operating resources.
 
 Build the wheel/source archive with `uv build --wheel --sdist`. Stage npm and
-the native archive with `scripts/release/stage_native_npm.py --output <new-dir>
+the native archive with `src/tooling/release/stage_native_npm.py --output <new-dir>
 --native-archive-dir <artifact-dir>`, then `npm pack` that staging directory.
 The staging directory and native archive must be absent before creation.
 
-`scripts/check/check_native_release_topology.py` consumes exactly one wheel,
+The npm manifest is authored in `src/cli/typescript/package.json`; staging supplies
+the version and description from `pyproject.toml`, the host constraints and paired
+native artefacts. The source manifest is private until staging installs those
+artefacts. Staging reads the binding files directly and does not consume
+`generated/workspace/`. The source archive includes these canonical inputs and
+the release helpers needed to rebuild them.
+
+`src/tooling/check/check_native_release_topology.py` consumes exactly one wheel,
 source archive, npm archive and native archive from `--artifact-dir`. It installs
 the packages in isolated consumers, clears tool lookup and source overrides,
 performs a carried owner-authorised write through each binding, checks binary
@@ -47,7 +71,8 @@ the standalone pair. It does not rebuild artefacts. Its receipt binds exact
 asset hashes, source commit, proof implementation, Node version and execution
 context; verification rejects stale inputs. Historical receipt filenames remain
 for release manifest compatibility, with the new `native-release-conformance/v1`
-kind. Historical generated-command proofs remain source-only checks.
+kind. Current native owner tests, public binding conformance and isolated artifact
+consumers replace the retired generated-command runners.
 
 The final promotion composer uses this same receipt validator for the exact
 source and artefact set. Only intact hosted proofs from clean source may satisfy
@@ -112,7 +137,7 @@ temporary release checkout and cleanup; a dirty failure must retain its evidence
 
 Require successful exact-source CI/security, installed native runtime proof,
 provenance, manifest and checksum checks from the existing preview workflow. Then
-run `scripts/release/preview_release.py --check-published preview-v0.55.0 --repo
+run `src/tooling/release/preview_release.py --check-published preview-v0.55.0 --repo
 rickardvh/agentic-workspace` from the exact artefact checkout, and the existing
 public install smoke on its supported host against the published assets. The
 source checkout can instead use `--admit-tag` with the exact `--artifact-commit`
@@ -220,7 +245,7 @@ Use the stable mapped version only after its independent support admission.
 Installing the CLI alone is not the supported paired installation. Registry
 availability does not widen the release's admitted platform/toolchain classes.
 
-`scripts/release/cargo_release.py` stages the existing sources, relocates literal
+`src/tooling/release/cargo_release.py` stages the existing sources, relocates literal
 compile-time resource references into `_inputs`, and retains the original bytes
 of included Rust source used for owner identities. The Cargo payload inventory
 explicitly includes hidden `.agentic-workspace` resources. The standalone lock is
@@ -251,3 +276,7 @@ and [authentication action](https://github.com/rust-lang/crates-io-auth-action).
 Account bootstrap, trusted-publisher configuration and live registry receipts are
 external acceptance steps. Local staging/build/install proof does not establish
 their completion or authorise the final RC/stable release.
+
+The sandbox model harness captures one Codex execution and its output artifact.
+It does not invoke the retired Python final-response admission/auto-resume route.
+Evaluation and native owner evidence remain separate from transport exit status.

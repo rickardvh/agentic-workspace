@@ -3,7 +3,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AID_ROOT = REPO_ROOT / ".agentic-workspace" / "agent-aids" / "scripts" / "codex-session-identity"
-LAUNCHER = REPO_ROOT / "scripts" / "run_agentic_workspace.py"
+LAUNCHER = REPO_ROOT / "src" / "tooling" / "run_agentic_workspace.py"
 
 
 def test_codex_identity_candidate_aid_is_retired() -> None:

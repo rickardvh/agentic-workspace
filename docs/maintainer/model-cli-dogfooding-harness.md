@@ -7,7 +7,7 @@ Keep scenario prompts close to ordinary human requests. The prompt should not us
 The smoke suite includes adapters for GitHub Copilot CLI, Gemini CLI, and Codex CLI. The Copilot adapter supports runs such as Claude Haiku through Copilot:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter copilot `
   --model claude-haiku-4.5 `
   --scenario startup-orientation
@@ -16,7 +16,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 The Gemini adapter defaults to Gemini 3 Flash:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter gemini `
   --model gemini-3-flash-preview `
   --scenario startup-orientation
@@ -25,7 +25,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 The Codex adapter defaults to GPT-5.3 Codex Spark:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter codex `
   --model gpt-5.3-codex-spark `
   --scenario startup-orientation
@@ -34,9 +34,9 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 The Docker Sandbox-backed Codex adapter runs the copied fixture through Docker Sandboxes instead of the host shell:
 
 ```powershell
-uv run python scripts/model_cli_harness/build_sbx_codex_template.py
+uv run python src/tooling/model-cli-harness/build_sbx_codex_template.py
 
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter codex-sbx `
   --model gpt-5.3-codex-spark `
   --scenario startup-orientation
@@ -49,7 +49,7 @@ The `build_sbx_codex_template.py` helper builds the repo-owned template image `a
 Release-mode dependencies are the default for long-horizon evaluations and cross-agent comparisons. Use source-candidate dogfooding only when evaluating unreleased AW changes:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter codex-sbx `
   --scenario startup-orientation `
   --aw-dependency-mode local-wheelhouse
@@ -62,7 +62,7 @@ The runner defaults to dry-run. It copies the scenario fixture into the configur
 Scenarios may define `prompt_variants` for non-deterministic probing. By default the runner uses the first/default prompt. Use `--prompt-variant all` to run every variant, or `--prompt-variant <id>` for a single one:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter codex `
   --scenario broad-work-decomposition `
   --prompt-variant all
@@ -71,7 +71,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 Before execution, the runner evaluates adapter prerequisites such as the CLI executable and declared shell/tool dependencies. If a blocking prerequisite is missing, the scenario result is `environment-blocked` and the model is not called. Use `--allow-environment-blocked` only when deliberately collecting partial evidence from a degraded runtime.
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter copilot `
   --model claude-haiku-4.5 `
   --scenario broad-work-decomposition `
@@ -81,7 +81,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 Copilot stores authenticated state under `COPILOT_HOME`. The harness does not isolate this by default because an empty home may not be authenticated. To run with run-local provider state after arranging authentication for that home, pass:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter copilot `
   --model claude-haiku-4.5 `
   --scenario startup-orientation `
@@ -91,7 +91,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 
 ## Reuse Contract
 
-Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
+Suites live under `src/tooling/model-cli-harness/suites/`. Each suite defines:
 
 - `adapters`: command templates with placeholders such as `{prompt}`, `{repo}`, `{model}`, `{share_path}`, and `{source_root}`.
 - `required_executables` and `required_shells`: optional preflight requirements. Entries may be strings or objects with `name`, `candidate_paths`, and `add_parent_to_path`.
@@ -100,7 +100,7 @@ Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
 - `sandbox`: optional sandbox adapter metadata. The result record includes `sandbox.kind`, `backend`, `agent`, `identity`, `repo_path`, `setup_status`, `setup_failures`, and `evidence: sandbox-backed`.
 - `artifact_capture`: optional host artefact capture from adapter-visible paths. The `codex-sbx` adapter writes the final message inside the mounted fixture and the harness copies it back to the standard run-local `share_path`.
 - `scenarios`: disposable fixture name, human prompt or `prompt_variants`, expected signals, scoring notes, and optional metadata scoring.
-- `fixtures`: copied repos under `tools/model-cli-harness/fixtures/`.
+- `fixtures`: copied repos under `src/tooling/model-cli-harness/fixtures/`.
 
 Scenario metadata can express common scoring without adding Python branches:
 
@@ -151,7 +151,7 @@ This loop is intentionally exploratory. The harness provides isolation, comparab
 Use comparison mode after product or harness changes to check whether a targeted weakness improved:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --compare-baseline .agentic-workspace/local/scratch/model-cli-harness/baseline/run.json `
   --compare-current .agentic-workspace/local/scratch/model-cli-harness/current/run.json `
   --format json
@@ -163,12 +163,12 @@ The comparison report lists resolved, retained, and new warnings, mutation delta
 
 Long-horizon episodes extend the harness for multi-phase continuity evaluation. They are not replacements for the Tier 1 smoke suite. Use them when the question is whether repo state, AW state, proof evidence, and handoff boundaries survive restart or agent switch.
 
-Episode metadata lives under `tools/model-cli-harness/episodes/` and validates against the hand-authorable `agentic-workspace/long-horizon-episode/v1` shape. Evaluator outputs validate against `agentic-workspace/long-horizon-evaluation/v1`. The runner is separate from the smoke runner:
+Episode metadata lives under `src/tooling/model-cli-harness/episodes/` and validates against the hand-authorable `agentic-workspace/long-horizon-episode/v1` shape. Evaluator outputs validate against `agentic-workspace/long-horizon-evaluation/v1`. The runner is separate from the smoke runner:
 
 ```powershell
-uv run python scripts/model_cli_harness/long_horizon_episode.py `
-  --episode tools/model-cli-harness/episodes/intent-proof-packaging-specifier.json `
-  --suite tools/model-cli-harness/suites/copilot-workflow-smoke.json `
+uv run python src/tooling/model-cli-harness/long_horizon_episode.py `
+  --episode src/tooling/model-cli-harness/episodes/intent-proof-packaging-specifier.json `
+  --suite src/tooling/model-cli-harness/suites/copilot-workflow-smoke.json `
   --format json
 ```
 
@@ -177,9 +177,9 @@ Dry-run remains the default. Add `--execute` only when you intentionally want th
 To collect sandbox-backed Codex evidence for a pinned episode, override the phase and evaluator adapters:
 
 ```powershell
-uv run python scripts/model_cli_harness/long_horizon_episode.py `
-  --episode tools/model-cli-harness/episodes/intent-proof-packaging-specifier.json `
-  --suite tools/model-cli-harness/suites/copilot-workflow-smoke.json `
+uv run python src/tooling/model-cli-harness/long_horizon_episode.py `
+  --episode src/tooling/model-cli-harness/episodes/intent-proof-packaging-specifier.json `
+  --suite src/tooling/model-cli-harness/suites/copilot-workflow-smoke.json `
   --adapter codex-sbx `
   --evaluator-adapter codex-sbx `
   --format json
@@ -221,7 +221,7 @@ Use `package_read_surface_summary` when optimising package output size. Use `usa
 Use pushed-to-completion follow-ups when a realistic human would keep steering the same agent until the intended outcome is actually complete. Each `--follow-up-prompt` is recorded as another request, with its own prompt, command, transcript, share file, result, and usage summary under `followups/`. Add `--completion-validation-command` to record final validation separately from first-pass success:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter gemini `
   --model gemini-3-flash-preview `
   --scenario csv-import-hard `
@@ -236,7 +236,7 @@ The per-run `completion_loop` distinguishes `first_pass_success`, `eventual_succ
 Use postmortem feedback during real optimisation loops when a run exposes ambiguous routing, excess file reads, surprising confidence, or high token use. The follow-up prompt asks the same agent why it chose its workflow and commands, what was ambiguous or too verbose, what package surface would have made the next step obvious, and what would reduce token usage without reducing safety or proof quality:
 
 ```powershell
-uv run python scripts/model_cli_harness/run_model_cli_harness.py `
+uv run python src/tooling/model-cli-harness/run_model_cli_harness.py `
   --adapter copilot `
   --model claude-haiku-4.5 `
   --scenario startup-orientation `
@@ -248,9 +248,9 @@ Treat the answer as evidence, not as ground truth. Separate provider/model limit
 
 Postmortem feedback must be isolated from the copied repo and tool access. Adapters can provide a separate `postmortem_command` and `{postmortem_cwd}` for this purpose. If an adapter cannot provide a true no-tool/no-repo reflection mode, mark `postmortem_feedback_supported` as `false`; the harness then records an unsupported postmortem status instead of launching a second tool-using coding session.
 
-`tools/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artefacts when the evidence supports that.
+`src/tooling/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artefacts when the evidence supports that.
 
-The #1600 external-agent evaluation lane is defined in `tools/model-cli-harness/external-agent-evaluation/`. Use that pack when maintainer work needs the scorecard/taxonomy, evaluator invariants, canonical scenario probes, historical failure fixtures, promotion decisions, surface simplification decisions, operational decision trace, or lane-level closure report. Validate it with:
+The #1600 external-agent evaluation lane is defined in `src/tooling/model-cli-harness/external-agent-evaluation/`. Use that pack when maintainer work needs the scorecard/taxonomy, evaluator invariants, canonical scenario probes, historical failure fixtures, promotion decisions, surface simplification decisions, operational decision trace, or lane-level closure report. Validate it with:
 
 The same pack owns `module-extension-scenario-matrix.json` for the #2610
 module-use and extension-cost slice. It reuses the ordinary smoke runner and
@@ -261,13 +261,13 @@ model access; selective live evidence remains explicitly unavailable until a
 maintainer intentionally records a harness run.
 
 ```powershell
-uv run python scripts/model_cli_harness/external_agent_evaluation_lane.py validate
+uv run python src/tooling/model-cli-harness/external_agent_evaluation_lane.py validate
 ```
 
 Generate the closure report with:
 
 ```powershell
-uv run python scripts/model_cli_harness/external_agent_evaluation_lane.py report --format json
+uv run python src/tooling/model-cli-harness/external_agent_evaluation_lane.py report --format json
 ```
 
 ## What To Score
@@ -288,7 +288,7 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 - The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows. The suite includes standard PowerShell install paths and prepends the discovered parent directory to the model CLI `PATH`.
 - The Gemini adapter runs `gemini --prompt` in headless mode and records JSON output. It uses `--approval-mode yolo` only when the operator explicitly passes `--execute`; dry-run remains the default.
 - The Codex adapter runs `codex exec --dangerously-bypass-approvals-and-sandbox` with a copied fixture as its working directory, writes the final message to the run-local share file, and captures JSONL events when available. The harness relies on copied disposable fixtures for isolation because the Codex sandbox can otherwise block the installed package CLI from running.
-- The `codex-sbx` adapter preflights `sbx`, then runs the host-side bridge `scripts/model_cli_harness/run_sbx_codex_adapter.py`. The bridge creates a named Docker Sandbox from the repo-owned `agentic-workspace/codex-sbx:local` template, executes `codex exec` inside it so Codex operates on the copied fixture from the sandbox, and removes the sandbox after the run. If a stale sandbox with the same generated name already exists, the bridge removes it before creating a fresh one. Use the bridge's `--keep-sandbox` flag only for deliberate debugging. It intentionally preserves the sandbox-provided Codex config because Docker Sandboxes use that config to route OAuth subscription auth through their proxy provider. Authentication, account-scope, network, or sandbox startup failures remain adapter/runtime failures; the harness does not fall back to host `codex`.
+- The `codex-sbx` adapter preflights `sbx`, then runs the host-side bridge `src/tooling/model-cli-harness/run_sbx_codex_adapter.py`. The bridge creates a named Docker Sandbox from the repo-owned `agentic-workspace/codex-sbx:local` template, executes `codex exec` inside it so Codex operates on the copied fixture from the sandbox, and removes the sandbox after the run. If a stale sandbox with the same generated name already exists, the bridge removes it before creating a fresh one. Use the bridge's `--keep-sandbox` flag only for deliberate debugging. It intentionally preserves the sandbox-provided Codex config because Docker Sandboxes use that config to route OAuth subscription auth through their proxy provider. Authentication, account-scope, network, or sandbox startup failures remain adapter/runtime failures; the harness does not fall back to host `codex`.
 - The runner emits warnings when transcripts report shell-runtime failures or modified files outside the copied fixture.
 - The runner classifies provider/runtime and adapter/tooling limits separately from product workflow failures. Examples include provider capacity errors, terminal noise, missing shell tools, permission-denied command execution, and adapters that cannot execute `agentic-workspace` commands through their tool layer.
 - Normal tests should validate command rendering and fixture isolation, not run external models.

@@ -1,34 +1,19 @@
 # Generated Surface Trust
 
-This page names the canonical sources and freshness rules for generated maintainer-facing surfaces.
+Generated material derives from a named current source and never adds authority.
+The native host footprint is declared in `src/core/contracts/workspace_surfaces.json`.
+Its materialization and preservation rules are enforced by Configuration.
 
-Use it when a change touches a generated doc, routing mirror, or installed surface that should be rerendered instead of hand-edited.
+`src/tooling/generate/generate_agent_interface.py` derives the core payload and
+ownership read profile from their declared sources. Native builds reject payload
+bytes that disagree with the portable input. Use `--check` to inspect freshness.
+Repository-local owner state is not a disposable generated mirror.
 
-## Canonical Sources
+`src/tooling/generate/generate_contract_catalogues.py` and
+`src/tooling/generate/generate_schema_reference.py` produce reference documentation.
+Edit their source contracts and regenerate when those declarations change.
 
-- `.agentic-workspace/planning/agent-manifest.json` is the canonical source for `tools/agent-manifest.json`, `tools/AGENT_QUICKSTART.md`, and `tools/AGENT_ROUTING.md`.
-- `scripts/render_agent_docs.py` is the checked-in renderer for the root generated routing docs.
-- Package payloads under `packages/memory/bootstrap/` and `packages/planning/bootstrap/` remain the canonical source for their installed payload mirrors and verify paths.
-
-## Generated Surfaces
-
-- `tools/agent-manifest.json`
-- `tools/AGENT_QUICKSTART.md`
-- `tools/AGENT_ROUTING.md`
-- Any other repo mirror that is explicitly rendered from the canonical planning manifest or package payload source
-
-## Trust Rules
-
-- Never hand-edit a generated surface when a canonical source exists.
-- Change the canonical source first, then rerender the mirror.
-- Keep generated files visibly marked as generated so reviewers do not have to guess.
-- Treat stale generated output as a contract drift, not a cosmetic diff.
-
-## Validation
-
-- `make maintainer-surfaces`
-- `make render-agent-docs`
-
-## Review Rule
-
-If a change touches generated mirrors or their startup/routing behavior, verify the canonical source, rerender path, and freshness check together before closing the task.
+The former generated command packages, standalone module installers and root
+routing documents are removed. Native public commands and returned owner requests
+are the current execution boundary; historical generated output supplies no
+fallback authority or current proof.

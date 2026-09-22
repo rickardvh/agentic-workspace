@@ -26,8 +26,7 @@ def test_exhaustive_admission_is_single_gate_for_broad_runner_fanout() -> None:
         ("workspace-checks", "planning-handoff-checks"),
         ("planning-handoff-checks", "independent-owner-ingress"),
         ("independent-owner-ingress", "workspace-package-artifacts"),
-        ("workspace-package-artifacts", "package-checks"),
-        ("package-checks", "declared-runtime-matrix"),
+        ("workspace-package-artifacts", "declared-runtime-matrix"),
         ("declared-runtime-matrix", "support-bearing-promotion"),
     )
     for name, next_name in job_pairs:

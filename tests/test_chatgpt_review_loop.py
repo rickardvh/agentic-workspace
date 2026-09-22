@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-_SCRIPT = Path(__file__).resolve().parents[1] / "tools" / "chatgpt_review_loop.py"
+_SCRIPT = Path(__file__).resolve().parents[1] / "src" / "tooling" / "github" / "chatgpt_review_loop.py"
 _SPEC = importlib.util.spec_from_file_location("chatgpt_review_loop", _SCRIPT)
 assert _SPEC and _SPEC.loader
 loop = importlib.util.module_from_spec(_SPEC)
@@ -119,7 +119,7 @@ def test_console_job_output_keeps_agent_messages_and_collapses_tool_transcripts(
             "codex\n",
             "I will inspect the watcher.\n",
             "exec\n",
-            '"pwsh" -Command "Get-Content tools/chatgpt_review_loop.py"\n',
+            '"pwsh" -Command "Get-Content src/tooling/github/chatgpt_review_loop.py"\n',
             "very large command output that must not be printed\n",
             "codex\n",
             "The command succeeded.\n",
@@ -127,7 +127,7 @@ def test_console_job_output_keeps_agent_messages_and_collapses_tool_transcripts(
     ) == [
         "codex",
         "I will inspect the watcher.",
-        '[tool] "pwsh" -Command "Get-Content tools/chatgpt_review_loop.py"',
+        '[tool] "pwsh" -Command "Get-Content src/tooling/github/chatgpt_review_loop.py"',
         "codex",
         "The command succeeded.",
     ]
@@ -1222,7 +1222,7 @@ def test_global_dispatch_refuses_dirty_checkout_before_branch_switch(tmp_path: P
             )
         if command[:3] == ["git", "status", "--porcelain"]:
             runner.commands.append(command)
-            return subprocess.CompletedProcess(command, 0, "M tools/chatgpt_review_loop.py\n", "")
+            return subprocess.CompletedProcess(command, 0, "M src/tooling/github/chatgpt_review_loop.py\n", "")
         return original_run(command, cwd=cwd, env=env)
 
     runner.run = run
@@ -2063,7 +2063,7 @@ def test_hook_mode_is_quiet_until_an_exact_loop_is_explicitly_enabled(tmp_path: 
 
 
 def test_runtime_state_root_is_covered_by_repo_gitignore() -> None:
-    gitignore = (_SCRIPT.parents[1] / ".gitignore").read_text(encoding="utf-8")
+    gitignore = (_SCRIPT.parents[3] / ".gitignore").read_text(encoding="utf-8")
     assert ".agentic-workspace/local/" in gitignore
 
 
@@ -2198,5 +2198,5 @@ def test_review_prompt_records_explicit_existing_loop_handoff() -> None:
     )
 
     assert "git push origin codex/example" in prompt
-    assert "tools/chatgpt_review_loop.py handoff --pr 12 --existing-only" in prompt
+    assert "src/tooling/github/chatgpt_review_loop.py handoff --pr 12 --existing-only" in prompt
     assert "repo Stop hook" not in prompt
