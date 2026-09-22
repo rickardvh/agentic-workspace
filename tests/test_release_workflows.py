@@ -99,6 +99,12 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
         assert package["release_policy"] == "coordinated-public-registry"
         assert package["registry_status"] == "trusted-publication-required"
 
+    # Execute the source preflight against canonical private source metadata.
+    # Publishability belongs to the packed-artifact guard tested below.
+    block = _step_run_block((WORKFLOW_ROOT / "release.yml").read_text(), "Verify tag targets coordinated release commit")
+    source = block.split("python - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    subprocess.run([sys.executable, "-c", source], cwd=ROOT, check=True, capture_output=True, text=True)
+
 
 @pytest.mark.parametrize(
     ("private", "policy", "accepted"),

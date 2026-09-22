@@ -194,8 +194,9 @@ jobs:
 
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           for package in ownership["typescript_packages"]:
-              payload = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
-              if payload.get("private") is not False or package.get("release_policy") != "coordinated-public-registry":
+              # Source metadata is private; admit publishability from the packed
+              # package in the release manifest step, after native staging.
+              if package.get("release_policy") != "coordinated-public-registry":
                   raise SystemExit(f"{package['package_json']} must declare coordinated public registry publication")
           PY
 
