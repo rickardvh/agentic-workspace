@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Validate the installation guide links to the canonical stable receipt without requiring duplicated receipt URLs in introductory pages."
