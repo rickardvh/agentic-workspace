@@ -98,7 +98,7 @@
   "kind": "agentic-workspace/repository-read-profile/v1",
   "recovery": "If kind/source identity is absent, incompatible or stale, or a selected ref is missing/malformed, keep only directly observed repository facts. Follow the exact owner ref in OWNERSHIP.toml; ask a runtime-capable maintainer to restore the generated profile or reconcile the source. Do not guess an operating decision.",
   "source": {
-    "git_blob_sha1": "6331a3108593e80b4015423de45c1166165df97f",
+    "git_blob_sha1": "921438f3937aad7e5df897bdb004d285b71dce33",
     "path": ".agentic-workspace/OWNERSHIP.toml"
   }
 }

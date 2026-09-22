@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:78df9adf3ddeaef35f7bab862e0fa578b4648573cadb9d05e636d30cbd63c43c`
+- Contract digest: `sha256:2688e701f84cf824cdd6359fd393beb95933e206f1a1967c8b4fc9e1f368ab5b`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -51,6 +51,30 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/learning.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/references/assessment.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/references/binding.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/references/manual.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/references/recovery.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/references/return.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-closeout-trust/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-closeout-trust/references/finish.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-closeout-trust/references/intent.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-reporting/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-review-continuation/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-review-continuation/references/continuation.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-review-continuation/references/triage.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-review-continuation/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-work/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-work/references/continuity.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-work/references/intake.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-work/references/structure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-work/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/README.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/REGISTRY.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden.
 
@@ -98,6 +122,30 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
 - `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md`
+- `.agentic-workspace/planning/skills/planning-assignment/procedure.md`
+- `.agentic-workspace/planning/skills/planning-assignment/references/assessment.md`
+- `.agentic-workspace/planning/skills/planning-assignment/references/binding.md`
+- `.agentic-workspace/planning/skills/planning-assignment/references/manual.md`
+- `.agentic-workspace/planning/skills/planning-assignment/references/recovery.md`
+- `.agentic-workspace/planning/skills/planning-assignment/references/return.md`
+- `.agentic-workspace/planning/skills/planning-assignment/SKILL.md`
+- `.agentic-workspace/planning/skills/planning-closeout-trust/procedure.md`
+- `.agentic-workspace/planning/skills/planning-closeout-trust/references/finish.md`
+- `.agentic-workspace/planning/skills/planning-closeout-trust/references/intent.md`
+- `.agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md`
+- `.agentic-workspace/planning/skills/planning-reporting/SKILL.md`
+- `.agentic-workspace/planning/skills/planning-review-continuation/procedure.md`
+- `.agentic-workspace/planning/skills/planning-review-continuation/references/continuation.md`
+- `.agentic-workspace/planning/skills/planning-review-continuation/references/triage.md`
+- `.agentic-workspace/planning/skills/planning-review-continuation/SKILL.md`
+- `.agentic-workspace/planning/skills/planning-work/procedure.md`
+- `.agentic-workspace/planning/skills/planning-work/references/continuity.md`
+- `.agentic-workspace/planning/skills/planning-work/references/intake.md`
+- `.agentic-workspace/planning/skills/planning-work/references/structure.md`
+- `.agentic-workspace/planning/skills/planning-work/SKILL.md`
+- `.agentic-workspace/planning/skills/README.md`
+- `.agentic-workspace/planning/skills/REGISTRY.json`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 

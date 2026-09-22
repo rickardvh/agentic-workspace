@@ -28,3 +28,11 @@ sources. Changing or withdrawing a real source changes dependent route
 currentness. Unrelated local instructions, scratch, nested repositories and
 links outside selected paths do not participate. No scan ledger or index is
 persisted. All public projections consume this same Rust catalogue.
+
+Planning's procedure bundle is an explicit portable package surface installed by
+repository adoption. Its surface rows declare `owner: planning`; native enclave
+classification retains that owner when the package and module declare identical
+exact managed-support material. Conflicting owners, scopes, classes or lifetimes
+remain invalid. Classification alone does not grant package delivery: only exact
+files in the artifact's payload declaration can be installed or refreshed. Planning
+state remains outside that declaration and retains its own writer and lifetime.

@@ -4,7 +4,8 @@ use cap_std::fs::Dir;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, io::Read};
 
-// Owners register classification only; adoption never acquires their writers.
+// Owners register classification only. Package delivery separately declares exact
+// immutable support files; it never acquires domain-state writers.
 pub(crate) struct Registration {
     pub declarations: fn() -> Value,
 }
@@ -33,7 +34,13 @@ pub(crate) fn declarations(root: &Dir, contract: &Value) -> Result<Vec<Value>, C
         }
     }
     for path in crate::native_payload::paths() {
-        rows.push(json!({"path":path,"scope":"exact","owner":"workspace","class":"managed-support","lifetime":"current-version"}));
+        let row = json!({"path":path,"scope":"exact","owner":crate::native_payload::owner(path).expect("declared payload owner"),"class":"managed-support","lifetime":"current-version"});
+        // The package and domain may agree on one exact support declaration.
+        // Different owners, classes, lifetimes or overlapping scopes still fail
+        // closed below; classification alone cannot add a payload writer.
+        if !rows.contains(&row) {
+            rows.push(row);
+        }
     }
     // Host declarations are admission of classification, not execution grants.
     // Never infer an opaque module root from legacy module_roots rows.
@@ -374,6 +381,21 @@ mod tests {
             &json!({"enclave":{"owner":"workspace","declarations":[]}}),
         )
         .unwrap();
+        let planning = ".agentic-workspace/planning/skills/REGISTRY.json";
+        let matching: Vec<_> = rows.iter().filter(|row| row["path"] == planning).collect();
+        assert_eq!(matching.len(), 1);
+        assert_eq!(matching[0]["owner"], "planning");
+        assert_eq!(matching[0]["class"], "managed-support");
+        for (owner, class, lifetime) in [
+            ("other", "managed-support", "current-version"),
+            ("planning", "mutable-state", "current-version"),
+            ("planning", "managed-support", "repository"),
+        ] {
+            let conflicting = json!({"enclave":{"owner":owner,"declarations":[{
+                "path":planning,"scope":"exact","class":class,"lifetime":lifetime
+            }]}});
+            assert!(declarations(&root, &conflicting).is_err());
+        }
         let observed = inventory(&root, &rows).unwrap();
         assert!(
             observed["removals"]
