@@ -69,7 +69,7 @@ fn admit_registry(
     Ok(())
 }
 
-fn admit_required_registry(root: &Dir, path: &str) -> Result<(), CoreError> {
+fn admit_declared_registry(root: &Dir, path: &str, optional: bool) -> Result<bool, CoreError> {
     crate::decision_source::relative(path)?;
     let parts: Vec<_> = path.split('/').collect();
     if parts.len() > 64 {
@@ -79,12 +79,12 @@ fn admit_required_registry(root: &Dir, path: &str) -> Result<(), CoreError> {
     let components: Vec<_> = parents.iter().map(String::as_str).collect();
     let mut admitted = BTreeSet::new();
     admit_registry(root, &components, &mut admitted)?;
-    if !admitted.contains(path) {
+    if !optional && !admitted.contains(path) {
         return Err(error(format!(
             "required route registry unavailable: {path}"
         )));
     }
-    Ok(())
+    Ok(admitted.contains(path))
 }
 
 /// Flat, opt-in material references. Never infer imports or execute a dependency.
@@ -202,20 +202,10 @@ fn catalogue_selected(
         ],
         &mut paths,
     )?;
-    // Explicit built-in Memory skill owner; no discovery by directory scanning.
-    admit_registry(
-        &root,
-        &[
-            ".agentic-workspace",
-            ".agentic-workspace/memory",
-            ".agentic-workspace/memory/skills",
-            ".agentic-workspace/memory/skills/REGISTRY.json",
-        ],
-        &mut paths,
-    )?;
     let mut declarations = BTreeMap::<String, Value>::new();
     let mut material = BTreeMap::new();
     let mut pending = paths.clone();
+    let mut declared = paths.clone();
     while let Some(path) = pending.pop_first() {
         if material.contains_key(&path) {
             continue;
@@ -242,11 +232,32 @@ fn catalogue_selected(
             let sources = sources
                 .as_array()
                 .ok_or_else(|| error(format!("invalid registry_sources in {path}")))?;
-            for source in sources {
-                let source = source
-                    .as_str()
-                    .ok_or_else(|| error(format!("invalid registry source in {path}")))?;
-                admit_required_registry(&root, source)?;
+            for declaration in sources {
+                // String references retain their required-source semantics.
+                // Optionality permits absence only, never invalid present material.
+                #[derive(serde::Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct OptionalSource {
+                    path: String,
+                    optional: bool,
+                }
+                let parsed;
+                let (source, optional) = if let Some(source) = declaration.as_str() {
+                    (source, false)
+                } else {
+                    parsed = serde_json::from_value::<OptionalSource>(declaration.clone())
+                        .map_err(|failure| {
+                            error(format!("invalid registry source in {path}: {failure}"))
+                        })?;
+                    (parsed.path.as_str(), parsed.optional)
+                };
+                declared.insert(source.to_owned());
+                if declared.len() > 256 {
+                    return Err(error("route registry source set exceeds 256 sources"));
+                }
+                if !admit_declared_registry(&root, source, optional)? {
+                    continue;
+                }
                 if paths.insert(source.to_owned()) {
                     if paths.len() > 256 {
                         return Err(error("route registry source set exceeds 256 sources"));
@@ -1064,6 +1075,85 @@ mod tests {
     }
 
     #[test]
+    fn optional_registry_composition_is_generic_and_absence_is_quiet() {
+        let target = Target::new();
+        let registry = "extensions/neutral/routes.json";
+        target.write(
+            ".agentic-workspace/skills/REGISTRY.json",
+            &json!({"registry_sources":[{"path":registry,"optional":true}]}).to_string(),
+        );
+        let absent = source(&target.0).unwrap();
+        assert_eq!(absent["routes"], json!([]));
+        target.write("unowned/REGISTRY.json", "malformed unadmitted material");
+        assert_eq!(source(&target.0).unwrap(), absent);
+        target.write(
+            registry,
+            r#"{"skills":[{"id":"neutral","path":"SKILL.md","semantic_routes":["neutral/work"]}]}"#,
+        );
+        target.write("extensions/neutral/SKILL.md", "Selected neutral procedure");
+        let present = source(&target.0).unwrap();
+        assert_eq!(present["routes"], json!(["neutral/work"]));
+        assert_ne!(present["revision"], absent["revision"]);
+        let detail = discovery(json!({"target":target.0,"exact":"neutral/work"})).unwrap();
+        assert_eq!(detail["routes"][0]["sources"][0]["skill_id"], "neutral");
+        let selected = procedure(&target.0, "neutral/work").unwrap();
+        assert_eq!(selected["authority_effect"], "procedure-reference-only");
+        target.write("extensions/neutral/unrelated.md", "Not selected");
+        assert_eq!(selected, procedure(&target.0, "neutral/work").unwrap());
+        target.write("extensions/neutral/SKILL.md", "Changed procedure");
+        assert_ne!(selected, procedure(&target.0, "neutral/work").unwrap());
+        target.write(registry, "malformed admitted material");
+        assert!(source(&target.0).is_err());
+        fs::remove_file(target.0.join(registry)).unwrap();
+        assert_eq!(source(&target.0).unwrap(), absent);
+    }
+
+    #[test]
+    fn optional_sources_preserve_closed_declarations_and_bounds() {
+        let target = Target::new();
+        for declaration in [
+            json!({"path":"../escape.json","optional":true}),
+            json!({"path":"/absolute.json","optional":true}),
+            json!({"path":"absent.json","optional":false}),
+            json!({"path":"absent.json"}),
+            json!({"path":"absent.json","optional":"true"}),
+            json!({"path":"absent.json","optional":true,"unknown":true}),
+            json!({"path":format!("{}file.json", "a/".repeat(64)),"optional":true}),
+        ] {
+            target.write(
+                "tools/skills/REGISTRY.json",
+                &json!({"registry_sources":[declaration]}).to_string(),
+            );
+            assert!(source(&target.0).is_err(), "{declaration}");
+        }
+        let references: Vec<_> = (0..256)
+            .map(|n| json!({"path":format!("absent/{n}.json"),"optional":true}))
+            .collect();
+        target.write(
+            "tools/skills/REGISTRY.json",
+            &json!({"registry_sources":references}).to_string(),
+        );
+        assert!(
+            source(&target.0)
+                .unwrap_err()
+                .to_string()
+                .contains("256 sources")
+        );
+        target.write(
+            "tools/skills/REGISTRY.json",
+            r#"{"registry_sources":[{"path":"folder","optional":true}]}"#,
+        );
+        fs::create_dir(target.0.join("folder")).unwrap();
+        assert!(source(&target.0).is_err());
+        target.write(
+            "tools/skills/REGISTRY.json",
+            r#"{"registry_sources":[{"path":"file/child.json","optional":true}]}"#,
+        );
+        target.write("file", "not a directory");
+        assert!(source(&target.0).is_err());
+    }
+
+    #[test]
     fn declared_cycles_terminate_and_incompatible_sources_fail_closed() {
         let target = Target::new();
         target.write(
@@ -1122,6 +1212,13 @@ mod tests {
         std::os::unix::fs::symlink(&outside.0, target.0.join(".agentic-workspace/local/linked"))
             .unwrap();
         assert_eq!(source(&target.0).unwrap()["routes"], json!([]));
+        target.write("tools/skills/REGISTRY.json", r#"{"registry_sources":[{"path":".agentic-workspace/local/linked/skills/REGISTRY.json","optional":true}]}"#);
+        assert!(
+            source(&target.0)
+                .unwrap_err()
+                .to_string()
+                .contains("symlink")
+        );
     }
 
     #[cfg(windows)]
@@ -1147,6 +1244,13 @@ mod tests {
             String::from_utf8_lossy(&result.stderr)
         );
         assert_eq!(source(&target.0).unwrap()["routes"], json!([]));
+        target.write("tools/skills/REGISTRY.json", r#"{"registry_sources":[{"path":".agentic-workspace/local/linked/skills/REGISTRY.json","optional":true}]}"#);
+        assert!(
+            source(&target.0)
+                .unwrap_err()
+                .to_string()
+                .contains("symlink")
+        );
         fs::remove_dir(link).unwrap();
     }
 }

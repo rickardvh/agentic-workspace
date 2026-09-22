@@ -2,6 +2,10 @@
   "schema_version": "skill-registry.v1",
   "owner": "agentic-workspace",
   "source_kind": "installed-workspace-skills",
+  "registry_sources": [
+    {"path": ".agentic-workspace/memory/skills/REGISTRY.json", "optional": true},
+    {"path": ".agentic-workspace/planning/skills/REGISTRY.json", "optional": true}
+  ],
   "skills": [
     {
       "id": "workspace-startup",
