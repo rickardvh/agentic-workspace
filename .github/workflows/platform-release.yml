@@ -4,11 +4,11 @@ on:
     paths:
       - .github/release-platforms.json
       - .github/workflows/platform-release.yml
-      - scripts/release/native_toolchain.py
+      - src/tooling/release/native_toolchain.py
       - pyproject.toml
-      - scripts/release/platform_release.py
-      - scripts/release/stage_native_npm.py
-      - scripts/release/admit_linux_wheel.py
+      - src/tooling/release/platform_release.py
+      - src/tooling/release/stage_native_npm.py
+      - src/tooling/release/admit_linux_wheel.py
       - src/cli/typescript/native/_transport.mjs
       - hatch_build.py
   workflow_call:
@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - id: matrix
-        run: echo "platforms=$(python scripts/release/platform_release.py matrix)" >> "$GITHUB_OUTPUT"
+        run: echo "platforms=$(python src/tooling/release/platform_release.py matrix)" >> "$GITHUB_OUTPUT"
   build:
     needs: matrix
     strategy:
@@ -58,7 +58,7 @@ jobs:
         with:
           node-version: '24'
       - name: Build native platform packages
-        run: python scripts/release/platform_release.py build --artifact-dir platform-dist
+        run: python src/tooling/release/platform_release.py build --artifact-dir platform-dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: platform-${{ matrix.target }}
@@ -85,7 +85,7 @@ jobs:
           pattern: platform-*
           path: platform-inputs
       - name: Assemble complete platform inventory and universal npm package
-        run: python scripts/release/platform_release.py assemble --inputs platform-inputs --artifact-dir dist
+        run: python src/tooling/release/platform_release.py assemble --inputs platform-inputs --artifact-dir dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: complete-platform-packages
@@ -116,7 +116,7 @@ jobs:
           name: complete-platform-packages
           path: dist
       - name: Install exact assembled packages without a compiler
-        run: python scripts/release/platform_release.py smoke --artifact-dir dist --receipt platform-consumer-${{ matrix.target }}.json
+        run: python src/tooling/release/platform_release.py smoke --artifact-dir dist --receipt platform-consumer-${{ matrix.target }}.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: platform-consumer-${{ matrix.target }}

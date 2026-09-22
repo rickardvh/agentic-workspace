@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-CHECKER = ROOT / "scripts/check/run_external_consumer_readiness.py"
+CHECKER = ROOT / "src/tooling/check/run_external_consumer_readiness.py"
 FIXTURES = ROOT / "tests/fixtures/external_consumer"
 
 
@@ -29,7 +29,7 @@ def test_consumers_use_only_public_package_entrypoints() -> None:
         assert "sys.path" not in source
         assert "generated/workspace" not in source
         assert private_generated_package not in source
-        assert "scripts/run_agentic_workspace" not in source
+        assert "src/tooling/run_agentic_workspace" not in source
         assert "tests/fixtures" not in source
 
 

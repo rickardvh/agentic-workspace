@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("check_language_facade", ROOT / "scripts/check/check_language_facade.py")
+spec = importlib.util.spec_from_file_location("check_language_facade", ROOT / "src/tooling/check/check_language_facade.py")
 checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
 check_node, check_python = checker.check_node, checker.check_python

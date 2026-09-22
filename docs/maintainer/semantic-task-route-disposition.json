@@ -3,7 +3,7 @@
   "issues": [2929, 2930, 2935, 2936, 2937],
   "principle": "Semantic task meaning is an agent-selected, current-work-bound applicability fact. Deterministic path, operation, owner, state, evidence, and policy facts remain stronger and independent.",
   "shared_contract": {
-    "schema": "src/agentic_workspace/contracts/schemas/semantic_task_routes.schema.json",
+    "schema": "src/tooling/contracts/schemas/semantic_task_routes.schema.json",
     "identity_owner": "canonical skill registry declarations",
     "selection_owner": "acting agent",
     "currentness_owner": "current-work binding plus route-source revision",

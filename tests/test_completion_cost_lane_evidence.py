@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_completion_cost_lane_evidence.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "src" / "tooling" / "check" / "check_completion_cost_lane_evidence.py"
 
 
 def _load_checker():

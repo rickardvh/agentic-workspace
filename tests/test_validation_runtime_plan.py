@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def _load_run_id_allocator():
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "allocate_validation_run_id.py"
+    path = Path(__file__).resolve().parents[1] / "src" / "tooling" / "check" / "allocate_validation_run_id.py"
     spec = importlib.util.spec_from_file_location("allocate_validation_run_id", path)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
@@ -63,7 +63,7 @@ def test_stock_pre_commit_routes_through_the_repo_owned_composition() -> None:
     root = Path(__file__).resolve().parents[1]
     config = (root / ".pre-commit-config.yaml").read_text(encoding="utf-8")
 
-    assert "entry: uv run python scripts/git_hooks/pre_commit.py" in config
+    assert "entry: uv run python src/tooling/git_hooks/pre_commit.py" in config
     assert "entry: make format\n" not in config
     assert "entry: make lint\n" not in config
     assert "entry: make typecheck\n" not in config

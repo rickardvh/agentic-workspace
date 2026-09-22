@@ -8,9 +8,9 @@ This ledger records the non-module repository files touched while proving the `a
 | --- | --- | --- |
 | `src/agentic_workspace/module_contract.py` | Generic public contract implementation | Validates, discovers, relevance-filters, and invokes any entry-point module without knowing its identity. |
 | `src/agentic_workspace/workspace_runtime_core.py` | Generic kernel adapter | Converts any admitted public descriptor into the existing resolve/act/reconcile representation and enforces selection conflicts. |
-| `src/agentic_workspace/contracts/schemas/module_capability.schema.json` | Public schema | Defines the identity-agnostic authoring contract. |
-| `src/agentic_workspace/contracts/schemas/module_registry.schema.json` and `src/agentic_workspace/contracts/module_registry.json` | First-party parity metadata | Projects the same public contract for bundled modules; no external module identity is registered here. |
-| `src/agentic_workspace/_schema.py` and `scripts/check/check_contract_tooling_surfaces.py` | Generic schema/tool discovery | Makes the public contract discoverable and checked without adding a module-specific branch. |
+| `src/tooling/contracts/schemas/module_capability.schema.json` | Public schema | Defines the identity-agnostic authoring contract. |
+| `src/tooling/contracts/schemas/module_registry.schema.json` and `src/tooling/contracts/module_registry.json` | First-party parity metadata | Projects the same public contract for bundled modules; no external module identity is registered here. |
+| `src/agentic_workspace/_schema.py` and `src/tooling/check/check_contract_tooling_surfaces.py` | Generic schema/tool discovery | Makes the public contract discoverable and checked without adding a module-specific branch. |
 
 ## Generic proof and package wiring
 
@@ -30,9 +30,9 @@ The installed fixture is discovered from distribution metadata after its tempora
 ## Cost and trust review
 
 The maintained scenario matrix is
-`tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json`.
+`src/tooling/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json`.
 Its checked-in measurements are produced by
-`scripts/model_cli_harness/module_extension_scenarios.py`. The collector runs
+`src/tooling/model-cli-harness/module_extension_scenarios.py`. The collector runs
 module discovery, compatibility/ownership admission, the ordinary startup
 posture projection, and any routed operation, then derives cost values from the
 resulting trace. Tests recompute that artefact and enforce scenario-owned

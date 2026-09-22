@@ -15,7 +15,7 @@ WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
 RULESET_PATH = ROOT / ".github" / "rulesets" / "master-support-bearing.json"
 SUPPORT_POLICY_PATH = ROOT / ".github" / "support-bearing-promotion.json"
-RELEASE_OWNERSHIP_CLASSIFIER_PATH = ROOT / "scripts" / "release" / "release_ownership.py"
+RELEASE_OWNERSHIP_CLASSIFIER_PATH = ROOT / "src" / "tooling" / "release" / "release_ownership.py"
 
 
 def _ownership() -> dict[str, object]:
@@ -136,7 +136,7 @@ def test_package_affecting_scope_excludes_github_automation() -> None:
     assert ".release/releases/" in paths
     assert "docs/release-and-versioning.md" in paths
     assert "src/" in paths
-    assert "scripts/release/" in paths
+    assert "src/tooling/release/" in paths
     assert "src/" in paths
     assert "uv.lock" in paths
 
@@ -258,7 +258,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "uv build --wheel --sdist --out-dir dist packages/memory" not in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/planning" not in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/verification" not in workflow
-    assert "scripts/release/patch_workspace_release_wheel.py" not in workflow
+    assert "src/tooling/release/patch_workspace_release_wheel.py" not in workflow
     assert "release-asset-base-url" not in workflow
     assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in workflow
     assert 'node-version: "24"' in workflow
@@ -278,7 +278,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "github.sha" not in manifest_step
     assert "distribution-install-readiness.json" in workflow
     assert "redistributable-package-readiness.json" in workflow
-    assert "scripts/check/check_package_identity.py" in workflow
+    assert "src/tooling/check/check_package_identity.py" in workflow
     assert "--require-exact-urls" in workflow
     assert "--write-receipts" in workflow
     assert "agentic-workspace.spdx.json" in workflow
@@ -458,7 +458,7 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
 
 
 def test_release_model_uses_existing_tags_instead_of_stale_bootstrap_floor() -> None:
-    helper = (ROOT / "scripts" / "release" / "coordinated_release.py").read_text(encoding="utf-8")
+    helper = (ROOT / "src" / "tooling" / "release" / "coordinated_release.py").read_text(encoding="utf-8")
 
     assert "existing_release_versions" in helper
     assert '"git",' in helper and '"tag",' in helper and '"--list",' in helper
@@ -474,14 +474,14 @@ def test_release_runtime_matrix_fetches_history_for_retained_evidence_ancestry()
 
     assert "fetch-depth: 0" in runtime
     assert "uv run pytest tests -q" not in runtime
-    assert "scripts/check/check_native_release_topology.py" in runtime
+    assert "src/tooling/check/check_native_release_topology.py" in runtime
     assert "--native-archive-dir runtime-dist" in runtime
 
 
 def test_release_model_ignores_tags_from_other_package_domains(monkeypatch) -> None:
     spec = importlib.util.spec_from_file_location(
         "coordinated_release_under_test",
-        ROOT / "scripts" / "release" / "coordinated_release.py",
+        ROOT / "src" / "tooling" / "release" / "coordinated_release.py",
     )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)

@@ -13,7 +13,7 @@ class ContractValidationError(ValueError):
 
 
 def contracts_root() -> Path:
-    return Path(__file__).resolve().parents[4] / "src" / "agentic_workspace" / "contracts"
+    return Path(__file__).resolve().parents[4] / "src" / "tooling" / "contracts"
 
 
 def contract_roots() -> tuple[Path, ...]:
@@ -130,7 +130,7 @@ def render_skillspec_target_skill(manifest: dict[str, Any], skill_id: str) -> st
         "",
         f"# Generated {spec.get('title', skill_id)}",
         "",
-        "Generated from `src/agentic_workspace/contracts/skill_specs.json`. Do not hand-edit generated output.",
+        "Generated from `src/tooling/contracts/skill_specs.json`. Do not hand-edit generated output.",
         "",
         "## Applies When",
         _markdown_list(list(spec.get("applies_when", []))),
@@ -223,8 +223,8 @@ def render_skillspec_plugin_target(manifest: dict[str, Any], target_id: str) -> 
         },
         "agenticWorkspace": {
             "generated": True,
-            "source": "src/agentic_workspace/contracts/skill_specs.json",
-            "schema": "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+            "source": "src/tooling/contracts/skill_specs.json",
+            "schema": "src/tooling/contracts/schemas/skill_spec.schema.json",
             "targetId": target["id"],
             "framework": target["framework"],
             "status": target["status"],
@@ -238,7 +238,7 @@ def render_skillspec_plugin_target(manifest: dict[str, Any], target_id: str) -> 
             "mustPreserve": target["must_preserve"],
             "nextSafeActionSemantics": target["next_safe_action_semantics"],
             "behaviorFixtures": manifest["generated_target_behavior_fixtures"],
-            "whereToEdit": "src/agentic_workspace/contracts/skill_specs.json",
+            "whereToEdit": "src/tooling/contracts/skill_specs.json",
             "doNotHandEditGeneratedOutput": True,
         },
     }

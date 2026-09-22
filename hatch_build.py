@@ -46,7 +46,7 @@ class CustomBuildHook(BuildHookInterface):
         root = Path(self.root)
         # An explicit host target prevents an ambient cross-compilation target
         # from being silently labelled as a locally executable wheel.
-        spec = importlib.util.spec_from_file_location("native_toolchain", root / "scripts/release/native_toolchain.py")
+        spec = importlib.util.spec_from_file_location("native_toolchain", root / "src/tooling/release/native_toolchain.py")
         toolchain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(toolchain_module)
         toolchain = toolchain_module.observe(root)

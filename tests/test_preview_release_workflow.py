@@ -74,8 +74,8 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
         "uses: ./.github/workflows/platform-release.yml",
         "platform_release.py verify --artifact-dir dist",
         "make packed-artifact-conformance",
-        "scripts/check/check_package_identity.py",
-        "scripts/check/check_security_supply_chain.py",
+        "src/tooling/check/check_package_identity.py",
+        "src/tooling/check/check_security_supply_chain.py",
         "anchore/sbom-action@",
         "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
         "softprops/action-gh-release@",
@@ -88,7 +88,7 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
 
 
 def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:
-    helper = (ROOT / "scripts" / "release" / "preview_release.py").read_text(encoding="utf-8")
+    helper = (ROOT / "src" / "tooling" / "release" / "preview_release.py").read_text(encoding="utf-8")
 
     assert 'DEFAULT_RECONSTRUCTION_REF = "master"' in helper
     assert 'f"{head_ref}:{tracking_ref}"' in helper
@@ -103,7 +103,7 @@ def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:
 
 
 def test_preview_manifest_is_explicitly_non_support_bearing_and_ownership_driven() -> None:
-    manifest = (ROOT / "scripts" / "release" / "preview_manifest.py").read_text(encoding="utf-8")
+    manifest = (ROOT / "src" / "tooling" / "release" / "preview_manifest.py").read_text(encoding="utf-8")
 
     assert '"kind": "agentic-workspace/coordinated-preview-release-manifest/v1"' in manifest
     assert "coordinated_release.release_identity(tag)" in manifest
@@ -150,7 +150,7 @@ def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> Non
     gate = admission["steps"][-1]
     assert (
         gate["run"]
-        == 'python scripts/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"'
+        == 'python src/tooling/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"'
     )
     assert gate["env"] == {"PREVIEW_TAG": "${{ inputs.preview_tag }}", "ARTIFACT_COMMIT": "${{ inputs.artifact_commit }}"}
     assert not any("${{ inputs." in step.get("run", "") for step in admission["steps"])

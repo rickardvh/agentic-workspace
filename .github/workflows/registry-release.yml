@@ -46,7 +46,7 @@ jobs:
       - name: Reconstruct packaging for byte comparison before credentials
         run: |
           cargo fetch --locked
-          python scripts/release/cargo_release.py build --no-verify --artifact-dir reconstructed --staging "$RUNNER_TEMP/aw-cargo"
+          python src/tooling/release/cargo_release.py build --no-verify --artifact-dir reconstructed --staging "$RUNNER_TEMP/aw-cargo"
       - name: Obtain short-lived crates.io identity after initial bootstrap
         id: auth
         uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1
@@ -54,11 +54,11 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
           RELEASE_TAG: ${{ inputs.tag }}
-        run: python scripts/release/cargo_release.py publish --tag "$RELEASE_TAG" --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+        run: python src/tooling/release/cargo_release.py publish --tag "$RELEASE_TAG" --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
       - name: Verify public Cargo sources and isolated paired install
         env:
           RELEASE_TAG: ${{ inputs.tag }}
-        run: python scripts/release/cargo_release.py verify --tag "$RELEASE_TAG" --artifact-dir dist
+        run: python src/tooling/release/cargo_release.py verify --tag "$RELEASE_TAG" --artifact-dir dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cargo-registry-publication

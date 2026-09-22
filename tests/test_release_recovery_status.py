@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = REPO_ROOT / "scripts" / "github" / "release_recovery_status.py"
+SCRIPT = REPO_ROOT / "src" / "tooling" / "github" / "release_recovery_status.py"
 
 
 def _load_module():
@@ -279,7 +279,7 @@ def test_recovery_packet_marks_failed_release_superseded_by_newer_success(monkey
     packet = module.recovery_packet(
         repo_root=REPO_ROOT,
         labels=["semver:patch"],
-        changed_files=["packages/agentic-workspace/pyproject.toml"],
+        changed_files=["pyproject.toml"],
         release_failure=failure,
     )
 

@@ -79,7 +79,7 @@ jobs:
           uv run pytest tests/test_native_former_routes.py -q
       - name: Verify skills-first interface convergence
         run: |
-          uv run python scripts/generate/generate_agent_interface.py --check
+          uv run python src/tooling/generate/generate_agent_interface.py --check
           uv run pytest tests/test_skills_first_interface.py -q
       - name: Verify schema validator reuse
         timeout-minutes: 2
@@ -229,7 +229,7 @@ jobs:
       - name: Verify native source boundaries
         env:
           AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
-        run: uv run python scripts/check/check_native_sources.py
+        run: uv run python src/tooling/check/check_native_sources.py
 
   planning-handoff-checks:
     needs: [exhaustive-admission, workspace-package-artifacts]
@@ -324,7 +324,7 @@ jobs:
       - name: Run built package and external-consumer proof
         run: |
           uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
-          uv run python scripts/check/run_external_consumer_readiness.py --dist-dir dist --require-node
+          uv run python src/tooling/check/run_external_consumer_readiness.py --dist-dir dist --require-node
       - name: Prove exact npm artifacts
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci
       - name: Set up Node.js semantic-major proof
@@ -332,7 +332,7 @@ jobs:
         with:
           node-version: "25"
       - name: Prove the same artifacts on Node.js 25
-        run: uv run python scripts/check/check_native_release_topology.py --artifact-dir dist --receipt-out dist/native-node25-proof.json --execution-context hosted-ci --expected-node-major 25
+        run: uv run python src/tooling/check/check_native_release_topology.py --artifact-dir dist --receipt-out dist/native-node25-proof.json --execution-context hosted-ci --expected-node-major 25
       - name: Upload coordinated package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -395,9 +395,9 @@ jobs:
       - name: Prove source-maintenance adapter conformance
         env:
           AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
-        run: uv run python scripts/check/check_native_sources.py
+        run: uv run python src/tooling/check/check_native_sources.py
       - name: Prove installed artifacts on the declared runtime
-        run: uv run python scripts/check/check_native_release_topology.py --artifact-dir admission-dist --receipt-out native-runtime-proof.json --execution-context hosted-ci --expected-node-major ${{ matrix.node }}
+        run: uv run python src/tooling/check/check_native_release_topology.py --artifact-dir admission-dist --receipt-out native-runtime-proof.json --execution-context hosted-ci --expected-node-major ${{ matrix.node }}
       - name: Retain exact runtime proof
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

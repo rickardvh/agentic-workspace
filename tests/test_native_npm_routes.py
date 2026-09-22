@@ -26,7 +26,7 @@ def packed(tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequ
     root = tmp_path_factory.mktemp("packed-native-routes")
     stage = root / "stage"
     staged = subprocess.run(
-        [sys.executable, str(ROOT / "scripts/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
+        [sys.executable, str(ROOT / "src/tooling/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
         cwd=ROOT,
         env={**os.environ, "CARGO_BUILD_TARGET": "unavailable-cross-target"},
         check=False,
@@ -256,12 +256,12 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
         "Cargo.toml",
         "Cargo.lock",
         "rust-toolchain.toml",
-        "scripts/release/native_toolchain.py",
+        "src/tooling/release/native_toolchain.py",
         "src/core/src/native_routes.rs",
         "src/cli/typescript/semantic-decision.mjs",
-        "scripts/release/stage_native_npm.py",
+        "src/tooling/release/stage_native_npm.py",
         "src/cli/typescript/package.json",
-        "scripts/release/coordinated_release.py",
+        "src/tooling/release/coordinated_release.py",
     ]:
         assert any(name.endswith("/" + reference) for name in names), reference
     assert not any("/src/native/bin/" in name or "/generated/workspace/" in name for name in names)
@@ -272,7 +272,7 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
     # Import the real entrypoint outside the checkout: filename inventory alone
     # misses transitive Python imports required by an sdist rebuild.
     result = subprocess.run(
-        [sys.executable, str(source / "scripts/release/stage_native_npm.py"), "--help"],
+        [sys.executable, str(source / "src/tooling/release/stage_native_npm.py"), "--help"],
         cwd=source,
         env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
         capture_output=True,
@@ -286,8 +286,8 @@ def test_stage_rejects_rust_build_mismatch(tmp_path: Path, monkeypatch: pytest.M
     import runpy
     import tomllib
 
-    monkeypatch.syspath_prepend(str(ROOT / "scripts/release"))
-    stage_native_npm = runpy.run_path(str(ROOT / "scripts/release/stage_native_npm.py"))
+    monkeypatch.syspath_prepend(str(ROOT / "src/tooling/release"))
+    stage_native_npm = runpy.run_path(str(ROOT / "src/tooling/release/stage_native_npm.py"))
 
     def observe(command, **kwargs):
         assert command == ["rustc", "-vV"], "mismatched host must fail before Cargo build"

@@ -17,7 +17,7 @@ owner/path is reported explicitly; apologies, chat promises and Memory notes do
 not substitute for retention. A focused prose-contract regression guards this
 procedure without claiming new native correction persistence support.
 
-`scripts/generate/generate_agent_interface.py` derives shipped payload bytes from
+`src/tooling/generate/generate_agent_interface.py` derives shipped payload bytes from
 the exact source paths declared in `workspace_surfaces.json`. Its `--check` mode
 and the ordinary CI guard reject drift. The Rust build embeds those payloads.
 The source maintenance bootstrap and ownership generators produce the same

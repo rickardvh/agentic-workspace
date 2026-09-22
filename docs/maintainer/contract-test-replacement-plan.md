@@ -26,7 +26,7 @@ If a behaviour cannot name one owner yet, keep the ordinary test and mark the bl
 
 | Surface | Current role | Replacement category | Owner |
 | --- | --- | --- | --- |
-| `src/agentic_workspace/contracts/conformance/*.json` | 85 existing process-level conformance cases as of the June 15, 2026 #1525 refresh | Keep and expand as contract-owned command/process cases | AW contracts |
+| `src/tooling/contracts/conformance/*.json` | 85 existing process-level conformance cases as of the June 15, 2026 #1525 refresh | Keep and expand as contract-owned command/process cases | AW contracts |
 | `tests/test_generated_tool_conformance.py` | Harness and registry checks for process conformance | Keep ordinary runner/harness tests; add converted cases under contracts | AW |
 | `tests/test_generated_command_package_proof_runner.py` | Generated package proof orchestration, freshness, boundary checks, and conformance routing | Keep proof/checker internals ordinary; convert stable command behaviour assertions to operation conformance cases | AW |
 | `tests/test_workspace_proof_generated_packages_cli.py` | Proof route selection for generated package paths | Keep ordinary proof-routing tests | AW |
@@ -56,7 +56,7 @@ If a behaviour cannot name one owner yet, keep the ordinary test and mark the bl
 
 3. Convert AW generated-command behaviour.
 
-   Move stable generated command examples into `src/agentic_workspace/contracts/conformance/*.json` or the owning operation/composite contract surface. Execute them through the shared runner for Python and TypeScript generated targets.
+   Move stable generated command examples into `src/tooling/contracts/conformance/*.json` or the owning operation/composite contract surface. Execute them through the shared runner for Python and TypeScript generated targets.
 
 4. Collapse duplicated ordinary tests.
 

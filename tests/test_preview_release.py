@@ -10,7 +10,7 @@ import pytest
 from tests.test_native_public_cli import native_cli as native_cli
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "release" / "coordinated_release.py"
+SCRIPT = ROOT / "src" / "tooling" / "release" / "coordinated_release.py"
 
 
 def _load_module():
@@ -204,7 +204,7 @@ def test_preview_preparation_rejects_stable_tag(tmp_path, monkeypatch) -> None:
 
 
 def _load_helper():
-    spec = importlib.util.spec_from_file_location("preview_helper_under_test", ROOT / "scripts/release/preview_release.py")
+    spec = importlib.util.spec_from_file_location("preview_helper_under_test", ROOT / "src/tooling/release/preview_release.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules["coordinated_release"] = _load_module()
     spec.loader.exec_module(module)
@@ -334,7 +334,7 @@ def test_trusted_admission_never_executes_forged_tag_authority(tmp_path, monkeyp
     # decide admission: the invoking helper checks their delta as inert data.
     _git(repo, "switch", "--detach", artifact)
     sentinel = tmp_path / "executed"
-    verifier = repo / "scripts/release/coordinated_release.py"
+    verifier = repo / "src/tooling/release/coordinated_release.py"
     verifier.parent.mkdir(parents=True, exist_ok=True)
     verifier.write_text(f"from pathlib import Path\nPath({str(sentinel)!r}).touch()\n")
     workflow = repo / ".github/workflows/preview-release.yml"
@@ -602,7 +602,7 @@ def test_preview_creation_consumer_reuses_native_terminal_lifecycle(tmp_path, sh
 
     helper = _load_helper()
     repository(tmp_path)
-    runner_ref = Path("scripts/check/run_compact_command.py")
+    runner_ref = Path("src/tooling/check/run_compact_command.py")
     (tmp_path / runner_ref).parent.mkdir(parents=True)
     (tmp_path / runner_ref).write_bytes((ROOT / runner_ref).read_bytes())
     git(tmp_path, "add", ".")

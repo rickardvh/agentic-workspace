@@ -34,7 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python scripts/release/support_bearing_promotion.py github-checks \
+          python src/tooling/release/support_bearing_promotion.py github-checks \
             --repository "${GITHUB_REPOSITORY}" \
             --commit "${GITHUB_SHA}" \
             --output server-promotion-receipt.json \
@@ -81,7 +81,7 @@ jobs:
         run: |
           args=()
           if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
-          python scripts/release/coordinated_release.py plan "${args[@]}" --github-output "$GITHUB_OUTPUT"
+          python src/tooling/release/coordinated_release.py plan "${args[@]}" --github-output "$GITHUB_OUTPUT"
 
       - name: Prepare coordinated release PR changes
         if: steps.release-plan.outputs.release_required == 'true'
@@ -90,9 +90,9 @@ jobs:
         run: |
           args=()
           if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
-          python scripts/release/coordinated_release.py prepare "${args[@]}"
+          python src/tooling/release/coordinated_release.py prepare "${args[@]}"
           uv lock
-          python scripts/release/coordinated_release.py verify
+          python src/tooling/release/coordinated_release.py verify
 
       - name: Open or update coordinated release PR
         id: release-pr
@@ -127,7 +127,7 @@ jobs:
         if: steps.release-plan.outputs.release_required != 'true'
         run: |
           git fetch origin master --tags
-          python scripts/release/coordinated_release.py tag-plan --github-output "$GITHUB_OUTPUT"
+          python src/tooling/release/coordinated_release.py tag-plan --github-output "$GITHUB_OUTPUT"
 
       - name: Create annotated release tag
         if: steps.release-commit.outputs.tag_needed == 'true'

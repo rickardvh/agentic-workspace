@@ -71,7 +71,7 @@
       "justification": "Current source/lifetime declarations for runtime and repository-only readers",
       "materialization": {
         "mode": "host-composed",
-        "source": "src/agentic_workspace/contracts/portable_ownership.toml",
+        "source": "src/core/contracts/portable_ownership.toml",
         "composer": "ownership-v1"
       }
     },
@@ -680,7 +680,7 @@
   ],
   "derivation": {
     "portable_sources": [
-      "src/agentic_workspace/contracts/portable_ownership.toml",
+      "src/core/contracts/portable_ownership.toml",
       ".agentic-workspace/skills/REGISTRY.json",
       ".agentic-workspace/skills/workspace-startup/SKILL.md",
       ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",

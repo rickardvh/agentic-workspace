@@ -10,4 +10,4 @@ Use the compact decision first when current state matters. Follow only relevant 
 
 Do not rebuild domain state from legacy summary field names or invent selectors. Report the actual returned current owner, restrictions, evidence and continuation. A quiet owner or successful query does not authorize a broader completion claim.
 
-Session analysis and export remain explicit source-checkout diagnostics. Their maintained route is `uv run --frozen python scripts/maintainer/session_diagnostics.py analyze --target .` (or `export`). They describe recorded coverage, not total task coverage or installed/public commands.
+Session analysis and export remain explicit source-checkout diagnostics. Their maintained route is `uv run --frozen python src/tooling/maintainer/session_diagnostics.py analyze --target .` (or `export`). They describe recorded coverage, not total task coverage or installed/public commands.

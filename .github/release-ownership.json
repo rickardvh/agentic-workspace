@@ -52,12 +52,12 @@
       24,
       25
     ],
-    "runner": "scripts/check/check_native_release_topology.py",
+    "runner": "src/tooling/check/check_native_release_topology.py",
     "failure_policy": "missing, stale, mismatched, failed, or unsupported receipts block publication"
   },
   "support_bearing_promotion": {
     "policy": ".github/support-bearing-promotion.json",
-    "checker": "scripts/release/support_bearing_promotion.py",
+    "checker": "src/tooling/release/support_bearing_promotion.py",
     "receipt_kind": "agentic-workspace/support-bearing-promotion/v1",
     "receipt": "support-bearing-promotion.json",
     "subject": "exact source commit and exact release artifact digests",
@@ -96,7 +96,7 @@
     ".release/releases/",
     "docs/release-and-versioning.md",
     "pyproject.toml",
-    "scripts/release/",
+    "src/tooling/release/",
     "src/",
     "uv.lock",
     "Cargo.toml",
@@ -180,7 +180,7 @@
       "agentic-workspace-cli"
     ],
     "install": "Install both exact same-version crates, core first, into one Cargo root",
-    "staging": "scripts/release/cargo_release.py",
+    "staging": "src/tooling/release/cargo_release.py",
     "manifest": "cargo-release-manifest.json",
     "bootstrap": "First versions require bounded manual publication before OIDC can be configured",
     "support": "Same admitted release host; RC remains non-support-bearing"

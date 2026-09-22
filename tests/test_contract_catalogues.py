@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = REPO_ROOT / "scripts/generate/generate_contract_catalogues.py"
+SCRIPT = REPO_ROOT / "src/tooling/generate/generate_contract_catalogues.py"
 
 
 def test_active_executable_examples_agree_with_native_command_authority():
@@ -31,7 +31,7 @@ def test_active_executable_examples_agree_with_native_command_authority():
         *REPO_ROOT.glob("src/core/payload/**/*.md"),
         *REPO_ROOT.glob("generated/**/*.md"),
         *REPO_ROOT.glob("tools/skills/**/*.md"),
-        *REPO_ROOT.glob("tools/model-cli-harness/fixtures/**/*.md"),
+        *REPO_ROOT.glob("src/tooling/model-cli-harness/fixtures/**/*.md"),
     }
     # Executable maintenance targets and live diagnostic/recovery producers are
     # also guidance. Retained legacy parsers, archived fixtures and historical

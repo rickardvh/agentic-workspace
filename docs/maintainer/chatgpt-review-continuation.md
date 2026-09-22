@@ -4,7 +4,7 @@ This repo-local maintainer loop transports actionable external PR review finding
 
 The implementation is intentionally outside shipped Agentic Workspace runtime and payload surfaces:
 
-- `tools/chatgpt_review_loop.py` owns explicit local handoff, polling, resume, inspection, and cleanup;
+- `src/tooling/github/chatgpt_review_loop.py` owns explicit local handoff, polling, resume, inspection, and cleanup;
 - `.agentic-workspace/local/chatgpt-review-loop/` owns gitignored runtime state;
 - `tools/skills/pr-review-recheck/SKILL.md` remains the independent external review policy.
 
@@ -23,7 +23,7 @@ For bounded unattended automation after all active user and plugin hook sources 
 Use the opt-in global mode to scan every open PR and dispatch at most one eligible blocked review:
 
 ```powershell
-uv run python tools/chatgpt_review_loop.py poll --all-open --watch
+uv run python src/tooling/github/chatgpt_review_loop.py poll --all-open --watch
 ```
 
 It retains one Codex session per PR and uses the main checkout serially. A first eligible review fetches the PR branch into an explicit `origin/<branch>` ref, verifies the fetched SHA equals the reviewed SHA, requires a clean checkout, switches to the PR branch, and fast-forwards it to that exact commit; a later eligible review switches back to the same branch and resumes the recorded session. Any pre-launch switch failure restores the checkout that the maintainer started from. A local exclusive lock keeps two poller invocations from starting concurrent jobs. The watcher stays active after empty scans and dispatches, and retires registry entries when their PR closes. The dispatcher preserves the exact-head marker, duplicate-review, branch-ownership, and bounded-recovery checks; stale comments never become jobs. Existing `poll` behaviour remains scoped to explicit local handoffs.
@@ -35,7 +35,7 @@ It retains one Codex session per PR and uses the main checkout serially. A first
 3. Run:
 
    ```powershell
-   uv run python tools/chatgpt_review_loop.py handoff
+   uv run python src/tooling/github/chatgpt_review_loop.py handoff
    ```
 
    `CODEX_THREAD_ID` supplies the exact session identity. Outside Codex, pass `--session-id <uuid>` explicitly. The command fails rather than deriving an identity from branch, recency, PID, or timestamps.
@@ -47,7 +47,7 @@ If another session already owns the PR, inspect it first. `--replace-session` is
 The all-open dispatcher normally runs on a branch checkout, so continuations push with `git push origin <PR branch>`. Legacy/manual detached sessions are still accepted only when explicitly named. After pushing `HEAD:<PR branch>`, record the handoff by naming the PR:
 
 ```powershell
-uv run python tools/chatgpt_review_loop.py handoff --pr <number>
+uv run python src/tooling/github/chatgpt_review_loop.py handoff --pr <number>
 ```
 
 The command resolves the branch only from that open PR and still requires the detached `HEAD` to equal its remote head; without `--pr`, detached handoff remains fail-closed.
@@ -57,13 +57,13 @@ The command resolves the branch only from that open PR and still requires the de
 Run one cheap deterministic poll:
 
 ```powershell
-uv run python tools/chatgpt_review_loop.py poll
+uv run python src/tooling/github/chatgpt_review_loop.py poll
 ```
 
 Or keep the local controller running for a bounded number of polls:
 
 ```powershell
-uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60 --bypass-hook-trust
+uv run python src/tooling/github/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60 --bypass-hook-trust
 ```
 
 For the serial all-open controller, use `make start-review-poller REVIEW_MAX_CYCLES=10`. It starts at most one job at a time, stores the cycle budget per PR, and is idempotent while its recorded process is alive.
@@ -83,7 +83,7 @@ For `merge-ready`, the controller records readiness and stops. It never invokes 
 When the maintainer chooses to merge that exact reviewed head, use the repository-owned guarded merge operation:
 
 ```powershell
-uv run python tools/review_stack_ops.py --merge-pr 123 --reviewed-head <full-sha> --merge-method merge --receipt merge-receipt.json
+uv run python src/tooling/github/review_stack_ops.py --merge-pr 123 --reviewed-head <full-sha> --merge-method merge --receipt merge-receipt.json
 ```
 
 The operation checks current CI and the caller-supplied reviewed head; independent review and merge authorisation remain the maintainer's responsibility. It does not create or mechanically establish review authority. Standalone PRs keep the ordinary `gh pr merge --match-head-commit` transport. A GitHub stack, or an ordinary transport refusal requiring asynchronous merge, uses GitHub's `merge-async` endpoint with the same head and merge method. Accepted or pending responses are not completion: the operation polls the request and then observes the PR in terminal merged state before returning success. A changed head, failed check, rejection, failure, or timeout leaves descendant branches untouched and records one exact failure in the receipt.
@@ -94,7 +94,7 @@ Explicit `--existing-only` continuation handoffs preserve the loop's configured 
 
 ## Declared stack restacking
 
-Use `tools/review_stack_ops.py` for descendants that must move after a reviewed base changes. It requires a JSON declaration with every PR, branch, old base, new base, and expected remote head written as a full SHA; it never discovers a rewrite target from branch ordering or abbreviated IDs:
+Use `src/tooling/github/review_stack_ops.py` for descendants that must move after a reviewed base changes. It requires a JSON declaration with every PR, branch, old base, new base, and expected remote head written as a full SHA; it never discovers a rewrite target from branch ordering or abbreviated IDs:
 
 ```json
 {
@@ -115,7 +115,7 @@ Use `tools/review_stack_ops.py` for descendants that must move after a reviewed 
 Plan and verify ancestry plus stable aggregate patch identity without publishing:
 
 ```powershell
-uv run python tools/review_stack_ops.py --declaration stack.json --receipt restack-receipt.json
+uv run python src/tooling/github/review_stack_ops.py --declaration stack.json --receipt restack-receipt.json
 ```
 
 After inspecting that receipt, add `--publish` to use an exact `--force-with-lease=<ref>:<old-head>` for every declared descendant. Add `--update-pr-bodies` only when the PR bodies should receive an `aw-exact-head` marker from the observed published heads. All rewrites are prepared before the first push. A pre-publication failure leaves branches and PR bodies unchanged; a later failure records precisely which pushes or metadata edits succeeded, because multi-ref GitHub publication is bounded but not atomic.
@@ -123,11 +123,11 @@ After inspecting that receipt, add `--publish` to use an exact `--force-with-lea
 ## Inspect, stop, recover, and clean up
 
 ```powershell
-uv run python tools/chatgpt_review_loop.py status
-uv run python tools/chatgpt_review_loop.py status --pr 123
-uv run python tools/chatgpt_review_loop.py stop --pr 123
-uv run python tools/chatgpt_review_loop.py recover --pr 123 --action continue-waiting
-uv run python tools/chatgpt_review_loop.py cleanup --pr 123
+uv run python src/tooling/github/chatgpt_review_loop.py status
+uv run python src/tooling/github/chatgpt_review_loop.py status --pr 123
+uv run python src/tooling/github/chatgpt_review_loop.py stop --pr 123
+uv run python src/tooling/github/chatgpt_review_loop.py recover --pr 123 --action continue-waiting
+uv run python src/tooling/github/chatgpt_review_loop.py cleanup --pr 123
 ```
 
 Use `recover` only after a human has fixed the reported malformed or ambiguous GitHub state. It does not remove a handled-review key or retry a failed exact review. After a resume failure or a session that ended without a corrective push, inspect the exact session, push a new head, and run a new handoff. `stop` or `cleanup` also ends a bounded watcher on its next poll; `cleanup` removes only the gitignored local state record and does not change the PR or its comments.
@@ -139,7 +139,7 @@ The controller reports explicit recovery for a closed PR, changed local or remot
 If the exact same Codex launch has already recorded `job-result`, but a rebase and later successful push produce the final head, record the correction explicitly from that checkout:
 
 ```powershell
-uv run python tools/chatgpt_review_loop.py job-result --session-id $env:CODEX_THREAD_ID --proof-status passed --proof-command "<proof command>" --proof-exit-code 0 --push-status passed --supersede
+uv run python src/tooling/github/chatgpt_review_loop.py job-result --session-id $env:CODEX_THREAD_ID --proof-status passed --proof-command "<proof command>" --proof-exit-code 0 --push-status passed --supersede
 ```
 
 `--supersede` is not a general duplicate override: it requires the same bound launch and session, a changed `HEAD`, and a successful push. It preserves the prior head in correction history and updates the result's final head for later exact-head validation. An unchanged or unverified duplicate remains fail-closed.
@@ -151,8 +151,8 @@ Run the focused deterministic suite with:
 ```powershell
 uv run pytest tests/test_chatgpt_review_loop.py -q
 uv run pytest tests/test_review_stack_ops.py -q
-uv run ruff check tools/chatgpt_review_loop.py tests/test_chatgpt_review_loop.py
-uv run ruff check tools/review_stack_ops.py tests/test_review_stack_ops.py
+uv run ruff check src/tooling/github/chatgpt_review_loop.py tests/test_chatgpt_review_loop.py
+uv run ruff check src/tooling/github/review_stack_ops.py tests/test_review_stack_ops.py
 ```
 
 The current dogfooding record is [aw-chatgpt-review-continuation-dogfood-2026-07-14.md](../reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md). Do not close issue #2290 or consider automatic merge until that record contains representative live external-review cycles rather than deterministic fixtures alone.

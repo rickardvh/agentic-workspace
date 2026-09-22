@@ -25,7 +25,7 @@ def test_decision_archive_directory_identity(tmp_path, shared_core_binary, nativ
     section = "decision_sources" if destination == "repository" else "memory"
     spellings = [archive, archive + "/"]
     if destination == "repository":
-        contracts = ROOT / "src/agentic_workspace/contracts"
+        contracts = ROOT / "src/tooling/contracts"
         schema = json.loads((contracts / "schemas/workspace_config.schema.json").read_text())
         defaults = json.loads((contracts / "workspace_defaults/payload.json").read_text())
         example = tomllib.loads("\n".join(defaults["assurance_onboarding"]["smallest_useful_config"]))

@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("pr_semver_integration", ROOT / "scripts/release/pr_semver_integration.py")
+SPEC = importlib.util.spec_from_file_location("pr_semver_integration", ROOT / "src/tooling/release/pr_semver_integration.py")
 assert SPEC and SPEC.loader
 checker = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(checker)
@@ -246,8 +246,8 @@ def test_integration_exception_fails_closed(stack, defect):
     "mode", ["ordinary", "base-advanced", "non-package", "mixed-ordinary", "integration", "missing-label", "multiple-labels"]
 )
 def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode):
-    monkeypatch.syspath_prepend(str(ROOT))
-    monkeypatch.setitem(sys.modules, "scripts.release.pr_semver_integration", checker)
+    monkeypatch.syspath_prepend(str(ROOT / "src/tooling"))
+    monkeypatch.setitem(sys.modules, "release.pr_semver_integration", checker)
     root, git, event, _, prs, provider = stack
     if mode in {"ordinary", "base-advanced"}:
         git("checkout", "--detach", prs[0]["head"]["sha"])

@@ -45,6 +45,13 @@ Planning, Memory and Verification implementation and native schemas live under
 the core embeds its generated operating payload from `src/core/payload/`.
 Current package topology is specified in the [distribution reference](native-release-topology.md).
 
+Maintainer execution lives under `src/tooling/`: `check/` validates sources,
+`generate/` derives adapters, `release/` builds and publishes artifacts, and
+`model-cli-harness/` contains the evaluation runners and their inputs. GitHub
+workflow helpers live in `github/`; shared development-only Python helpers live
+in `python/aw_maintainer/`. `contracts/` contains maintainer contracts, separate
+from native contracts under `src/core/`. `tools/skills/` retains procedure Markdown.
+
 Repository state under `.agentic-workspace/` is not freehand implementation scratch.
 Use the responsible AW operation for interpreted state and use the canonical source
 for generated or packaged material. A change to README or another declared intent

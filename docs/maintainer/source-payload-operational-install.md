@@ -17,7 +17,7 @@ The canonical boundary contract is `.agentic-workspace/docs/extraction-and-disco
 Run the source/payload/install check from the repository root:
 
 ```bash
-uv run python scripts/check/check_source_payload_operational_install.py --format json --strict
+uv run python src/tooling/check/check_source_payload_operational_install.py --format json --strict
 ```
 
 Use its report to locate a mismatch in the owning source or generated copy.

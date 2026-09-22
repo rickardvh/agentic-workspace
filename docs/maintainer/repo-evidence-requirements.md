@@ -67,7 +67,7 @@ subject = "planning-record-selected-read"
 subject_revision = "fixture-r1"
 environment = "windows-ci-python-3.13"
 source_revision = "benchmark-r1"
-producer_command = "python scripts/measure_selected_latency.py --compact"
+producer_command = "python src/tooling/measure_selected_latency.py --compact"
 excluded_costs = ["environment bootstrap"]
 ```
 

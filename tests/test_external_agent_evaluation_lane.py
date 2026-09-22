@@ -16,10 +16,10 @@ import pytest
 from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-LANE_DIR = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
-SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
-HARNESS_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
-SBX_ADAPTER_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_sbx_codex_adapter.py"
+LANE_DIR = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "external-agent-evaluation"
+SCRIPT = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "external_agent_evaluation_lane.py"
+HARNESS_SCRIPT = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "run_model_cli_harness.py"
+SBX_ADAPTER_SCRIPT = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "run_sbx_codex_adapter.py"
 CONTEXT_COST_BRIDGE_SCRIPT = LANE_DIR / "codex_context_cost_bridge.py"
 
 
@@ -110,9 +110,7 @@ def test_issue_2818_supported_host_cost_evidence_is_bounded_honest_and_actionabl
     assert host["workspace_mutation_observed"] is False
     assert host["provider_event_projection_sha256"] == hashlib.sha256(CONTEXT_COST_BRIDGE_SCRIPT.read_bytes()).hexdigest()
 
-    schema = json.loads(
-        (REPO_ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text(encoding="utf-8")
-    )
+    schema = json.loads((REPO_ROOT / "src/tooling/contracts/schemas/assignment_context_cost.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     for run in runs.values():
         Draft202012Validator(schema).validate(run["context_cost"])
@@ -517,7 +515,7 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
 
 def test_model_cli_harness_scores_source_checkout_aw_invocation_as_package_cli() -> None:
     module = _load_harness_module()
-    executed = module._normalized_command_text("uv run python scripts/run_agentic_workspace.py start --target . --format json")
+    executed = module._normalized_command_text("uv run python src/tooling/run_agentic_workspace.py start --target . --format json")
 
     assert module._command_requirement_satisfied(required="uv run agentic-workspace start", executed_command_text=executed)
 
@@ -858,7 +856,7 @@ def test_model_cli_harness_rejects_blocked_or_wrong_transition_assignment_receip
 
 
 def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> None:
-    evidence_root = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
+    evidence_root = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "external-agent-evaluation"
     payload = json.loads((evidence_root / "live-results-2026-08-14-adapter-guidance.json").read_text(encoding="utf-8"))
     availability = json.loads((evidence_root / "provider-availability-2026-08-14.json").read_text(encoding="utf-8"))
 
@@ -1004,7 +1002,7 @@ def test_model_cli_harness_codex_source_checkout_fixture_uses_current_checkout(t
     module = _load_harness_module()
 
     payload = module.run_suite(
-        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        suite_path=REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
         adapter_id="codex",
         model="gpt-5.4-mini",
         scenario_filter="memory-consult-before-edit",
@@ -1027,7 +1025,7 @@ def test_model_cli_harness_codex_source_checkout_fixture_uses_current_checkout(t
 
 def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path: Path) -> None:
     module = _load_harness_module()
-    suite_path = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
+    suite_path = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
     suite = module._load_json(suite_path)
     scenarios = {scenario["id"]: scenario for scenario in suite["scenarios"]}
 
@@ -1061,7 +1059,7 @@ def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path:
 
 def test_model_cli_harness_defines_compact_startup_weak_agent_probes(tmp_path: Path) -> None:
     module = _load_harness_module()
-    suite_path = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
+    suite_path = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
     suite = module._load_json(suite_path)
     scenarios = {scenario["id"]: scenario for scenario in suite["scenarios"]}
     scenario_ids = (
@@ -1101,7 +1099,7 @@ def test_model_cli_harness_defines_compact_startup_weak_agent_probes(tmp_path: P
     assert scenarios["compact-startup-module-rich-routing"]["fixture"] == "aw-memory-host-repo"
 
     for fixture in ("aw-minimal-host-repo", "aw-memory-host-repo"):
-        guidance = (REPO_ROOT / "tools" / "model-cli-harness" / "fixtures" / fixture / "AGENTS.md").read_text(encoding="utf-8")
+        guidance = (REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "fixtures" / fixture / "AGENTS.md").read_text(encoding="utf-8")
         assert ".agentic-workspace/skills/workspace-startup/SKILL.md" in guidance
         assert "read it directly" in guidance
 
@@ -1117,7 +1115,8 @@ def test_model_cli_harness_defines_compact_startup_weak_agent_probes(tmp_path: P
     assert post_action["required_executed_commands"] == ["uv run agentic-workspace start"]
     manifest = (
         REPO_ROOT
-        / "tools"
+        / "src"
+        / "tooling"
         / "model-cli-harness"
         / "fixtures"
         / "aw-memory-host-repo"
@@ -1235,7 +1234,7 @@ def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> No
     module = _load_harness_module()
 
     payload = module.run_suite(
-        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        suite_path=REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
         adapter_id="codex-sbx",
         model=None,
         scenario_filter="startup-orientation",
@@ -1247,7 +1246,7 @@ def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> No
     result = payload["results"][0]
     assert result["adapter_id"] == "codex-sbx"
     assert result["command"][0].endswith(("python", "python.exe"))
-    assert result["command"][1].replace("\\", "/").endswith("scripts/model_cli_harness/run_sbx_codex_adapter.py")
+    assert result["command"][1].replace("\\", "/").endswith("src/tooling/model-cli-harness/run_sbx_codex_adapter.py")
     assert "--sandbox-name" in result["command"]
     assert "--template" in result["command"]
     assert "agentic-workspace/codex-sbx:local" in result["command"]
@@ -1266,7 +1265,7 @@ def test_model_cli_harness_codex_sbx_dry_run_marks_sandbox(tmp_path: Path) -> No
 
 def test_model_cli_harness_plain_codex_large_prompt_uses_file_reference_transport(tmp_path: Path) -> None:
     module = _load_harness_module()
-    suite = module._load_json(REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json")
+    suite = module._load_json(REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json")
     adapter = suite["adapters"]["codex"]
     large_prompt = "large evaluator prompt\n" * 1000
 
@@ -1412,7 +1411,7 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     )
 
     payload = module.run_suite(
-        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        suite_path=REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
         adapter_id="codex-sbx",
         model=None,
         scenario_filter="startup-orientation",
@@ -1556,7 +1555,7 @@ def test_model_cli_harness_windows_local_wheelhouse_black_box_uses_fixture_runti
         prompt_variant_id="default",
     )
     module._prepare_fixture(
-        suite_path=REPO_ROOT / "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+        suite_path=REPO_ROOT / "src/tooling/model-cli-harness/suites/copilot-workflow-smoke.json",
         scenario={"id": "startup", "fixture": "aw-minimal-host-repo"},
         paths=paths,
         adapter={},
@@ -1655,7 +1654,7 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_fixture_runs_host_val
     )
 
     module._prepare_fixture(
-        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        suite_path=REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
         scenario={"id": "startup-orientation", "fixture": "aw-minimal-host-repo"},
         paths=paths,
         adapter={"sandbox": {"backend": "docker-sandbox", "agent": "codex"}},

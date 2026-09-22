@@ -1,48 +1,15 @@
 # Contract Schema Index
 
-This page indexes the first shared schemas and manifests for workspace contract tooling.
+Native public contracts and shared schemas live under `src/core/contracts/`.
+Planning, Memory and Verification schemas live with their native owners under
+`src/core/src/modules/`. The Rust owners consume these declarations directly.
+Python and Node facades forward the public envelopes; they do not interpret them.
 
-Use it when you need to know which checked-in file owns a machine-readable contract shape, who consumes it, and which validation lane should catch drift.
+Maintainer-only contracts live under `src/tooling/contracts/`. They describe
+source validation, generation and repository workflow, not another installed
+runtime. The structured-file inventory classifies retained structured sources.
 
-## Ownership
-
-- Manifests live under [`src/agentic_workspace/contracts/`](../../src/agentic_workspace/contracts/).
-- Schemas live under [`src/agentic_workspace/contracts/schemas/`](../../src/agentic_workspace/contracts/schemas/).
-- Runtime consumers live in [`src/agentic_workspace/cli.py`](../../src/agentic_workspace/cli.py).
-- Development-time validation lives in `scripts/check/check_contract_tooling_surfaces.py`.
-
-## First Manifest Set
-
-| Manifest | Owns | Primary consumers |
-| --- | --- | --- |
-| `compact_contract_profile.json` | compact answer envelope metadata and selector definitions | `defaults`, compact selector answers |
-| `proof_routes.json` | stable proof route ids and commands | `defaults`, `proof` |
-| `report_contract.json` | stable report schema metadata | `report` |
-| `contract_inventory.json` | declarative/procedural/derived boundary inventory | docs and contract-tooling checker |
-
-## First Schema Set
-
-| Schema | Validates |
-| --- | --- |
-| `compact_contract_answer.schema.json` | emitted compact selector answers |
-| `selector_contracts_manifest.schema.json` | selector manifest |
-| `proof_routes_manifest.schema.json` | proof routes manifest |
-| `report_contract_manifest.schema.json` | report contract manifest |
-| `workspace_report.schema.json` | emitted workspace report envelope |
-| `contract_inventory.schema.json` | boundary inventory |
-| `agent_feedback.schema.json` | optional feedback review artifacts; not a required operating surface unless command-emitted later |
-| `workspace_config.schema.json` | `.agentic-workspace/config.toml` |
-| `workspace_local_override.schema.json` | `.agentic-workspace/config.local.toml` |
-| `setup_findings.schema.json` | `tools/setup-findings.json` |
-| `delegation_outcomes.schema.json` | `.agentic-workspace/delegation-outcomes.json` |
-
-## Guardrails
-
-- These schemas are for development-time validation and drift checks, not adopter runtime requirements.
-- Keep manifest scope narrow and stable.
-- Keep canonical docs authoritative for semantics; schemas and manifests make the shape inspectable and checkable.
-
-## Relationship To Other Docs
-
-- Use [`docs/package/contracts.md`](../../docs/package/contracts.md) for the boundary between contract data, schemata, generated references, and runtime outputs.
-- Use [`docs/maintainer/contributor-playbook.md`](../../docs/maintainer/contributor-playbook.md) for the maintainer validation lane that should run the contract-tooling check after edits here.
+Use `make native-sources`, `make structured-file-inventory`, and the applicable
+native owner tests to validate a changed boundary. Generate reference output with
+`make render-schema-reference`; edit its canonical schema rather than the output.
+The retired generated-operation catalogues and Python host are not current APIs.

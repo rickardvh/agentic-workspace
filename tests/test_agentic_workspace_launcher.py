@@ -9,7 +9,7 @@ from pathlib import Path
 
 from tests.test_native_public_cli import native_cli as native_cli
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "src" / "tooling" / "run_agentic_workspace.py"
 
 
 def _load_module():
@@ -31,7 +31,7 @@ def test_source_launcher_uses_documented_pair_and_preserves_explicit_selection(t
     monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     monkeypatch.delenv("AGENTIC_WORKSPACE_CORE_BINARY", raising=False)
     resolver = tmp_path / "src/cli/python/agentic_workspace/native_core.py"
-    _write(resolver, (SCRIPT_PATH.parent.parent / "src/cli/python/agentic_workspace/native_core.py").read_text())
+    _write(resolver, (Path(__file__).resolve().parents[1] / "src/cli/python/agentic_workspace/native_core.py").read_text())
     for marker in ("Cargo.lock", "src/core/Cargo.toml", "src/cli/rust/Cargo.toml"):
         _write(tmp_path / marker, "source fixture")
     suffix = ".exe" if os.name == "nt" else ""

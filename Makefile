@@ -5,10 +5,12 @@ MAKEFLAGS += --no-print-directory
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
+# Preserve the typed/formatted Python boundary across the tooling relocation.
+PYTHON_TYPED_SOURCES = src/cli/python src/adapters/codex src/core/payload src/tooling/python
 ifeq ($(VALIDATION_JOIN_TOKEN),join:$(VALIDATION_RUN_ID))
 VALIDATION_RUN_PROVENANCE ?= transported-child
 else
-VALIDATION_RUN_ID := $(shell uv run --no-project python scripts/check/allocate_validation_run_id.py)
+VALIDATION_RUN_ID := $(shell uv run --no-project python src/tooling/check/allocate_validation_run_id.py)
 VALIDATION_JOIN_TOKEN := join:$(VALIDATION_RUN_ID)
 VALIDATION_RUN_PROVENANCE := allocated-here
 endif
@@ -24,7 +26,7 @@ PACKAGE_PYTEST_PARALLEL_ARGS ?= $(PYTEST_PARALLEL_ARGS)
 MEMORY_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
 PLANNING_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
 VERIFICATION_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
-COMPACT_RUN = uv run python scripts/check/run_compact_command.py
+COMPACT_RUN = uv run python src/tooling/check/run_compact_command.py
 PACKED_ARTIFACT_DIR ?= $(CURDIR)/.agentic-workspace/local/packed-artifact-conformance
 PACKED_ARTIFACT_RECEIPT ?= $(PACKED_ARTIFACT_DIR)/generated-command-conformance-local.json
 PACKED_ARTIFACT_CONTEXT ?= local
@@ -134,7 +136,6 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_completion_cost_json_corpus.py \
 	tests/test_completion_cost_lane_evidence.py \
 	tests/test_completion_cost_live_behavior_proof.py \
-	tests/test_completion_cost_schema_analysis.py \
 	tests/test_external_agent_evaluation_lane.py \
 	tests/test_external_integration_boundary.py \
 	tests/test_git_hooks.py \
@@ -167,15 +168,15 @@ sync-all:
 	@$(COMPACT_RUN) --label "sync-all" -- uv sync --locked --all-groups
 
 install-hooks:
-	uv run python scripts/install_git_hooks.py
+	uv run python src/tooling/install_git_hooks.py
 
 setup: sync-all install-hooks
 
 pre-commit:
-	@uv run python scripts/git_hooks/pre_commit.py
+	@uv run python src/tooling/git_hooks/pre_commit.py
 
 start-review-poller:
-	@$(COMPACT_RUN) --label "review poller" -- uv run python tools/start_chatgpt_review_poller.py --target . --max-cycles $(REVIEW_MAX_CYCLES)
+	@$(COMPACT_RUN) --label "review poller" -- uv run python src/tooling/github/start_chatgpt_review_poller.py --target . --max-cycles $(REVIEW_MAX_CYCLES)
 
 sync-memory:
 	@$(COMPACT_RUN) --label "sync-memory" -- uv sync --all-packages --group dev
@@ -243,12 +244,12 @@ lint: sync-all lint-nosync
 markdownlint-memory:
 
 markdownlint-workspace:
-	@$(COMPACT_RUN) --label "workspace markdownlint" -- uv run python scripts/check/check_workspace_markdown.py
+	@$(COMPACT_RUN) --label "workspace markdownlint" -- uv run python src/tooling/check/check_workspace_markdown.py
 
 markdownlint: sync-all markdownlint-workspace markdownlint-memory
 
 typecheck-workspace:
-	@$(COMPACT_RUN) --label "workspace typecheck" -- uv run ty check src
+	@$(COMPACT_RUN) --label "workspace typecheck" -- uv run ty check $(PYTHON_TYPED_SOURCES)
 
 
 
@@ -258,7 +259,7 @@ typecheck-nosync: typecheck-workspace
 typecheck: sync-all typecheck-nosync
 
 format-workspace:
-	@$(COMPACT_RUN) --label "workspace format" -- uv run ruff format src tests
+	@$(COMPACT_RUN) --label "workspace format" -- uv run ruff format $(PYTHON_TYPED_SOURCES) tests
 
 
 
@@ -268,7 +269,7 @@ format-nosync: format-workspace
 format: sync-all format-nosync
 
 format-check-workspace:
-	@$(COMPACT_RUN) --label "workspace format-check" -- uv run ruff format --check src tests
+	@$(COMPACT_RUN) --label "workspace format-check" -- uv run ruff format --check $(PYTHON_TYPED_SOURCES) tests
 
 
 
@@ -295,28 +296,28 @@ verify-nosync: verify-workspace native-sources
 verify: sync-all verify-nosync
 
 memory-freshness:
-	@$(COMPACT_RUN) --label "memory freshness" -- uv run python scripts/check/check_memory_freshness.py
+	@$(COMPACT_RUN) --label "memory freshness" -- uv run python src/tooling/check/check_memory_freshness.py
 
 memory-freshness-strict:
-	@$(COMPACT_RUN) --label "memory freshness strict" -- uv run python scripts/check/check_memory_freshness.py --strict
+	@$(COMPACT_RUN) --label "memory freshness strict" -- uv run python src/tooling/check/check_memory_freshness.py --strict
 
 
 
 structured-file-inventory:
-	@$(COMPACT_RUN) --label "structured file inventory" -- uv run python scripts/check/check_structured_file_inventory.py
+	@$(COMPACT_RUN) --label "structured file inventory" -- uv run python src/tooling/check/check_structured_file_inventory.py
 
 structured-file-inventory-changed:
-	@$(COMPACT_RUN) --label "structured file inventory changed" -- uv run python scripts/check/check_structured_file_inventory.py --changed $(CHANGED_PATHS)
+	@$(COMPACT_RUN) --label "structured file inventory changed" -- uv run python src/tooling/check/check_structured_file_inventory.py --changed $(CHANGED_PATHS)
 
 
 security-supply-chain:
-	@uv run python scripts/check/check_security_supply_chain.py --format json
+	@uv run python src/tooling/check/check_security_supply_chain.py --format json
 
 package-artifact-duplicates:
-	@$(COMPACT_RUN) --label "package artifact duplicates" -- uv run python scripts/check/check_package_artifact_duplicates.py
+	@$(COMPACT_RUN) --label "package artifact duplicates" -- uv run python src/tooling/check/check_package_artifact_duplicates.py
 
 agent-aids:
-	@$(COMPACT_RUN) --label "agent aid manifests" -- uv run python scripts/check/check_agent_aids.py
+	@$(COMPACT_RUN) --label "agent aid manifests" -- uv run python src/tooling/check/check_agent_aids.py
 
 
 
@@ -324,22 +325,22 @@ agent-aids:
 
 
 render-schema-reference:
-	@$(COMPACT_RUN) --label "render schema reference" -- uv run python scripts/generate/generate_schema_reference.py
-	@$(COMPACT_RUN) --label "render contract catalogues" -- uv run python scripts/generate/generate_contract_catalogues.py
+	@$(COMPACT_RUN) --label "render schema reference" -- uv run python src/tooling/generate/generate_schema_reference.py
+	@$(COMPACT_RUN) --label "render contract catalogues" -- uv run python src/tooling/generate/generate_contract_catalogues.py
 
 
 schema-reference-docs:
-	@$(COMPACT_RUN) --label "schema reference docs" -- uv run python scripts/generate/generate_schema_reference.py --check --check-annotations
-	@$(COMPACT_RUN) --label "contract catalogues" -- uv run python scripts/generate/generate_contract_catalogues.py --check
+	@$(COMPACT_RUN) --label "schema reference docs" -- uv run python src/tooling/generate/generate_schema_reference.py --check --check-annotations
+	@$(COMPACT_RUN) --label "contract catalogues" -- uv run python src/tooling/generate/generate_contract_catalogues.py --check
 
 absolute-paths:
-	@$(COMPACT_RUN) --label "absolute paths" -- uv run python scripts/check/check_no_absolute_paths.py
+	@$(COMPACT_RUN) --label "absolute paths" -- uv run python src/tooling/check/check_no_absolute_paths.py
 
 
 
 
 packed-artifact-conformance:
-	@uv run python scripts/check/check_native_release_topology.py --artifact-dir "$(PACKED_ARTIFACT_DIR)" --receipt-out "$(PACKED_ARTIFACT_RECEIPT)" --execution-context "$(PACKED_ARTIFACT_CONTEXT)"
+	@uv run python src/tooling/check/check_native_release_topology.py --artifact-dir "$(PACKED_ARTIFACT_DIR)" --receipt-out "$(PACKED_ARTIFACT_RECEIPT)" --execution-context "$(PACKED_ARTIFACT_CONTEXT)"
 
 check-memory-nosync: test-memory verify-memory memory-freshness-strict
 
@@ -365,5 +366,5 @@ check-bounded-parallel:
 check-all: check-nosync
 
 native-sources:
-	@uv run python scripts/check/check_native_sources.py
-	@uv run python scripts/generate/generate_agent_interface.py --check
+	@uv run python src/tooling/check/check_native_sources.py
+	@uv run python src/tooling/generate/generate_agent_interface.py --check

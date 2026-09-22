@@ -186,7 +186,7 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
 
     # The maintained entrypoint must behave like the formerly required disabled
     # capture recovery, including tree selection and normalized source records.
-    script = Path(__file__).resolve().parents[1] / "scripts/maintainer/session_diagnostics.py"
+    script = Path(__file__).resolve().parents[1] / "src/tooling/maintainer/session_diagnostics.py"
     command = [sys.executable, str(script), "export", "--target", str(tmp_path), "--no-artifacts"]
     ordinary = subprocess.run(command, capture_output=True, text=True, timeout=30)
     assert ordinary.returncode == 0, ordinary.stderr

@@ -53,7 +53,7 @@
   "external_agent_evidence": {
     "status": "verified",
     "executed_at": "2026-08-23",
-    "suite": "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+    "suite": "src/tooling/model-cli-harness/suites/copilot-workflow-smoke.json",
     "adapter": "codex",
     "model": "gpt-5.3-codex-spark",
     "dependency_mode": "local-wheelhouse",

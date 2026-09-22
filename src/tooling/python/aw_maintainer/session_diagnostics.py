@@ -1037,7 +1037,7 @@ def _is_session_log_analyzer_entry(entry: dict[str, Any]) -> bool:
     except ValueError:
         tokens = str(entry.get("command", "")).split()
     for index, token in enumerate(tokens):
-        if token.replace("\\", "/").endswith("scripts/maintainer/session_diagnostics.py"):
+        if token.replace("\\", "/").endswith("src/tooling/maintainer/session_diagnostics.py"):
             return tokens[index + 1 : index + 2] == ["analyze"]
     try:
         surface_index = tokens.index("session-log")
@@ -1637,7 +1637,7 @@ def analyze_session_log(
 
     # Routes are source-checkout diagnostics and retain the selected log even
     # when the caller used an explicit path or a different repository target.
-    diagnostic = "uv run --frozen --active --no-sync python scripts/maintainer/session_diagnostics.py"
+    diagnostic = "uv run --frozen --active --no-sync python src/tooling/maintainer/session_diagnostics.py"
     selection = f"--target {shlex.quote(str(state.target_root))} --path {shlex.quote(log_path.relative_to(state.target_root).as_posix())}"
     analyze_route = f"{diagnostic} analyze {selection}"
     export_route = f"{diagnostic} export {selection}"

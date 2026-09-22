@@ -30,7 +30,7 @@ Physical rotations append through the same logical-stream lock and never restart
 Review an export before sharing it. Path normalisation is not secret scanning or
 transfer approval; exports can include command output.
 
-`uv run --frozen python scripts/maintainer/session_diagnostics.py export --target .` produces one share-review candidate ending in `.jsonl.gz`. Without an explicit `--id` or `--path`, it includes the current logical session, its physical rotations, and linked delegated descendants. The first record is an `export.manifest`; later records are one normalised event per line in global sequence order. Large text output remains in per-command blob files referenced by path, byte count, and SHA-256 from completion events; export converts available stdout and stderr into bounded `output.chunk` events so no line grows without limit. Binary or unavailable blobs remain digest references. `--no-artifacts` retains hashes and coverage metadata without output bytes.
+`uv run --frozen python src/tooling/maintainer/session_diagnostics.py export --target .` produces one share-review candidate ending in `.jsonl.gz`. Without an explicit `--id` or `--path`, it includes the current logical session, its physical rotations, and linked delegated descendants. The first record is an `export.manifest`; later records are one normalised event per line in global sequence order. Large text output remains in per-command blob files referenced by path, byte count, and SHA-256 from completion events; export converts available stdout and stderr into bounded `output.chunk` events so no line grows without limit. Binary or unavailable blobs remain digest references. `--no-artifacts` retains hashes and coverage metadata without output bytes.
 
 Exports preserve the raw local logs, normalise known machine-local paths, and disclose time, gap, child-session, and artefact coverage. Event ordering is deterministic for unchanged source streams; deliberately variable manifest creation metadata gives each export its own hash.
 
@@ -50,7 +50,7 @@ A stable OS owner lock serialises admitted native registration writers, and the 
 
 This closes the bounded new-identity registration gap for newly custody-created native registries. Historical transfer, interrupted-command capture/rotation, and separate release-artefact acceptance under #2990 remain unresolved; #2995 is not declared complete.
 
-Source-checkout maintainers can use `uv run --frozen python scripts/maintainer/session_diagnostics.py analyze --target .` or the same script with `export --no-artifacts` to read registered native streams through the current logical identity. This is maintained diagnostic tooling, not an installed/public command. The former command-generation session-log model is source-maintenance-only. Native caller origin is explicitly unknown. Native capture does not introduce a separate analysis command or log store.
+Source-checkout maintainers can use `uv run --frozen python src/tooling/maintainer/session_diagnostics.py analyze --target .` or the same script with `export --no-artifacts` to read registered native streams through the current logical identity. This is maintained diagnostic tooling, not an installed/public command. The former command-generation session-log model is source-maintenance-only. Native caller origin is explicitly unknown. Native capture does not introduce a separate analysis command or log store.
 
 ### Ordinary capture posture
 

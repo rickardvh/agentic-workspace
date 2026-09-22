@@ -13,7 +13,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 
 def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_path, shared_core_binary, native_cli):
-    source = json.loads((ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
+    source = json.loads((ROOT / "src/tooling/contracts/source_maintenance_surfaces.json").read_text())
     host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     required = set(source["payload_files"] + source["necessary_surface_files"])
     required.update(path for paths in source["module_surface_files"].values() for path in paths)
@@ -237,7 +237,7 @@ def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_
         assert ledger.read_bytes() == before
         return
     assert call(invocation=authorize(propose()))["effect_outcome"]["status"] == "committed"
-    portable = tomllib.loads((ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text())
+    portable = tomllib.loads((ROOT / "src/core/contracts/portable_ownership.toml").read_text())
     expected = copy.deepcopy(portable)
     if host_subsystems:
         expected["subsystems"] = host_subsystems

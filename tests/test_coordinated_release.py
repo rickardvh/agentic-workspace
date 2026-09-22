@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "release" / "coordinated_release.py"
+SCRIPT = ROOT / "src" / "tooling" / "release" / "coordinated_release.py"
 
 
 def _load_module():
@@ -274,7 +274,7 @@ def test_preview_release_workflow_remains_separate_from_stable_support_bearing_p
 
 
 def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref() -> None:
-    helper = (ROOT / "scripts/release/preview_release.py").read_text(encoding="utf-8")
+    helper = (ROOT / "src/tooling/release/preview_release.py").read_text(encoding="utf-8")
 
     assert 'f"{head_ref}:{tracking_ref}"' in helper
     assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper

@@ -78,7 +78,7 @@ Use when prose is no longer the strongest home and the guidance should become ve
 
 Default owners:
 
-- `scripts/check/`
+- `src/tooling/check/`
 - validation workflows
 - config plus checks when both explanation and enforcement are needed
 
@@ -157,7 +157,7 @@ The first reportable examples in this repo are:
 - `improvement_latitude` promoted into `.agentic-workspace/config.toml` as machine-readable standing policy
 - `optimization_bias` promoted into `.agentic-workspace/config.toml` as machine-readable output policy
 - planning-surface integrity promoted into planner-owned doctor/report checks
-- source/payload/root-install boundary protection promoted into `scripts/check/check_source_payload_operational_install.py`
+- source/payload/root-install boundary protection promoted into native Configuration adoption and isolated artifact checks
 
 These examples show the intended path:
 

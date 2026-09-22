@@ -14,7 +14,7 @@ def _run(command: list[str], *, cwd: Path) -> None:
 
 
 def _load_pre_commit_module():
-    module_path = Path(__file__).resolve().parents[1] / "scripts" / "git_hooks" / "pre_commit.py"
+    module_path = Path(__file__).resolve().parents[1] / "src" / "tooling" / "git_hooks" / "pre_commit.py"
     spec = importlib.util.spec_from_file_location("pre_commit_hook_under_test", module_path)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
@@ -41,13 +41,13 @@ def test_pre_commit_repo_root_uses_current_linked_worktree(tmp_path: Path) -> No
 
 
 def test_installed_hook_enters_the_invoking_worktree() -> None:
-    installer_path = Path(__file__).resolve().parents[1] / "scripts" / "install_git_hooks.py"
+    installer_path = Path(__file__).resolve().parents[1] / "src" / "tooling" / "install_git_hooks.py"
     spec = importlib.util.spec_from_file_location("install_git_hooks_under_test", installer_path)
     assert spec is not None and spec.loader is not None
     installer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(installer)
 
-    hook = installer._hook_script(Path("python"), Path("scripts/git_hooks/pre_commit.py"))
+    hook = installer._hook_script(Path("python"), Path("src/tooling/git_hooks/pre_commit.py"))
 
     assert "git rev-parse --show-toplevel" in hook
     assert 'cd "$repo_root"' in hook
@@ -115,7 +115,7 @@ def test_pre_commit_uses_one_run_for_setup_lint_and_typecheck(monkeypatch: pytes
         ["make", "sync-all"],
         ["make", "lint-nosync"],
         ["make", "typecheck-nosync"],
-        [pre_commit.sys.executable, "scripts/check/check_no_absolute_paths.py"],
+        [pre_commit.sys.executable, "src/tooling/check/check_no_absolute_paths.py"],
     ]
     assert all(command_environment is environment for _, command_environment in commands)
 
@@ -154,7 +154,7 @@ def test_pre_commit_records_and_stages_format_before_other_phases(monkeypatch: p
     assert pre_commit.main() == 0
     assert commands[0] == ["make", "sync-all"]
     assert commands[1][1:7] == [
-        "scripts/check/run_compact_command.py",
+        "src/tooling/check/run_compact_command.py",
         "--label",
         "pre-commit format",
         "--id",
@@ -168,7 +168,7 @@ def test_pre_commit_records_and_stages_format_before_other_phases(monkeypatch: p
 def test_pre_commit_failure_retry_uses_fresh_run_and_preserves_failed_manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pre_commit = _load_pre_commit_module()
     root = Path(__file__).resolve().parents[1]
-    runner = root / "scripts" / "check" / "run_compact_command.py"
+    runner = root / "src" / "tooling" / "check" / "run_compact_command.py"
     runner_spec = importlib.util.spec_from_file_location("compact_runner_hook_retry", runner)
     assert runner_spec is not None and runner_spec.loader is not None
     runner_module = importlib.util.module_from_spec(runner_spec)
@@ -207,7 +207,7 @@ def test_pre_commit_failure_retry_uses_fresh_run_and_preserves_failed_manifest(t
         ]
 
     def run(command: list[str], *, environment: dict[str, str]) -> int:
-        if command == ["make", "sync-all"] or command[-1:] == ["scripts/check/check_no_absolute_paths.py"]:
+        if command == ["make", "sync-all"] or command[-1:] == ["src/tooling/check/check_no_absolute_paths.py"]:
             return 0
         if len(command) > 1 and command[1] == str(runner):
             previous = {key: os.environ.get(key) for key in ("VALIDATION_RUN_ID", "VALIDATION_JOIN_TOKEN")}

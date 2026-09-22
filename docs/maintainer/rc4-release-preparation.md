@@ -17,7 +17,7 @@ next candidate; it does not announce publication or stable support.
 
 ## Version and publication
 
-After this PR merges, use the existing `scripts/release/preview_release.py`
+After this PR merges, use the existing `src/tooling/release/preview_release.py`
 preparer with `--rc v1.0.0-rc.4` and the accepted merged source commit. Its native
 resource procedure supplies any required isolation admission. The preparer
 creates the release-only artefact commit and coordinates Python `1.0.0rc4`

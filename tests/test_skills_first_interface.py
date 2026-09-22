@@ -21,7 +21,7 @@ from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 STARTUP_POINTER = "<!-- agentic-workspace:workflow:start -->\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.\n<!-- agentic-workspace:workflow:end -->"
-spec = importlib.util.spec_from_file_location("agent_interface_generator", ROOT / "scripts/generate/generate_agent_interface.py")
+spec = importlib.util.spec_from_file_location("agent_interface_generator", ROOT / "src/tooling/generate/generate_agent_interface.py")
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
@@ -48,7 +48,7 @@ def test_active_bootstrap_and_config_command_examples_match_native_surface():
 
 def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert generator.synchronize(check=True) == []
-    portable = (ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text()
+    portable = (ROOT / "src/core/contracts/portable_ownership.toml").read_text()
     shipped = (ROOT / "src/core/payload" / LEDGER).read_text()
     assert shipped == portable and shipped != (ROOT / LEDGER).read_text()
     assert (ROOT / "src/core/payload" / PROFILE).read_text() == render(portable, target=ROOT)
@@ -168,7 +168,7 @@ def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypat
     """Projection writes cannot silently repair another owner's source record."""
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     host_ref = "src/core/contracts/workspace_surfaces.json"
-    maintenance_ref = "src/agentic_workspace/contracts/source_maintenance_surfaces.json"
+    maintenance_ref = "src/tooling/contracts/source_maintenance_surfaces.json"
     host = json.loads((ROOT / host_ref).read_text())
     maintenance = json.loads((ROOT / maintenance_ref).read_text())
     references = {
@@ -366,7 +366,7 @@ def test_known_leaf_returns_current_procedure_and_shared_applicability(tmp_path,
     request["arguments"] = {"posture": "selected", "routes": ["repository/inspect"]}
     selected = call({"request": request})
     fact = selected["decision_packet"]["semantic_task_routes"]
-    schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/semantic_task_routes.schema.json").read_text())
+    schema = json.loads((ROOT / "src/tooling/contracts/schemas/semantic_task_routes.schema.json").read_text())
     validator = Draft202012Validator({**schema, "oneOf": [{"$ref": "#/$defs/resolved_task_fact"}]})
     validator.validate(fact)
     assert fact["status"] == "current"

@@ -54,7 +54,7 @@ jobs:
         env:
           PREVIEW_TAG: ${{ inputs.preview_tag }}
           ARTIFACT_COMMIT: ${{ inputs.artifact_commit }}
-        run: python scripts/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"
+        run: python src/tooling/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"
 
   platform-packages:
     needs: preview-admission
@@ -102,9 +102,9 @@ jobs:
           uv lock --check
           uv sync --locked --all-groups
           uv build --wheel --sdist --out-dir runtime-dist
-          uv run python scripts/release/stage_native_npm.py --output runtime-npm --native-archive-dir runtime-dist
+          uv run python src/tooling/release/stage_native_npm.py --output runtime-npm --native-archive-dir runtime-dist
           npm pack ./runtime-npm --pack-destination runtime-dist
-          uv run python scripts/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
+          uv run python src/tooling/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
 
   preview-package:
     needs: [preview-admission, preview-runtime-matrix, platform-packages]
@@ -147,7 +147,7 @@ jobs:
             echo "Preview tag ${RELEASE_TAG} resolves to ${TAG_COMMIT}, checkout is ${HEAD_COMMIT}" >&2
             exit 1
           fi
-          python scripts/release/coordinated_release.py verify-preview --tag "${RELEASE_TAG}" > preview-subject.json
+          python src/tooling/release/coordinated_release.py verify-preview --tag "${RELEASE_TAG}" > preview-subject.json
           SOURCE_COMMIT="$(python -c 'import json; print(json.load(open("preview-subject.json", encoding="utf-8"))["reconstruction_source_commit"])')"
           if ! git merge-base --is-ancestor "${SOURCE_COMMIT}" refs/remotes/origin/master; then
             echo "Preview source ${SOURCE_COMMIT} is not reachable from master" >&2
@@ -163,7 +163,7 @@ jobs:
         id: existing
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
+        run: python src/tooling/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
 
       - if: steps.existing.outputs.complete != 'true'
         name: Sync exact preview dependency graph
@@ -186,10 +186,10 @@ jobs:
       - if: steps.existing.outputs.complete != 'true'
         name: Build coordinated preview package artifacts
         run: |
-          python scripts/release/platform_release.py verify --artifact-dir dist
-          python scripts/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
-          python scripts/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
-          uv run python scripts/check/check_package_identity.py \
+          python src/tooling/release/platform_release.py verify --artifact-dir dist
+          python src/tooling/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+          python src/tooling/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+          uv run python src/tooling/check/check_package_identity.py \
             --artifact-dir dist \
             --require-exact-urls
 
@@ -237,19 +237,19 @@ jobs:
         run: |
           for runtime_major in 20 24 25; do
             receipt="dist/generated-command-conformance-node${runtime_major}.json"
-            uv run python scripts/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
+            uv run python src/tooling/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
           done
 
       - if: steps.existing.outputs.complete != 'true'
         name: Generate preview security readiness
         run: |
-          python scripts/check/check_rust_dependencies.py --install
-          uv run python scripts/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
+          python src/tooling/check/check_rust_dependencies.py --install
+          uv run python src/tooling/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
 
       - if: steps.existing.outputs.complete != 'true'
         name: Compose non-support-bearing preview manifest and checksums
         run: |
-          python scripts/release/preview_manifest.py --tag "${RELEASE_TAG}" --artifact-dir dist > preview-manifest-result.json
+          python src/tooling/release/preview_manifest.py --tag "${RELEASE_TAG}" --artifact-dir dist > preview-manifest-result.json
           test -f dist/agentic-workspace-preview-release-manifest.json
           test -f dist/SHA256SUMS
           test ! -e dist/support-bearing-promotion.json
@@ -266,13 +266,13 @@ jobs:
 
       - if: steps.existing.outputs.complete != 'true'
         name: Bind all platform artifacts and compiler-free consumers
-        run: python scripts/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
+        run: python src/tooling/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
 
       - if: steps.existing.outputs.complete != 'true'
         name: Reject replacement of existing preview bytes
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --artifact-dir dist
+        run: python src/tooling/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --artifact-dir dist
 
       - if: steps.existing.outputs.complete != 'true'
         name: Attest exact preview subjects
@@ -314,7 +314,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          python scripts/release/preview_public_smoke.py --tag "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" | tee preview-public-smoke.json
+          python src/tooling/release/preview_public_smoke.py --tag "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" | tee preview-public-smoke.json
           {
             echo "### Published preview smoke"
             echo '```json'
@@ -373,7 +373,7 @@ jobs:
         id: pending
         env:
           RELEASE_TAG: ${{ needs.preview-admission.outputs.tag }}
-        run: python scripts/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
+        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
       - name: Publish missing exact PyPI artifacts with trusted identity
         if: steps.pending.outputs.python_pending == 'true'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
@@ -387,7 +387,7 @@ jobs:
       - name: Verify public bytes and clean native consumers
         env:
           RELEASE_TAG: ${{ needs.preview-admission.outputs.tag }}
-        run: python scripts/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --verify --receipt registry-publication.json
+        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --verify --receipt registry-publication.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: language-registry-publication

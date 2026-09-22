@@ -42,11 +42,11 @@ jobs:
             echo "Release subject ${RELEASE_COMMIT} does not match ${EXPECTED_SOURCE_COMMIT}" >&2
             exit 1
           fi
-          python scripts/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
+          python src/tooling/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
           if [ "${RELEASE_TAG}" = "v1.0.0" ]; then
-            python scripts/release/coordinated_release.py verify-rc-promotion --require-published --repo "${GITHUB_REPOSITORY}"
+            python src/tooling/release/coordinated_release.py verify-rc-promotion --require-published --repo "${GITHUB_REPOSITORY}"
           fi
-          python scripts/release/support_bearing_promotion.py github-checks \
+          python src/tooling/release/support_bearing_promotion.py github-checks \
             --repository "${GITHUB_REPOSITORY}" \
             --commit "${RELEASE_COMMIT}" \
             --output server-promotion-receipt.json \
@@ -102,14 +102,14 @@ jobs:
           uv lock --check
           uv sync --locked --all-groups
           uv build --wheel --sdist --out-dir runtime-dist
-          uv run python scripts/release/stage_native_npm.py --output runtime-npm --native-archive-dir runtime-dist
+          uv run python src/tooling/release/stage_native_npm.py --output runtime-npm --native-archive-dir runtime-dist
           npm pack ./runtime-npm --pack-destination runtime-dist
-          uv run python scripts/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
+          uv run python src/tooling/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
       - name: Write runtime support receipt
         shell: bash
         run: |
           mkdir -p runtime-receipts
-          python scripts/release/support_bearing_promotion.py runtime-receipt \
+          python src/tooling/release/support_bearing_promotion.py runtime-receipt \
             --commit "$(git rev-parse HEAD)" \
             --os "${{ matrix.os }}" \
             --python "${{ matrix.python }}" \
@@ -187,7 +187,7 @@ jobs:
             echo "Release tag ${RELEASE_TAG} must point at a commit reachable from origin/master" >&2
             exit 1
           fi
-          python scripts/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
+          python src/tooling/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
           python - <<'PY'
           import json
           from pathlib import Path
@@ -211,16 +211,16 @@ jobs:
 
       - name: Build Agentic Workspace package artifacts
         run: |
-          python scripts/release/platform_release.py verify --artifact-dir dist
-          python scripts/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
-          python scripts/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
-          uv run python scripts/check/check_package_identity.py \
+          python src/tooling/release/platform_release.py verify --artifact-dir dist
+          python src/tooling/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+          python src/tooling/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+          uv run python src/tooling/check/check_package_identity.py \
             --artifact-dir dist \
             --require-exact-urls \
             --write-receipts
 
       - name: Bind platform install instructions before security and promotion
-        run: python scripts/release/platform_release.py receipts --artifact-dir dist --tag "${RELEASE_TAG}"
+        run: python src/tooling/release/platform_release.py receipts --artifact-dir dist --tag "${RELEASE_TAG}"
 
       - name: Run built package smoke tests
         env:
@@ -258,16 +258,16 @@ jobs:
         run: |
           for runtime_major in 20 24 25; do
             receipt="dist/generated-command-conformance-node${runtime_major}.json"
-            uv run python scripts/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
+            uv run python src/tooling/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
           done
 
       - name: Check locked Rust advisories, licenses and sources
-        run: python scripts/check/check_rust_dependencies.py --install
+        run: python src/tooling/check/check_rust_dependencies.py --install
 
       - name: Generate checksums and release manifest
         run: |
-          uv run python scripts/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
-          python scripts/release/support_bearing_promotion.py compose \
+          uv run python src/tooling/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
+          python src/tooling/release/support_bearing_promotion.py compose \
             --commit "$(git rev-parse HEAD)" \
             --artifact-dir dist \
             --server-receipt promotion-inputs/server/server-promotion-receipt.json \
@@ -429,10 +429,10 @@ jobs:
           }
           if os.environ["RELEASE_TAG"] == "v1.0.0":
               manifest["release_candidate_promotion"] = json.loads(subprocess.check_output(
-                  ["python", "scripts/release/coordinated_release.py", "verify-rc-promotion"], text=True
+                  ["python", "src/tooling/release/coordinated_release.py", "verify-rc-promotion"], text=True
               ))
           import sys
-          sys.path.insert(0, "scripts/release")
+          sys.path.insert(0, "src/tooling/release")
           import cargo_release
           manifest["cargo"] = cargo_release.admitted_manifest(dist, ownership, manifest["source_commit"], manifest["version"])
           for item in [manifest["cargo"]["manifest"], *manifest["cargo"]["packages"]]:
@@ -462,7 +462,7 @@ jobs:
           PY
 
       - name: Bind all platform artifacts and compiler-free consumers
-        run: python scripts/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
+        run: python src/tooling/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
 
       - name: Verify release artifacts
         run: |
@@ -620,7 +620,7 @@ jobs:
         id: pending
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-        run: python scripts/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
+        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
       - name: Publish missing exact PyPI artifacts with trusted identity
         if: steps.pending.outputs.python_pending == 'true'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
@@ -634,7 +634,7 @@ jobs:
       - name: Verify public bytes and clean native consumers
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-        run: python scripts/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --verify --receipt registry-publication.json
+        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --verify --receipt registry-publication.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: language-registry-publication

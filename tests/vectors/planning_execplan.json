@@ -104,7 +104,7 @@
     "packages/**",
     "generated/**",
     "tests/**",
-    "scripts/**",
+    "src/tooling/**",
     "docs/**",
     ".github/**",
     ".release/**",

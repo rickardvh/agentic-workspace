@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = REPO_ROOT / "scripts" / "github" / "pr_comment_delta.py"
-README = REPO_ROOT / "scripts" / "github" / "README.md"
+SCRIPT = REPO_ROOT / "src" / "tooling" / "github" / "pr_comment_delta.py"
+README = REPO_ROOT / "src" / "tooling" / "github" / "README.md"
 REVIEW_HEAD = "a" * 40
 PR2746_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "pr_review_intake" / "pr2746.json"
 
@@ -233,7 +233,7 @@ def test_pr_comment_delta_uses_multiline_structured_blocker_before_next_action_p
                     "1. The PR remains a draft.\n2. The PR Semver Label workflow is stale.\n3. Required CI checks are still pending."
                 ),
                 next_action=(
-                    "Update `scripts/github/pr_comment_delta.py` if source changes become necessary, "
+                    "Update `src/tooling/github/pr_comment_delta.py` if source changes become necessary, "
                     "then mark the PR ready after checks and labels are correct."
                 ),
             ),
@@ -253,7 +253,7 @@ def test_pr_comment_delta_keeps_multiline_structured_source_blockers_actionable(
             "kind": "issue_comment",
             "body": _structured_review_body(
                 unresolved=(
-                    "1. `scripts/github/pr_comment_delta.py` only captures one-line review fields.\n"
+                    "1. `src/tooling/github/pr_comment_delta.py` only captures one-line review fields.\n"
                     "2. Add a focused regression test in tests/test_pr_comment_delta.py for multiline review bodies."
                 ),
                 next_action="Mark the PR ready after the proof passes.",
@@ -379,7 +379,7 @@ def test_pr_comment_delta_uses_structured_unresolved_for_mixed_blocker_lists() -
             "body": _structured_review_body(
                 unresolved=(
                     "1. The PR remains a draft.\n"
-                    "2. Update scripts/github/pr_comment_delta.py so multiline structured fields parse correctly.\n"
+                    "2. Update src/tooling/github/pr_comment_delta.py so multiline structured fields parse correctly.\n"
                     "3. Add a focused regression test before claiming the blocker is resolved."
                 ),
                 next_action="Fix labels only after the source blocker is handled.",
@@ -693,7 +693,7 @@ def test_pr2887_replay_treats_prose_resolution_and_merge_ready_verdict_as_eviden
                     "body": (
                         "decision: blocked\n"
                         "unresolved:\n"
-                        "Update scripts/github/pr_comment_delta.py and add a focused regression test.\n"
+                        "Update src/tooling/github/pr_comment_delta.py and add a focused regression test.\n"
                         f"<!-- aw-chatgpt-review pr=99 head={old_head} policy=pr-review-recheck-v1 decision=blocked -->"
                     ),
                     "createdAt": "2026-08-25T11:00:00Z",
@@ -960,7 +960,7 @@ def test_pr_comment_delta_readme_keeps_live_workflow_discoverable() -> None:
     text = README.read_text(encoding="utf-8")
 
     assert "agentic-workspace/pr-comment-delta/v1" in text
-    assert "uv run python scripts/github/pr_comment_delta.py" in text
+    assert "uv run python src/tooling/github/pr_comment_delta.py" in text
     assert "--baseline-json" in text
     assert "pagination.truncated" in text
     assert "does not write to GitHub" in text

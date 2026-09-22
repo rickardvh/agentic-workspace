@@ -10,7 +10,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-HARNESS_DIR = REPO_ROOT / "scripts" / "model_cli_harness"
+HARNESS_DIR = REPO_ROOT / "src" / "tooling" / "model-cli-harness"
 EPISODE_PATH = HARNESS_DIR / "long_horizon_episode.py"
 
 
@@ -152,7 +152,7 @@ def _write_episode(tmp_path: Path, *, evaluator: bool = True, modes: list[dict] 
 def test_long_horizon_episode_validates_sample_pack_and_schema_files() -> None:
     module = _load_episode_module()
 
-    schema_dir = REPO_ROOT / "tools" / "model-cli-harness" / "schemas"
+    schema_dir = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "schemas"
     episode_schema = json.loads((schema_dir / "long-horizon-episode.schema.json").read_text(encoding="utf-8"))
     evaluation_schema = json.loads((schema_dir / "long-horizon-evaluation.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(episode_schema)
@@ -163,7 +163,7 @@ def test_long_horizon_episode_validates_sample_pack_and_schema_files() -> None:
     assert episode_schema["$id"] == module.EPISODE_KIND
     assert evaluation_schema["$id"] == module.EVALUATION_KIND
 
-    episode_dir = REPO_ROOT / "tools" / "model-cli-harness" / "episodes"
+    episode_dir = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "episodes"
     for path in [
         episode_dir / "intent-proof-packaging-specifier.json",
         episode_dir / "reuse-abstraction-pluggy.json",
@@ -217,7 +217,7 @@ def test_long_horizon_episode_rejects_unknown_mistake_class(tmp_path: Path) -> N
 
 def test_long_horizon_episode_rejects_malformed_evaluation_contract(tmp_path: Path) -> None:
     module = _load_episode_module()
-    schema_path = REPO_ROOT / "tools" / "model-cli-harness" / "schemas" / "long-horizon-episode.schema.json"
+    schema_path = REPO_ROOT / "src" / "tooling" / "model-cli-harness" / "schemas" / "long-horizon-episode.schema.json"
     episode_schema = json.loads(schema_path.read_text(encoding="utf-8"))
     episode_validator = Draft202012Validator(episode_schema)
     path = _write_episode(tmp_path)

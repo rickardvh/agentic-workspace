@@ -115,7 +115,9 @@ NPM = shutil.which("npm") or "npm"
 
 
 def _load_checker():
-    spec = importlib.util.spec_from_file_location("package_identity_checker_under_test", ROOT / "scripts/check/check_package_identity.py")
+    spec = importlib.util.spec_from_file_location(
+        "package_identity_checker_under_test", ROOT / "src/tooling/check/check_package_identity.py"
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -175,7 +177,7 @@ def coordinated_artifacts(tmp_path_factory: pytest.TempPathFactory) -> tuple[Pat
     _run(
         [
             sys.executable,
-            "scripts/release/stage_native_npm.py",
+            "src/tooling/release/stage_native_npm.py",
             "--output",
             str(staged_npm),
             "--native-archive-dir",

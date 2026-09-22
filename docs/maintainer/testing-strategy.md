@@ -179,7 +179,7 @@ This keeps validation observable without silently repeating dependency setup:
   constituent before waiting. Timeouts and failures must name the constituent
   and durable log/result locations.
 
-Use `scripts/check/check_structured_file_inventory.py --changed <paths...>`
+Use `src/tooling/check/check_structured_file_inventory.py --changed <paths...>`
 for focused changed-path proof. It escalates to the full inventory audit when
 the inventory, schema, or matching implementation changes. The full
 `make structured-file-inventory` audit remains the broad no-prune proof for

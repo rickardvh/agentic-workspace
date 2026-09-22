@@ -21,10 +21,10 @@ Create the smallest aid that removes the friction:
 The existing root `Makefile` demonstrates the preferred command-wrapper pattern:
 
 ```make
-COMPACT_RUN = uv run python scripts/check/run_compact_command.py
+COMPACT_RUN = uv run python src/tooling/check/run_compact_command.py
 ```
 
-`scripts/check/run_compact_command.py` prints compact success output such as `[ok] <label> (<duration>)`, prints a tailed failure or timeout on error, and stores full logs under `scratch/command-logs`. Reuse this runner, or the same compact-output/full-log pattern, when a recurring command is too noisy for ordinary agent loops. For long checks, pass `--timeout-seconds <seconds>` with a value below the outer tool timeout so the runner can emit compact timeout evidence, write a log, and stop the command tree before the shell is killed externally.
+`src/tooling/check/run_compact_command.py` prints compact success output such as `[ok] <label> (<duration>)`, prints a tailed failure or timeout on error, and stores full logs under `scratch/command-logs`. Reuse this runner, or the same compact-output/full-log pattern, when a recurring command is too noisy for ordinary agent loops. For long checks, pass `--timeout-seconds <seconds>` with a value below the outer tool timeout so the runner can emit compact timeout evidence, write a log, and stop the command tree before the shell is killed externally.
 
 ## Storage Classes
 
@@ -44,7 +44,7 @@ Checked-in candidate aids are reviewable repo state. Put each aid in its own dir
 
 Use `authority_boundary` when an aid is provider-specific, tracker-specific, or close to workflow routing. Advisory aids should declare `runtime_authority: none` or `advisory-only` and name the owner surface for behavior-relevant facts, such as external-intent evidence, Planning state, Memory, docs contracts, or host config. This makes the aid's boundary explicit without making the aid a package-owned policy source.
 
-Run `python scripts/check/check_agent_aids.py` or `make agent-aids` to validate checked-in aid manifests and ensure aid files are covered by nearby metadata.
+Run `python src/tooling/check/check_agent_aids.py` or `make agent-aids` to validate checked-in aid manifests and ensure aid files are covered by nearby metadata.
 
 Use the current startup skill and semantic route references to select relevant agent aids. Read their declared source and scope; discovery does not grant effect authority.
 

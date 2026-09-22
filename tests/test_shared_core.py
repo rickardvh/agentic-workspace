@@ -705,7 +705,7 @@ def test_stored_attempt_requires_custody_and_replays_in_a_fresh_process(shared_c
     action = decision["primary_action"]
     admitted = admit_stored_attempt(str(tmp_path), decision, action)
     custody = admitted["custody"]
-    schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/effect_attempt.schema.json").read_text())
+    schema = json.loads((ROOT / "src/tooling/contracts/schemas/effect_attempt.schema.json").read_text())
     Draft202012Validator(schema).validate(admitted["record"])
     Draft202012Validator(schema["$defs"]["evidence"]).validate(custody["attempt"])
     path = tmp_path / custody["attempt"]["path"]

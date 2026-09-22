@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check locked Rust advisories, licenses and sources
-        run: python scripts/check/check_rust_dependencies.py --install
+        run: python src/tooling/check/check_rust_dependencies.py --install
 
   dependency-review:
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
@@ -79,4 +79,4 @@ jobs:
       - name: Verify locked security baseline
         run: |
           uv sync --locked
-          uv run python scripts/check/check_security_supply_chain.py --format json
+          uv run python src/tooling/check/check_security_supply_chain.py --format json

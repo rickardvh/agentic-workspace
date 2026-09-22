@@ -17,7 +17,7 @@ Prefer cheap reproducible proxies over invented exactness.
 Use:
 
 ```bash
-uv run python scripts/check/measure_lazy_discovery.py --target .
+uv run python src/tooling/check/measure_lazy_discovery.py --target .
 ```
 
 The current framework measures:

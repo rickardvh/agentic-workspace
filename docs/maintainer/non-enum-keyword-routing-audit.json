@@ -22,7 +22,7 @@
       "agent_judgment_boundary": "The table may surface task-shape evidence; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
-      "path": "packages/memory/scripts/check/check_memory_freshness.py",
+      "path": "packages/memory/src/tooling/check/check_memory_freshness.py",
       "function": "_delegates_durable_context",
       "variable": "delegation_markers",
       "classification": "advisory-diagnostic",

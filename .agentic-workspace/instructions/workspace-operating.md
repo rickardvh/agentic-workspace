@@ -1,12 +1,9 @@
 ---
 paths:
   - .agentic-workspace/**
-  - src/agentic_workspace/**
-  - packages/**
-  - scripts/**
+  - src/**
   - tests/**
   - docs/**
-  - crates/**
   - .github/**
 read:
   - docs/maintainer/testing-strategy.md

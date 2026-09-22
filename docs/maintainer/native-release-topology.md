@@ -51,7 +51,7 @@ The source archive contains binding sources and exact Rust compile inputs,
 including canonical contracts and bundled operating resources.
 
 Build the wheel/source archive with `uv build --wheel --sdist`. Stage npm and
-the native archive with `scripts/release/stage_native_npm.py --output <new-dir>
+the native archive with `src/tooling/release/stage_native_npm.py --output <new-dir>
 --native-archive-dir <artifact-dir>`, then `npm pack` that staging directory.
 The staging directory and native archive must be absent before creation.
 
@@ -62,7 +62,7 @@ artefacts. Staging reads the binding files directly and does not consume
 `generated/workspace/`. The source archive includes these canonical inputs and
 the release helpers needed to rebuild them.
 
-`scripts/check/check_native_release_topology.py` consumes exactly one wheel,
+`src/tooling/check/check_native_release_topology.py` consumes exactly one wheel,
 source archive, npm archive and native archive from `--artifact-dir`. It installs
 the packages in isolated consumers, clears tool lookup and source overrides,
 performs a carried owner-authorised write through each binding, checks binary
@@ -137,7 +137,7 @@ temporary release checkout and cleanup; a dirty failure must retain its evidence
 
 Require successful exact-source CI/security, installed native runtime proof,
 provenance, manifest and checksum checks from the existing preview workflow. Then
-run `scripts/release/preview_release.py --check-published preview-v0.55.0 --repo
+run `src/tooling/release/preview_release.py --check-published preview-v0.55.0 --repo
 rickardvh/agentic-workspace` from the exact artefact checkout, and the existing
 public install smoke on its supported host against the published assets. The
 source checkout can instead use `--admit-tag` with the exact `--artifact-commit`
@@ -245,7 +245,7 @@ Use the stable mapped version only after its independent support admission.
 Installing the CLI alone is not the supported paired installation. Registry
 availability does not widen the release's admitted platform/toolchain classes.
 
-`scripts/release/cargo_release.py` stages the existing sources, relocates literal
+`src/tooling/release/cargo_release.py` stages the existing sources, relocates literal
 compile-time resource references into `_inputs`, and retains the original bytes
 of included Rust source used for owner identities. The Cargo payload inventory
 explicitly includes hidden `.agentic-workspace` resources. The standalone lock is

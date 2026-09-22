@@ -31,7 +31,7 @@ def wheel(tmp_path_factory):
     if len(wheels) > 1:
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location("platform_release", ROOT / "scripts/release/platform_release.py")
+        spec = importlib.util.spec_from_file_location("platform_release", ROOT / "src/tooling/release/platform_release.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         data = module.load(output)
@@ -131,7 +131,7 @@ print(json.dumps({'effect':result['effect_outcome']['status']}))
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["effect"] == "committed"
     parity = subprocess.run(
-        [str(python), str(ROOT / "scripts/check/check_language_facade.py"), "--installed-python"],
+        [str(python), str(ROOT / "src/tooling/check/check_language_facade.py"), "--installed-python"],
         cwd=target,
         env=environment,
         capture_output=True,
@@ -188,7 +188,7 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
         archive = archives[0]
     else:
         subprocess.run(
-            [sys.executable, str(ROOT / "scripts/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
+            [sys.executable, str(ROOT / "src/tooling/release/stage_native_npm.py"), "--output", str(stage), "--profile", "dev"],
             check=True,
             capture_output=True,
         )
@@ -305,5 +305,5 @@ def test_source_archive_has_no_development_host_or_workspace_dependencies():
         assert f"{root}/Cargo.lock" in names
         assert f"{root}/rust-toolchain.toml" in names
         assert f"{root}/deny.toml" in names
-        assert f"{root}/scripts/check/check_rust_dependencies.py" in names
-        assert f"{root}/scripts/release/native_toolchain.py" in names
+        assert f"{root}/src/tooling/check/check_rust_dependencies.py" in names
+        assert f"{root}/src/tooling/release/native_toolchain.py" in names

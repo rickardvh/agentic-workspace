@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/release/support_bearing_promotion.py"
+SCRIPT = ROOT / "src/tooling/release/support_bearing_promotion.py"
 spec = importlib.util.spec_from_file_location("support_bearing_promotion_under_test", SCRIPT)
 assert spec is not None and spec.loader is not None
 PROMOTION = importlib.util.module_from_spec(spec)
@@ -116,7 +116,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             entry = tarfile.TarInfo("package/src/native/bin/" + name)
             entry.size = len(binary)
             archive.addfile(entry, io.BytesIO(binary))
-    sys.path.insert(0, str(ROOT / "scripts/release"))
+    sys.path.insert(0, str(ROOT / "src/tooling/release"))
     import platform_release
 
     rows = []

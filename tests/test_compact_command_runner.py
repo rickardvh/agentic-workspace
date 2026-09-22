@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_compact_command.py"
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "src" / "tooling" / "check" / "run_compact_command.py"
 
 
 def _load_runner():
@@ -21,7 +21,7 @@ def _load_runner():
 
 def test_compact_runner_rejects_output_escape_before_writing(tmp_path) -> None:
     root = tmp_path / "repo"
-    script = root / "scripts/check/run_compact_command.py"
+    script = root / "src/tooling/check/run_compact_command.py"
     script.parent.mkdir(parents=True)
     script.write_bytes(SCRIPT_PATH.read_bytes())
     outside = tmp_path / "outside"
