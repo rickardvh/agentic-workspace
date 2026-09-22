@@ -183,7 +183,9 @@ def consume(
     custom_core: bool = False,
 ) -> dict:
     context = {"projection": "full", **context}
-    installed = native_artifact_consumers.CURRENT
+    # A separately compiled independent-owner crate is a source composition,
+    # not the stock release pair. Installed manifests must reject its digest.
+    installed = None if custom_core else native_artifact_consumers.CURRENT
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
     if surface == "native":
@@ -252,10 +254,6 @@ def consume(
             if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH", "PYTHONHOME", "NODE_PATH"}
         }
         environment["PATH"] = effective_path
-        if custom_core:
-            # Independent-owner composition deliberately uses a separately built
-            # admitted core with the installed binding; ordinary tests stay paired.
-            environment["AGENTIC_WORKSPACE_CORE_BINARY"] = str(binary)
     result = subprocess.run(
         command,
         input=stdin,
