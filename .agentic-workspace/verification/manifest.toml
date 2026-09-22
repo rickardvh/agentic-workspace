@@ -1,5 +1,7 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[scenarios]
+
 [scenarios.aw_context_consistency]
 protocol_id = "aw_context_consistency"
 title = "AW-consumed context consistency"
@@ -13,9 +15,17 @@ expected_observations = [
   "Context authority and skill dependencies remain source-owned and current.",
   "Wrong-source generated edits name their canonical source and regeneration route.",
 ]
-pass_evidence_labels = ["memory_context_freshness", "context_contract_consistency"]
-fail_evidence_labels = ["memory_manifest_drift", "context_authority_drift", "generated_context_drift"]
-automation_hint = "uv run python scripts/check/check_memory_freshness.py --strict && uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+pass_evidence_labels = [
+  "memory_context_freshness",
+  "context_contract_consistency",
+]
+fail_evidence_labels = [
+  "memory_manifest_drift",
+  "context_authority_drift",
+  "generated_context_drift",
+]
+automation_hint = "uv run pytest tests/test_native_memory_declarations.py tests/test_native_startup_adapter.py -q && uv run python scripts/generate/generate_agent_interface.py --check"
+
 [scenarios.authoritative_validation_run]
 protocol_id = "authoritative_validation"
 title = "Authoritative compact validation run"
@@ -27,57 +37,25 @@ expected_observations = [
   "The result is bound to the current repository HEAD and validation-plan graph.",
   "The evidence bundle retains compact identity and cost metadata without raw child output.",
 ]
-pass_evidence_labels = ["authoritative_validation_pass"]
-fail_evidence_labels = ["validation_result_rejected"]
+pass_evidence_labels = [
+  "authoritative_validation_pass",
+]
+fail_evidence_labels = [
+  "validation_result_rejected",
+]
 automation_hint = "uv run python scripts/check/run_compact_command.py --label <label> -- <command>"
-
-[protocols.authoritative_validation]
-title = "Authoritative validation admission"
-purpose = "Admit ordinary compact validation as reusable exact-subject evidence without treating exit zero alone as proof."
-applies_to_paths = [
-  "scripts/check/run_compact_command.py",
-  "docs/maintainer/validation-runtime-2435/**",
-  "scratch/validation-results/**",
-]
-scenario_refs = ["authoritative_validation_run"]
-steps = [
-  "Validate result, proof-route, plan, repository, runtime, and time identity.",
-  "Reject stale, partial, failed, or mismatched results with typed reasons.",
-]
-expected_evidence = ["authoritative_validation_pass"]
-review_owner = "maintainer"
-authority_refs = [
-  "scripts/check/run_compact_command.py",
-  "docs/maintainer/validation-runtime-2435/validation-plan.json",
-]
-stale_when = ["scripts/check/run_compact_command.py", "docs/maintainer/validation-runtime-2435/**"]
-non_goals = [
-  "Verification does not retain raw child output or transcripts.",
-  "A passing process does not prove a different subject or route.",
-]
-commands = ["uv run python scripts/check/run_compact_command.py --label <label> -- <command>"]
-review_aids = ["Inspect validation_evidence_admissions for typed rejection reasons before relying on a bundle.", "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"local-compact-summary\""]
-
-[proof_routes.authoritative_validation]
-protocol_refs = ["authoritative_validation"]
-scenario_refs = ["authoritative_validation_run"]
-commands = ["uv run python scripts/check/run_compact_command.py --label <label> -- <command>"]
-review_aids = ["Reference the admitted bundle id; do not reinterpret raw process output."]
-proof_lane_hint = "authoritative-validation"
-reason = "Ordinary compact validation needs exact-subject admission before reuse by release or promotion."
 
 [scenarios.generated_adapter_local_conformance]
 protocol_id = "generated_adapter_conformance"
-title = "Generated adapter local conformance"
+title = "Native adapter and artifact conformance"
 steps = [
-  "Check generated package freshness and static surfaces.",
-  "Run local generated adapter conformance against the canonical Python runtime.",
-  "Run generated TypeScript package tests with Node.",
+  "Check generated contract catalogue freshness.",
+  "Exercise the native CLI, Python and Node transports against the paired native core.",
+  "Inspect wheel and npm artifact identity and reject source-tree or compiler fallback.",
 ]
 expected_observations = [
-  "Generated resources are fresh from command_package_ir.",
-  "Generated TypeScript adapters validate interface shape before runtime handoff.",
-  "Local adapter conformance matches the canonical runtime boundary.",
+  "Canonical Rust semantics agree across thin transports.",
+  "Installed package resources and binaries are self-contained and share native provenance.",
 ]
 pass_evidence_labels = [
   "generated_package_freshness_static",
@@ -88,19 +66,20 @@ fail_evidence_labels = [
   "generated_package_drift",
   "generated_adapter_conformance_drift",
 ]
-automation_hint = "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q && uv run python scripts/generate/generate_contract_catalogues.py --check"
+manual_boundary = "Historical Docker/generated-host labels are not renewed evidence. Cross-platform release admission requires its actual platform artifacts."
 
 [scenarios.generated_adapter_docker_conformance]
 protocol_id = "generated_adapter_conformance"
-title = "Generated adapter Docker conformance"
+title = "Native adapter and artifact conformance"
 steps = [
-  "Run generated TypeScript package Docker proof.",
-  "Run generated TypeScript adapter Docker conformance.",
-  "Run generated Python adapter Docker conformance when Python package surfaces changed.",
+  "Check generated contract catalogue freshness.",
+  "Exercise the native CLI, Python and Node transports against the paired native core.",
+  "Inspect wheel and npm artifact identity and reject source-tree or compiler fallback.",
 ]
 expected_observations = [
-  "Container proof includes generated package resources and support code.",
-  "Docker conformance can import command-generation support and canonical runtime modules.",
+  "Canonical Rust semantics agree across thin transports.",
+  "Installed package resources and binaries are self-contained and share native provenance.",
 ]
 pass_evidence_labels = [
   "generated_typescript_docker_proof",
@@ -111,7 +90,8 @@ fail_evidence_labels = [
   "generated_docker_proof_failure",
   "generated_docker_conformance_failure",
 ]
-automation_hint = "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q && uv run python scripts/generate/generate_contract_catalogues.py --check"
+manual_boundary = "Historical Docker/generated-host labels are not renewed evidence. Cross-platform release admission requires its actual platform artifacts."
 
 [scenarios.closeout_intent_satisfaction_review]
 protocol_id = "closeout_intent_satisfaction"
@@ -182,344 +162,6 @@ fail_evidence_labels = [
 automation_hint = "uv run pytest tests/test_native_verification_strategy.py -q"
 manual_boundary = "The acting agent answers current Verification requests for the specific evidence change; an automated check does not decide sufficiency or confer completion authority."
 
-[protocols.generated_adapter_conformance]
-title = "Generated adapter conformance"
-purpose = "Keep generated command package adapters honest across generated Python and TypeScript surfaces without making Verification the proof authority."
-applies_to_paths = [
-  "src/agentic_workspace/contracts/command_package_ir.json",
-  "internal/command-generation/src/command_generation/**",
-  "scripts/check/check_generated_command_packages.py",
-  "scripts/generate/generate_command_packages.py",
-  "scripts/generate/workspace_command_generation.py",
-  "generated/*/python/**",
-  "generated/*/typescript/**",
-  "generated/python/Dockerfile*",
-  "generated/typescript*.Dockerfile",
-]
-applies_to_task_markers = [
-  "generated adapter",
-  "generated command package",
-  "command_package_ir",
-  "typescript cli",
-  "adapter conformance",
-]
-scenario_refs = [
-  "generated_adapter_local_conformance",
-  "generated_adapter_docker_conformance",
-]
-steps = [
-  "Regenerate or check generated command packages from command_package_ir.",
-  "Run local static and conformance checks for generated package adapters.",
-  "Run Docker proof when generated adapter packaging, runtime handoff, or Docker support changed.",
-]
-expected_evidence = [
-  "generated_package_freshness_static",
-  "generated_adapter_local_conformance",
-  "generated_typescript_node_tests",
-  "generated_typescript_docker_proof",
-  "generated_typescript_docker_conformance",
-]
-review_owner = "maintainer"
-authority_refs = [
-  "src/agentic_workspace/contracts/command_package_ir.json",
-  "scripts/check/check_generated_command_packages.py",
-  "internal/command-generation/src/command_generation/generator.py",
-]
-stale_when = [
-  "src/agentic_workspace/contracts/command_package_ir.json",
-  "internal/command-generation/src/command_generation/**",
-  "scripts/check/check_generated_command_packages.py",
-  "scripts/generate/generate_command_packages.py",
-  "scripts/generate/workspace_command_generation.py",
-  "generated/*/python/**",
-  "generated/*/typescript/**",
-  "generated/python/Dockerfile*",
-  "generated/typescript*.Dockerfile",
-]
-non_goals = [
-  "Verification does not decide whether a feature is correct.",
-  "Verification does not store raw command output or long transcripts by default.",
-]
-commands = [
-  "uv run python scripts/generate/generate_command_packages.py --check",
-  "uv run python scripts/check/check_generated_command_packages.py --require-node",
-  "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-  "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-  "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
-]
-review_aids = ["If Docker is unavailable, record the proof-environment gap rather than treating missing Docker as adapter success.", "Do not let stale generated adapter evidence satisfy changed command_package_ir, generator, checker, or generated-root changes.", "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
-
-[protocols.aw_context_consistency]
-title = "AW-consumed context consistency"
-purpose = "Protect only repository inputs consumed by AW, with changed-path-selected checks and bounded repair output."
-applies_to_paths = [
-  "AGENTS.md",
-  "SYSTEM_INTENT.md",
-  ".agentic-workspace/config*.toml",
-  ".agentic-workspace/memory/repo/**",
-  ".agentic-workspace/skills/**",
-  "src/agentic_workspace/contracts/context_authority_registry.json",
-  "src/agentic_workspace/contracts/operation_contracts.json",
-  "src/agentic_workspace/contracts/structured_file_inventory.json",
-  "scripts/check/check_memory_freshness.py",
-  "scripts/check/check_contract_tooling_surfaces.py",
-]
-applies_to_task_markers = ["memory manifest", "context authority", "AW context", "skill registry", "system intent"]
-scenario_refs = ["aw_context_consistency"]
-steps = [
-  "Run the strict Memory manifest/freshness audit when Memory inputs change.",
-  "Run contract tooling when registered authority, skill, operation, or generated context changes.",
-]
-expected_evidence = ["memory_context_freshness", "context_contract_consistency"]
-review_owner = "context source owner"
-authority_refs = [
-  ".agentic-workspace/memory/repo/manifest.toml",
-  "src/agentic_workspace/contracts/context_authority_registry.json",
-  "scripts/check/check_memory_freshness.py",
-  "scripts/check/check_contract_tooling_surfaces.py",
-]
-stale_when = [
-  ".agentic-workspace/memory/repo/**",
-  ".agentic-workspace/skills/**",
-  "src/agentic_workspace/contracts/context_authority_registry.json",
-  "src/agentic_workspace/contracts/operation_contracts.json",
-]
-non_goals = [
-  "Do not lint unrelated documentation or code.",
-  "Do not turn advisory historical material into current authority.",
-]
-commands = [
-  "uv run python scripts/check/check_memory_freshness.py --strict",
-  "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
-]
-
-review_aids = ["Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
-[protocols.closeout_intent_satisfaction]
-title = "Closeout intent satisfaction"
-purpose = "Make completion-honesty and residue-routing review repeatable for planning and closeout behavior without letting Verification decide semantic satisfaction."
-applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_proof.rs",
-  "crates/agentic-workspace-core/src/native_verification.rs",
-  "crates/agentic-workspace-core/src/native_public.rs",
-  "tests/test_native_proof_producer.py",
-  "packages/planning/src/**/archive*.py",
-  "packages/planning/src/**/closeout*.py",
-  "packages/planning/tests/**/test_archive*.py",
-  "src/agentic_workspace/workspace_runtime*.py",
-  "tests/test_native_planning_create.py",
-  "tests/test_native_public_cli.py",
-]
-applies_to_task_markers = [
-  "closeout",
-  "intent satisfaction",
-  "parent lane",
-  "residue",
-  "completion claim",
-]
-assurance_requirement_refs = []
-proof_profiles = []
-scenario_refs = ["closeout_intent_satisfaction_review"]
-steps = [
-  "Inspect closeout trust and intent-satisfaction surfaces.",
-  "Compare delivered behavior, proof, and remaining continuation claims.",
-]
-expected_evidence = [
-  "intent_satisfaction_review",
-  "closeout_trust_review",
-]
-review_owner = "maintainer"
-authority_refs = [
-  ".agentic-workspace/docs/reporting-contract.md",
-  ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
-  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
-]
-stale_when = [
-  "crates/agentic-workspace-core/src/native_proof.rs",
-  "crates/agentic-workspace-core/src/native_verification.rs",
-  "crates/agentic-workspace-core/src/native_public.rs",
-  "tests/test_native_proof_producer.py",
-  "packages/planning/src/**/archive*.py",
-  "packages/planning/src/**/closeout*.py",
-  "packages/planning/tests/**/test_archive*.py",
-  "src/agentic_workspace/workspace_runtime*.py",
-]
-non_goals = [
-  "Verification does not decide whether the user is satisfied.",
-  "Verification does not close parent lanes.",
-]
-commands = [
-  "uv run pytest tests/test_native_proof_producer.py -q",
-]
-review_aids = ["Use this route when closeout, archive, continuation, or completion-honesty semantics changed.", "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
-
-[protocols.requirement_grounding_delegation]
-title = "Requirement grounding and delegation"
-purpose = "Keep requirement-grounding and delegation support inspectable without turning Verification into the decision maker."
-applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_assignment.rs",
-  "crates/agentic-workspace-core/src/native_delegation.rs",
-  "crates/agentic-workspace-core/src/native_handoff.rs",
-  "crates/agentic-workspace-core/src/native_requirements.rs",
-  "tests/test_native_assignment_judgment.py",
-  "tests/test_native_readonly_handoff.py",
-  ".agentic-workspace/config.toml",
-  ".agentic-workspace/OWNERSHIP.toml",
-  "src/agentic_workspace/workspace_runtime*.py",
-  "tests/test_native_config_admission.py",
-  "tests/test_native_public_cli.py",
-]
-applies_to_task_markers = [
-  "requirement grounding",
-  "delegation",
-  "assurance",
-  "subsystem profile",
-  "handoff",
-]
-assurance_requirement_refs = []
-proof_profiles = []
-scenario_refs = ["requirement_grounding_delegation_review"]
-steps = [
-  "Inspect requirement grounding and delegation report fields for the changed paths.",
-  "Confirm AW surfaces facts and questions while the agent owns the route decision.",
-]
-expected_evidence = [
-  "requirement_grounding_review",
-  "delegation_route_review",
-]
-review_owner = "maintainer"
-authority_refs = [
-  ".agentic-workspace/config.toml",
-  ".agentic-workspace/OWNERSHIP.toml",
-  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
-]
-stale_when = [
-  "crates/agentic-workspace-core/src/native_assignment.rs",
-  "crates/agentic-workspace-core/src/native_delegation.rs",
-  "crates/agentic-workspace-core/src/native_handoff.rs",
-  "crates/agentic-workspace-core/src/native_requirements.rs",
-  "tests/test_native_assignment_judgment.py",
-  "tests/test_native_readonly_handoff.py",
-  ".agentic-workspace/config.toml",
-  ".agentic-workspace/OWNERSHIP.toml",
-  "src/agentic_workspace/workspace_runtime*.py",
-]
-non_goals = [
-  "Verification does not choose whether to delegate.",
-  "Verification does not promote source observations into requirements.",
-]
-commands = [
-  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
-]
-review_aids = ["Use this route when requirement refs, subsystem assurance, delegation policy, or handoff packets changed.", "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
-
-[protocols.test_evidence_decision]
-title = "Test evidence decision"
-purpose = "Make ordinary test growth, reduction, movement, and conformance conversion explainable by evidence ownership instead of raw test count."
-applies_to_paths = [
-  "crates/agentic-workspace-core/src/native_verification.rs",
-  "tests/test_native_verification_strategy.py",
-  "tests/**",
-  "packages/**/tests/**",
-  "docs/maintainer/testing-strategy.md",
-  "docs/maintainer/test-knowledge-inventory.md",
-]
-applies_to_task_markers = [
-  "test reduction",
-  "regression test",
-  "ordinary test",
-  "conformance test",
-  "proof decision",
-]
-assurance_requirement_refs = ["test_evidence_change_decision"]
-scenario_refs = ["test_evidence_decision_review"]
-steps = [
-  "Inspect evidence_strategy, regression_sprawl, and proof_decision report fields.",
-  "Record or review agent-authored proof-decision evidence when ordinary tests change materially.",
-]
-expected_evidence = [
-  "verification_proof_decision_review",
-  "test_evidence_owner_review",
-]
-review_owner = "maintainer"
-authority_refs = [
-  "docs/maintainer/testing-strategy.md",
-  "docs/maintainer/test-knowledge-inventory.md",
-  "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
-]
-stale_when = [
-  "crates/agentic-workspace-core/src/native_verification.rs",
-  "tests/test_native_verification_strategy.py",
-  "tests/**",
-  "packages/**/tests/**",
-  "docs/maintainer/testing-strategy.md",
-  "docs/maintainer/test-knowledge-inventory.md",
-  "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
-]
-non_goals = [
-  "Verification does not authorize deletion by itself.",
-  "Verification does not infer host strategy from prose or filenames.",
-]
-commands = [
-  "uv run pytest tests/test_native_verification_strategy.py -q",
-]
-review_aids = ["Use this route before claiming test-count reduction, pruning, conversion, or new regression tests are sufficient.", "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
-
-[proof_routes.generated_adapter_conformance]
-protocol_refs = ["generated_adapter_conformance"]
-scenario_refs = [
-  "generated_adapter_local_conformance",
-  "generated_adapter_docker_conformance",
-]
-commands = [
-  "uv run python scripts/generate/generate_command_packages.py --check",
-  "uv run python scripts/check/check_generated_command_packages.py --require-node",
-  "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-  "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-  "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
-]
-review_aids = [
-  "Compare the generated adapter evidence to the changed generated surfaces and claim boundary.",
-]
-proof_lane_hint = "generated-adapter-conformance"
-reason = "Generated command package changes need repeatable local and Docker conformance evidence."
-
-[proof_routes.closeout_intent_satisfaction]
-protocol_refs = ["closeout_intent_satisfaction"]
-scenario_refs = ["closeout_intent_satisfaction_review"]
-commands = [
-  "uv run pytest tests/test_native_proof_producer.py -q",
-]
-review_aids = [
-  "Compare proof success, delivered behavior, user intent, and remaining continuation before broad completion claims.",
-]
-proof_lane_hint = "closeout-intent-satisfaction"
-reason = "Closeout and planning behavior changes need repeatable completion-honesty evidence."
-
-[proof_routes.requirement_grounding_delegation]
-protocol_refs = ["requirement_grounding_delegation"]
-scenario_refs = ["requirement_grounding_delegation_review"]
-commands = [
-  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
-]
-review_aids = [
-  "Confirm source observations, agent interpretation, and delegation route decisions remain separate.",
-]
-proof_lane_hint = "requirement-grounding-delegation"
-reason = "Requirement-grounding, assurance, and delegation changes need explicit route-review evidence."
-
-[proof_routes.test_evidence_decision]
-protocol_refs = ["test_evidence_decision"]
-scenario_refs = ["test_evidence_decision_review"]
-assurance_requirement_refs = ["test_evidence_change_decision"]
-commands = [
-  "uv run pytest tests/test_native_verification_strategy.py -q",
-]
-review_aids = [
-  "Record a live proof-decision when ordinary test evidence materially changes.",
-]
-proof_lane_hint = "test-evidence-decision"
-reason = "Test evidence changes need trust-question and replacement-evidence review beyond raw test counts."
-
 [scenarios.repo_acceptance_policy]
 protocol_id = "repo_acceptance_policy"
 title = "Repo acceptance policy remains executable and proportional"
@@ -554,6 +196,347 @@ fail_evidence_labels = [
 automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
 manual_boundary = "Verification reports evidence; config and the operating decision retain policy and claim authority. This route does not authorize non-local dispatch or satisfy open issue #2817."
 
+[scenarios.config_orthogonality_constructibility]
+protocol_id = "config_orthogonality_constructibility"
+title = "Current configuration dimensions and authority layering"
+steps = [
+  "Run the current configuration owner's orthogonality, alias, local override, and assignment-policy fixtures.",
+]
+expected_observations = [
+  "Independent legal dimensions compose; same-question aliases fail closed; local authority cannot silently weaken shared constraints.",
+]
+pass_evidence_labels = [
+  "config_orthogonality_constructibility_fixture",
+]
+fail_evidence_labels = [
+  "repo_acceptance_evidence_stale",
+]
+manual_boundary = "Executable fixtures cover the declared configuration owner; they do not prove ordinary supported-host delegation or independent review."
+
+[protocols]
+
+[protocols.authoritative_validation]
+title = "Authoritative validation admission"
+purpose = "Admit ordinary compact validation as reusable exact-subject evidence without treating exit zero alone as proof."
+applies_to_paths = [
+  "scripts/check/run_compact_command.py",
+  "docs/maintainer/validation-runtime-2435/**",
+  "scratch/validation-results/**",
+]
+scenario_refs = [
+  "authoritative_validation_run",
+]
+steps = [
+  "Validate result, proof-route, plan, repository, runtime, and time identity.",
+  "Reject stale, partial, failed, or mismatched results with typed reasons.",
+]
+expected_evidence = [
+  "authoritative_validation_pass",
+]
+review_owner = "maintainer"
+authority_refs = [
+  "scripts/check/run_compact_command.py",
+  "docs/maintainer/validation-runtime-2435/validation-plan.json",
+]
+stale_when = [
+  "scripts/check/run_compact_command.py",
+  "docs/maintainer/validation-runtime-2435/**",
+]
+non_goals = [
+  "Verification does not retain raw child output or transcripts.",
+  "A passing process does not prove a different subject or route.",
+]
+commands = [
+  "uv run python scripts/check/run_compact_command.py --label <label> -- <command>",
+]
+review_aids = [
+  "Inspect validation_evidence_admissions for typed rejection reasons before relying on a bundle.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"local-compact-summary\"",
+]
+
+[protocols.generated_adapter_conformance]
+title = "Native adapter conformance"
+purpose = "Keep thin transports and generated reference catalogues aligned with the native semantic authority."
+applies_to_paths = [
+  "src/cli/**",
+  "crates/agentic-workspace-cli/src/main.rs",
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "scripts/release/**",
+  "scripts/generate/**",
+]
+applies_to_task_markers = [
+  "generated adapter",
+  "generated command package",
+  "native command contract",
+  "typescript cli",
+  "adapter conformance",
+]
+scenario_refs = [
+  "generated_adapter_local_conformance",
+  "generated_adapter_docker_conformance",
+]
+steps = [
+  "Check generated contract catalogue freshness.",
+  "Exercise the native CLI, Python and Node transports against the paired native core.",
+  "Inspect wheel and npm artifact identity and reject source-tree or compiler fallback.",
+]
+expected_evidence = [
+  "generated_package_freshness_static",
+  "generated_adapter_local_conformance",
+  "generated_typescript_node_tests",
+  "generated_typescript_docker_proof",
+  "generated_typescript_docker_conformance",
+]
+review_owner = "maintainer"
+authority_refs = [
+  "crates/agentic-workspace-cli/src/main.rs",
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "docs/maintainer/native-release-topology.md",
+]
+stale_when = [
+  "src/cli/**",
+  "src/core/**",
+  "scripts/release/**",
+  "scripts/generate/generate_contract_catalogues.py",
+]
+non_goals = [
+  "Verification does not decide whether a feature is correct.",
+  "Verification does not store raw command output or long transcripts by default.",
+]
+commands = [
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q",
+  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+]
+review_aids = [
+  "If Docker is unavailable, record the proof-environment gap rather than treating missing Docker as adapter success.",
+  "Do not let stale generated adapter evidence satisfy changed native command contract, generator, checker, or generated-root changes.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
+]
+
+[protocols.aw_context_consistency]
+title = "AW-consumed context consistency"
+purpose = "Protect only repository inputs consumed by AW, with changed-path-selected checks and bounded repair output."
+applies_to_paths = [
+  "AGENTS.md",
+  "SYSTEM_INTENT.md",
+  ".agentic-workspace/config*.toml",
+  ".agentic-workspace/memory/repo/**",
+  ".agentic-workspace/skills/**",
+  "src/agentic_workspace/contracts/**",
+]
+applies_to_task_markers = [
+  "memory manifest",
+  "context authority",
+  "AW context",
+  "skill registry",
+  "system intent",
+]
+scenario_refs = [
+  "aw_context_consistency",
+]
+steps = [
+  "Run the strict Memory manifest/freshness audit when Memory inputs change.",
+  "Run contract tooling when registered authority, skill, operation, or generated context changes.",
+]
+expected_evidence = [
+  "memory_context_freshness",
+  "context_contract_consistency",
+]
+review_owner = "context source owner"
+authority_refs = [
+  ".agentic-workspace/memory/repo/manifest.toml",
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "scripts/check/check_memory_freshness.py",
+  "scripts/check/check_structured_file_inventory.py",
+]
+stale_when = [
+  ".agentic-workspace/memory/repo/**",
+  ".agentic-workspace/skills/**",
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+]
+non_goals = [
+  "Do not lint unrelated documentation or code.",
+  "Do not turn advisory historical material into current authority.",
+]
+commands = [
+  "uv run pytest tests/test_native_memory_declarations.py tests/test_native_startup_adapter.py -q",
+  "uv run python scripts/generate/generate_agent_interface.py --check",
+]
+review_aids = [
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
+]
+
+[protocols.closeout_intent_satisfaction]
+title = "Closeout intent satisfaction"
+purpose = "Make completion-honesty and residue-routing review repeatable for planning and closeout behavior without letting Verification decide semantic satisfaction."
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/**",
+  "crates/agentic-workspace-core/src/**",
+  "tests/test_native_proof_producer.py",
+]
+applies_to_task_markers = [
+  "closeout",
+  "intent satisfaction",
+  "parent lane",
+  "residue",
+  "completion claim",
+]
+assurance_requirement_refs = [
+]
+proof_profiles = [
+]
+scenario_refs = [
+  "closeout_intent_satisfaction_review",
+]
+steps = [
+  "Inspect closeout trust and intent-satisfaction surfaces.",
+  "Compare delivered behavior, proof, and remaining continuation claims.",
+]
+expected_evidence = [
+  "intent_satisfaction_review",
+  "closeout_trust_review",
+]
+review_owner = "maintainer"
+authority_refs = [
+  ".agentic-workspace/docs/reporting-contract.md",
+  ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
+]
+stale_when = [
+  "crates/agentic-workspace-core/src/native_proof.rs",
+  "crates/agentic-workspace-core/src/native_verification.rs",
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "tests/test_native_proof_producer.py",
+  "crates/agentic-workspace-core/src/",
+  "crates/agentic-workspace-core/src/native_*.rs",
+]
+non_goals = [
+  "Verification does not decide whether the user is satisfied.",
+  "Verification does not close parent lanes.",
+]
+commands = [
+  "uv run pytest tests/test_native_proof_producer.py -q",
+]
+review_aids = [
+  "Use this route when closeout, archive, continuation, or completion-honesty semantics changed.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
+]
+
+[protocols.requirement_grounding_delegation]
+title = "Requirement grounding and delegation"
+purpose = "Keep requirement-grounding and delegation support inspectable without turning Verification into the decision maker."
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "crates/agentic-workspace-core/src/native_requirements.rs",
+  "crates/agentic-workspace-core/src/native_delegation.rs",
+]
+applies_to_task_markers = [
+  "requirement grounding",
+  "delegation",
+  "assurance",
+  "subsystem profile",
+  "handoff",
+]
+assurance_requirement_refs = [
+]
+proof_profiles = [
+]
+scenario_refs = [
+  "requirement_grounding_delegation_review",
+]
+steps = [
+  "Inspect requirement grounding and delegation report fields for the changed paths.",
+  "Confirm AW surfaces facts and questions while the agent owns the route decision.",
+]
+expected_evidence = [
+  "requirement_grounding_review",
+  "delegation_route_review",
+]
+review_owner = "maintainer"
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/OWNERSHIP.toml",
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
+]
+stale_when = [
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "crates/agentic-workspace-core/src/native_delegation.rs",
+  "crates/agentic-workspace-core/src/native_handoff.rs",
+  "crates/agentic-workspace-core/src/native_requirements.rs",
+  "tests/test_native_assignment_judgment.py",
+  "tests/test_native_readonly_handoff.py",
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/OWNERSHIP.toml",
+  "crates/agentic-workspace-core/src/native_*.rs",
+]
+non_goals = [
+  "Verification does not choose whether to delegate.",
+  "Verification does not promote source observations into requirements.",
+]
+commands = [
+  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
+]
+review_aids = [
+  "Use this route when requirement refs, subsystem assurance, delegation policy, or handoff packets changed.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
+]
+
+[protocols.test_evidence_decision]
+title = "Test evidence decision"
+purpose = "Make ordinary test growth, reduction, movement, and conformance conversion explainable by evidence ownership instead of raw test count."
+applies_to_paths = [
+  "tests/**",
+  "docs/maintainer/testing-strategy.md",
+  "docs/maintainer/test-knowledge-inventory.md",
+]
+applies_to_task_markers = [
+  "test reduction",
+  "regression test",
+  "ordinary test",
+  "conformance test",
+  "proof decision",
+]
+assurance_requirement_refs = [
+  "test_evidence_change_decision",
+]
+scenario_refs = [
+  "test_evidence_decision_review",
+]
+steps = [
+  "Inspect evidence_strategy, regression_sprawl, and proof_decision report fields.",
+  "Record or review agent-authored proof-decision evidence when ordinary tests change materially.",
+]
+expected_evidence = [
+  "verification_proof_decision_review",
+  "test_evidence_owner_review",
+]
+review_owner = "maintainer"
+authority_refs = [
+  "docs/maintainer/testing-strategy.md",
+  "docs/maintainer/test-knowledge-inventory.md",
+  "crates/agentic-workspace-core/src/",
+]
+stale_when = [
+  "crates/agentic-workspace-core/src/native_verification.rs",
+  "tests/test_native_verification_strategy.py",
+  "tests/**",
+  "crates/agentic-workspace-core/tests/**",
+  "docs/maintainer/testing-strategy.md",
+  "docs/maintainer/test-knowledge-inventory.md",
+  "crates/agentic-workspace-core/src/",
+]
+non_goals = [
+  "Verification does not authorize deletion by itself.",
+  "Verification does not infer host strategy from prose or filenames.",
+]
+commands = [
+  "uv run pytest tests/test_native_verification_strategy.py -q",
+]
+review_aids = [
+  "Use this route before claiming test-count reduction, pruning, conversion, or new regression tests are sufficient.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
+]
+
 [protocols.repo_acceptance_policy]
 title = "Repo acceptance policy"
 purpose = "Keep repo-selected policy source-local while reusing assurance, Verification, proof, scoped instructions, and the one operating decision."
@@ -573,7 +556,9 @@ assurance_requirement_refs = [
   "invalid_selector_rejection_budget",
   "selected_proof_residue_budget",
 ]
-scenario_refs = ["repo_acceptance_policy"]
+scenario_refs = [
+  "repo_acceptance_policy",
+]
 steps = [
   "Validate named references and config authority constraints.",
   "Run the focused behavior and measurement fixtures selected by the changed policy owner.",
@@ -597,7 +582,7 @@ authority_refs = [
 ]
 stale_when = [
   ".agentic-workspace/config.toml",
-  "tests/test_summary_exact_selector_performance.py",
+  "tests/test_native_operating_carriage.py",
   "tests/test_native_public_cli.py",
   "tests/test_native_domain_proof.py",
 ]
@@ -608,11 +593,145 @@ non_goals = [
 commands = [
   "uv run pytest tests/test_native_domain_proof.py -q",
 ]
-review_aids = ["Use the smallest focused route that proves the activated requirement and keep full evidence detail with its declared owner.", "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
+review_aids = [
+  "Use the smallest focused route that proves the activated requirement and keep full evidence detail with its declared owner.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
+]
+
+[protocols.config_orthogonality_constructibility]
+title = "Configuration orthogonality and constructibility"
+purpose = "Keep the activated configuration requirement's focused evidence mandatory without importing unrelated CLI, Planning, or session protocols."
+applies_to_paths = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/verification/manifest.toml",
+]
+assurance_requirement_refs = [
+  "config_orthogonality_constructibility",
+]
+scenario_refs = [
+  "config_orthogonality_constructibility",
+]
+steps = [
+  "Validate the existing configuration requirement against its owner fixtures.",
+]
+expected_evidence = [
+  "config_orthogonality_constructibility_fixture",
+]
+review_owner = "workspace-config"
+authority_refs = [
+  ".agentic-workspace/config.toml#assurance.requirements.config_orthogonality_constructibility",
+  "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility",
+]
+stale_when = [
+  "crates/agentic-workspace-core/src/native_config.rs",
+  "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+  "tests/test_native_config_admission.py",
+]
+non_goals = [
+  "A configuration proof does not satisfy unrelated policy requirements or supported-host delegation evidence.",
+]
+commands = [
+  "uv run pytest tests/test_native_config_admission.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q",
+]
+review_aids = [
+  "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
+]
+
+[proof_routes]
+
+[proof_routes.authoritative_validation]
+protocol_refs = [
+  "authoritative_validation",
+]
+scenario_refs = [
+  "authoritative_validation_run",
+]
+commands = [
+  "uv run python scripts/check/run_compact_command.py --label <label> -- <command>",
+]
+review_aids = [
+  "Reference the admitted bundle id; do not reinterpret raw process output.",
+]
+proof_lane_hint = "authoritative-validation"
+reason = "Ordinary compact validation needs exact-subject admission before reuse by release or promotion."
+
+[proof_routes.generated_adapter_conformance]
+protocol_refs = [
+  "generated_adapter_conformance",
+]
+scenario_refs = [
+  "generated_adapter_local_conformance",
+  "generated_adapter_docker_conformance",
+]
+commands = [
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q",
+  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+]
+review_aids = [
+  "Compare the generated adapter evidence to the changed generated surfaces and claim boundary.",
+]
+proof_lane_hint = "generated-adapter-conformance"
+reason = "Generated command package changes need repeatable local and Docker conformance evidence."
+
+[proof_routes.closeout_intent_satisfaction]
+protocol_refs = [
+  "closeout_intent_satisfaction",
+]
+scenario_refs = [
+  "closeout_intent_satisfaction_review",
+]
+commands = [
+  "uv run pytest tests/test_native_proof_producer.py -q",
+]
+review_aids = [
+  "Compare proof success, delivered behavior, user intent, and remaining continuation before broad completion claims.",
+]
+proof_lane_hint = "closeout-intent-satisfaction"
+reason = "Closeout and planning behavior changes need repeatable completion-honesty evidence."
+
+[proof_routes.requirement_grounding_delegation]
+protocol_refs = [
+  "requirement_grounding_delegation",
+]
+scenario_refs = [
+  "requirement_grounding_delegation_review",
+]
+commands = [
+  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
+]
+review_aids = [
+  "Confirm source observations, agent interpretation, and delegation route decisions remain separate.",
+]
+proof_lane_hint = "requirement-grounding-delegation"
+reason = "Requirement-grounding, assurance, and delegation changes need explicit route-review evidence."
+
+[proof_routes.test_evidence_decision]
+protocol_refs = [
+  "test_evidence_decision",
+]
+scenario_refs = [
+  "test_evidence_decision_review",
+]
+assurance_requirement_refs = [
+  "test_evidence_change_decision",
+]
+commands = [
+  "uv run pytest tests/test_native_verification_strategy.py -q",
+]
+review_aids = [
+  "Record a live proof-decision when ordinary test evidence materially changes.",
+]
+proof_lane_hint = "test-evidence-decision"
+reason = "Test evidence changes need trust-question and replacement-evidence review beyond raw test counts."
 
 [proof_routes.repo_acceptance_policy]
-protocol_refs = ["repo_acceptance_policy"]
-scenario_refs = ["repo_acceptance_policy"]
+protocol_refs = [
+  "repo_acceptance_policy",
+]
+scenario_refs = [
+  "repo_acceptance_policy",
+]
 assurance_requirement_refs = [
   "typed_cli_selector_contract",
   "proof_execution_integrity",
@@ -625,7 +744,7 @@ assurance_requirement_refs = [
 ]
 commands = [
   "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q",
-  "uv run pytest tests/test_instruction_clause_ir.py tests/test_scoped_instructions.py tests/test_native_config_admission.py -q",
+  "uv run pytest tests/test_native_instruction_write.py tests/test_native_instruction_verification.py tests/test_native_config_admission.py -q",
 ]
 review_aids = [
   "Check evidence identity/currentness and verify guidelines remain non-blocking for unrelated direct work.",
@@ -633,339 +752,871 @@ review_aids = [
 proof_lane_hint = "repo-acceptance-policy"
 reason = "Repo-local policy changes need executable source-owner evidence without widening portable Workspace authority."
 
-[scenarios.config_orthogonality_constructibility]
-protocol_id = "config_orthogonality_constructibility"
-title = "Current configuration dimensions and authority layering"
-steps = ["Run the current configuration owner's orthogonality, alias, local override, and assignment-policy fixtures."]
-expected_observations = ["Independent legal dimensions compose; same-question aliases fail closed; local authority cannot silently weaken shared constraints."]
-pass_evidence_labels = ["config_orthogonality_constructibility_fixture"]
-fail_evidence_labels = ["repo_acceptance_evidence_stale"]
-manual_boundary = "Executable fixtures cover the declared configuration owner; they do not prove ordinary supported-host delegation or independent review."
+[assurance]
 
-[protocols.config_orthogonality_constructibility]
-title = "Configuration orthogonality and constructibility"
-purpose = "Keep the activated configuration requirement's focused evidence mandatory without importing unrelated CLI, Planning, or session protocols."
-applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml"]
-assurance_requirement_refs = ["config_orthogonality_constructibility"]
-scenario_refs = ["config_orthogonality_constructibility"]
-steps = ["Validate the existing configuration requirement against its owner fixtures."]
-expected_evidence = ["config_orthogonality_constructibility_fixture"]
-review_owner = "workspace-config"
-authority_refs = [".agentic-workspace/config.toml#assurance.requirements.config_orthogonality_constructibility", "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility"]
-stale_when = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_native_config_admission.py"]
-non_goals = ["A configuration proof does not satisfy unrelated policy requirements or supported-host delegation evidence."]
-commands = ["uv run pytest tests/test_native_config_admission.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q"]
+[assurance.proof_profiles]
 
-# Operational strategy declarations transferred from shared config (#2613).
-review_aids = ["Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
 [assurance.proof_profiles.workspace_behavior]
-required_commands = []
-optional_commands = []
-review_aids = ["Use focused domain proof lanes for executable behavior evidence; broad workspace validation requires an explicit broad route or escalation reason."]
+required_commands = [
+]
+optional_commands = [
+]
+review_aids = [
+  "Use focused domain proof lanes for executable behavior evidence; broad workspace validation requires an explicit broad route or escalation reason.",
+]
 
 [assurance.proof_profiles.verification_behavior]
-required_commands = ["uv run pytest packages/verification/tests -q"]
-optional_commands = []
-review_aids = ["Confirm Verification reports facts and questions without making agent-owned proof decisions."]
+required_commands = [
+  "uv run pytest packages/verification/tests -q",
+]
+optional_commands = [
+]
+review_aids = [
+  "Confirm Verification reports facts and questions without making agent-owned proof decisions.",
+]
 
 [assurance.proof_profiles.test_evidence_change]
-required_commands = ["uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q"]
-review_aids = ["Record or inspect the Verification proof-decision route when ordinary tests grow, shrink, or move."]
+required_commands = [
+  "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
+]
+review_aids = [
+  "Record or inspect the Verification proof-decision route when ordinary tests grow, shrink, or move.",
+]
+
+[assurance.domain_proof_lanes]
 
 [assurance.domain_proof_lanes.workspace_proof_runtime]
 purpose = "Focused root Workspace proof-routing behavior."
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_native_domain_proof.py"]
-commands = ["uv run pytest tests/test_native_domain_proof.py -k changed_selector -q"]
-review_aids = ["Confirm the selected proof route, narrowness packet, and escalation fields match the changed proof behavior.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"60\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["root-workspace-proof-routing", "focused-serial-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
-escalation = ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries", "the focused selector does not exercise the changed proof behavior"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_proof.rs",
+  "tests/test_native_domain_proof.py",
+]
+commands = [
+  "uv run pytest tests/test_native_domain_proof.py -q",
+]
+review_aids = [
+  "Confirm the selected proof route, narrowness packet, and escalation fields match the changed proof behavior.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"60\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "root-workspace-proof-routing",
+  "focused-serial-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "docs/maintainer/testing-strategy.md",
+]
+escalation = [
+  "the change crosses package, generated-command, lifecycle, or closeout behavior boundaries",
+  "the focused selector does not exercise the changed proof behavior",
+]
 claim_boundary = "focused-workspace-proof-required-before-runtime-routing-claim"
 owner = "workspace-cli-runtime"
 notes = "This lane is the first focused replacement for generic workspace_behavior proof on proof-router changes."
 
 [assurance.domain_proof_lanes.review_stack_operations]
 purpose = "Focused external-review continuation and declared PR-stack publication behavior."
-applies_to_paths = ["tools/chatgpt_review_loop.py", "tools/review_stack_ops.py", "tools/skills/pr-review-recheck/SKILL.md", "scripts/github/review_merge_gate.py", "tests/test_chatgpt_review_loop.py", "tests/test_review_stack_ops.py", "tests/test_review_merge_gate.py", "docs/maintainer/chatgpt-review-continuation.md"]
-commands = ["uv run pytest tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py tests/test_review_merge_gate.py -q", "uv run ruff check tools/chatgpt_review_loop.py tools/review_stack_ops.py scripts/github/review_merge_gate.py tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py tests/test_review_merge_gate.py"]
-review_aids = ["Confirm the controller only consumes externally supplied exact-head review markers and never launches a reviewer; stack publication remains declaration-driven, patch-preserving, receipt-backed, and force-with-lease protected.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"70\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["regression_prevention", "scenario_coverage"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["docs/maintainer/chatgpt-review-continuation.md", "tools/skills/pr-review-recheck/SKILL.md"]
-escalation = ["the change alters the merge gate, autonomous merge authority, arbitrary branch mutation, or shipped runtime behavior"]
+applies_to_paths = [
+  "tools/chatgpt_review_loop.py",
+  "tools/review_stack_ops.py",
+  "tools/skills/pr-review-recheck/SKILL.md",
+  "tests/test_chatgpt_review_loop.py",
+  "tests/test_review_stack_ops.py",
+  "docs/maintainer/chatgpt-review-continuation.md",
+]
+commands = [
+  "uv run pytest tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py -q",
+]
+review_aids = [
+  "Confirm the controller only consumes externally supplied exact-head review markers and never launches a reviewer; stack publication remains declaration-driven, patch-preserving, receipt-backed, and force-with-lease protected.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"70\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "regression_prevention",
+  "scenario_coverage",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "docs/maintainer/chatgpt-review-continuation.md",
+  "tools/skills/pr-review-recheck/SKILL.md",
+]
+escalation = [
+  "the change alters the merge gate, autonomous merge authority, arbitrary branch mutation, or shipped runtime behavior",
+]
 claim_boundary = "focused-review-stack-proof-required-before-review-publication-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.pr_comment_delta]
 purpose = "Focused GitHub PR comment-delta behavior."
-applies_to_paths = ["scripts/github/pr_comment_delta.py", "tests/test_pr_comment_delta.py"]
-commands = ["uv run pytest tests/test_pr_comment_delta.py -q", "uv run ruff check scripts/github/pr_comment_delta.py tests/test_pr_comment_delta.py"]
-review_aids = ["Confirm comment identity, pagination, and delta classification remain covered without widening proof to unrelated GitHub tooling.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"72\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["regression_prevention", "scenario_coverage", "focused-serial-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "tests/test_pr_comment_delta.py"]
-escalation = ["the change alters shared GitHub transport, review merge gates, or publication authority"]
+applies_to_paths = [
+  "scripts/github/pr_comment_delta.py",
+  "tests/test_pr_comment_delta.py",
+]
+commands = [
+  "uv run pytest tests/test_pr_comment_delta.py -q",
+  "uv run ruff check scripts/github/pr_comment_delta.py tests/test_pr_comment_delta.py",
+]
+review_aids = [
+  "Confirm comment identity, pagination, and delta classification remain covered without widening proof to unrelated GitHub tooling.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"72\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "regression_prevention",
+  "scenario_coverage",
+  "focused-serial-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "tests/test_pr_comment_delta.py",
+]
+escalation = [
+  "the change alters shared GitHub transport, review merge gates, or publication authority",
+]
 claim_boundary = "focused-pr-comment-delta-proof-required-before-comment-delta-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.generated_cli_catalogue]
 purpose = "Focused freshness proof for the generated CLI contract catalogue."
-applies_to_paths = ["docs/reference/cli-catalogue.md"]
-commands = ["uv run python scripts/generate/generate_contract_catalogues.py --check"]
-review_aids = ["Confirm the CLI catalogue is an exact generated projection of the current canonical command contracts.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"72\"; allowed_composition = [\"behavior\", \"maintenance\"]"]
-evidence_concepts = ["generated_surface_freshness", "contract_parity"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["src/agentic_workspace/contracts/cli_commands.json", "scripts/generate/generate_contract_catalogues.py"]
-escalation = ["the catalogue generator or canonical command authority changes"]
+applies_to_paths = [
+  "docs/reference/cli-catalogue.md",
+]
+commands = [
+  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+]
+review_aids = [
+  "Confirm the CLI catalogue is an exact generated projection of the current canonical command contracts.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"72\"; allowed_composition = [\"behavior\", \"maintenance\"]",
+]
+evidence_concepts = [
+  "generated_surface_freshness",
+  "contract_parity",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "scripts/generate/generate_contract_catalogues.py",
+]
+escalation = [
+  "the catalogue generator or canonical command authority changes",
+]
 claim_boundary = "generated-cli-catalogue-freshness-required-before-catalogue-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.correction_guidance_authority]
 purpose = "Focused trusted-correction custody, normalization, canonical-owner disposition, and guidance authority behavior."
-applies_to_paths = ["src/agentic_workspace/agent_guidance.py", "src/agentic_workspace/contracts/operations/correction-event*.json", "src/agentic_workspace/contracts/schemas/correction_event*.json", "tests/test_external_operation_clients.py", "tests/test_native_config_admission.py"]
-commands = ["uv run pytest tests/test_external_operation_clients.py tests/test_native_config_admission.py -k correction -q", "uv run ruff check src/agentic_workspace/agent_guidance.py tests/test_external_operation_clients.py tests/test_native_config_admission.py"]
-review_aids = ["Confirm caller labels cannot mint correction authority, trusted host custody survives corrected-agent non-compliance, unresolved events constrain closeout, and canonical-owner disposition creates no duplicate guidance or Memory policy.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"75\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["regression_prevention", "authority-separation", "scenario_coverage"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["src/agentic_workspace/contracts/operations/correction-event.submit.json", "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json"]
-escalation = ["the change alters checked-in Memory authority, host signature admission, or cross-repository guidance storage"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_owner_change.rs",
+  "crates/agentic-workspace-core/src/native_config_write.rs",
+  "crates/agentic-workspace-core/src/native_instruction_write.rs",
+  "tests/test_native_config_admission.py",
+]
+commands = [
+  "uv run pytest tests/test_native_config_admission.py tests/test_native_instruction_write.py -q",
+]
+review_aids = [
+  "Confirm caller labels cannot mint correction authority, trusted host custody survives corrected-agent non-compliance, unresolved events constrain closeout, and canonical-owner disposition creates no duplicate guidance or Memory policy.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"75\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "regression_prevention",
+  "authority-separation",
+  "scenario_coverage",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
+]
+escalation = [
+  "the change alters checked-in Memory authority, host signature admission, or cross-repository guidance storage",
+]
 claim_boundary = "focused-correction-authority-proof-required-before-guidance-or-closeout-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.proof_route_authority]
 purpose = "Focused maintenance route for repo-owned proof-routing authority."
-applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".release/changes/*.toml", "Makefile", "docs/reference/implementer-context.md", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/operations/proof.report.json", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/implementer_context.schema.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_selector_validation.py", "tests/test_workspace_makefile_targets.py", "tests/test_native_domain_proof.py"]
-commands = ["uv run pytest tests/test_native_domain_proof.py -k \"focused_domain_route or missing_focused_route or tiny_profile_returns_next_validation_action\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
-manual_evidence = ["proof_route_authority_review"]
-review_aids = ["Confirm focused routes remain declared in existing config and Verification authority rather than in a standalone parallel matrix.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"explicit-request\", \"focused-route-insufficient\"]; route_role = \"maintenance\"; precedence = \"90\"; allowed_composition = [\"behavior\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["root-workspace-proof-routing", "route-maintenance", "focused-serial-proof"]
-proof_profiles = ["workspace_behavior", "test_evidence_change"]
-authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", "docs/maintainer/testing-strategy.md"]
-escalation = ["route authority changes cannot be covered by focused proof-router tests", "maintainer explicitly requests broad workspace validation"]
+applies_to_paths = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/verification/manifest.toml",
+  "crates/agentic-workspace-core/src/**",
+  "Makefile",
+  "tests/test_native_domain_proof.py",
+]
+commands = [
+  "uv run pytest tests/test_native_domain_proof.py tests/test_native_verification_declarations.py -q",
+  "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+]
+manual_evidence = [
+  "proof_route_authority_review",
+]
+review_aids = [
+  "Confirm focused routes remain declared in existing config and Verification authority rather than in a standalone parallel matrix.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"explicit-request\", \"focused-route-insufficient\"]; route_role = \"maintenance\"; precedence = \"90\"; allowed_composition = [\"behavior\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "root-workspace-proof-routing",
+  "route-maintenance",
+  "focused-serial-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+  "test_evidence_change",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/verification/manifest.toml",
+  "docs/maintainer/testing-strategy.md",
+]
+escalation = [
+  "route authority changes cannot be covered by focused proof-router tests",
+  "maintainer explicitly requests broad workspace validation",
+]
 claim_boundary = "proof-route-authority-review-required-before-route-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.session_logging_friction]
 purpose = "Focused session-log friction evidence and proof-route maintenance behavior."
-applies_to_paths = ["src/agentic_workspace/session_logging.py", "tests/test_workspace_session_logging.py"]
-commands = ["uv run pytest tests/test_workspace_session_logging.py -k slow_commands -q"]
-review_aids = ["Confirm session-log friction candidates remain non-authoritative evidence that can feed proof-route refinement.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\"]; route_role = \"maintenance\"; precedence = \"90\"; allowed_composition = [\"behavior\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["route-maintenance", "focused-serial-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
-escalation = ["session logging changes alter closeout, Memory capture, or proof-route authority rather than friction evidence only"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/maintainer_logging.rs",
+  "tests/test_native_maintainer_logging.py",
+]
+commands = [
+  "uv run pytest tests/test_native_maintainer_logging.py -q",
+]
+review_aids = [
+  "Confirm session-log friction candidates remain non-authoritative evidence that can feed proof-route refinement.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\"]; route_role = \"maintenance\"; precedence = \"90\"; allowed_composition = [\"behavior\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "route-maintenance",
+  "focused-serial-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "docs/maintainer/testing-strategy.md",
+]
+escalation = [
+  "session logging changes alter closeout, Memory capture, or proof-route authority rather than friction evidence only",
+]
 claim_boundary = "session-friction-proof-required-before-route-maintenance-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.memory_package_behavior]
 purpose = "Focused Memory package behavior."
-applies_to_paths = ["packages/memory/src/**", "packages/memory/tests/**"]
-commands = ["make test-memory"]
-review_aids = ["Confirm the change is package-local Memory behavior rather than root orchestration.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\"]; route_role = \"behavior\"; precedence = \"50\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["memory-package-behavior", "package-local-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "packages/memory/AGENTS.md"]
-escalation = ["the change crosses root workspace orchestration or installed payload boundaries"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/**",
+  "tests/test_native_memory*.py",
+]
+commands = [
+  "make test-memory",
+]
+review_aids = [
+  "Confirm the change is Memory-owned native behavior rather than root orchestration.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\"]; route_role = \"behavior\"; precedence = \"50\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "memory-package-behavior",
+  "package-local-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "crates/agentic-workspace-core/src/",
+]
+escalation = [
+  "the change crosses root workspace orchestration or installed payload boundaries",
+]
 claim_boundary = "focused-memory-proof-required-before-package-claim"
 owner = "memory"
 
 [assurance.domain_proof_lanes.planning_package_behavior]
 purpose = "Focused Planning package behavior."
-applies_to_paths = ["packages/planning/src/**", "packages/planning/tests/**", "tests/test_planning_selection_custody.py"]
-commands = ["make test-planning", "uv run pytest tests/test_planning_selection_custody.py -q"]
-review_aids = ["Confirm the change is package-local Planning behavior rather than root orchestration.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"high-risk-requirement\"]; route_role = \"behavior\"; precedence = \"50\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["planning-package-behavior", "package-local-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "packages/planning/AGENTS.md"]
-escalation = ["the change crosses root workspace orchestration, closeout trust, or installed payload boundaries"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/**",
+  "crates/agentic-workspace-core/src/planning.rs",
+  "tests/test_native_planning*.py",
+]
+commands = [
+  "make test-planning",
+]
+review_aids = [
+  "Confirm the change is Planning-owned native behavior rather than root orchestration.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"high-risk-requirement\"]; route_role = \"behavior\"; precedence = \"50\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "planning-package-behavior",
+  "package-local-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "crates/agentic-workspace-core/src/",
+]
+escalation = [
+  "the change crosses root workspace orchestration, closeout trust, or installed payload boundaries",
+]
 claim_boundary = "focused-planning-proof-required-before-package-claim"
 owner = "planning"
 
 [assurance.domain_proof_lanes.planning_record_surfaces]
 purpose = "Narrow schema, owner-revision, and target-integration proof for passive Planning record mutations."
-applies_to_paths = [".agentic-workspace/planning/execplans/*.plan.json", ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json", ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json"]
-commands = ["uv run agentic-planning doctor --target . --format json", "uv run python scripts/check/check_planning_surfaces.py --format json", "uv run pytest packages/planning/tests/test_branch_safe_planning.py -k integration_proposal -q"]
-review_aids = ["Confirm the changed records are schema-valid, remain revision-guarded, and do not alter Planning runtime or cross-surface authority.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"64\"; allowed_composition = [\"maintenance\"]"]
-evidence_concepts = ["host:planning-record-validity", "host:target-integration-guards", "host:record-only-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/planning/schemas/planning-execplan.schema.json", ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json", "packages/planning/AGENTS.md"]
-escalation = ["Planning runtime or schema changes", "the record mutation changes cross-surface authority", "the focused record checks expose an uncovered semantic transition"]
+applies_to_paths = [
+  ".agentic-workspace/planning/**",
+]
+commands = [
+  "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+  "uv run pytest tests/test_native_planning_create.py tests/test_native_planning_lifetime.py -q",
+]
+review_aids = [
+  "Confirm the changed records are schema-valid, remain revision-guarded, and do not alter Planning runtime or cross-surface authority.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"64\"; allowed_composition = [\"maintenance\"]",
+]
+evidence_concepts = [
+  "host:planning-record-validity",
+  "host:target-integration-guards",
+  "host:record-only-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+  ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
+  "crates/agentic-workspace-core/src/",
+]
+escalation = [
+  "Planning runtime or schema changes",
+  "the record mutation changes cross-surface authority",
+  "the focused record checks expose an uncovered semantic transition",
+]
 claim_boundary = "focused-planning-record-proof-required-before-record-validity-or-integration-claim"
 owner = "planning"
 
 [assurance.domain_proof_lanes.maintained_review_records]
 purpose = "Narrow freshness proof for maintained review and dogfooding evidence documents."
-applies_to_paths = ["docs/reviews/*.md"]
-commands = ["make maintainer-surfaces"]
-review_aids = ["Confirm the review document reports measured evidence honestly and does not redefine runtime or cross-surface authority.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\"]; route_role = \"maintenance\"; precedence = \"63\"; allowed_composition = [\"behavior\", \"evidence\"]"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["Makefile", "docs/reviews/"]
-escalation = ["the review document changes executable policy or claims a cross-surface semantic transition"]
+applies_to_paths = [
+  "docs/reviews/*.md",
+]
+commands = [
+  "make maintainer-surfaces",
+]
+review_aids = [
+  "Confirm the review document reports measured evidence honestly and does not redefine runtime or cross-surface authority.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\"]; route_role = \"maintenance\"; precedence = \"63\"; allowed_composition = [\"behavior\", \"evidence\"]",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "Makefile",
+  "docs/reviews/",
+]
+escalation = [
+  "the review document changes executable policy or claims a cross-surface semantic transition",
+]
 claim_boundary = "focused-maintained-review-proof-required-before-evidence-publication-claim"
 owner = "workspace-maintainers"
 
 [assurance.domain_proof_lanes.planning_reconciliation_runtime]
 purpose = "Focused Planning-to-workspace reconciliation, residue disposition, and bounded-effect routing behavior."
-applies_to_paths = [".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/fallback/no-cli-policy.json", ".agentic-workspace/memory/repo/domains/planning-package-context.md", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/schemas/**", ".agentic-workspace/planning/issue-relations/**", ".agentic-workspace/planning/assignments/**", "docs/reference/installed-surface-catalogue.md", "packages/planning/**", "scripts/check/check_source_payload_operational_install.py", "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml", "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json", "src/agentic_workspace/contracts/authority_markers.json", "src/agentic_workspace/contracts/contract_inventory.json", "src/agentic_workspace/contracts/improvement_latitude_policy.json", "src/agentic_workspace/contracts/module_registry.json", "src/agentic_workspace/contracts/setup_findings_policy.json", "src/agentic_workspace/contracts/workflow_artifact_profiles.json", "src/agentic_workspace/contracts/workspace_defaults/payload.json", "src/agentic_workspace/contracts/workspace_surfaces.json", "src/agentic_workspace/operating_decision.py", "src/agentic_workspace/reconciliation.py", "src/agentic_workspace/workspace_runtime_planning.py", "tools/agent-manifest.json"]
-commands = ["uv run pytest packages/planning/tests/test_promote.py tests/test_reconciliation.py tests/test_native_public_cli.py -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
-review_aids = ["Confirm future-context disposition remains explicit and owner-backed, bounded external effects stay fail-closed, schema mirrors are synchronized, and no parallel Memory or Planning authority is introduced.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"high-risk-requirement\"]; route_role = \"behavior\"; precedence = \"65\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["planning-workspace-reconciliation", "bounded-external-effects", "owner-backed-residue"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/planning/schemas/planning-execplan.schema.json", "packages/planning/AGENTS.md"]
-escalation = ["the change alters external-effect authority beyond bounded issue filing, creates a new durable owner, or crosses independent review authority"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/**",
+  "crates/agentic-workspace-core/src/native_source_reconciliation.rs",
+  ".agentic-workspace/OWNERSHIP.toml",
+  "src/core/payload/**",
+]
+commands = [
+  "uv run pytest tests/test_native_source_reconciliation.py tests/test_native_planning_create.py tests/test_native_workflow_artifact_profile.py -q",
+]
+review_aids = [
+  "Confirm future-context disposition remains explicit and owner-backed, bounded external effects stay fail-closed, schema mirrors are synchronized, and no parallel Memory or Planning authority is introduced.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"high-risk-requirement\"]; route_role = \"behavior\"; precedence = \"65\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "planning-workspace-reconciliation",
+  "bounded-external-effects",
+  "owner-backed-residue",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+  "crates/agentic-workspace-core/src/",
+]
+escalation = [
+  "the change alters external-effect authority beyond bounded issue filing, creates a new durable owner, or crosses independent review authority",
+]
 claim_boundary = "focused-planning-reconciliation-proof-required-before-routing-or-residue-claim"
 owner = "planning"
 
 [assurance.domain_proof_lanes.verification_package_behavior]
 purpose = "Focused Verification package behavior."
-applies_to_paths = ["packages/verification/src/**", "packages/verification/tests/**"]
-commands = ["make test-verification"]
-review_aids = ["Confirm Verification reports facts and questions without becoming the proof decision owner.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\"]; route_role = \"behavior\"; precedence = \"50\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["verification-package-behavior", "package-local-proof"]
-proof_profiles = ["verification_behavior"]
-authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml"]
-escalation = ["the change alters root proof selection, assurance policy, or generated package behavior"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/**",
+  "tests/test_native_verification*.py",
+]
+commands = [
+  "make test-verification",
+]
+review_aids = [
+  "Confirm Verification reports facts and questions without becoming the proof decision owner.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\"]; route_role = \"behavior\"; precedence = \"50\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "verification-package-behavior",
+  "package-local-proof",
+]
+proof_profiles = [
+  "verification_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/verification/manifest.toml",
+]
+escalation = [
+  "the change alters root proof selection, assurance policy, or generated package behavior",
+]
 claim_boundary = "focused-verification-proof-required-before-package-claim"
 owner = "verification"
 
 [assurance.domain_proof_lanes.generated_command_packages]
 purpose = "Focused generated command package and adapter conformance."
-applies_to_paths = ["src/agentic_workspace/__init__.py", "src/agentic_workspace/client.py", "src/agentic_workspace/conformance.py", "src/agentic_workspace/contracts/command_package_ir.json", "src/agentic_workspace/contracts/conformance/implement.context.process.json", "src/agentic_workspace/contracts/conformance/planning.handoff.process.json", "src/agentic_workspace/contracts/conformance/proof.report.process.json", "src/agentic_workspace/contracts/conformance/start.context.process.json", "src/agentic_workspace/contracts/external_consumer_profile.json", "src/agentic_workspace/contracts/external_operation_conformance_receipts.json", "src/agentic_workspace/contracts/operation_conformance_test_ir.json", "src/agentic_workspace/contracts/operation_primitives.json", "src/agentic_workspace/contracts/operations/assignment.import.json", "src/agentic_workspace/contracts/python_primitive_support.py", "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json", "src/agentic_workspace/contracts/schemas/conformance.schema.json", "src/agentic_workspace/contracts/schemas/operation_conformance_test_ir.schema.json", "src/agentic_workspace/contracts/schemas/operation_failure.schema.json", "src/agentic_workspace/contracts/typescript_primitive_support.mjs", "docs/reference/conformance.md", "scripts/check/check_generated_command_packages.py", "scripts/check/run_generated_command_package_proof.py", "scripts/check/run_operation_conformance_tests.py", "scripts/generate/generate_command_packages.py", "scripts/generate/generate_external_consumer_profile.py", "scripts/generate/templates/external_client.mjs", "scripts/generate/workspace_command_generation.py", ".github/workflows/ci.yml", ".github/workflows/release.yml", "generated/workspace/.agentic-workspace-cli-fingerprint.json", "generated/planning/.agentic-workspace-cli-fingerprint.json", "generated/memory/.agentic-workspace-cli-fingerprint.json", "generated/verification/.agentic-workspace-cli-fingerprint.json", "generated/workspace/python/**", "generated/workspace/typescript/**", "generated/planning/python/**", "generated/planning/typescript/**", "generated/memory/python/**", "generated/memory/typescript/**", "generated/verification/python/**", "generated/verification/typescript/**", "tests/test_external_operation_clients.py", "tests/test_generated_command_package_proof_runner.py"]
-commands = ["uv run python scripts/check/check_generated_command_packages.py --require-node", "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"]
-review_aids = ["Use the Verification generated-adapter protocol to decide whether Docker proof is required or an environment gap must be recorded.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"high-risk-requirement\"]; route_role = \"behavior\"; precedence = \"55\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["generated-package-freshness", "generated-adapter-conformance"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/verification/manifest.toml#proof_routes.generated_adapter_conformance", "src/agentic_workspace/contracts/command_package_ir.json"]
-escalation = ["Docker packaging, runtime handoff, command-generation internals, or cross-target behavior changed"]
+applies_to_paths = [
+  "src/cli/**",
+  "crates/agentic-workspace-cli/src/main.rs",
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+  "scripts/release/**",
+  "scripts/generate/**",
+]
+commands = [
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_npm_routes.py tests/test_native_release_topology.py -q",
+  "uv run python scripts/generate/generate_contract_catalogues.py --check",
+]
+review_aids = [
+  "Use the Verification generated-adapter protocol to decide whether Docker proof is required or an environment gap must be recorded.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"high-risk-requirement\"]; route_role = \"behavior\"; precedence = \"55\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "generated-package-freshness",
+  "generated-adapter-conformance",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/verification/manifest.toml#proof_routes.generated_adapter_conformance",
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+]
+escalation = [
+  "Docker packaging, runtime handoff, native CLI/transport internals, or cross-target behavior changed",
+]
 claim_boundary = "focused-generated-adapter-proof-required-before-generated-package-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.delegation_lifecycle_review_repair]
 purpose = "Focused proof for delegation lifecycle conformance and its canonical AW proof receipts."
-applies_to_paths = [".agentic-workspace/proof/receipts/*.json", "src/agentic_workspace/contracts/conformance/assignment.import.process.json"]
-commands = ["uv run python scripts/check/check_generated_command_packages.py --conformance --require-node", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
-review_aids = ["Confirm the strengthened delegated-return fixture reaches awaiting-admission and current canonical receipts bind to concrete changed-path commands.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["generated-adapter-conformance", "regression_prevention"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["src/agentic_workspace/contracts/conformance/assignment.import.process.json", ".agentic-workspace/proof/receipts/index.json"]
-escalation = ["the repair changes assignment admission authority rather than fixture or receipt binding"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "crates/agentic-workspace-core/src/native_delegation.rs",
+  "crates/agentic-workspace-core/src/native_handoff.rs",
+]
+commands = [
+  "uv run pytest tests/test_native_delegation_lifecycle.py tests/test_native_assignment_judgment.py -q",
+]
+review_aids = [
+  "Confirm the strengthened delegated-return fixture reaches awaiting-admission and current canonical receipts bind to concrete changed-path commands.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "generated-adapter-conformance",
+  "regression_prevention",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+  ".agentic-workspace/proof/receipts/index.json",
+]
+escalation = [
+  "the repair changes assignment admission authority rather than fixture or receipt binding",
+]
 claim_boundary = "focused-delegation-conformance-and-receipt-proof-required-before-closure"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.shared_kernel_contract]
 purpose = "Exact shared Rust authority, selective consequences, and independent language/JSON consumers."
-applies_to_paths = ["crates/agentic-workspace-core/src/lib.rs", "crates/agentic-workspace-core/tests/vectors.rs", "tests/vectors/source_decision.json", "tests/vectors/capability_contract.json", "tests/test_source_request_dependencies.py"]
-commands = ["cargo test --locked -p agentic-workspace-core --test vectors", "uv run pytest tests/test_shared_core.py tests/test_source_request_dependencies.py -k 'vectors or fail_closed_errors or node_binding_executes_the_same_core or ready_set or source_dependencies' -q"]
-review_aids = ["Check explicit owner admission, restriction versus grant authority, exact work/currentness, and selected-outcome terminality. Vector agreement does not establish native stateful owner integration.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["generated-adapter-conformance", "regression_prevention"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["crates/agentic-workspace-core/src/lib.rs", "tests/vectors/source_decision.json"]
-escalation = ["a change affects a source-owning operation or stateful recovery not exercised by shared vectors"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/lib.rs",
+  "crates/agentic-workspace-core/tests/vectors.rs",
+  "tests/vectors/source_decision.json",
+  "tests/vectors/capability_contract.json",
+  "tests/test_source_request_dependencies.py",
+]
+commands = [
+  "cargo test --locked -p agentic-workspace-core --test vectors",
+  "uv run pytest tests/test_shared_core.py tests/test_source_request_dependencies.py -k 'vectors or fail_closed_errors or node_binding_executes_the_same_core or ready_set or source_dependencies' -q",
+]
+review_aids = [
+  "Check explicit owner admission, restriction versus grant authority, exact work/currentness, and selected-outcome terminality. Vector agreement does not establish native stateful owner integration.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "generated-adapter-conformance",
+  "regression_prevention",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "crates/agentic-workspace-core/src/lib.rs",
+  "tests/vectors/source_decision.json",
+]
+escalation = [
+  "a change affects a source-owning operation or stateful recovery not exercised by shared vectors",
+]
 claim_boundary = "shared-kernel-contract-proof-is-not-owner-lifecycle-completion-or-independent-acceptance"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.native_public_owners]
 purpose = "Native transport and source-owning Planning/Verification ingress through four independent consumers."
-applies_to_paths = ["crates/agentic-workspace-cli/**", "crates/agentic-workspace-core/src/native_*.rs", "crates/agentic-workspace-core/src/maintainer_logging.rs", "crates/agentic-workspace-core/src/direct_task.rs", "crates/agentic-workspace-core/src/assurance_applicability.rs", "src/agentic_workspace/contracts/schemas/assurance_applicability.schema.json", "tests/test_native_public_cli.py", "tests/test_native_startup_adapter.py", "tests/test_native_maintainer_logging.py", "tests/test_native_workflow_artifact_profile.py", "tests/test_native_planning_create.py", "tests/test_native_domain_proof.py", "tests/test_native_verification_strategy.py", "tests/test_native_execution_configurations.py", "tests/test_native_assignment_policy.py", "tests/test_native_assignment_judgment.py", "tests/test_native_readonly_handoff.py", "crates/agentic-workspace-core/src/assignment_packet.rs", "crates/agentic-workspace-core/src/assignment_policy.rs", "crates/agentic-workspace-core/src/transport_source.rs", "crates/agentic-workspace-core/src/verification_strategy.rs", "tests/test_native_proof_producer.py", "tests/test_native_advisory_config.py", "tests/test_native_system_intent.py", "tests/test_native_former_routes.py", "tests/test_native_npm_routes.py", "scripts/release/stage_native_npm.py", "tests/test_assurance_applicability.py", "tests/test_direct_task_identity.py"]
-commands = ["cargo build --locked --workspace --bins", "cargo test --locked -p agentic-workspace-cli", "cargo test --locked -p agentic-workspace-core --lib", "uv run pytest tests/test_native_public_cli.py tests/test_native_startup_adapter.py tests/test_native_maintainer_logging.py tests/test_native_workflow_artifact_profile.py tests/test_native_planning_create.py tests/test_native_domain_proof.py tests/test_native_verification_strategy.py tests/test_native_execution_configurations.py tests/test_native_assignment_policy.py tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py tests/test_native_proof_producer.py tests/test_native_advisory_config.py tests/test_native_system_intent.py tests/test_native_former_routes.py tests/test_native_npm_routes.py tests/test_assurance_applicability.py tests/test_direct_task_identity.py -q", "make lint-workspace", "make typecheck"]
-review_aids = ["Inspect real source custody, exact replay, precommit authority drift, direct unrelated work, and conservative Verification publication admission. Native PATH-empty proof establishes no Python/Node invocation; it does not establish package/platform support or full ordinary owner coverage.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\", \"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["real-source-custody", "task-claim-currentness", "public-language-parity"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["tests/test_native_public_cli.py", "tests/test_native_domain_proof.py", "tests/test_native_verification_strategy.py", "tests/test_native_execution_configurations.py", "tests/test_native_assignment_policy.py", "tests/test_native_assignment_judgment.py", "tests/test_native_readonly_handoff.py", "crates/agentic-workspace-core/src/assignment_packet.rs", "crates/agentic-workspace-core/src/assignment_policy.rs", "crates/agentic-workspace-core/src/transport_source.rs", "crates/agentic-workspace-core/src/verification_strategy.rs", "crates/agentic-workspace-cli/tests/transport.rs"]
-escalation = ["a changed owner is not exercised through native public ingress", "a completion claim requires independent judgment or supported-host execution"]
+applies_to_paths = [
+  "crates/agentic-workspace-cli/**",
+  "crates/agentic-workspace-core/src/native_*.rs",
+  "crates/agentic-workspace-core/src/maintainer_logging.rs",
+  "crates/agentic-workspace-core/src/direct_task.rs",
+  "crates/agentic-workspace-core/src/assurance_applicability.rs",
+  "src/agentic_workspace/contracts/schemas/assurance_applicability.schema.json",
+  "tests/test_native_public_cli.py",
+  "tests/test_native_startup_adapter.py",
+  "tests/test_native_maintainer_logging.py",
+  "tests/test_native_workflow_artifact_profile.py",
+  "tests/test_native_planning_create.py",
+  "tests/test_native_domain_proof.py",
+  "tests/test_native_verification_strategy.py",
+  "tests/test_native_execution_configurations.py",
+  "tests/test_native_assignment_policy.py",
+  "tests/test_native_assignment_judgment.py",
+  "tests/test_native_readonly_handoff.py",
+  "crates/agentic-workspace-core/src/assignment_packet.rs",
+  "crates/agentic-workspace-core/src/assignment_policy.rs",
+  "crates/agentic-workspace-core/src/transport_source.rs",
+  "crates/agentic-workspace-core/src/verification_strategy.rs",
+  "tests/test_native_proof_producer.py",
+  "tests/test_native_advisory_config.py",
+  "tests/test_native_system_intent.py",
+  "tests/test_native_former_routes.py",
+  "tests/test_native_npm_routes.py",
+  "scripts/release/stage_native_npm.py",
+  "tests/test_assurance_applicability.py",
+]
+commands = [
+  "cargo build --locked --workspace --bins",
+  "cargo test --locked -p agentic-workspace-cli",
+  "cargo test --locked -p agentic-workspace-core --lib",
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_startup_adapter.py tests/test_native_maintainer_logging.py tests/test_native_workflow_artifact_profile.py tests/test_native_planning_create.py tests/test_native_domain_proof.py tests/test_native_verification_strategy.py tests/test_native_execution_configurations.py tests/test_native_assignment_policy.py tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py tests/test_native_proof_producer.py tests/test_native_advisory_config.py tests/test_native_system_intent.py tests/test_native_former_routes.py tests/test_native_npm_routes.py tests/test_assurance_applicability.py tests/test_native_public_cli.py -q",
+  "make lint-workspace",
+  "make typecheck",
+]
+review_aids = [
+  "Inspect real source custody, exact replay, precommit authority drift, direct unrelated work, and conservative Verification publication admission. Native PATH-empty proof establishes no Python/Node invocation; it does not establish package/platform support or full ordinary owner coverage.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\", \"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "real-source-custody",
+  "task-claim-currentness",
+  "public-language-parity",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "tests/test_native_public_cli.py",
+  "tests/test_native_domain_proof.py",
+  "tests/test_native_verification_strategy.py",
+  "tests/test_native_execution_configurations.py",
+  "tests/test_native_assignment_policy.py",
+  "tests/test_native_assignment_judgment.py",
+  "tests/test_native_readonly_handoff.py",
+  "crates/agentic-workspace-core/src/assignment_packet.rs",
+  "crates/agentic-workspace-core/src/assignment_policy.rs",
+  "crates/agentic-workspace-core/src/transport_source.rs",
+  "crates/agentic-workspace-core/src/verification_strategy.rs",
+  "crates/agentic-workspace-cli/tests/transport.rs",
+]
+escalation = [
+  "a changed owner is not exercised through native public ingress",
+  "a completion claim requires independent judgment or supported-host execution",
+]
 claim_boundary = "native-public-owner-proof-is-not-full-native-cutover-or-independent-acceptance"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.proof_subject_owner]
 purpose = "Shared proof identity, receipt admission and bounded current-owner evidence reconciliation."
-applies_to_paths = ["crates/agentic-workspace-core/src/proof_publication.rs", "crates/agentic-workspace-core/src/attempt_store.rs", "tests/test_proof_publication.py", "tests/test_verification_public_owner.py", "crates/agentic-workspace-core/src/separation_of_duty.rs", "tests/test_separation_of_duty.py", "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json", "crates/agentic-workspace-core/src/task_judgment.rs", "tests/test_task_judgment_candidates.py", "crates/agentic-workspace-core/src/proof_subject.rs", "crates/agentic-workspace-core/src/proof_receipt.rs", "src/agentic_workspace/proof_subject.py", "src/agentic_workspace/proof_receipt_admission.py", "tests/test_proof_subject.py", "tests/test_proof_subject_batch.py", "tests/test_proof_receipt_owner.py"]
-commands = ["cargo test --locked -p agentic-workspace-core proof_publication --lib", "uv run pytest tests/test_proof_publication.py tests/test_verification_public_owner.py -q", "cargo test --locked -p agentic-workspace-core separation_of_duty", "uv run pytest tests/test_separation_of_duty.py -q", "cargo test --locked -p agentic-workspace-core task_judgment", "uv run pytest tests/test_task_judgment_candidates.py -q", "cargo test --locked -p agentic-workspace-core proof_subject", "cargo test --locked -p agentic-workspace-core proof_receipt", "uv run pytest tests/test_proof_subject.py tests/test_proof_subject_batch.py tests/test_proof_receipt_owner.py -q", "uv run pytest tests/test_native_domain_proof.py -k 'reconciliation or every_bridge_result or proof_record_receipt' -q"]
-review_aids = ["Compare original owner fingerprints, reject incomplete identity, preserve missing strategy/independent judgment, and verify current source changes invalidate evidence after a batched evaluation.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["task-claim-currentness", "public-language-parity", "regression_prevention"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["tests/fixtures/proof_subject_identity.json", "tests/fixtures/proof_receipt_admission.json", "tests/test_proof_subject_batch.py"]
-escalation = ["a completion claim requires native execution environment or returned independent judgment admission"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/proof_subject.rs",
+  "crates/agentic-workspace-core/src/proof_receipt.rs",
+  "crates/agentic-workspace-core/src/proof_publication.rs",
+  "crates/agentic-workspace-core/src/attempt_store.rs",
+]
+commands = [
+  "cargo test --locked -p agentic-workspace-core proof_subject",
+  "cargo test --locked -p agentic-workspace-core proof_receipt",
+  "uv run pytest tests/test_proof_publication.py tests/test_proof_receipt_owner.py tests/test_native_proof_scope.py -q",
+]
+review_aids = [
+  "Compare original owner fingerprints, reject incomplete identity, preserve missing strategy/independent judgment, and verify current source changes invalidate evidence after a batched evaluation.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "task-claim-currentness",
+  "public-language-parity",
+  "regression_prevention",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "tests/fixtures/proof_subject_identity.json",
+  "tests/fixtures/proof_receipt_admission.json",
+  "tests/test_native_proof_scope.py",
+]
+escalation = [
+  "a completion claim requires native execution environment or returned independent judgment admission",
+]
 claim_boundary = "proof-identity-and-shape-admission-do-not-grant-current-evidence-or-completion"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.delegation_outcome_attribution]
 purpose = "Conservative shared-core responsibility, configuration-scoped burden and assignment-derived evidence."
-applies_to_paths = ["bindings/node/semantic-decision.mjs", "crates/agentic-workspace-core/src/assignment.rs", "crates/agentic-workspace-core/src/main.rs", "src/agentic_workspace/decision.py", "src/agentic_workspace/orchestration.py", "tests/test_orchestration.py", "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json", "src/agentic_workspace/contracts/schemas/delegation_outcomes.schema.json", "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json", "docs/reference/assignment-context-cost.md", "docs/reference/delegation-outcomes.md", "docs/reference/delegation-outcome-append-input.md"]
-commands = ["uv run pytest tests/test_orchestration.py -q", "uv run pytest tests/test_native_transport.py tests/test_shared_core.py tests/test_external_operation_clients.py tests/test_execution_guarantees.py -q", "uv run ty check src"]
-review_aids = ["Verify unknown facts grant no target credit, proof publication alone does not calibrate, and current closeout nominates evidence only after return/integration/bound proof. Distinguish remaining unimplemented failure-heavy learning and unsupported-host behavior from passing fixtures.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["generated-adapter-conformance", "regression_prevention"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["tests/test_orchestration.py", "tests/test_external_operation_clients.py", "tests/test_native_config_admission.py"]
-escalation = ["a responsibility claim requires semantic judgment absent from the canonical owner evidence"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "crates/agentic-workspace-core/src/native_delegation.rs",
+  "crates/agentic-workspace-core/src/native_handoff.rs",
+  "bindings/node/**",
+]
+commands = [
+  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
+]
+review_aids = [
+  "Verify unknown facts grant no target credit, proof publication alone does not calibrate, and current closeout nominates evidence only after return/integration/bound proof. Distinguish remaining unimplemented failure-heavy learning and unsupported-host behavior from passing fixtures.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "generated-adapter-conformance",
+  "regression_prevention",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "tests/test_native_delegation_lifecycle.py",
+  "tests/test_native_public_cli.py",
+  "tests/test_native_config_admission.py",
+]
+escalation = [
+  "a responsibility claim requires semantic judgment absent from the canonical owner evidence",
+]
 claim_boundary = "attributed-outcome-proof-is-not-independent-PR-approval-or-lane-closure"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.delegation_execution_configurations]
 purpose = "Focused source-current execution configuration and provider-native transport proof."
-applies_to_paths = ["src/agentic_workspace/assignment_source.py", "src/agentic_workspace/native_transport.py", "src/agentic_workspace/target_evidence.py", "src/agentic_workspace/contracts/operations/assignment.dispatch.json", "src/agentic_workspace/contracts/operations/assignment.export.json", "src/agentic_workspace/contracts/operations/assignment.reassign.json", "src/agentic_workspace/contracts/operations/assignment.repair.json", "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json", "tests/test_native_transport.py", "tests/test_execution_guarantees.py", "docs/reference/native-delegation-transport.md", "docs/reference/assignment-lifecycle-input.md"]
-commands = ["uv run pytest tests/test_native_transport.py tests/test_shared_core.py tests/test_external_operation_clients.py tests/test_execution_guarantees.py -q", "uv run ty check src", "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"]
-review_aids = ["Check hard eligibility before configuration selection, opaque provider-reference custody, and exact packet binding. Separate deterministic contract proof from opt-in installed-host evidence; do not start provider turns in ordinary proof.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["generated-adapter-conformance", "regression_prevention"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["docs/reference/native-delegation-transport.md", "tests/test_native_transport.py", "tests/test_external_operation_clients.py"]
-escalation = ["the change alters canonical assignment admission, Planning authority, or lifecycle outcome attribution beyond transport configuration"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_config.rs",
+  "crates/agentic-workspace-core/src/native_delegation.rs",
+  "crates/agentic-workspace-core/src/transport.rs",
+]
+commands = [
+  "uv run pytest tests/test_native_execution_configurations.py tests/test_native_transport.py -q",
+]
+review_aids = [
+  "Check hard eligibility before configuration selection, opaque provider-reference custody, and exact packet binding. Separate deterministic contract proof from opt-in installed-host evidence; do not start provider turns in ordinary proof.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "generated-adapter-conformance",
+  "regression_prevention",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "docs/reference/native-delegation-transport.md",
+  "tests/test_native_transport.py",
+  "tests/test_native_public_cli.py",
+]
+escalation = [
+  "the change alters canonical assignment admission, Planning authority, or lifecycle outcome attribution beyond transport configuration",
+]
 claim_boundary = "focused-configuration-proof-and-supported-host-evidence-do-not-replace-independent-review"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.delegation_owner_conformance]
 purpose = "Focused ratchet for current Planning custody, task-bound Verification, and sparse assignment observations."
-applies_to_paths = ["crates/agentic-workspace-core/src/planning.rs", "src/agentic_workspace/assignment_burden.py", "tests/test_assignment_burden.py", "tests/test_assignment_no_change_prompt.py", "tests/test_assignment_override_policy.py", "tests/test_assignment_planning_requirements.py", "tests/test_ordinary_public_owner.py", "tests/test_task_judgment_candidates.py", "tests/test_verification_public_owner.py"]
-commands = ["uv run pytest tests/test_assignment_burden.py tests/test_assignment_no_change_prompt.py tests/test_assignment_override_policy.py tests/test_assignment_planning_requirements.py tests/test_ordinary_public_owner.py tests/test_task_judgment_candidates.py tests/test_verification_public_owner.py -q", "uv run pytest tests/test_shared_core.py -k planning -q", "uv run pytest tests/test_native_public_cli.py -k \"upgrade_replay_preserves_context_through_proof_and_bounded_closeout or direct_task_claim_does_not_reuse_unrelated_or_unbound_judgment\" -q", "make lint-workspace", "make typecheck"]
-review_aids = ["Keep semantic authority in the existing owners. Distinguish public deterministic currentness proof from supported-host lifecycle evidence and independent acceptance.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\", \"missing-domain-authority\"]; route_role = \"evidence\"; precedence = \"85\"; allowed_composition = [\"behavior\", \"maintenance\", \"broad\"]"]
-evidence_concepts = ["real-source-custody", "task-claim-currentness", "public-language-parity", "lifecycle-observation"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["tests/vectors/planning_execplan.json", "tests/test_verification_public_owner.py", "tests/test_assignment_burden.py"]
-escalation = ["an owner outcome remains false despite the regression", "a claim needs unavailable supported-host or independent judgment evidence"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/assignment.rs",
+  "crates/agentic-workspace-core/src/planning.rs",
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+]
+commands = [
+  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_assignment_policy.py tests/test_native_public_cli.py -q",
+]
+review_aids = [
+  "Keep semantic authority in the existing owners. Distinguish public deterministic currentness proof from supported-host lifecycle evidence and independent acceptance.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\", \"missing-domain-authority\"]; route_role = \"evidence\"; precedence = \"85\"; allowed_composition = [\"behavior\", \"maintenance\", \"broad\"]",
+]
+evidence_concepts = [
+  "real-source-custody",
+  "task-claim-currentness",
+  "public-language-parity",
+  "lifecycle-observation",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "tests/vectors/planning_execplan.json",
+  "tests/test_native_domain_proof.py",
+  "tests/test_native_assignment_judgment.py",
+]
+escalation = [
+  "an owner outcome remains false despite the regression",
+  "a claim needs unavailable supported-host or independent judgment evidence",
+]
 claim_boundary = "owner-conformance-does-not-grant-supported-host-success-or-independent-acceptance"
 owner = "verification"
 
 [assurance.domain_proof_lanes.evaluation_operation_runtime]
-purpose = "Focused Evaluation operation runtime, contract, projection, and behavior proof."
-applies_to_paths = ["src/agentic_workspace/evaluation.py", "src/agentic_workspace/contracts/operations/evaluation.*.json", "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json", "generated/workspace/python/operations/evaluation.*.json", "generated/workspace/typescript/resources/operations/evaluation.*.json", "tests/test_workspace_evaluation.py"]
-commands = ["uv run pytest tests/test_workspace_evaluation.py -q", "uv run python scripts/generate/generate_command_packages.py --check", "uv run python scripts/check/check_generated_command_packages.py"]
-review_aids = ["Confirm the exact Evaluation behavior test, operation contract, and smallest generated consumer check cover the changed operation boundary.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"focused-route-insufficient\", \"explicit-request\"]; route_role = \"behavior\"; precedence = \"70\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["evaluation-operation-runtime", "generated-package-freshness", "focused-serial-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "src/agentic_workspace/contracts/operations/evaluation.status.json"]
-escalation = ["the change alters Docker packaging, command-generation internals, or cross-target runtime handoff beyond the Evaluation operation"]
+purpose = "Former Evaluation host routes remain unavailable; maintained external evaluation evidence stays explicitly bounded to its observed source."
+applies_to_paths = [
+  "tests/test_native_former_routes.py",
+  "tools/model-cli-harness/**",
+]
+commands = [
+  "uv run pytest tests/test_native_former_routes.py tests/test_external_agent_evaluation_lane.py -q",
+]
+review_aids = [
+  "Confirm the exact Evaluation behavior test, operation contract, and smallest generated consumer check cover the changed operation boundary.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"focused-route-insufficient\", \"explicit-request\"]; route_role = \"behavior\"; precedence = \"70\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "evaluation-operation-runtime",
+  "generated-package-freshness",
+  "focused-serial-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "src/agentic_workspace/contracts/source_decision_contract.json",
+]
+escalation = [
+  "the change alters Docker packaging, native CLI/transport internals, or cross-target runtime handoff beyond the Evaluation operation",
+]
 claim_boundary = "focused-evaluation-operation-proof-required-before-operation-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.compact_output_contract]
 purpose = "Focused compact-output profile, public CLI option, and budget maintenance proof."
-applies_to_paths = ["docs/package/output-profiles.md", "docs/reference/evaluation-summary.md", "src/agentic_workspace/contracts/cli_commands.json", "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json", "src/agentic_workspace/contracts/structured_file_inventory.json", "tests/test_output_profile_budgets.py"]
-commands = ["uv run pytest tests/test_output_profile_budgets.py -q", "uv run python scripts/generate/generate_command_packages.py --check"]
-review_aids = ["Confirm ordinary output stays within the declared byte, field, token, and line budgets while exact detail remains selector-addressable.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\", \"explicit-request\"]; route_role = \"maintenance\"; precedence = \"75\"; allowed_composition = [\"behavior\", \"evidence\", \"broad\"]"]
-evidence_concepts = ["compact-output-budget", "generated-package-freshness"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["docs/package/output-profiles.md", "tests/test_output_profile_budgets.py"]
-escalation = ["the output contract changes a cross-target runtime handoff or removes exact detail access"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/operating.rs",
+  "crates/agentic-workspace-cli/src/main.rs",
+  "tests/test_native_operating_carriage.py",
+]
+commands = [
+  "uv run pytest tests/test_native_operating_carriage.py tests/test_native_public_cli.py -q",
+]
+review_aids = [
+  "Confirm ordinary output stays within the declared byte, field, token, and line budgets while exact detail remains selector-addressable.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\", \"explicit-request\"]; route_role = \"maintenance\"; precedence = \"75\"; allowed_composition = [\"behavior\", \"evidence\", \"broad\"]",
+]
+evidence_concepts = [
+  "compact-output-budget",
+  "generated-package-freshness",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "docs/package/output-profiles.md",
+  "tests/test_native_operating_carriage.py",
+]
+escalation = [
+  "the output contract changes a cross-target runtime handoff or removes exact detail access",
+]
 claim_boundary = "focused-output-budget-proof-required-before-compact-output-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.test_evidence_decision]
 purpose = "Focused test-evidence change review."
-applies_to_paths = ["tests/**", "packages/**/tests/**", "docs/maintainer/testing-strategy.md", "docs/maintainer/test-knowledge-inventory.md", "scripts/model_cli_harness/run_model_cli_harness.py"]
-commands = ["uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q"]
-manual_evidence = ["verification_proof_decision_review", "test_evidence_owner_review"]
-review_aids = ["Record why retained, added, merged, converted, or pruned evidence is sufficient under the maintainer testing strategy.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"80\"; allowed_composition = [\"behavior\", \"maintenance\", \"broad\"]"]
-evidence_concepts = ["test-evidence-decision", "route-maintenance"]
-assurance_requirement_refs = ["test_evidence_change_decision"]
-proof_profiles = ["test_evidence_change"]
-authority_refs = [".agentic-workspace/verification/manifest.toml#proof_routes.test_evidence_decision", "docs/maintainer/testing-strategy.md"]
-escalation = ["the test evidence change crosses product behavior or generated adapter boundaries"]
+applies_to_paths = [
+  "tests/**",
+  "crates/agentic-workspace-core/tests/**",
+  "docs/maintainer/testing-strategy.md",
+  "docs/maintainer/test-knowledge-inventory.md",
+  "scripts/model_cli_harness/run_model_cli_harness.py",
+]
+commands = [
+  "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
+]
+manual_evidence = [
+  "verification_proof_decision_review",
+  "test_evidence_owner_review",
+]
+review_aids = [
+  "Record why retained, added, merged, converted, or pruned evidence is sufficient under the maintainer testing strategy.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"80\"; allowed_composition = [\"behavior\", \"maintenance\", \"broad\"]",
+]
+evidence_concepts = [
+  "test-evidence-decision",
+  "route-maintenance",
+]
+assurance_requirement_refs = [
+  "test_evidence_change_decision",
+]
+proof_profiles = [
+  "test_evidence_change",
+]
+authority_refs = [
+  ".agentic-workspace/verification/manifest.toml#proof_routes.test_evidence_decision",
+  "docs/maintainer/testing-strategy.md",
+]
+escalation = [
+  "the test evidence change crosses product behavior or generated adapter boundaries",
+]
 claim_boundary = "test-evidence-disposition-required-before-closeout"
 owner = "verification"
 
 [assurance.domain_proof_lanes.workspace_broad_suite]
 purpose = "Explicit broad workspace validation route."
-applies_to_task_markers = ["full workspace validation", "broad workspace proof", "cross-cutting high-risk claim"]
+applies_to_task_markers = [
+  "full workspace validation",
+  "broad workspace proof",
+  "cross-cutting high-risk claim",
+]
 commands = [
   "make test-workspace-cli",
   "make test-workspace-proof",
@@ -975,116 +1626,296 @@ commands = [
   "make test-workspace-integration",
   "make lint-workspace",
 ]
-review_aids = ["Name the structured escalation reason before treating this broad route as the acceptance boundary.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\", \"explicit-request\", \"high-risk-requirement\"]; route_role = \"broad\"; precedence = \"10\"; allowed_composition = [\"behavior\", \"maintenance\", \"evidence\"]"]
-evidence_concepts = ["broad-workspace-validation", "explicit-escalation"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
-escalation = ["cross-cutting behavior lacks sufficient focused coverage", "maintainer or user explicitly requested broad proof", "high-risk claim requires broad root evidence"]
+review_aids = [
+  "Name the structured escalation reason before treating this broad route as the acceptance boundary.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\", \"explicit-request\", \"high-risk-requirement\"]; route_role = \"broad\"; precedence = \"10\"; allowed_composition = [\"behavior\", \"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "broad-workspace-validation",
+  "explicit-escalation",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "docs/maintainer/testing-strategy.md",
+]
+escalation = [
+  "cross-cutting behavior lacks sufficient focused coverage",
+  "maintainer or user explicitly requested broad proof",
+  "high-risk claim requires broad root evidence",
+]
 claim_boundary = "explicit-broad-escalation-required"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.validation_runtime_2435]
-applies_to_paths = ["docs/maintainer/validation-runtime-2435/*.json", "scripts/check/check_validation_runtime_plan.py", "scripts/check/run_compact_command.py", "tests/test_compact_command_runner.py", "tests/test_validation_runtime_plan.py"]
-authority_refs = ["docs/maintainer/testing-strategy.md", "docs/maintainer/validation-runtime-2435/validation-plan.json", "docs/maintainer/validation-runtime-2435/runtime-evidence.json"]
+applies_to_paths = [
+  "docs/maintainer/validation-runtime-2435/*.json",
+  "scripts/check/allocate_validation_run_id.py",
+  "scripts/check/run_compact_command.py",
+  "tests/test_compact_command_runner.py",
+  "tests/test_validation_runtime_plan.py",
+]
+authority_refs = [
+  "docs/maintainer/testing-strategy.md",
+  "docs/maintainer/validation-runtime-2435/validation-plan.json",
+  "docs/maintainer/validation-runtime-2435/runtime-evidence.json",
+]
 claim_boundary = "focused-validation-runtime-proof-required-before-closeout"
-commands = ["uv run pytest tests/test_compact_command_runner.py tests/test_validation_runtime_plan.py -q", "uv run python scripts/check/check_validation_runtime_plan.py --quiet-success"]
-escalation = ["broad validation command composition changes", "generated or release proof authority changes", "cross-package validation behavior changes"]
-evidence_concepts = ["validation-runtime-plan", "runtime-evidence", "proof-route-maintenance"]
+commands = [
+  "uv run pytest tests/test_compact_command_runner.py tests/test_validation_runtime_plan.py -q",
+]
+escalation = [
+  "broad validation command composition changes",
+  "generated or release proof authority changes",
+  "cross-package validation behavior changes",
+]
+evidence_concepts = [
+  "validation-runtime-plan",
+  "runtime-evidence",
+  "proof-route-maintenance",
+]
 owner = "workspace-maintainer-checks"
-proof_profiles = ["workspace_behavior"]
+proof_profiles = [
+  "workspace_behavior",
+]
 purpose = "Focused validation-runtime plan, evidence, manifest, compact-runner, and checker proof."
-review_aids = ["Confirm compact result records carry canonical constituent ids, dependencies, and proof purposes.", "Confirm checked-in runtime evidence references an exact passing manifest for the broad validation run.", "Source review guidance (requires current owner judgment, never automatic policy admission): allowed_composition = [\"maintenance\", \"evidence\"]; escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; precedence = \"70\"; route_role = \"evidence\""]
+review_aids = [
+  "Confirm compact result records carry canonical constituent ids, dependencies, and proof purposes.",
+  "Confirm checked-in runtime evidence references an exact passing manifest for the broad validation run.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): allowed_composition = [\"maintenance\", \"evidence\"]; escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; precedence = \"70\"; route_role = \"evidence\"",
+]
 
 [assurance.domain_proof_lanes.workspace_root_guidance]
-applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/composed_operation_scenarios.py", "src/agentic_workspace/projection_reuse.py", "src/agentic_workspace/contracts/runtime_implementation_ownership.json", "src/agentic_workspace/contracts/skill_specs.json", "scripts/check/check_composed_operation_scenarios.py", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py", "tests/test_native_public_cli.py"]
-applies_to_task_markers = ["host guidance target localization", "root workspace guidance", "startup fallback authority"]
-authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", "docs/maintainer/testing-strategy.md"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "crates/agentic-workspace-core/src/native_startup.rs",
+  "crates/agentic-workspace-core/src/native_config.rs",
+  "crates/agentic-workspace-core/src/operating.rs",
+]
+applies_to_task_markers = [
+  "host guidance target localization",
+  "root workspace guidance",
+  "startup fallback authority",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/verification/manifest.toml",
+  "docs/maintainer/testing-strategy.md",
+]
 claim_boundary = "focused-root-guidance-proof-required-before-runtime-routing-claim"
-commands = ["uv run pytest tests/test_native_domain_proof.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "uv run pytest tests/test_native_public_cli.py -k \"session_improvement_intake or repo_friction or dogfooding_report_sections\" -q", "make typecheck", "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py"]
-escalation = ["the change alters generated command-package IR, cross-package payload behavior, or user-visible CLI compatibility beyond startup/report/defaults guidance", "the focused route cannot prove the changed command contract"]
-evidence_concepts = ["root-workspace-guidance", "startup-routing", "report-contract", "generated-contract-freshness", "focused-serial-proof"]
+commands = [
+  "uv run pytest tests/test_native_startup_adapter.py tests/test_native_public_cli.py tests/test_native_config_admission.py -q",
+]
+escalation = [
+  "the change alters generated command-package IR, cross-package payload behavior, or user-visible CLI compatibility beyond startup/report/defaults guidance",
+  "the focused route cannot prove the changed command contract",
+]
+evidence_concepts = [
+  "root-workspace-guidance",
+  "startup-routing",
+  "report-contract",
+  "generated-contract-freshness",
+  "focused-serial-proof",
+]
 notes = "Focused replacement for broad workspace CLI validation on root guidance and diagnostic-intake changes."
 owner = "workspace-cli-runtime"
-proof_profiles = ["workspace_behavior"]
+proof_profiles = [
+  "workspace_behavior",
+]
 purpose = "Focused root Workspace startup, report, defaults, generated-guidance, and diagnostic-intake behavior."
-review_aids = ["Confirm host-target localization, diagnostic intake, maintained proof discovery, output budgets, type posture, and runtime mirror parity remain covered without the broad workspace CLI suite.", "Source review guidance (requires current owner judgment, never automatic policy admission): allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]; escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\", \"high-risk-requirement\"]; precedence = \"65\"; route_role = \"behavior\""]
+review_aids = [
+  "Confirm host-target localization, diagnostic intake, maintained proof discovery, output budgets, type posture, and runtime mirror parity remain covered without the broad workspace CLI suite.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]; escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\", \"high-risk-requirement\"]; precedence = \"65\"; route_role = \"behavior\"",
+]
 
 [assurance.domain_proof_lanes.workspace_local_override_contract]
 purpose = "Focused workspace-local override documentation, schema, and configuration contract proof."
-applies_to_paths = ["docs/reference/workspace-local-override.md", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"]
-commands = ["uv run pytest tests/test_native_config_admission.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
-review_aids = ["Confirm local-only transport configuration remains schema-backed, source-attributed, non-portable, and separate from portable assignment semantics.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"66\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
-evidence_concepts = ["workspace-local-override-contract", "configuration-source-attribution"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "docs/reference/workspace-local-override.md"]
-escalation = ["the change alters portable assignment semantics, generated adapter behavior, or secret custody rather than the local override contract"]
+applies_to_paths = [
+  "docs/reference/workspace-local-override.md",
+  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+]
+commands = [
+  "uv run pytest tests/test_native_config_admission.py -q",
+]
+review_aids = [
+  "Confirm local-only transport configuration remains schema-backed, source-attributed, non-portable, and separate from portable assignment semantics.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"66\"; allowed_composition = [\"maintenance\", \"evidence\"]",
+]
+evidence_concepts = [
+  "workspace-local-override-contract",
+  "configuration-source-attribution",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+  "docs/reference/workspace-local-override.md",
+]
+escalation = [
+  "the change alters portable assignment semantics, generated adapter behavior, or secret custody rather than the local override contract",
+]
 claim_boundary = "focused-local-override-contract-proof-required-before-configuration-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.maintained_external_evaluation_evidence]
 purpose = "Focused contract proof for maintained external-agent evaluation evidence."
-applies_to_paths = ["tools/model-cli-harness/external-agent-evaluation/*.json"]
-commands = ["uv run pytest tests/test_external_agent_evaluation_lane.py -q"]
-review_aids = ["Confirm maintained evidence is current, structured, inspectable, and bounded to the observed supported-host result rather than a generalized model-quality claim.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"72\"; allowed_composition = [\"behavior\", \"maintenance\"]"]
-evidence_concepts = ["maintained-external-evaluation-evidence", "durable-real-session-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = ["tools/model-cli-harness/external-agent-evaluation", "tests/test_external_agent_evaluation_lane.py"]
-escalation = ["the artifact changes Evaluation runtime semantics, provider authority, or model-harness execution behavior"]
+applies_to_paths = [
+  "tools/model-cli-harness/external-agent-evaluation/*.json",
+]
+commands = [
+  "uv run pytest tests/test_external_agent_evaluation_lane.py -q",
+]
+review_aids = [
+  "Confirm maintained evidence is current, structured, inspectable, and bounded to the observed supported-host result rather than a generalized model-quality claim.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"evidence\"; precedence = \"72\"; allowed_composition = [\"behavior\", \"maintenance\"]",
+]
+evidence_concepts = [
+  "maintained-external-evaluation-evidence",
+  "durable-real-session-proof",
+]
+proof_profiles = [
+  "workspace_behavior",
+]
+authority_refs = [
+  "tools/model-cli-harness/external-agent-evaluation",
+  "tests/test_external_agent_evaluation_lane.py",
+]
+escalation = [
+  "the artifact changes Evaluation runtime semantics, provider authority, or model-harness execution behavior",
+]
 claim_boundary = "focused-maintained-evaluation-evidence-proof-required-before-supported-host-claim"
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.evaluation_conclusion_evidence]
-applies_to_paths = [".agentic-workspace/evaluations.json", ".agentic-workspace/evaluations/*.json", "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json"]
-authority_refs = [".agentic-workspace/config.toml", "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json"]
+applies_to_paths = [
+  ".agentic-workspace/evaluations.json",
+  ".agentic-workspace/evaluations/*.json",
+]
+authority_refs = [
+  ".agentic-workspace/config.toml",
+  "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json",
+]
 claim_boundary = "focused-current-evaluation-evidence-contract-required-before-conclusion-claim"
-commands = ["uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
-escalation = ["the disposition changes Evaluation runtime semantics or closes over evidence that is not currently admitted"]
-evidence_concepts = ["evaluation-conclusion-evidence", "current-result-admission", "durable-real-session-proof"]
+commands = [
+  "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+]
+escalation = [
+  "the disposition changes Evaluation runtime semantics or closes over evidence that is not currently admitted",
+]
+evidence_concepts = [
+  "evaluation-conclusion-evidence",
+  "current-result-admission",
+  "durable-real-session-proof",
+]
 owner = "workspace-cli-runtime"
-proof_profiles = ["workspace_behavior"]
+proof_profiles = [
+  "workspace_behavior",
+]
 purpose = "Focused durable Evaluation observation, conclusion, and disposition evidence contract proof."
-review_aids = ["Confirm conclusion artifacts cite current admitted result identities, current authority receipts, and compact real-session measurements; pair semantic runtime changes with the evaluation_operation_runtime lane.", "Source review guidance (requires current owner judgment, never automatic policy admission): allowed_composition = [\"behavior\", \"maintenance\", \"broad\"]; escalation_conditions = [\"cross-owner\", \"focused-route-insufficient\", \"explicit-request\"]; precedence = \"71\"; route_role = \"evidence\""]
+review_aids = [
+  "Confirm conclusion artifacts cite current admitted result identities, current authority receipts, and compact real-session measurements; pair semantic runtime changes with the evaluation_operation_runtime lane.",
+  "Source review guidance (requires current owner judgment, never automatic policy admission): allowed_composition = [\"behavior\", \"maintenance\", \"broad\"]; escalation_conditions = [\"cross-owner\", \"focused-route-insufficient\", \"explicit-request\"]; precedence = \"71\"; route_role = \"evidence\"",
+]
 
-# Repo Verification requirements retain their exact force and provenance.
-# Source refs/revisions below declare policy provenance. Currentness remains
-# unresolved until established by the source/evidence owner for the current work.
+[assurance.requirements]
+
 [assurance.requirements.test_evidence_change_decision]
 level = "high"
-applies_to_paths = ["tests/**", "packages/**/tests/**", "docs/maintainer/test-knowledge-inventory.md", "docs/maintainer/testing-strategy.md"]
-applies_to_task_markers = ["test reduction", "regression test", "ordinary test", "conformance test", "proof decision"]
-authority_refs = ["docs/maintainer/testing-strategy.md", "docs/maintainer/test-knowledge-inventory.md"]
-required_evidence = ["verification_proof_decision_review"]
+applies_to_paths = [
+  "tests/**",
+  "crates/agentic-workspace-core/tests/**",
+  "docs/maintainer/test-knowledge-inventory.md",
+  "docs/maintainer/testing-strategy.md",
+]
+applies_to_task_markers = [
+  "test reduction",
+  "regression test",
+  "ordinary test",
+  "conformance test",
+  "proof decision",
+]
+authority_refs = [
+  "docs/maintainer/testing-strategy.md",
+  "docs/maintainer/test-knowledge-inventory.md",
+]
+required_evidence = [
+  "verification_proof_decision_review",
+]
 proof_profile = "test_evidence_change"
 review_owner = "maintainer"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete", "close-parent-lane"]
+blocking_claims = [
+  "claim-work-complete",
+  "close-parent-lane",
+]
 notes = "Changing ordinary test evidence should explain the trust question and replacement/retention decision instead of relying on test count alone."
 
 [assurance.requirements.closeout_intent_satisfaction]
 level = "high"
-applies_to_paths = ["packages/planning/src/**/archive*.py", "packages/planning/src/**/closeout*.py", "packages/planning/tests/**/test_archive*.py", "tests/test_native_planning_create.py", "tests/test_native_public_cli.py"]
-applies_to_task_markers = ["closeout", "intent satisfaction", "parent lane", "completion claim"]
-authority_refs = ["AGENTS.md", ".agentic-workspace/OWNERSHIP.toml#subsystems.planning", ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md"]
-required_evidence = ["intent_satisfaction_review", "closeout_trust_review"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/",
+  "tests/test_native_planning_create.py",
+  "tests/test_native_public_cli.py",
+]
+applies_to_task_markers = [
+  "closeout",
+  "intent satisfaction",
+  "parent lane",
+  "completion claim",
+]
+authority_refs = [
+  "AGENTS.md",
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.planning",
+  ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
+]
+required_evidence = [
+  "intent_satisfaction_review",
+  "closeout_trust_review",
+]
 proof_profile = "workspace_behavior"
 review_owner = "maintainer"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete", "close-parent-lane"]
+blocking_claims = [
+  "claim-work-complete",
+  "close-parent-lane",
+]
 notes = "Planning and closeout behavior changes need explicit intent-satisfaction and residue-routing evidence before broad completion claims."
 
-# Repo-local acceptance policy. Numeric thresholds and fixture identities belong
-# here, not in portable Workspace semantics. Human rationale and disposition:
-# docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy.
 [assurance.requirements.typed_cli_selector_contract]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/proof_execution_projection.py", "src/agentic_workspace/workspace_selector_validation.py", "src/agentic_workspace/workspace_runtime*.py", "src/agentic_workspace/cli.py", "generated/workspace/python/**", "tests/test_native_public_cli.py", "tests/test_native_domain_proof.py", "tests/test_workspace_session_logging.py"]
-applies_to_task_markers = ["typed cli result", "invalid selector", "selector authority", "process exit status", "proof execution result"]
-authority_refs = ["SYSTEM_INTENT.md#3-make-control-programmable-and-actionable", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
-required_evidence = ["typed_cli_selector_contract_fixture"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_proof.rs",
+  "crates/agentic-workspace-core/src/operating.rs",
+  "crates/agentic-workspace-core/src/native_*.rs",
+  "crates/agentic-workspace-cli/src/main.rs",
+  "docs/maintainer/native-release-topology.md",
+  "tests/test_native_public_cli.py",
+  "tests/test_native_domain_proof.py",
+  "tests/test_native_maintainer_logging.py",
+]
+applies_to_task_markers = [
+  "typed cli result",
+  "invalid selector",
+  "selector authority",
+  "process exit status",
+  "proof execution result",
+]
+authority_refs = [
+  "SYSTEM_INTENT.md#3-make-control-programmable-and-actionable",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+required_evidence = [
+  "typed_cli_selector_contract_fixture",
+]
 proof_profile = "workspace_behavior"
 review_owner = "workspace-cli-runtime"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "invariant"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#typed-cli-and-selector-contract"
 source_intent_revision = "repo-acceptance-policy-v1"
@@ -1094,14 +1925,31 @@ notes = "Typed usage, validation, or failed direct-action results must declare a
 
 [assurance.requirements.proof_execution_integrity]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_core.py", "tests/test_native_domain_proof.py", ".agentic-workspace/proof/**"]
-applies_to_task_markers = ["proof completeness", "execute selected", "proof residue", "proof evidence reuse"]
-authority_refs = ["SYSTEM_INTENT.md#authority-model", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
-required_evidence = ["proof_execution_integrity_fixture"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_proof.rs",
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "tests/test_native_domain_proof.py",
+  ".agentic-workspace/proof/**",
+]
+applies_to_task_markers = [
+  "proof completeness",
+  "execute selected",
+  "proof residue",
+  "proof evidence reuse",
+]
+authority_refs = [
+  "SYSTEM_INTENT.md#authority-model",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+required_evidence = [
+  "proof_execution_integrity_fixture",
+]
 proof_profile = "workspace_behavior"
 review_owner = "workspace-cli-runtime"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "invariant"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#proof-execution-integrity"
 source_intent_revision = "repo-acceptance-policy-v1"
@@ -1111,14 +1959,32 @@ notes = "A green proof claim requires affected-owner coverage, one admitted exec
 
 [assurance.requirements.binding_automatic_assignment]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/assignment_lifecycle.py", "tests/test_native_public_cli.py", ".agentic-workspace/config.local.toml"]
-applies_to_task_markers = ["binding automatic assignment", "automatic delegation", "non-local assignment", "delegation permission", "issue 2817"]
-authority_refs = ["https://github.com/rickardvh/agentic-workspace/issues/2817", "docs/maintainer/repo-evidence-requirements.md#binding-automatic-assignment"]
-required_evidence = ["binding_automatic_assignment_organic_dogfood"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "tests/test_native_public_cli.py",
+  ".agentic-workspace/config.local.toml",
+]
+applies_to_task_markers = [
+  "binding automatic assignment",
+  "automatic delegation",
+  "non-local assignment",
+  "delegation permission",
+  "issue 2817",
+]
+authority_refs = [
+  "https://github.com/rickardvh/agentic-workspace/issues/2817",
+  "docs/maintainer/repo-evidence-requirements.md#binding-automatic-assignment",
+]
+required_evidence = [
+  "binding_automatic_assignment_organic_dogfood",
+]
 proof_profile = "workspace_behavior"
 review_owner = "workspace-cli-runtime"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "invariant"
 source_intent_ref = "https://github.com/rickardvh/agentic-workspace/issues/2817"
 source_intent_revision = "issue-2817-ordinary-behavior-v1"
@@ -1128,14 +1994,35 @@ notes = "Once durable local policy and a current binding non-local assignment au
 
 [assurance.requirements.config_orthogonality_constructibility]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_native_config_admission.py", "docs/reference/workspace-config.md", "docs/reference/workspace-local-override.md"]
-applies_to_task_markers = ["config orthogonality", "constructible configuration", "overlapping config owners", "issue 2613", "issue 2916"]
-authority_refs = ["https://github.com/rickardvh/agentic-workspace/issues/2613", "https://github.com/rickardvh/agentic-workspace/issues/2916", "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility"]
-required_evidence = ["config_orthogonality_constructibility_fixture"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_config.rs",
+  "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+  "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+  "tests/test_native_config_admission.py",
+  "docs/reference/workspace-config.md",
+  "docs/reference/workspace-local-override.md",
+]
+applies_to_task_markers = [
+  "config orthogonality",
+  "constructible configuration",
+  "overlapping config owners",
+  "issue 2613",
+  "issue 2916",
+]
+authority_refs = [
+  "https://github.com/rickardvh/agentic-workspace/issues/2613",
+  "https://github.com/rickardvh/agentic-workspace/issues/2916",
+  "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility",
+]
+required_evidence = [
+  "config_orthogonality_constructibility_fixture",
+]
 proof_profile = "workspace_behavior"
 review_owner = "workspace-cli-runtime"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "invariant"
 source_intent_ref = "https://github.com/rickardvh/agentic-workspace/issues/2613"
 source_intent_revision = "issues-2613-2916-orthogonality-v1"
@@ -1145,14 +2032,28 @@ notes = "Independent writable config dimensions must compose for every legal val
 
 [assurance.requirements.direct_no_signal]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_runtime_implement.py", "tests/test_native_public_cli.py"]
-applies_to_task_markers = ["direct no-signal", "irrelevant capability", "ordinary startup proportionality"]
-authority_refs = ["SYSTEM_INTENT.md#product-shape-rules", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
-required_evidence = ["direct_no_signal_fixture"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "tests/test_native_public_cli.py",
+]
+applies_to_task_markers = [
+  "direct no-signal",
+  "irrelevant capability",
+  "ordinary startup proportionality",
+]
+authority_refs = [
+  "SYSTEM_INTENT.md#product-shape-rules",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+required_evidence = [
+  "direct_no_signal_fixture",
+]
 proof_profile = "workspace_behavior"
 review_owner = "workspace-cli-runtime"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "invariant"
 source_intent_ref = "SYSTEM_INTENT.md#product-shape-rules"
 source_intent_revision = "repo-acceptance-policy-v1"
@@ -1162,19 +2063,34 @@ notes = "Installed but irrelevant Planning, Memory, proof, reporting, and dogfoo
 
 [assurance.requirements.selected_planning_read_budget]
 level = "high"
-applies_to_paths = ["packages/planning/**", "tests/test_summary_exact_selector_performance.py", "src/agentic_workspace/workspace_runtime_planning.py"]
-applies_to_task_markers = ["selected planning read", "history independence", "planning selector performance"]
-authority_refs = ["SYSTEM_INTENT.md#2-surface-only-what-matters-now", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
-required_evidence = ["selected_planning_read_cold_median"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/",
+  "tests/test_native_operating_carriage.py",
+  "crates/agentic-workspace-core/src/native_planning.rs",
+]
+applies_to_task_markers = [
+  "selected planning read",
+  "history independence",
+  "planning selector performance",
+]
+authority_refs = [
+  "SYSTEM_INTENT.md#2-surface-only-what-matters-now",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+required_evidence = [
+  "selected_planning_read_cold_median",
+]
 proof_profile = "workspace_behavior"
 review_owner = "planning"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#selected-planning-read-budget"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:planning-selected-read"
-detail_route = "uv run pytest tests/test_summary_exact_selector_performance.py -q"
+detail_route = "uv run pytest tests/test_native_operating_carriage.py -q"
 
 [assurance.requirements.selected_planning_read_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -1186,27 +2102,45 @@ threshold = 2.0
 aggregation = "median"
 minimum_samples = 5
 subject = "planning-summary-exact-selector-history-1000"
-subject_revision = "tests/test_summary_exact_selector_performance.py@policy-v1"
+subject_revision = "tests/test_native_operating_carriage.py@policy-v1"
 environment = "maintained-local-cold-process"
 source_revision = "repo-acceptance-policy-v1"
-excluded_costs = ["dependency installation", "provider refresh"]
-producer_command = "uv run pytest tests/test_summary_exact_selector_performance.py -q"
+excluded_costs = [
+  "dependency installation",
+  "provider refresh",
+]
+producer_command = "uv run pytest tests/test_native_operating_carriage.py -q"
 
 [assurance.requirements.selected_planning_scaling_budget]
 level = "high"
-applies_to_paths = ["packages/planning/**", "tests/test_summary_exact_selector_performance.py", "src/agentic_workspace/workspace_runtime_planning.py"]
-applies_to_task_markers = ["selected planning read", "history independence", "planning selector performance"]
-authority_refs = ["SYSTEM_INTENT.md#2-surface-only-what-matters-now", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
-required_evidence = ["selected_planning_read_history_ratio"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/",
+  "tests/test_native_operating_carriage.py",
+  "crates/agentic-workspace-core/src/native_planning.rs",
+]
+applies_to_task_markers = [
+  "selected planning read",
+  "history independence",
+  "planning selector performance",
+]
+authority_refs = [
+  "SYSTEM_INTENT.md#2-surface-only-what-matters-now",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+required_evidence = [
+  "selected_planning_read_history_ratio",
+]
 proof_profile = "workspace_behavior"
 review_owner = "planning"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#selected-planning-read-budget"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:planning-selected-read"
-detail_route = "uv run pytest tests/test_summary_exact_selector_performance.py -q"
+detail_route = "uv run pytest tests/test_native_operating_carriage.py -q"
 
 [assurance.requirements.selected_planning_scaling_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -1219,24 +2153,42 @@ tolerance = 0.01
 aggregation = "ratio"
 minimum_samples = 5
 subject = "planning-summary-exact-selector-history-1000"
-subject_revision = "tests/test_summary_exact_selector_performance.py@policy-v1"
+subject_revision = "tests/test_native_operating_carriage.py@policy-v1"
 control_subject = "planning-summary-exact-selector-history-empty"
-control_revision = "tests/test_summary_exact_selector_performance.py@policy-v1"
+control_revision = "tests/test_native_operating_carriage.py@policy-v1"
 environment = "maintained-local-cold-process"
 source_revision = "repo-acceptance-policy-v1"
-excluded_costs = ["dependency installation", "provider refresh"]
-producer_command = "uv run pytest tests/test_summary_exact_selector_performance.py -q"
+excluded_costs = [
+  "dependency installation",
+  "provider refresh",
+]
+producer_command = "uv run pytest tests/test_native_operating_carriage.py -q"
 
 [assurance.requirements.invalid_selector_rejection_budget]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_selector_validation.py", "src/agentic_workspace/workspace_runtime*.py", "tests/test_native_public_cli.py"]
-applies_to_task_markers = ["invalid selector", "selector latency", "selector fail-fast"]
-authority_refs = ["SYSTEM_INTENT.md#3-make-control-programmable-and-actionable", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
-required_evidence = ["invalid_selector_cold_median"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/operating.rs",
+  "crates/agentic-workspace-core/src/native_*.rs",
+  "tests/test_native_public_cli.py",
+]
+applies_to_task_markers = [
+  "invalid selector",
+  "selector latency",
+  "selector fail-fast",
+]
+authority_refs = [
+  "SYSTEM_INTENT.md#3-make-control-programmable-and-actionable",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+required_evidence = [
+  "invalid_selector_cold_median",
+]
 proof_profile = "workspace_behavior"
 review_owner = "workspace-cli-runtime"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#typed-cli-and-selector-contract"
 source_intent_revision = "repo-acceptance-policy-v1"
@@ -1256,19 +2208,36 @@ subject = "upgrade-dry-run-invalid-actions-selector"
 subject_revision = "tests/test_native_public_cli.py@policy-v1"
 environment = "maintained-local-cold-process"
 source_revision = "repo-acceptance-policy-v1"
-excluded_costs = ["dependency installation"]
+excluded_costs = [
+  "dependency installation",
+]
 producer_command = "uv run pytest tests/test_native_public_cli.py -k upgrade_unknown_selector -q"
 
 [assurance.requirements.selected_proof_residue_budget]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_core.py", "tests/test_native_domain_proof.py"]
-applies_to_task_markers = ["selected proof persistence", "tracked proof residue", "proof evidence reuse"]
-authority_refs = ["SYSTEM_INTENT.md#7-keep-ownership-sharp-and-residue-low", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
-required_evidence = ["selected_proof_tracked_residue"]
+applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_proof.rs",
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "tests/test_native_domain_proof.py",
+]
+applies_to_task_markers = [
+  "selected proof persistence",
+  "tracked proof residue",
+  "proof evidence reuse",
+]
+authority_refs = [
+  "SYSTEM_INTENT.md#7-keep-ownership-sharp-and-residue-low",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+required_evidence = [
+  "selected_proof_tracked_residue",
+]
 proof_profile = "workspace_behavior"
 review_owner = "workspace-cli-runtime"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#proof-execution-integrity"
 source_intent_revision = "repo-acceptance-policy-v1"
@@ -1292,7 +2261,12 @@ producer_command = "uv run pytest tests/test_native_domain_proof.py -k leaves_tr
 
 [assurance.requirements.total_completion_cost]
 level = "medium"
-applies_to_task_markers = ["route selection", "executor selection", "proof selection", "workflow optimization"]
+applies_to_task_markers = [
+  "route selection",
+  "executor selection",
+  "proof selection",
+  "workflow optimization",
+]
 force = "recommended"
 requirement_class = "guideline"
 source_intent_ref = "SYSTEM_INTENT.md#4-optimize-total-successful-completion-cost"
@@ -1302,7 +2276,12 @@ notes = "Among equally capable and safe paths, prefer fewer rereads, retries, pr
 
 [assurance.requirements.query_shaped_operation]
 level = "medium"
-applies_to_task_markers = ["broad inventory", "history scan", "selected read", "progressive disclosure"]
+applies_to_task_markers = [
+  "broad inventory",
+  "history scan",
+  "selected read",
+  "progressive disclosure",
+]
 force = "recommended"
 requirement_class = "guideline"
 source_intent_ref = "SYSTEM_INTENT.md#2-surface-only-what-matters-now"
@@ -1312,7 +2291,11 @@ notes = "Prefer exact selectors and source-owner routes; keep broad inventories,
 
 [assurance.requirements.stronger_owner_correction]
 level = "medium"
-applies_to_task_markers = ["recurring regression", "compensating guidance", "deterministic failure"]
+applies_to_task_markers = [
+  "recurring regression",
+  "compensating guidance",
+  "deterministic failure",
+]
 force = "recommended"
 requirement_class = "guideline"
 source_intent_ref = "SYSTEM_INTENT.md#10-convert-repeated-friction-into-better-context-or-control"
@@ -1321,26 +2304,54 @@ preference_target = "operation:repair-strongest-deterministic-owner"
 notes = "Prefer making recurring deterministic failures impossible in their owning contract, operation, or test over adding permanent compensating guidance."
 
 [assurance.requirements."subsystem:workspace-cli-runtime"]
-requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
-required_evidence = ["workspace_runtime_proof", "tiny_surface_compatibility_review"]
+requirement_refs = [
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
+]
+required_evidence = [
+  "workspace_runtime_proof",
+  "tiny_surface_compatibility_review",
+]
 proof_profile = "workspace_behavior"
 review_owner = "maintainer"
 force = "required-before-closeout"
 claim_boundary = "workspace-runtime-routing"
 notes = "Workspace runtime routing changes need focused runtime proof and compact-output compatibility review before broad completion claims. Scope transferred from the current Ownership declaration; maintain future proof scope in this Verification requirement."
 level = "high"
-blocking_claims = ["claim-work-complete"]
-applies_to_paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
-authority_refs = ["AGENTS.md", ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
+blocking_claims = [
+  "claim-work-complete",
+]
+applies_to_paths = [
+  "docs/maintainer/native-release-topology.md",
+  "crates/agentic-workspace-core/src/native_*.rs",
+]
+authority_refs = [
+  "AGENTS.md",
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
+]
 
 [assurance.requirements.model_harness_evidence]
 level = "high"
-applies_to_paths = ["tools/model-cli-harness/**", "scripts/model_cli_harness/**", "docs/maintainer/test-knowledge-inventory.md"]
-applies_to_task_markers = ["model cli harness", "harness scorer", "test knowledge inventory"]
-authority_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.model-cli-harness", "docs/maintainer/test-knowledge-inventory.md"]
-required_evidence = ["model_harness_scorer_proof", "test_knowledge_inventory_review"]
+applies_to_paths = [
+  "tools/model-cli-harness/**",
+  "docs/maintainer/test-knowledge-inventory.md",
+]
+applies_to_task_markers = [
+  "model cli harness",
+  "harness scorer",
+  "test knowledge inventory",
+]
+authority_refs = [
+  ".agentic-workspace/OWNERSHIP.toml#subsystems.model-cli-harness",
+  "docs/maintainer/test-knowledge-inventory.md",
+]
+required_evidence = [
+  "model_harness_scorer_proof",
+  "test_knowledge_inventory_review",
+]
 proof_profile = "test_evidence_change"
 review_owner = "maintainer"
 force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
+blocking_claims = [
+  "claim-work-complete",
+]
 notes = "Model harness and test-knowledge changes need scorer proof and inventory review before broad completion claims."
