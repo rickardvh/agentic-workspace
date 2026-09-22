@@ -1414,7 +1414,7 @@ applies_to_paths = [
   "src/core/src/native_assignment.rs",
   "src/core/src/native_delegation.rs",
   "src/core/src/native_handoff.rs",
-  "bindings/node/**",
+  "src/cli/typescript/**",
 ]
 commands = [
   "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
