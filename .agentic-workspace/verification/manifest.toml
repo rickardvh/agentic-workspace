@@ -370,8 +370,8 @@ review_aids = [
 title = "Closeout intent satisfaction"
 purpose = "Make completion-honesty and residue-routing review repeatable for planning and closeout behavior without letting Verification decide semantic satisfaction."
 applies_to_paths = [
-  "src/core/src/**",
-  "src/core/src/**",
+  "src/core/src/modules/verification/**",
+  "src/core/src/modules/planning/**",
   "tests/test_native_proof_producer.py",
 ]
 applies_to_task_markers = [
@@ -407,7 +407,7 @@ stale_when = [
   "src/core/src/modules/verification/native_verification.rs",
   "src/core/src/native_public.rs",
   "tests/test_native_proof_producer.py",
-  "src/core/src/",
+  "src/core/src/modules/planning/",
   "src/core/src/native_*.rs",
 ]
 non_goals = [
@@ -514,7 +514,7 @@ review_owner = "maintainer"
 authority_refs = [
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
-  "src/core/src/",
+  "src/core/src/modules/verification/",
 ]
 stale_when = [
   "src/core/src/modules/verification/native_verification.rs",
@@ -523,7 +523,7 @@ stale_when = [
   "src/core/tests/**",
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
-  "src/core/src/",
+  "src/core/src/modules/verification/",
 ]
 non_goals = [
   "Verification does not authorize deletion by itself.",
@@ -820,8 +820,8 @@ notes = "This lane is the first focused replacement for generic workspace_behavi
 [assurance.domain_proof_lanes.review_stack_operations]
 purpose = "Focused external-review continuation and declared PR-stack publication behavior."
 applies_to_paths = [
-  "tools/chatgpt_review_loop.py",
-  "tools/review_stack_ops.py",
+  "scripts/github/chatgpt_review_loop.py",
+  "scripts/github/review_stack_ops.py",
   "tools/skills/pr-review-recheck/SKILL.md",
   "tests/test_chatgpt_review_loop.py",
   "tests/test_review_stack_ops.py",
@@ -937,7 +937,7 @@ proof_profiles = [
 ]
 authority_refs = [
   "src/core/contracts/source_decision_contract.json",
-  "src/core/contracts/schemas/correction_event_input.schema.json",
+  "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
 ]
 escalation = [
   "the change alters checked-in Memory authority, host signature admission, or cross-repository guidance storage",
@@ -950,7 +950,7 @@ purpose = "Focused maintenance route for repo-owned proof-routing authority."
 applies_to_paths = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/verification/manifest.toml",
-  "src/core/src/**",
+  "src/core/src/modules/verification/**",
   "Makefile",
   "tests/test_native_domain_proof.py",
 ]
@@ -1019,7 +1019,7 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.memory_package_behavior]
 purpose = "Focused Memory package behavior."
 applies_to_paths = [
-  "src/core/src/**",
+  "src/core/src/modules/memory/**",
   "tests/test_native_memory*.py",
 ]
 commands = [
@@ -1038,7 +1038,7 @@ proof_profiles = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "src/core/src/",
+  "src/core/src/modules/memory/",
 ]
 escalation = [
   "the change crosses root workspace orchestration or installed payload boundaries",
@@ -1049,7 +1049,7 @@ owner = "memory"
 [assurance.domain_proof_lanes.planning_package_behavior]
 purpose = "Focused Planning package behavior."
 applies_to_paths = [
-  "src/core/src/**",
+  "src/core/src/modules/planning/**",
   "src/core/src/planning.rs",
   "tests/test_native_planning*.py",
 ]
@@ -1069,7 +1069,7 @@ proof_profiles = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "src/core/src/",
+  "src/core/src/modules/planning/",
 ]
 escalation = [
   "the change crosses root workspace orchestration, closeout trust, or installed payload boundaries",
@@ -1101,7 +1101,7 @@ proof_profiles = [
 authority_refs = [
   ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
   ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
-  "src/core/src/",
+  "src/core/src/modules/planning/",
 ]
 escalation = [
   "Planning runtime or schema changes",
@@ -1139,7 +1139,7 @@ owner = "workspace-maintainers"
 [assurance.domain_proof_lanes.planning_reconciliation_runtime]
 purpose = "Focused Planning-to-workspace reconciliation, residue disposition, and bounded-effect routing behavior."
 applies_to_paths = [
-  "src/core/src/**",
+  "src/core/src/modules/planning/**",
   "src/core/src/modules/verification/native_source_reconciliation.rs",
   ".agentic-workspace/OWNERSHIP.toml",
   "src/core/payload/**",
@@ -1162,7 +1162,7 @@ proof_profiles = [
 authority_refs = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
-  "src/core/src/",
+  "src/core/src/modules/planning/",
 ]
 escalation = [
   "the change alters external-effect authority beyond bounded issue filing, creates a new durable owner, or crosses independent review authority",
@@ -1173,7 +1173,7 @@ owner = "planning"
 [assurance.domain_proof_lanes.verification_package_behavior]
 purpose = "Focused Verification package behavior."
 applies_to_paths = [
-  "src/core/src/**",
+  "src/core/src/modules/verification/**",
   "tests/test_native_verification*.py",
 ]
 commands = [
@@ -1577,7 +1577,7 @@ applies_to_paths = [
   "src/core/tests/**",
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
-  "scripts/model_cli_harness/run_model_cli_harness.py",
+  "tools/model-cli-harness/run_model_cli_harness.py",
 ]
 commands = [
   "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
@@ -1796,7 +1796,7 @@ applies_to_paths = [
 ]
 authority_refs = [
   ".agentic-workspace/config.toml",
-  "src/core/contracts/schemas/evaluation_issue_disposition.schema.json",
+  "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json",
 ]
 claim_boundary = "focused-current-evaluation-evidence-contract-required-before-conclusion-claim"
 commands = [
@@ -1856,7 +1856,7 @@ notes = "Changing ordinary test evidence should explain the trust question and r
 [assurance.requirements.closeout_intent_satisfaction]
 level = "high"
 applies_to_paths = [
-  "src/core/src/",
+  "src/core/src/modules/planning/",
   "tests/test_native_planning_create.py",
   "tests/test_native_public_cli.py",
 ]
@@ -2064,7 +2064,7 @@ notes = "Installed but irrelevant Planning, Memory, proof, reporting, and dogfoo
 [assurance.requirements.selected_planning_read_budget]
 level = "high"
 applies_to_paths = [
-  "src/core/src/",
+  "src/core/src/modules/planning/",
   "tests/test_native_operating_carriage.py",
   "src/core/src/modules/planning/native_planning.rs",
 ]
@@ -2114,7 +2114,7 @@ producer_command = "uv run pytest tests/test_native_operating_carriage.py -q"
 [assurance.requirements.selected_planning_scaling_budget]
 level = "high"
 applies_to_paths = [
-  "src/core/src/",
+  "src/core/src/modules/planning/",
   "tests/test_native_operating_carriage.py",
   "src/core/src/modules/planning/native_planning.rs",
 ]
