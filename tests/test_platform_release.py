@@ -58,7 +58,7 @@ def inventory(tmp_path):
                     "source_commit": data["source_commit"],
                     "inventory_sha256": release.digest(tmp_path / release.MANIFEST),
                     "rust_available": False,
-                    "checks": ["uv-sync", "npm-install", "native-start"],
+                    "checks": ["uv-sync", "npm-local-install", "installed-first-contact"],
                 }
             )
         )

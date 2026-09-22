@@ -24,6 +24,7 @@ directory describe internal or retired representations, not public commands.
 [Contracts and reference maintenance](../package/contracts.md) explains that
 boundary and where contributors should make changes.
 
-The [source-maintenance inventory](source-maintenance-surface-catalogue.md) is for
-package-build work. The public installed-surface catalogue above instead describes
+Use [source layout](../architecture.md) and
+[maintainer commands](../maintainer/maintainer-commands.md) for package-build work.
+The public installed-surface catalogue above describes
 the footprint used by current repository adoption, refresh and removal.

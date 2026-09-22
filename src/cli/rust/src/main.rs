@@ -1,4 +1,5 @@
 use serde_json::{Value, json};
+mod setup;
 #[cfg(not(unix))]
 use std::io::Write;
 use std::{
@@ -47,6 +48,7 @@ struct Parsed {
     values: Value,
     input_path: Option<String>,
     explicit: BTreeSet<String>,
+    format: String,
 }
 
 fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
@@ -91,6 +93,13 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
             return Err(format!("{flag} may be supplied only once"));
         }
         index += 1;
+        if option["boolean"] == true {
+            if attached.is_some() {
+                return Err(format!("{flag} does not take a value"));
+            }
+            values.insert(field.to_owned(), json!(true));
+            continue;
+        }
         let mut supplied = Vec::new();
         if let Some(value) = attached {
             supplied.push(value.to_owned());
@@ -130,7 +139,18 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
     if command["input_required"] == true && input_path.is_none() {
         return Err("--input is required for this command".to_owned());
     }
-    values.remove("format");
+    let format = values
+        .remove("format")
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "json".into());
+    if args[0] != "setup"
+        && (format != "json"
+            || ["yes", "dry_run", "recover"]
+                .iter()
+                .any(|key| seen.contains(*key)))
+    {
+        return Err("text output, --yes, --dry-run and --recover are setup-only".into());
+    }
     if values.contains_key("reference") {
         // Absent context must stay absent when carrying exact work. Explicit
         // context remains in the request for Rust's equality check.
@@ -149,6 +169,7 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
         values: Value::Object(values),
         input_path,
         explicit: seen,
+        format,
     }))
 }
 
@@ -208,6 +229,9 @@ fn run() -> Result<(), (&'static str, String)> {
         println!("{}", help(&contract));
         return Ok(());
     };
+    if parsed.command == "setup" {
+        return setup::run(parsed).map_err(|error| ("setup", error));
+    }
     let input = if let Some(path) = &parsed.input_path {
         let text = if path == "-" {
             let mut text = String::new();

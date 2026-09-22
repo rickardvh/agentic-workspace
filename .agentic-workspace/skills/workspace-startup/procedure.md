@@ -4,7 +4,7 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which procedure is needed for the current work? Select only applicable needs; clear direct work may use ordinary guidance without native calls.",
+  "question": "Which procedure is needed for the current work? Select only applicable needs; after obtaining current entry context, clear work may continue directly.",
   "branches": [
     {
       "id": "ordinary",
@@ -40,5 +40,5 @@
 }
 ```
 
-Known needs may follow the same links in SKILL.md directly. An uncertain need
+Known needs may follow their reference directly. An uncertain need
 remains unknown; do not infer effects or requirements from a branch label.

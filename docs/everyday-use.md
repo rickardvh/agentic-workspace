@@ -78,14 +78,6 @@ It is also reasonable to retain nothing: code, tests and the PR may already expl
 
 A reviewer without executable AW can read the same main skill and follow the relevant references in `.agentic-workspace/READING.json`. It can inspect recorded intent, progress and lessons. It cannot establish current machine state, available credentials or newly passing tests from those files.
 
-<a id="precise-tools"></a>
-
-## Inspect AW directly
-
-For a current task-specific tool response:
-
-```sh
-agentic-workspace start --target . --task "Inspect the API change constraints" --changed src/api/users.py --format json
-```
-
-Replace the example task and path with your actual work. Use the [CLI reference](reference/cli-catalogue.md) for options, [Your repository and data](package/installed-surfaces.md) for retained files, and [Troubleshooting](troubleshooting.md) when the observed result differs from what you expected.
+For saved files, see [Your repository and data](package/installed-surfaces.md).
+For failures, see [Troubleshooting](troubleshooting.md). Direct CLI operation is
+an [integration and debugging reference](reference/native-cli.md).

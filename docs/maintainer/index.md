@@ -11,7 +11,9 @@ to the [user guide](../index.md).
 | Choose or change tests | [Testing strategy](testing-strategy.md) |
 | Update generated references | [Contracts and reference maintenance](../package/contracts.md) |
 | Write human documentation | [Documentation style guide](../documentation-style-guide.md) |
-| Prepare a release | [Release and versioning](../release-and-versioning.md) and [native distribution topology](native-release-topology.md) |
+| Prepare a release | [Release and versioning](../release-and-versioning.md) |
+| Write a reusable repository method | [Author a skill](../package/skill-authoring.md) |
+| Observe an agent on a realistic task | [Probe an agent workflow](model-cli-dogfooding-harness.md) |
 | Configure recurring research or monitoring | [Scheduled maintainer tasks](scheduled-tasks/README.md) |
 
 [System intent](../../SYSTEM_INTENT.md) and [design principles](../design-principles.md)
@@ -21,6 +23,7 @@ explains where to route observed friction.
 ## Specialist references and evidence
 
 Use [Rust toolchain](rust-toolchain.md),
+[native distribution topology](native-release-topology.md),
 [source/payload maintenance](source-payload-operational-install.md),
 [independent native owners](independent-native-owners.md), or
 [repository-only reading](repository-read-profile.md) when working on those areas.

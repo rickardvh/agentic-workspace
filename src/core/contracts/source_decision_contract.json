@@ -183,6 +183,12 @@
     "help_flag": "--help",
     "commands": [
       {
+        "name": "setup",
+        "description": "Add or refresh AW in this repository; show the proposal and ask before writing.",
+        "input_field": "request",
+        "input_required": false
+      },
+      {
         "name": "worker",
         "description": "Project bounded worker entry, expand an exact captured input, or assemble unproven return re-entry from a sealed Assignment packet.",
         "input_field": "request",
@@ -233,9 +239,10 @@
         "field": "format",
         "default": "json",
         "choices": [
-          "json"
+          "json",
+          "text"
         ],
-        "description": "Output format (json)."
+        "description": "Output format: setup defaults to text; machine commands use json."
       },
       {
         "flag": "--projection",
@@ -267,6 +274,24 @@
         "flag": "--input",
         "field": "input",
         "description": "JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action."
+      },
+      {
+        "flag": "--yes",
+        "field": "yes",
+        "boolean": true,
+        "description": "Authorise the exact setup proposal (setup only)."
+      },
+      {
+        "flag": "--dry-run",
+        "field": "dry_run",
+        "boolean": true,
+        "description": "Show the setup proposal without changes (setup only)."
+      },
+      {
+        "flag": "--recover",
+        "field": "recover",
+        "boolean": true,
+        "description": "Inspect and authorise an interrupted setup (setup only)."
       }
     ]
   },

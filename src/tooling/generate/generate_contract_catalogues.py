@@ -177,6 +177,10 @@ def render_support_install() -> str:
             projection["install_command"],
             "```",
             "",
+            "The command above is for the root receipt's named platform, not a universal wheel. Choose your platform:",
+            "",
+            *[f"- `{row['target']}`: `{row['command']}`" for row in projection.get("platforms", [])],
+            "",
             "The release receipt remains authority. This checked-in page is a parity-checked projection for discovery; mutable branch, registry, editable, source-checkout, and debug installs are not substituted for this identity.",
             "",
         ]

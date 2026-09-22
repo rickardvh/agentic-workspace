@@ -19,6 +19,7 @@ import tomllib
 from pathlib import Path
 
 import coordinated_release
+from first_contact import journey
 from registry_release import fetch, json_response, sha256
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -211,6 +212,8 @@ def install_pair(packages, home, *, staging=None):
     suffix = ".exe" if os.name == "nt" else ""
     binaries = home / "installed/bin"
     assert all((binaries / (crate["binary"] + suffix)).is_file() for crate in packages)
+    subprocess.run(["git", "init", "-q", str(consumer)], check=True, env=env)
+    journey([str(binaries / ("agentic-workspace" + suffix))], consumer, env)
     env["PATH"] = ""
     result = subprocess.check_output(
         [str(binaries / ("agentic-workspace" + suffix)), "start", "--target", str(consumer), "--task", "Inspect", "--format", "json"],

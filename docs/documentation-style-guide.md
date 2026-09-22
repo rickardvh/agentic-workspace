@@ -27,6 +27,21 @@ not list every document in the source tree. Reuse an existing page before adding
 new one; merge duplicate explanations and remove obsolete prose instead of
 creating another layer of navigation.
 
+## Keep guides short and references exact
+
+A guide gives the shortest sufficient path to its reader's result and stops when
+that job is done. Use one representative example; link to the existing exact
+reference for options, fields and exceptional cases. Prefer deleting, merging or
+linking over adding another explanation. Splitting one long guide into several
+equally verbose pages does not reduce the reading burden.
+
+References may be detailed and exhaustive. Keep generated contracts complete and
+change them through their source. Put dated evidence and reconstruction history
+in their existing evidence homes; retain history in a current guide only when it
+changes the reader's present action. Navigation should lead to guides first, then
+specialist reference and evidence. Judge sufficiency by the reader's job, not a
+word quota. Preserve safety and compatibility details at the affected step.
+
 ## Introduce context before details
 
 Open with the reader's task and the result the page helps them obtain. Define the

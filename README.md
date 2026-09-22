@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/agentic-workspace)](https://pypi.org/project/agentic-workspace/)
 [![npm](https://img.shields.io/npm/v/%40agentic-workspace%2Fworkspace-cli)](https://www.npmjs.com/package/@agentic-workspace/workspace-cli)
-[![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/src/cli/rust)
+[![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/crates/agentic-workspace-cli)
 
 **Persistent operating context and dynamic control for coding agents.**
 
@@ -88,33 +88,17 @@ Exact package identities, installation commands, runtime versions, operating-sys
 
 ## Get started
 
-Use the [installation and adoption guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) for the release class you intend to run. Stable support, release candidates, and previews have different evidence and support boundaries; exact install commands and platform claims belong to the selected release and its receipts rather than this README.
+1. Install AW: `npm install --global @agentic-workspace/workspace-cli`.
+2. From your Git working-tree root, run `agentic-workspace setup` and authorise
+   the proposed integration.
+3. Give your agent an ordinary task, such as correcting a documentation error.
 
-For support-bearing installs, follow the [generated install projection](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/support-bearing-install.md) to the selected release's `distribution-install-readiness.json` receipt and its exact installation command.
-
-### Adopt a repository
-
-Installing the runtime and adopting a repository are separate operations. After installing the selected artefact, run ordinary `start` against the target Git repository:
-
-```bash
-agentic-workspace start --target . \
-  --task "Inspect this repository" \
-  --format json
-```
-
-If the repository is not yet adopted and the selected artefact includes the current adoption owner, Configuration returns the exact repository-adoption request. Follow that request and execute only the returned authorised action. Adoption establishes the small package-owned host footprint and managed `AGENTS.md` fence; it does **not** invent repository policy, choose optional modules, or create Planning, Memory, or Verification state.
-
-### In an adopted repository
-
-The repository's small entry point leads to the canonical `workspace-startup` skill. Agent hosts with supported native skill discovery can expose the same skill directly.
-
-For an initial check, ask your agent:
-
-> Use this repository's Agentic Workspace setup to identify the guidance and checks relevant to an API change. Do not modify anything yet.
-
-For direct inspection, use the same `start` boundary with the actual task. After adoption, continue giving your agent ordinary work; the canonical skill teaches it when AW is useful, so you should not need to run a manual command sequence around every change.
-
-[Installation and adoption](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [CLI reference](https://github.com/rickardvh/agentic-workspace/blob/master/docs/reference/cli-catalogue.md)
+The setup command is awaiting stable publication. Check the
+[Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md)
+for the current release boundary, Python/Cargo alternatives and repository-local
+npm invocation. Installation supplies the runtime; setup adds the AW enclave and
+an AGENTS.md pointer. Your agent then follows that pointer without a manual command
+sequence around each task.
 
 ## Your repository, your rules
 

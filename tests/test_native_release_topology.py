@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src/tooling/release"))
 
 
 @pytest.fixture(scope="module")
@@ -252,6 +253,35 @@ console.log(JSON.stringify(result.effect_outcome));
     effect = subprocess.run([node, "--input-type=module", "-e", script], cwd=consumer, env=environment, capture_output=True, text=True)
     assert effect.returncode == 0, effect.stderr
     assert json.loads(effect.stdout)["status"] == "committed"
+
+    from first_contact import journey, validate_pointer
+
+    git = shutil.which("git")
+    environment["PATH"] = os.pathsep.join([str(Path(node).parent), str(Path(git).parent)])
+    assert shutil.which("agentic-workspace", path=environment["PATH"]) is None
+    subprocess.run([git, "init", "-q", str(consumer)], check=True)
+    journey([npm, "exec", "--no", "--", "agentic-workspace"], consumer, environment)
+    startup = consumer / ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    startup.write_text("stale installed procedure", encoding="utf-8")
+    with pytest.raises(ValueError, match="differs"):
+        validate_pointer(consumer)
+    startup.unlink()
+    with pytest.raises(ValueError, match="missing or stale"):
+        validate_pointer(consumer)
+    prefix = tmp_path / "global-install"
+    subprocess.run(
+        [npm, "install", "--global", "--prefix", str(prefix), "--offline", "--no-audit", "--no-fund", "--ignore-scripts", str(archive)],
+        check=True,
+        capture_output=True,
+    )
+    global_env = dict(environment)
+    global_env["PATH"] = str(prefix if os.name == "nt" else prefix / "bin") + os.pathsep + environment["PATH"]
+    executable = shutil.which("agentic-workspace", path=global_env["PATH"])
+    assert executable and Path(executable).is_relative_to(prefix)
+    global_consumer = tmp_path / "global-consumer"
+    global_consumer.mkdir()
+    subprocess.run([git, "init", "-q", str(global_consumer)], check=True)
+    journey([executable], global_consumer, global_env)
 
 
 def test_exact_archive_and_language_packages_share_native_bytes(wheel, tmp_path):

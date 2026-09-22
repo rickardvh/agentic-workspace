@@ -10,7 +10,7 @@ handwritten field list. For using the product, start with the
 
 | Question | Source |
 | --- | --- |
-| Commands and flags in this build | `native_cli` in [source_decision_contract.json](../../src/agentic_workspace/contracts/source_decision_contract.json), the [CLI catalogue](../reference/cli-catalogue.md), and executable `--help` |
+| Commands and flags in this build | `native_cli` in [source_decision_contract.json](../../src/core/contracts/source_decision_contract.json), the [CLI catalogue](../reference/cli-catalogue.md), and executable `--help` |
 | Current requests and permitted actions | The responsible native component's response for the target repository |
 | Shared and local settings | [Configuration](../reference/workspace-config.md) and [local override](../reference/workspace-local-override.md) schemas |
 | Files managed by repository adoption | [Installed-surface catalogue](../reference/installed-surface-catalogue.md), derived from the public footprint contract |
@@ -24,8 +24,9 @@ that an old installed version provides the feature.
 The reference directory also contains retained operation IR, former command-host
 schemas and generated-adapter maintenance contracts. They describe their named
 sources, not alternative public commands. Use the
-[source-maintenance inventory](../reference/source-maintenance-surface-catalogue.md)
-for that build boundary. Completed migration explanations remain recoverable from
+[source layout](../architecture.md) and
+[maintainer commands](../maintainer/maintainer-commands.md) for the current build
+boundary. Completed migration explanations remain recoverable from
 Git history and dated reviews; new API documentation should not narrate that history.
 
 ## Change a reference

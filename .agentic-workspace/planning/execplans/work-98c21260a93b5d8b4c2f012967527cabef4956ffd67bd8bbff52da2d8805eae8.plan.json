@@ -1,0 +1,120 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "agent_may_decide": "Thin setup UX, bounded decomposition, source-owned docs contraction and lowest sufficient proof.",
+    "escalate_when": "Real owner authority gap, required unavailable published product, or irreducible human choice.",
+    "hard_constraints": "Preserve human policy, custom content, pointer-only fence and exact owner custody; fail closed on conflicts or stale approval; no self-review or proxy reviewer."
+  },
+  "continuation": {
+    "owner": "first-contact-lane",
+    "residual_intent": "Implementation is published as stacked PRs #3584 -> #3585 -> #3586, ready for externally initiated independent review. After acceptance and a release containing setup, run the current public package journey and fresh-agent semantic walkthrough before closing #3558/#3562. Configured native Terra inventory dispatch rejected before effect with changed handoff/execution configuration; no worker result or model-cost comparison exists. Preserve the older capability snapshot factual-currentness limitation recorded in the bounded audit; no trust revision or source admission was waived."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/520bcf003a83fb171096d66cb87dde3f4ae90c02a28523631514a91121dd5f41.attempt.json",
+        "revision": "sha256:f214c78aa74dc07d4b248df4636848ae5c7df8c83b516c23e2a68617a0f9d39a",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/520bcf003a83fb171096d66cb87dde3f4ae90c02a28523631514a91121dd5f41.result.json",
+        "revision": "sha256:a41c7e51fe2c5bca046f04c8adb3135e7bb6658eaf8380281985cce9133dfefb",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:b2212382494a610b3c50c5743d32144aa6856934ef40ca9a8231a835f299bf99",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:c5b585bb3632c6fb65a7dff8526bc6412b43f2934a439afc9074c0338aad3de7"
+  },
+  "id": "work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8",
+  "intent": {
+    "non_goals": [
+      "No independent approval or merge. No alternate adoption writer, optional-module setup mandate, or documentation framework."
+    ],
+    "outcome": "Implement #3559 -> #3558 -> #3562 in coherent stacked PRs: install, authorise repository adoption, then ordinary agent work; concise guides with exact reference preserved."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "live",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Implementation is published as stacked PRs #3584 -> #3585 -> #3586, ready for externally initiated independent review. After acceptance and a release containing setup, run the current public package journey and fresh-agent semantic walkthrough before closing #3558/#3562. Configured native Terra inventory dispatch rejected before effect with changed handoff/execution configuration; no worker result or model-cost comparison exists. Preserve the older capability snapshot factual-currentness limitation recorded in the bounded audit; no trust revision or source admission was waived.",
+  "owner_level": "lane",
+  "parent": {
+    "closure_boundary": "Implementation and bounded proof; public release journey and independent acceptance stay separately reported.",
+    "contribution": "First-contact product and documentation lane",
+    "owner_id": "github-3562"
+  },
+  "phase": "validation",
+  "proof": {
+    "claims": [
+      "#3584/#3585 required CI passed; #3585 installed consumers passed on all six declared targets. #3586 current-guide implementation passes 26 focused tests, generated parity, link/anchor checks and commit hooks; source reconciliation covers 356/356 postimages through six native owner actions. Three guides contract 9507 to 2020 words, with a retained 47-surface audit. Public stable 1.2.0 installs but lacks setup; validation, issue closure, intent satisfaction and total operating cost remain distinct."
+    ],
+    "refs": [],
+    "requirements": [
+      "Existing native adoption owner tests plus bounded installed CLI journey",
+      "Current release identity and installed startup route negatives",
+      "Documentation links, subtraction inventory and fresh-reader procedure walkthrough"
+    ]
+  },
+  "references": [],
+  "relationships": {
+    "dependencies": {
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/3559",
+        "https://github.com/rickardvh/agentic-workspace/issues/3558",
+        "https://github.com/rickardvh/agentic-workspace/issues/3562"
+      ]
+    }
+  },
+  "revision": 5,
+  "scope": {
+    "effects": [
+      "Native setup composition, generated contracts, guide contraction, installed journey validation and stacked PRs."
+    ],
+    "owned": [
+      "src/cli",
+      "src/core/contracts",
+      "src/tooling",
+      "tests",
+      "README.md",
+      "docs",
+      ".agentic-workspace/skills",
+      ".release/changes"
+    ]
+  },
+  "title": "First-contact lane: human setup, current onboarding, concise guides",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/13dc05ccb51c6b13d12bfbb00dfa134b48524a01dbb2edb9d5f844c5ad1b3a9a.attempt.json",
+        "revision": "sha256:11c39f19985a813437880a67a50313a69f38a9e5e7a8578abc314bf726efe48c",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/13dc05ccb51c6b13d12bfbb00dfa134b48524a01dbb2edb9d5f844c5ad1b3a9a.result.json",
+        "revision": "sha256:299f1df53559fd5c0b39a254f10c0137fa1c99588417df82b85532a2d6e496a1",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:5d9ddafa01b40412a07d1fb7b3492f3e13ed58218f873e90c7022322bc742779",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:f5d32f55c717c46c05015f59789054638b6b37c27c24f56a3958c7730b590d77",
+        "owner_id": "work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8",
+        "owner_path": ".agentic-workspace/planning/execplans/work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8.plan.json"
+      }
+    }
+  }
+}

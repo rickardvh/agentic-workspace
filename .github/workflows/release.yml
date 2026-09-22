@@ -581,6 +581,20 @@ jobs:
     with:
       tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
 
+  current-install-projection:
+    needs: agentic-workspace-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+      - name: Detect post-publication documentation drift
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python src/tooling/release/current_install.py
+
   # PyPI trusts the top-level workflow; publishing from workflow_call is unsupported.
   language-packages:
     needs: agentic-workspace-package
@@ -604,6 +618,8 @@ jobs:
           node-version: '24'
       - name: Install OIDC-capable npm
         run: npm install --global npm@11.5.1
+      - name: Install uv for the documented Python tool journey
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - name: Fetch and verify admitted GitHub bytes
         env:
           GH_TOKEN: ${{ github.token }}

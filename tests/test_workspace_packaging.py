@@ -357,13 +357,11 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
             args.extend(["--input", str(packet)])
         return _run_workspace_console_json(workspace_exe, target, *args)
 
-    discovered = call(call()["configuration_write"]["repository_adoption_request"])
-    adopt = next(r for r in discovered["configuration_write"]["adoption_requests"] if r["arguments"]["mode"] == "adopt")
-    proposed = call(adopt)
-    decisions = proposed["decision_packet"]["pending_consequences"]["decisions"]
-    answer = next(d for d in decisions if d["id"] == "repository-adoption-authorization")["response_request"]
-    answer["arguments"]["answer"] = "authorize-write"
-    assert call(invocation=call(answer)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
+    # Exercise the installed human entry point; native adoption fixtures own
+    # shared currentness, conflict and recovery semantics.
+    setup = _run_workspace_console_json(workspace_exe, target, "setup", "--yes", "--format", "json")
+    assert setup["effect_outcome"]["status"] == "committed"
+    assert _run_workspace_console_json(workspace_exe, target, "setup", "--format", "json")["status"] == "already-current"
     manifest = json.loads((WORKSPACE_ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     for reference in manifest["payload_files"]:
         assert (target / reference).is_file(), reference
