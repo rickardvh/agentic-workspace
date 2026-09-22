@@ -4,8 +4,8 @@
     "invariants": "Exact admission, no launch on rejection, no full packet diagnostics, no blind retries, no proof/review authority."
   },
   "continuation": {
-    "assignment": "Current Astra binding for diagnosis/integration. Configured Terra bounded test inventory dispatched successfully after fix and admitted by Assignment for supporting use only; no independent review.",
-    "frontier": "Implementation and focused validation complete for the bounded leaf: startup dependencies enter before handoff/Planning sealing; exact dispatch remains fail-closed with bounded owner/actionable mismatch diagnostics. Independent PR review and merge remain outstanding. #3558/#3562 public-release acceptance is separate retained work."
+    "assignment": "Astra performed diagnosis/integration. Configured Terra supplied the owner-admitted bounded test inventory as supporting evidence only; no continuing assignment or independent review authority.",
+    "frontier": "Implementation and focused validation complete for #3588. External PR review, acceptance and merge are outside this plan's remaining work and must be observed in GitHub; this terminal state grants none of those authorities. #3558/#3562 public-release acceptance remains separate retained work."
   },
   "creation_provenance": {
     "custody": {
@@ -31,18 +31,18 @@
     "outcome": "Current exact dispatch survives public carriage; relevant drift rejects before effect with bounded actionable diagnostics."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "live",
+  "lifecycle": "closed",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish codex/3588-dispatch-currentness ready for independent review; external reviewer owns acceptance, and the PR closes bounded leaf #3588 on merge.",
+  "next_action": "No remaining implementation or validation work in this bounded plan.",
   "owner_level": "slice",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3588"
   },
-  "phase": "validation",
+  "phase": "complete",
   "proof": {
     "current": [
       "62 handoff/startup/source-request/catalogue tests passed in 156.52 seconds",
@@ -53,9 +53,7 @@
       "Configured Terra read-only inventory returned and was owner-admitted; no review or proof authority"
     ],
     "limits": "One worker transport observed 12.731 seconds and 26352 packet bytes. Token use and total successful-completion cost are unknown; no provider ranking, review acceptance or parent-lane completion claim.",
-    "pending": [
-      "Independent PR review and acceptance"
-    ],
+    "pending": [],
     "required_commit_checks": "Normal repository format/lint/typecheck/no-absolute-path hooks; no bypass authorised.",
     "stop_rationale": "The current reproduced missing class is fixed at public carriage. Current positive/negative owner evidence covers exact admission, genuine drift, unrelated control, privacy and no-effect truth. No unresolved host uncertainty requires another provider probe or a matrix; original deleted packet is not claimed reconstructed."
   },
@@ -65,9 +63,9 @@
       "refs": []
     }
   },
-  "revision": 3,
+  "revision": 4,
   "scope": {
-    "excluded": "Provider quality, economics, new orchestration, proxy review.",
+    "excluded": "Provider quality, economics, new orchestration, proxy review. External PR review, acceptance and merge are GitHub-owned transitions, not durable Planning continuation.",
     "included": "Controlled reproduction, smallest responsible-owner correction, focused positive/negative proof and one PR."
   },
   "title": "#3588 dispatch currentness and bounded diagnostics",
@@ -75,18 +73,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/47e61ad3fa6bc644d2f37913698ae287dca4955dcc5cb16673e1f4823e2cdd76.attempt.json",
-        "revision": "sha256:a3542a33a8bc9b3b3fc2abdc922d7339a5f01a2b6f325ff39bd93a4e15de000e",
+        "path": ".agentic-workspace/local/effects/2671c4bced9c393ff1c7070577dd3f34ef53968316d70d20938dfc8ec2a0a16c.attempt.json",
+        "revision": "sha256:009e401df5fe55c188cb048aa1b453f1162cf2eda307fc466ca107c3bb865f06",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/47e61ad3fa6bc644d2f37913698ae287dca4955dcc5cb16673e1f4823e2cdd76.result.json",
-        "revision": "sha256:fbb45c7e0259d06a6a23dfe542cc153c25d77ea1588956507f67fffabf1fe99b",
+        "path": ".agentic-workspace/local/effects/2671c4bced9c393ff1c7070577dd3f34ef53968316d70d20938dfc8ec2a0a16c.result.json",
+        "revision": "sha256:69f321535f85ec999fd3bc7e5a75eb2654abac740f3209babb7c8bc3d94ca629",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:8234c3cc2b4eb7ad2063c218a4a21d5399cc08e8ddcf37bbb38f006ff8e06d60",
+    "invocation_revision": "sha256:9e2a4ac6ef9fb2acee02e889b5b13772f8e64810675a1957109c0407c17bcf0c",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -94,7 +92,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:9a3db2b980e34168f970bff4d8033bc1e651bf776db0a830dd4fcc1294f0265c",
+        "document_revision": "sha256:a8e26cc32b3cf595f71e68a4ef7524549ada71d5f98caaafc0a4d2a1b570c857",
         "owner_id": "work-83f5d9b3bae1c9d0b9a64dfe08d132dfe93599b574c80bc411bc8bc18d64a8bf",
         "owner_path": ".agentic-workspace/planning/execplans/work-83f5d9b3bae1c9d0b9a64dfe08d132dfe93599b574c80bc411bc8bc18d64a8bf.plan.json"
       }
