@@ -1,4 +1,4 @@
-"""Stage the existing workspace npm artifact with this host's current Rust core."""
+"""Stage the canonical Node binding with this host's current Rust core."""
 
 from __future__ import annotations
 
@@ -20,15 +20,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def stage(output: Path, *, profile: str = "release") -> Path:
-    source = ROOT / "generated/workspace/typescript"
-    package = json.loads((source / "package.json").read_text(encoding="utf-8"))
+    package = json.loads((ROOT / "bindings/node/package.json").read_text(encoding="utf-8"))
     product = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    if package["version"] != coordinated_release.npm_version(product["project"]["version"]):
-        raise ValueError("npm and compiled product versions differ")
-    if (source / "src/native/semantic-decision.mjs").read_text(encoding="utf-8") != (
-        ROOT / "bindings/node/semantic-decision.mjs"
-    ).read_text(encoding="utf-8"):
-        raise ValueError("generated native binding is stale")
+    package["version"] = coordinated_release.npm_version(product["project"]["version"])
+    package["description"] = product["project"]["description"]
     if output.exists():
         raise ValueError("staging destination must be absent")
     spec = importlib.util.spec_from_file_location("native_toolchain", ROOT / "scripts/release/native_toolchain.py")
@@ -92,23 +87,8 @@ def stage(output: Path, *, profile: str = "release") -> Path:
         + "\n",
         encoding="utf-8",
     )
-    package = {
-        key: package[key] for key in ("name", "version", "author", "license", "repository", "homepage", "bugs", "engines", "private", "publishConfig")
-    }
-    package.update(
-        {
-            "type": "module",
-            "description": product["project"]["description"],
-            "bin": {"agentic-workspace": "./src/cli.mjs"},
-            "exports": {
-                ".": {"types": "./src/native/operating.d.mts", "import": "./src/native/operating.mjs"},
-                "./operating": {"types": "./src/native/operating.d.mts", "import": "./src/native/operating.mjs"},
-            },
-            "files": ["src", "LICENSE", "README.md"],
-            "scripts": {"test": "node src/cli.mjs --help"},
-            "agenticWorkspace": {"runtimeBinding": {}},
-        }
-    )
+    package["private"] = False
+    package["scripts"] = {"test": "node src/cli.mjs --help"}
     package["os"] = [node_platform]
     package["cpu"] = [node_arch]
     package["agenticWorkspace"]["runtimeBinding"]["runtime_dependency"] = "node-and-packaged-rust-core"

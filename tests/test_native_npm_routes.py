@@ -260,11 +260,25 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
         "crates/agentic-workspace-core/src/native_routes.rs",
         "bindings/node/semantic-decision.mjs",
         "scripts/release/stage_native_npm.py",
-        "generated/workspace/typescript/package.json",
-        "generated/workspace/typescript/src/native/semantic-decision.mjs",
+        "bindings/node/package.json",
+        "scripts/release/coordinated_release.py",
     ]:
         assert any(name.endswith("/" + reference) for name in names), reference
-    assert not any("/src/native/bin/" in name for name in names)
+    assert not any("/src/native/bin/" in name or "/generated/workspace/" in name for name in names)
+    extracted = tmp_path / "source"
+    with tarfile.open(archive) as package:
+        package.extractall(extracted, filter="data")
+    (source,) = extracted.iterdir()
+    # Import the real entrypoint outside the checkout: filename inventory alone
+    # misses transitive Python imports required by an sdist rebuild.
+    result = subprocess.run(
+        [sys.executable, str(source / "scripts/release/stage_native_npm.py"), "--help"],
+        cwd=source,
+        env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize("mismatch", ["host", "compiler"])

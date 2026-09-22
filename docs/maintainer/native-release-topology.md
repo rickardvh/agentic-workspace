@@ -38,6 +38,13 @@ the native archive with `scripts/release/stage_native_npm.py --output <new-dir>
 --native-archive-dir <artifact-dir>`, then `npm pack` that staging directory.
 The staging directory and native archive must be absent before creation.
 
+The npm manifest is authored in `bindings/node/package.json`; staging supplies
+the version and description from `pyproject.toml`, the host constraints and paired
+native artefacts. The source manifest is private until staging installs those
+artefacts. Staging reads the binding files directly and does not consume
+`generated/workspace/`. The source archive includes these canonical inputs and
+the release helpers needed to rebuild them.
+
 `scripts/check/check_native_release_topology.py` consumes exactly one wheel,
 source archive, npm archive and native archive from `--artifact-dir`. It installs
 the packages in isolated consumers, clears tool lookup and source overrides,
