@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Shorten current maintainer guides and separate exact reference and historical evidence."

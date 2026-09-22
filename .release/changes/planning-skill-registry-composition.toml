@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Make packaged Planning procedures discoverable through the generic skill registry closure."
