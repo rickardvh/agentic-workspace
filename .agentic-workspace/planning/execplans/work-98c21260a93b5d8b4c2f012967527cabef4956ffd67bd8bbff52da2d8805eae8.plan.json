@@ -7,7 +7,7 @@
   },
   "continuation": {
     "owner": "first-contact-lane",
-    "residual_intent": "Publish the final #3562 implementation PR on #3585, ready for independent review. Source implementation and bounded proof for all three layers are complete. Await externally initiated acceptance and a release containing setup, then run the current public first-contact journey and fresh-agent semantic walkthrough before closing #3558/#3562. Configured Terra inventory dispatch rejected before effect; no worker result or cost comparison exists."
+    "residual_intent": "Implementation is published as stacked PRs #3584 -> #3585 -> #3586, ready for externally initiated independent review. After acceptance and a release containing setup, run the current public package journey and fresh-agent semantic walkthrough before closing #3558/#3562. Configured native Terra inventory dispatch rejected before effect with changed handoff/execution configuration; no worker result or model-cost comparison exists. Preserve the older capability snapshot factual-currentness limitation recorded in the bounded audit; no trust revision or source admission was waived."
   },
   "creation_provenance": {
     "custody": {
@@ -42,17 +42,17 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish the final #3562 implementation PR on #3585, ready for independent review. Source implementation and bounded proof for all three layers are complete. Await externally initiated acceptance and a release containing setup, then run the current public first-contact journey and fresh-agent semantic walkthrough before closing #3558/#3562. Configured Terra inventory dispatch rejected before effect; no worker result or cost comparison exists.",
+  "next_action": "Implementation is published as stacked PRs #3584 -> #3585 -> #3586, ready for externally initiated independent review. After acceptance and a release containing setup, run the current public package journey and fresh-agent semantic walkthrough before closing #3558/#3562. Configured native Terra inventory dispatch rejected before effect with changed handoff/execution configuration; no worker result or model-cost comparison exists. Preserve the older capability snapshot factual-currentness limitation recorded in the bounded audit; no trust revision or source admission was waived.",
   "owner_level": "lane",
   "parent": {
     "closure_boundary": "Implementation and bounded proof; public release journey and independent acceptance stay separately reported.",
     "contribution": "First-contact product and documentation lane",
     "owner_id": "github-3562"
   },
-  "phase": "implementation",
+  "phase": "validation",
   "proof": {
     "claims": [
-      "#3584 and #3585 CI passed, including all six native platform build/installed-consumer jobs for #3585. #3562 reduces three guides from 9507 to 2020 words, retains 47-surface role/size evidence and exact references, passes 26 focused tests and link/generated checks, and records 356/356 governed source postimages through six Verification owner actions. Validation is not issue closure or independent acceptance; public 1.2.0 still lacks setup."
+      "#3584/#3585 required CI passed; #3585 installed consumers passed on all six declared targets. #3586 current-guide implementation passes 26 focused tests, generated parity, link/anchor checks and commit hooks; source reconciliation covers 356/356 postimages through six native owner actions. Three guides contract 9507 to 2020 words, with a retained 47-surface audit. Public stable 1.2.0 installs but lacks setup; validation, issue closure, intent satisfaction and total operating cost remain distinct."
     ],
     "refs": [],
     "requirements": [
@@ -71,7 +71,7 @@
       ]
     }
   },
-  "revision": 4,
+  "revision": 5,
   "scope": {
     "effects": [
       "Native setup composition, generated contracts, guide contraction, installed journey validation and stacked PRs."
@@ -92,18 +92,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/37a29baa4c3ed254f61e0b17654111a94e42554af91c9a06159db51b090a3455.attempt.json",
-        "revision": "sha256:c01f1a4818b15dfe3692321c44b16bee11e28eb45500fd669dfa0b3d29e0c516",
+        "path": ".agentic-workspace/local/effects/13dc05ccb51c6b13d12bfbb00dfa134b48524a01dbb2edb9d5f844c5ad1b3a9a.attempt.json",
+        "revision": "sha256:11c39f19985a813437880a67a50313a69f38a9e5e7a8578abc314bf726efe48c",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/37a29baa4c3ed254f61e0b17654111a94e42554af91c9a06159db51b090a3455.result.json",
-        "revision": "sha256:bec91b676f83db3272d62195bba0d41b60affe40980d61df29e38a7f583ac9ea",
+        "path": ".agentic-workspace/local/effects/13dc05ccb51c6b13d12bfbb00dfa134b48524a01dbb2edb9d5f844c5ad1b3a9a.result.json",
+        "revision": "sha256:299f1df53559fd5c0b39a254f10c0137fa1c99588417df82b85532a2d6e496a1",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:7b40f7bd188edade884c5b734d2e8e8edf04c2473b50d9d420879b32258dbc2d",
+    "invocation_revision": "sha256:5d9ddafa01b40412a07d1fb7b3492f3e13ed58218f873e90c7022322bc742779",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -111,7 +111,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:bada05c33f04ea2477b88b332c355d83982c1622aa1044e84996c673194d6252",
+        "document_revision": "sha256:f5d32f55c717c46c05015f59789054638b6b37c27c24f56a3958c7730b590d77",
         "owner_id": "work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8",
         "owner_path": ".agentic-workspace/planning/execplans/work-98c21260a93b5d8b4c2f012967527cabef4956ffd67bd8bbff52da2d8805eae8.plan.json"
       }
