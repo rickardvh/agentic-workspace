@@ -7,6 +7,10 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
+import tomllib
+import zipfile
+from email.parser import Parser
 from pathlib import Path
 
 import pytest
@@ -233,6 +237,16 @@ def test_built_artifacts_carry_exact_identity(coordinated_artifacts: tuple[Path,
     assert list(release_dist.glob("*.whl")) == [release_dist / wheels[0].name]
     assert wheels[0].read_bytes() == (release_dist / wheels[0].name).read_bytes()
     assert CHECKER.artifact_identity_errors(ROOT, release_dist, require_exact_urls=True) == []
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    assert project["readme"] == "README.md"
+    readme = (ROOT / project["readme"]).read_text(encoding="utf-8")
+    with zipfile.ZipFile(wheels[0]) as archive:
+        metadata = archive.read(next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))).decode()
+        message = Parser().parsestr(metadata)
+        assert message["Description-Content-Type"] == "text/markdown"
+        assert message.get_payload().replace("\r\n", "\n") == readme
+    with tarfile.open(next(release_dist.glob("*.tgz")), "r:gz") as archive:
+        assert archive.extractfile("package/README.md").read().decode().replace("\r\n", "\n") == readme
 
 
 def test_redistributable_receipt_binds_exact_artifact_names_and_hashes(
