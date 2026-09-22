@@ -744,7 +744,7 @@ def _run_external_public_consumer(*, target: Path) -> dict[str, object]:
 from __future__ import annotations
 import json
 import sys
-from agentic_workspace import invoke_operation
+from agentic_workspace.client import invoke_operation
 payload = invoke_operation(
     'config.report',
     {},

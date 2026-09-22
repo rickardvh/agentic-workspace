@@ -78,8 +78,8 @@ print(json.dumps(result, indent=2))
 
 Functions accept mappings containing JSON-compatible values and return dictionaries.
 `DecisionContractError` reports native lookup or request rejection. See the
-[installed exports](../../bindings/python/__init__.py) and their
-[signatures](../../bindings/python/_binding.py).
+[installed exports](../../src/agentic_workspace/__init__.py) and their
+[signatures](../../src/agentic_workspace/_binding.py).
 
 ### TypeScript / Node.js
 

@@ -56,7 +56,7 @@ def test_profile_is_fresh_and_fail_closed() -> None:
 
 @pytest.mark.parametrize("status", ["stale", "revoked", "superseded"])
 def test_explicit_receipt_retirement_preserves_history_without_readiness(status: str) -> None:
-    from agentic_workspace import AWClientError, require_operations
+    from agentic_workspace.client import AWClientError, require_operations
 
     module = _module()
     profile = json.loads(module.render())
@@ -75,7 +75,8 @@ def test_explicit_receipt_retirement_preserves_history_without_readiness(status:
 
 @pytest.mark.parametrize("operation", ["assignment.close", "assignment.reassign"])
 def test_retired_assignment_exports_cannot_launch_a_runtime(tmp_path: Path, operation: str) -> None:
-    from agentic_workspace import AWClientError, generated_operations, invoke_operation
+    from agentic_workspace import generated_operations
+    from agentic_workspace.client import AWClientError, invoke_operation
 
     source = tmp_path / ".agentic-workspace/config.toml"
     source.parent.mkdir()

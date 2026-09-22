@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import re
 import shutil
@@ -39,25 +38,15 @@ def cases(contract):
 
 def check_python(contract, package=None):
     import agentic_workspace
-    if package is None:
-        # Validate the actual build input with the source platform adapter.
-        spec = importlib.util.spec_from_file_location("agentic_workspace._binding", ROOT / "bindings/python/_binding.py")
-        binding = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(binding)
-        source = (ROOT / "bindings/python/__init__.py").read_text()
-        import ast
-        names = next(ast.literal_eval(n.value) for n in ast.parse(source).body
-                     if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__all__" for t in n.targets))
-    else:
-        from agentic_workspace import _binding as binding
-        names = agentic_workspace.__all__
+    from agentic_workspace import _binding as binding
+    names = agentic_workspace.__all__
     expected = {op["python"] for op in contract["operations"]} | set(contract["adapter_exports"]["python"])
     assert set(names) == expected, (names, expected)
     original = binding._request
     try:
         binding._request = lambda payload: payload
         for case in cases(contract):
-            function = getattr(binding if package is None else agentic_workspace, case["python"])
+            function = getattr(agentic_workspace, case["python"])
             values = case["values"]
             actual = function(*values[:2], answer=values[2]) if case.get("optional") and len(values) == 3 else function(*values)
             assert actual == case["expected"], (case["python"], actual, case["expected"])

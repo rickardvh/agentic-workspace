@@ -49,6 +49,8 @@ def test_wheel_contains_only_binding_host_adapter_and_paired_core(wheel):
             f"agentic_workspace/{name}.py"
             for name in ("__init__", "cli", "_binding", "native_core", "codex_provider", "sealed_codex_transport")
         }
+        for name in code:
+            assert archive.read(name).decode().replace("\r\n", "\n") == (ROOT / "src" / name).read_text(encoding="utf-8")
         # The host adapter has provider I/O, not the old Python policy/runtime host.
         provider = ast.parse(archive.read("agentic_workspace/codex_provider.py"))
         for node in ast.walk(provider):
@@ -66,6 +68,28 @@ def test_wheel_contains_only_binding_host_adapter_and_paired_core(wheel):
         assert toolchain["host"] == manifest["rust_host"] == manifest["rust_target"]
         assert toolchain["declaration_sha256"] == hashlib.sha256((ROOT / "rust-toolchain.toml").read_bytes()).hexdigest()
         assert not any("_payload" in name or "_generated" in name for name in files)
+
+
+def test_source_public_import_is_native_and_fails_closed(tmp_path, shared_core_binary):
+    script = """
+import json, sys
+import agentic_workspace as aw
+assert not any(name in sys.modules for name in (
+    'agentic_workspace.client', 'agentic_workspace.decision',
+    'agentic_workspace.workspace_runtime_core', 'agentic_workspace.modules'))
+assert not hasattr(aw, 'invoke_operation')
+assert not hasattr(aw, 'compile_source_decision')
+print(json.dumps(aw.start({'target': '.', 'task': 'Inspect this consumer'})))
+"""
+    environment = {**os.environ, "PYTHONPATH": str(ROOT / "src"), "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)}
+    result = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env=environment, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "decision_packet" in json.loads(result.stdout)
+    environment["AGENTIC_WORKSPACE_CORE_BINARY"] = str(tmp_path / "missing-core")
+    rejected = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env=environment, capture_output=True, text=True)
+    assert rejected.returncode != 0
+    assert "core is unavailable" in rejected.stderr
+    assert not (tmp_path / ".agentic-workspace").exists()
 
 
 def test_isolated_python_owner_mutation_and_missing_core_rejection(wheel, tmp_path):

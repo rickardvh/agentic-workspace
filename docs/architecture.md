@@ -88,7 +88,7 @@ cannot establish runtime capability, fresh proof or permission to mutate state.
 | --- | --- |
 | `crates/agentic-workspace-core/` | Shared deterministic behaviour and native state/effect owners. |
 | `crates/agentic-workspace-cli/` | Public command parsing and forwarding. |
-| `bindings/python/`, `bindings/node/` | Installed language bindings and transport declarations. |
+| `src/agentic_workspace/`, `bindings/node/` | Installed language bindings and transport declarations. |
 | `src/agentic_workspace/contracts/` | Declarative contracts and schemas, including retained maintenance formats. |
 | `packages/`, other Python source | Source-development and maintenance machinery; not a second installed semantic runtime. |
 | `.agentic-workspace/` | This repository's own AW integration, policy and retained state. |

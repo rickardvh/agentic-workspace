@@ -72,6 +72,8 @@ members = [
 
 [tool.hatch.build.targets.wheel]
 only-include = [
+  "src/agentic_workspace/__init__.py",
+  "src/agentic_workspace/_binding.py",
   "src/agentic_workspace/native_core.py",
   "src/agentic_workspace/cli.py",
   "src/agentic_workspace/codex_provider.py",
@@ -91,7 +93,8 @@ include = [
   "/scripts/check/check_rust_dependencies.py",
   "/scripts/release/native_toolchain.py",
   "/.github/release-platforms.json",
-  "/bindings/python",
+  "/src/agentic_workspace/__init__.py",
+  "/src/agentic_workspace/_binding.py",
   "/bindings/node",
   "/generated/workspace/typescript/package.json",
   "/generated/workspace/typescript/src/native",

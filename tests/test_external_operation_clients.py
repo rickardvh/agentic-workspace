@@ -17,9 +17,9 @@ from jsonschema import Draft202012Validator
 from tests.workspace_proof_support import _verified_host_fixture, _write_independent_review_host_result
 
 import agentic_workspace.client as public_client
-from agentic_workspace import (
+from agentic_workspace import cli
+from agentic_workspace.client import (
     AWClientError,
-    cli,
     detect_workspace,
     external_conformance_profile,
     external_contract_bundle,
