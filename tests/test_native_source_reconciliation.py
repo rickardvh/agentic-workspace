@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -324,13 +325,11 @@ def test_non_document_source_and_duplicate_instruction(tmp_path, shared_core_bin
 def test_planning_reentry_preserves_pending_obligation(tmp_path, shared_core_binary, native_cli):
     import json
 
-    from tests.test_native_public_cli import ROOT
-
     context = repository(tmp_path)
     ref = Path(".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json")
     plan = tmp_path / ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / ref).read_bytes())
+    plan.write_bytes(fixture_source(ref).read_bytes())
     original = json.loads(plan.read_bytes())
     (plan.parent.parent / "state.toml").write_text(
         f'[[active.execplans]]\nid="{original["id"]}"\npath="{ref.as_posix()}"\nstatus="active"\n'
@@ -348,7 +347,7 @@ def test_planning_reentry_preserves_pending_obligation(tmp_path, shared_core_bin
     fresh = call()
     assert fresh["planning"]["source_reconciliation"]["obligations"] == ["docs/guide.md"]
     assert fresh["planning"]["source_reconciliation"]["status"] == "judgment-material-required"
-    assert plan.read_bytes() == (ROOT / ref).read_bytes()
+    assert plan.read_bytes() == fixture_source(ref).read_bytes()
 
 
 def test_protected_receipt_destination_never_publishes(tmp_path, shared_core_binary, native_cli):

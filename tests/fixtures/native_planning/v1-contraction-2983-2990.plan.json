@@ -1,0 +1,238 @@
+{
+  "blockers": [
+    "Remaining native domain-owner coverage under #2986/#2987/#3020 is incomplete; the ordinary native CLI cutover itself is implemented and needs cumulative conformance under #3077.",
+    "Consequential delegation (#2947/#2817/#2818/#2210) and positive lifecycle-derived target evidence (#2209) remain release-critical.",
+    "#2909 still owns inherited review-schema and runtime-routing conformance findings; #2616 final behavior, exact #2990 admission and later #3014/#3138 cutover are not complete."
+  ],
+  "completion_criteria": [
+    "Every release-relevant P0/P1 owner is classified exactly once and its intended end state has current owner-specific proof; an open issue or a landed slice alone is not a disposition.",
+    "The ordinary native CLI and supported Python/TypeScript/JSON projections share Rust semantics; superseded hosts are subtracted after current authority is transferred or bounded.",
+    "Consequential non-local and matched local delegation outcomes and positive lifecycle-derived target evidence are admitted honestly.",
+    "#2909 cumulative conformance and #2616 final documentation describe admitted behavior; #2990 independently admits one exact release-equivalent candidate.",
+    "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
+  ],
+  "continuation": {
+    "frontier": "Post-Candidate-B frontier: PR #3292 carries the independently reviewable evidence and auto-closing transition for #3276/#2929. Candidate B implementation and exact preview-v0.56.0 publication are established at source 3fd508feba856354e30fd4afc82930f2e6012c87 and artifact 87cf9ea4b2b0e1d6d59152ef707c3900b5b90595. After that merge, the next lane is Candidate C (#3277); no separate Candidate B review/closure continuation remains.",
+    "owner": "#3277",
+    "residual_intent": "Candidate C #3277 owns #3264/#3266/#3267 dispositions, #3260 aggregate closure, final preview and independent support-bearing v1 admission under #2985. #3291 owns preview-consumer hardening before the next publication. PR #3292 acceptance is the bounded transition into this frontier; this record does not pre-approve it or claim Candidate C, maturity or total-cost success."
+  },
+  "execution_bounds": {
+    "allowed paths": "Tracked product source, first-party packages, generated/released resources, tests, docs, workflows, release metadata, and canonical Planning records required by #2983-#2990.",
+    "ask-before-refactor threshold": "A new public concept, command family, compatibility layer, distribution or authority outside the existing release-critical owner outcomes and explicit human decisions.",
+    "max changed files": "1200",
+    "required validation commands": "Focused owner-native/parity/currentness tests per correction; cumulative conformance and release-equivalent artifact/support proof under #2909/#2990 before admission.",
+    "stop before touching": "Unknown repo-owned host content, credentials, unrelated user changes, or destructive lifecycle behavior outside explicit test fixtures."
+  },
+  "goal": [
+    "Deliver the smallest coherent first-stable AW product through consolidated owner-aligned pull requests; preserve quiet repo-native continuity, supported language bindings, current authority and release-equivalent proof."
+  ],
+  "id": "v1-contraction-2983-2990",
+  "intent": {
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ],
+    "outcome": "Complete the existing release-critical P0/P1 reconstruction owners through one native Rust authority, prove the cumulative candidate, and prepare exact first-stable admission under #2983/#2909/#2990."
+  },
+  "intent_continuity": {
+    "continuation surface": "#2983 current convergence frontier; #3077 and consequential delegation/#2209; then #2909/#2616/#2990/#3014",
+    "larger intended outcome": "Ship and prove the smallest coherent Agentic Workspace v1 contract described by #2983.",
+    "this slice completes the larger intended outcome": "no"
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "live",
+  "next_action": "Continue Candidate C through #3277: resolve current #3264 compound-effect, #3266 adaptation/subtraction and #3267 host-disposition owners; require #3291 release-consumer hardening before the next publication. PR #3292 is the Candidate B/#2929 evidence-acceptance and administrative closure transition; its merge closes those issues without a second closure task.",
+  "non_goals": [
+    "Promote research-only #2821/autopilot concepts without evidence.",
+    "Preserve pre-v1 compatibility solely for historical callers.",
+    "Modify the unrelated coordinated-release pull request #2917.",
+    "Delete unknown repo-owned content or weaken destructive-operation authority."
+  ],
+  "owner_level": "slice",
+  "parent": {
+    "closure_boundary": "this slice only",
+    "contribution": "GitHub issues #2983-#2990; user requested all P0 issues in consolidated pull requests",
+    "owner_id": "none"
+  },
+  "phase": "implementation",
+  "proof": {
+    "claims": [
+      "The real selected owner was natively maintained/recovered at revision 11. This update preserves its identity, scope, relationships and unrelated original-checkout work.",
+      "#3167 native process/return/Planning/Verification and matched real Codex/local proof remain bounded; supported host-native/mutation/pause-resume outcomes and general target quality remain open.",
+      "#3168 writer proof remains 21 advisory/configuration cases with one Windows file-symlink skip and passing directory-junction rejection, 96 Rust tests with three ignored helpers, and shared/local native/JSON/Python/TypeScript parity. No broader configuration custody or configure-once completion is inferred.",
+      "Current follow-up: isolated installed Python and packed TypeScript consumers pass fresh-process Planning create/select/update/reconcile, idempotent result recovery and stale unconsumed-action rejection, exact configuration write/no-op/source-drift/replay rejection, disabled modules, incompatible reader and malformed source rejection, artifact-payload presence/currentness/drift/missing-byte admission, and consumer removal with ordinary native owner recovery. Payload bytes and initial human policy are explicit fixtures, not a claim that a native payload installer created them.",
+      "Five replacement installed-runtime/integration cases and 13 external-consumer/maintainer cases pass on Windows. Memory explicitly owns the optional-ledger rule; present malformed evidence still fails. Generated mirrors are current. Hosted exact-head and cumulative conformance remain pending; no release gate is waived.",
+      "Merged c2303e921 current proof: source-built paired Rust binaries recover the real native Planning owner; all 16 native/JSON/Python/TypeScript Assignment comparison/currentness cases pass. Real original-local-source startup retains the implementation blocker after exact task and current-target comparative requests. This is observed failure-to-admit evidence, not successful implementation or target-failure evidence.",
+      "Bounded Assignment repair: unchanged local config SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189; actual native route returns assigned-current-target and no implementation blockers. 66 neighboring parity/configuration cases pass with one Windows file-symlink skip; Rust core 96 pass/3 subprocess helpers ignored; generated package static proof passes. Original 16 refusal/currentness cases are retained. No worker launched and no configuration policy was rewritten.",
+      "Verification source split: #3171 retains the detailed revision-specific implementation evidence in #2909 comment 5594433501 and subsequent commits. Source floors, former subsystem projection, source/currentness parity, exact configuration insertion, native proof publication and unrelated former-answer exclusion remain distinct from independent review. The reference registry and generated catalogue now agree at 834bc5d60; source/payload validation has zero warnings. Historical proof is not relabeled as exact final-candidate admission.",
+      "Memory disposition: implementation 880c80183 has 14 focused four-interface/confinement cases; the combined current Memory/real-decision-read selection has 30 passing cases. Rust library proof has 97 passed and three ignored helpers; retain interruption recovery passes before and after publication and fails on policy drift. Clippy, lint/typechecks, generated command/contract tooling and zero-warning source/payload proof pass. The larger neighboring run had 170 passing cases and one Windows file-symlink skip; four stale-decision diagnostic checks were subsequently corrected and passed. Fresh native Assignment still returns assigned-current-target with no implementation blocker and local SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Promotion/retirement tests use explicit fixture answers, not approval of the real corpus. Root .local scratch was relocated intact under the ignored package-local directory; all 17 file hashes matched. No issue closure, independent review, final release proof or master promotion is inferred.",
+      "Native constructibility follow-through: e108fd8b1 has 33 passing Assignment/configuration cases plus four repaired fixture cases, nine passing complete read-only process/admission/Planning/Verification journeys, and 97 Rust tests with three ignored helpers. Clippy and commit checks pass. The four initial failures were a test-only doubled Windows line-ending error, corrected without weakening the negatives. Fresh native Assignment against unchanged local SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189 returns assigned-current-target with no implementation blocker. No live worker was launched for this correction. Memory/source follow-through 6f64219c7 has 16 receiving/public-decision and 11 bounded-source/supersession/fallback cases; local 16-record/no-match fresh resolution fell from median350ms to118ms without cache state. #2909 comment5595137662 preserves that evidence and #2981 limits. These are implementation inputs, not independent review or exact-release admission.",
+      "Human implementation authorization: on 2026-09-09 the human explicitly approved the proposed typed fallback capability and everything planned in the open issues, and directed the dogfooding skill to reserve renewed human review for autonomously introduced changes beyond those approved plans. The skill clarification is committed at b21e322ce. This authorizes implementation of planned authority boundaries; it is not approval of later agent-added scope, a specific decision or April-note promotion, stale source effects, independent review, issue closure, release admission or master promotion. Do not ask again for the approved capabilities.",
+      "Current source-write continuation correction: eight configuration shared/local cases pass across native/JSON/Python/TypeScript, including selected Planning source drift and source preservation; Rust library 97 passed with 3 ignored helpers and Clippy passed. April retirement separately passed 18 Memory cases and final 8 disposition cases with Planning-source drift. Actual note SHA-256 remains 06332182cc9f0085b4c0d6d2bdf132ff607c8eb339b1c403f3700ac9031100fa; config.local.toml remains 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Cumulative native configuration, Memory and public-interface proof passed 200 cases with one skip in 205.48 seconds; no final conformance or owner completion admission is inferred.",
+      "Truthful invoke local proof: 329 broad owner cases passed before a previously loaded logging assertion stopped the run; the updated logging and remaining independent-owner cases plus carriage/continuation cases then passed, 84 total. Rust library: 109 passed, three subprocess helpers intentionally ignored. Fresh installed Python/TypeScript lifecycle, stale rejection and removal/no-residue proof passed. The deterministic config trace uses 4022 versus 114 model protocol bytes, 4 versus 3 public calls and 3 versus 1 modeled interactions, zero required detail calls. Failure injection at the shared continuation boundary preserves a real configuration write and custody. These observations do not authenticate independent review or parent completion.",
+      "Candidate A #3275 implementation proof: source launcher 30 cases; configuration/source-policy/advisory 73 passed and one Windows file-symlink skip, plus 39 independent-module/repository-decision cases; Assignment/claim/execution 41 passed and all eight real process patch lifecycle cases; complete Rust workspace 129 passed/three helpers ignored; release/security 32 passed. Paired build, lint/clippy, generated-contract and strict payload checks passed. The first CI lane passed merge sufficiency/security but required missing release changesets, now supplied. Exact final hosted checks remain external observations, not independent acceptance.",
+      "Dogfood reconciliation: prepared source launcher availability is repaired in #3280; smaller canonical local configuration no longer hides omitted current former-source intent. First managed generic completion claims now retain required Assignment non-admission in #3281. Obsolete member dependency locks are removed in release preparation; hosted alert closure awaits default-branch scan. Alpha is retained with unresolved representative-evidence and release inputs. No source-assurance trust revision is advanced.",
+      "Operating-cost boundary: useful existing owner/transport proof lanes were reused; no new worker or review agent was launched. Configuration and process proof includes explicit fixture limitations. Total comparative agent cost remains unknown; the 8-case process lane took 309.80 seconds and 32-case release/security lane 11.85 seconds. Initial stale generated/payload/test fixture failures and missing changesets were corrected, not counted as successful first-pass proof.",
+      "2026-09-15 review fix: the external review correctly found implementation_admission was only descriptive. The Assignment owner now contributes a restriction after result-owner resolution; local acceptance does not clear unadmitted materialized/observed work. The native owner control covers later-local combinations; public ingress already rejects already-materialized transport, and the shared claim test verifies restriction/recovery. 28 public claim/Assignment cases, the focused Rust control, and eight real process lifecycle cases passed (326.60 seconds). Paired build, Clippy/Ruff and generated contracts pass. Windows temporarily prevented rebuilding a running binary; rebuild passed after tests completed. Total comparative agent cost remains unknown. This fixes implementation, not independent acceptance or issue completion.",
+      "Candidate A publication 2026-09-15: accepted master b5a7748a493a6ea257ec4ad5a9696336a66bfdf2 is the exact single parent of immutable preview-v0.55.0 artifact ce0eef8cc89bbecdbda39fbe0051118dd9492eae. Hosted run 34946934597 passed three runtime jobs, artifact/install/redistribution/security/provenance/checksum/public-byte checks; public smoke returned runtime 0.55.0. Separate trusted Git-object admission and download verification returned complete:true for 13 assets; downloaded manifest attestation verified successfully. Exact manifest SHA-256 bf04966bff10f1fb16889d52098b8f5f5acef5a74126c1f581fdefa395f5930d. Maturity remains Alpha.",
+      "Closure reconciliation reuses independent #3281 corrected-head acceptance for #3274 and #3280 plus accepted #3178/#3185/#3230/#3241/#3252/#3254 owner evidence for #2767; both are now closed. The user had already closed #3275 administratively before release; closure alone was not used as proof. #2985 remains open. No source-assurance trust revision is advanced. Historical source admissions remain unchanged.",
+      "Operating cost/recovery: source launcher succeeds after paired build without an explicit core environment override. The release resource owner refused cleanup of hook-created unleased caches/output. Those exact new paths were preserved in task scratch, uv removed its 2360 cache files (88.5 MiB), and native worktree removal committed; unrelated worktrees remain untouched. Direct coordinated verification from the development checkout correctly rejected the version mismatch; exact-tag admission verified Git objects instead. Hosted Dependabot alerts 1-3 still report removed member locks open; current source/security passed but hosted alert closure is not claimed. Total comparative cost remains unknown.",
+      "Candidate B #3262 bounded proof: 33 issue-body/agent-aid tests pass; source/payload strict and aid manifests pass. Existing Planning conversion/default synthesis is subtracted. One fresh-process preparation trace takes 4.78 ms versus 4.12 ms baseline and emits 2221 versus 1501 compact packet bytes. Procedure-step accounting removes separate model form inspection for complete shaped input; no controlled inference or lower-total-cost claim. See docs/reviews/candidate-b-preparation-evidence.md. #2929 creation replay is bounded-inapplicable to this leaf because no legitimate new issue is needed. All other Candidate B leaves/reconciliation and independent acceptance remain open.",
+      "PR #3285 review correction: current-form render attributes now determine textarea code blocks. Existing bug-form expectation plus one owner case cover embedded fences, changed language/currentness and unsupported syntax. 34 issue-body/agent-aid cases passed in 0.60 seconds. Earlier operating-cost measurements remain pre-correction evidence. Independent acceptance and all remaining Candidate B work remain open.",
+      "Candidate B #3261: 23 review/issue/workflow cases pass; 43 existing carriage/invoke/Planning lifetime cases pass in 110.77 seconds. Strict source/payload check passes. Review fixture: 101 complete files, nine logical GETs per first/recheck, 29215 versus 15384 serialized bytes; no live network latency/model inference/total cost claim. No review was performed by the implementation lineage. Shared availability/resource implementation and external acceptance/publication remain open.",
+      "Candidate B #3263: native route owner nine cases pass; Rust library 122 passed/three intentionally ignored; four existing public known-leaf cases and 20 aid checks pass. Generated schema/catalogue and strict payload checks pass. The material control adds 100 irrelevant executable declarations without reading their missing helpers or enlarging roots beyond 1500 bytes. No helper executes during discovery. #2257 reuse/adapt/retire and #2822 evidence-only dispositions are recorded. Resource composition, independent acceptance and publication remain open.",
+      "Candidate B resource proof: 30 resource/skills-first cases pass (35.37 s), including minimal/mirrored install/use/uninstall; Rust library 122 pass/three ignored. Native capability mismatch is rejected; generated/static/payload checks pass. Matched scratch lifecycle: public calls 4->2, native owner calls 4->4, extra selected availability checks 0->4, serialized result bytes 7450->4869, one sample elapsed 175.39->148.52 ms, zero containers both paths. Real current-task scratch reentry also returned committed with the same exact resource context through composed native admission. No statistical/provider/total-cost or independent acceptance claim."
+    ],
+    "observations": "Candidate B publication: accepted source 3fd508feba856354e30fd4afc82930f2e6012c87; artifact 87cf9ea4b2b0e1d6d59152ef707c3900b5b90595; preview-v0.56.0; hosted run 34962615722 success, 13 public assets, public verifier complete and manifest attestation verified. One public download retry and manual unleased hook-output disposition were required; exact native normalization-worktree cleanup committed. #3291 carries recurrence prevention. Real issue creation consumed current shaping/creation/form/helper/labels before gh mutation; returned title/body/label matched. Independent #2929 evidence review remains.Review feedback on #3292: publication and real #2929 creation evidence were found substantively sufficient; the sole blocker was a continuation still pointing to the issues merge would close. Native Planning now assigns the post-merge frontier to #3277 and records #3292 itself as the closure transition. Independent acceptance remains external, with no second administrative-closure action left in the merged continuation.",
+    "refs": [
+      "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
+      "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587513916",
+      "tests/test_native_planning_create.py",
+      "tests/test_native_startup_adapter.py",
+      ".agentic-workspace/reconstruction/owner-audit.md",
+      "https://github.com/rickardvh/agentic-workspace/pull/3166",
+      "https://github.com/rickardvh/agentic-workspace/pull/3167",
+      "https://github.com/rickardvh/agentic-workspace/pull/3168",
+      "https://github.com/rickardvh/agentic-workspace/issues/2909#issuecomment-5589567494",
+      "https://github.com/rickardvh/agentic-workspace/issues/2767#issuecomment-5590211138",
+      "docs/maintainer/operating-carriage.md",
+      "tests/test_native_operating_carriage.py"
+    ],
+    "requirements": [
+      "Prove this real owner is materially current through native update, fresh-session recovery, source-drift rejection and preservation of unrelated work.",
+      "For each remaining P0/P1 owner, prove positive and negative currentness/admission behavior through required native/Python/TypeScript/JSON surfaces; distinguish implementation from evidence gaps.",
+      "Admit a complete supported consequential non-local delegation lifecycle plus matched retained-local control, excluding incomplete or censored workers; prove attributable lifecycle-derived #2209 target evidence separately from completion authority.",
+      "Aggregate #2909 conformance and finalize #2616 against admitted behavior; #2990 must independently admit one exact release-equivalent candidate and supported artifact matrix before cutover."
+    ]
+  },
+  "references": [
+    {
+      "kind": "source",
+      "label": "GitHub issues #2983-#2990; user requested all P0 issues in consolidated pull requests",
+      "locator": "",
+      "role": "intake",
+      "target": "GitHub issues #2983-#2990; user requested all P0 issues in consolidated pull requests"
+    }
+  ],
+  "relationships": {
+    "delegation": {
+      "bounded_child_authority": "separate-binding-decision",
+      "parent_task_custody": "retained-current",
+      "reason": "The user requested consolidated pull requests, not sub-agent delegation; one local owner is needed to preserve semantic and branch-stack coherence across the dependent issue graph.",
+      "route": "keep-local",
+      "scope": "active-plan-work-unit",
+      "state": "recorded"
+    },
+    "dependencies": {
+      "order": "Current P0/P1 implementation and focused proof; cumulative #2909; finalize #2616; independently admit exact #2990; only then explicitly authorized #3014/#3138 cutover.",
+      "refs": [
+        "#2970",
+        "#3077",
+        "#2613",
+        "#2767",
+        "#2947",
+        "#2817",
+        "#2818",
+        "#2210",
+        "#2209",
+        "#2909",
+        "#2616",
+        "#2990",
+        "#3014"
+      ]
+    },
+    "external_posture": {
+      "refs": [],
+      "state": "unobserved"
+    },
+    "proof_posture": {
+      "refs": [],
+      "state": "pending"
+    },
+    "selection": {
+      "owner": "v1-contraction-2983-2990",
+      "state": "selected-local"
+    }
+  },
+  "revision": 57,
+  "scope": {
+    "effects": [
+      "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
+    ],
+    "owned": [
+      "crates/agentic-workspace-core/",
+      "crates/agentic-workspace-cli/",
+      "src/agentic_workspace/",
+      "packages/",
+      "generated/",
+      "tests/",
+      "scripts/",
+      "docs/",
+      ".github/",
+      ".release/",
+      ".agentic-workspace/",
+      "SYSTEM_INTENT.md",
+      "AGENTS.md",
+      "pyproject.toml",
+      "uv.lock",
+      "Cargo.toml",
+      "Cargo.lock"
+    ]
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "revision": 1,
+      "target": "planning://delegation/keep-local"
+    }
+  ],
+  "title": "Implement and prove the v1 contraction issue graph",
+  "touched_paths": [
+    "src/**",
+    "packages/**",
+    "generated/**",
+    "tests/**",
+    "scripts/**",
+    "docs/**",
+    ".github/**",
+    ".release/**",
+    "pyproject.toml",
+    "uv.lock",
+    "README.md",
+    "SYSTEM_INTENT.md",
+    ".agentic-workspace/**"
+  ],
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/84e7006d14238ba5ee462549f52683f762b88392456e513e8899922910ce569e.attempt.json",
+        "revision": "sha256:0b4cc3ec584fc20e755089e8b9baa2fbe613b5f43a05962f9e018c4517854992",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/84e7006d14238ba5ee462549f52683f762b88392456e513e8899922910ce569e.result.json",
+        "revision": "sha256:1807348f1c8e2cfe7e347f7e2ee348e89fffe6b780cb50b1939202ef3aa94ed9",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:b7f0227c4dbd2bb38207268a6f8c0a70b8edfccaced5f9a5ac8e033b2d757d43",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:f485b6601393b9e5953832604705ecfb774f922865052d83cb4160d61956a684",
+        "owner_id": "v1-contraction-2983-2990",
+        "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
+      }
+    }
+  },
+  "validation_commands": [
+    "make check-nosync",
+    "uv build --wheel --sdist",
+    "release-equivalent clean-room v1 conformance and uninstall test"
+  ]
+}

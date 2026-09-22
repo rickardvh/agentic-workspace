@@ -91,6 +91,7 @@ fn observe_sources(root: &Dir) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
         ".agentic-workspace/reconstruction",
         ".agentic-workspace/system-intent",
         ".agentic-workspace/instructions",
+        ".agentic-workspace/local/decision-point-intent",
     ] {
         files(root, path, &mut sources)?;
     }

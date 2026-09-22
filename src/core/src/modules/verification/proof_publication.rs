@@ -39,6 +39,9 @@ pub(crate) fn retention_reusable(target: &Path, receipt: &Value) -> Result<bool,
         return Ok(false);
     };
     let previous = &committed["invocation"]["arguments"]["selection"];
+    if !crate::planning::retained_work_current(target, &previous["work"])? {
+        return Ok(false);
+    }
     let changed: Vec<String> =
         serde_json::from_value(receipt["changed_paths"].clone()).map_err(err)?;
     Ok(crate::native_proof::freshness(
@@ -50,6 +53,21 @@ pub(crate) fn retention_reusable(target: &Path, receipt: &Value) -> Result<bool,
         receipt,
     )?["status"]
         == "reusable")
+}
+
+pub(crate) fn retention_planning_subject(
+    target: &Path,
+    receipt: &Value,
+) -> Result<Option<String>, CoreError> {
+    let Some(committed) = crate::native_proof::committed_publication(target, receipt)? else {
+        return Ok(None);
+    };
+    Ok(
+        committed["invocation"]["arguments"]["selection"]["work"]["id"]
+            .as_str()
+            .filter(|id| id.starts_with("planning:"))
+            .map(str::to_owned),
+    )
 }
 
 #[cfg(test)]

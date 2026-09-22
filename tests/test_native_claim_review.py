@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -70,12 +71,10 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
 def test_claim_review_keeps_planning_subject_and_unfinished_work(tmp_path, shared_core_binary, native_cli):
     import json
 
-    from tests.test_native_public_cli import ROOT
-
     reference = Path(".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json")
     plan = tmp_path / reference
     plan.parent.mkdir(parents=True)
-    original = (ROOT / reference).read_bytes()
+    original = fixture_source(reference).read_bytes()
     plan.write_bytes(original)
     identity = json.loads(original)["id"]
     (plan.parent.parent / "state.toml").write_text(

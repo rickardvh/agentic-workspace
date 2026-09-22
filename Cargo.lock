@@ -15,6 +15,7 @@ dependencies = [
 name = "agentic-workspace-core"
 version = "1.2.0"
 dependencies = [
+ "aho-corasick",
  "base64",
  "cap-std",
  "chrono",

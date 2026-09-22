@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_planning_create import material as planning_material
 from tests.test_native_proof_producer import fixture as proof_fixture
 from tests.test_native_public_cli import ROOT, consume
@@ -205,7 +206,7 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
         reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
         plan = tmp_path / reference
         plan.parent.mkdir(parents=True)
-        plan.write_bytes((ROOT / reference).read_bytes())
+        plan.write_bytes(fixture_source(reference).read_bytes())
         (plan.parent.parent / "state.toml").write_text(
             f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
         )

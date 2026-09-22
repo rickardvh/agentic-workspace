@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -240,7 +241,7 @@ def test_review_owner_identity_uses_native_planning_selection(tmp_path, shared_c
     ref = ".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json"
     plan = tmp_path / ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / ref).read_bytes())
+    plan.write_bytes(fixture_source(ref).read_bytes())
     (plan.parent.parent / "state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{ref}"\nstatus="active"\n', encoding="utf-8"
     )

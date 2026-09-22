@@ -80,6 +80,38 @@ pub(crate) fn source_subject(target: &std::path::Path, source: &Value) -> Result
     Ok(reconciliation(&input)?["subject"].clone())
 }
 
+/// Proof reuse for a Planning subject ends when its exact owner subject is gone
+/// or materially changed. Selecting another task alone does not stale it.
+pub(crate) fn retained_work_current(
+    target: &std::path::Path,
+    work: &Value,
+) -> Result<bool, CoreError> {
+    if !work["id"]
+        .as_str()
+        .is_some_and(|id| id.starts_with("planning:"))
+    {
+        return Ok(true);
+    }
+    let canonical = std::fs::canonicalize(target).map_err(error)?;
+    let root =
+        cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
+    let mut sources = std::collections::BTreeMap::new();
+    crate::retention_sources::files(&root, ".agentic-workspace/planning/execplans", &mut sources)?;
+    for (path, bytes) in sources {
+        let body: Value = serde_json::from_slice(&bytes).map_err(error)?;
+        let Some(id) = body["id"].as_str() else {
+            continue;
+        };
+        if work["id"] == format!("planning:{}", digest(&json!({"target":canonical,"id":id}))?) {
+            let source = json!({"target":canonical,"path":path,"owner":"planning","revision":crate::native_intent::hash(&bytes)});
+            if source_subject(target, &source)?["revision"] == work["revision"] {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
 /// Cross-environment semantic identity is deliberately separate from the
 /// target-bound reconciliation/effect subject. This view cannot grant custody.
 pub(crate) fn portable_continuation(

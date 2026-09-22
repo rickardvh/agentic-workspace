@@ -1256,7 +1256,7 @@ mod tests {
         }
         fn plan(&self) -> Value {
             let value: Value = serde_json::from_str(include_str!(
-                "../../../../../.agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json"
+                "../../../../../tests/fixtures/native_planning/delegation-lane-sweep.plan.json"
             ))
             .unwrap();
             self.write(PLAN, &value.to_string());

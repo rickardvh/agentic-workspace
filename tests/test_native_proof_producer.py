@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from tests import native_artifact_consumers
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -381,14 +382,13 @@ def test_shared_publication_identity_preserves_legacy_unicode_and_defaults(share
 def test_native_proof_uses_actual_reconciled_planning_subject(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, consumer: str
 ) -> None:
-    from tests.test_native_public_cli import ROOT
 
     native_cli = native_artifact_consumers.paired_cli(consumer, native_cli)
     context = fixture(tmp_path)
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / reference
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / reference).read_bytes())
+    plan.write_bytes(fixture_source(reference).read_bytes())
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
     )

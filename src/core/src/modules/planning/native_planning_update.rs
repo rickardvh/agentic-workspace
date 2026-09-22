@@ -1243,7 +1243,7 @@ mod tests {
     }
     fn material() -> Value {
         let source: Value = serde_json::from_str(include_str!(
-            "../../../../../.agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json"
+            "../../../../../tests/fixtures/native_planning/delegation-lane-sweep.plan.json"
         ))
         .unwrap();
         let mut value = json!({});

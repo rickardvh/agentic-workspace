@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -113,7 +114,7 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
         plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
         plan = tmp_path / plan_ref
         plan.parent.mkdir(parents=True)
-        plan.write_bytes((Path(__file__).resolve().parents[1] / plan_ref).read_bytes())
+        plan.write_bytes(fixture_source(plan_ref).read_bytes())
         (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
             f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
         )

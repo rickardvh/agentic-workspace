@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import consume, native_cli  # noqa: F401
 
 
@@ -75,11 +76,10 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_unreconciled_planning_owner_is_not_known_absence(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
-    root = Path(__file__).resolve().parents[1]
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((root / plan_ref).read_bytes())
+    plan.write_bytes(fixture_source(plan_ref).read_bytes())
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[todo]\nactive_items = [{{id="delegation-lane-sweep",status="in-progress",surface="{plan_ref.as_posix()}"}}]\nqueued_items=[]\n',
         encoding="utf-8",

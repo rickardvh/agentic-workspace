@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -21,7 +22,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 def test_native_update_observation_schema(schema_path: str) -> None:
     schema = json.loads((ROOT / schema_path).read_text())
     validator = Draft202012Validator(schema)
-    body = json.loads((ROOT / ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json").read_text())
+    body = json.loads(fixture_source(".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json").read_text())
     validator.validate(body)
     for version in ["v1", "v2"]:
         body["update_provenance"]["kind"] = f"agentic-planning/update-provenance/{version}"
@@ -36,7 +37,7 @@ def test_native_update_observation_schema(schema_path: str) -> None:
 
 
 def material() -> dict:
-    original = json.loads((ROOT / ".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json").read_text())
+    original = json.loads(fixture_source(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json").read_text())
     fields = [
         "title",
         "owner_level",
@@ -69,7 +70,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     ref = Path(".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json")
     path = tmp_path / ref
     path.parent.mkdir(parents=True)
-    path.write_bytes((ROOT / ref).read_bytes())
+    path.write_bytes(fixture_source(ref).read_bytes())
     original = json.loads(path.read_bytes())
     state = tmp_path / ".agentic-workspace/planning/state.toml"
     state.write_text(f'[[active.execplans]]\nid="{original["id"]}"\npath="{ref.as_posix()}"\nstatus="active"\n')
@@ -125,10 +126,10 @@ def test_real_former_owner_can_evolve_after_native_custody(
         with pytest.raises(AssertionError):
             call({**context, "invocation": action})
         assert selector.read_bytes() == before_selector
-        assert path.read_bytes() == (ROOT / ref).read_bytes()
+        assert path.read_bytes() == fixture_source(ref).read_bytes()
         policy.unlink()
     acquired = call({**context, "invocation": action})
-    assert path.read_bytes() == (ROOT / ref).read_bytes(), "custody transfer cannot rewrite Planning material"
+    assert path.read_bytes() == fixture_source(ref).read_bytes(), "custody transfer cannot rewrite Planning material"
     if selector_mode == "legacy-local":
         transferred = json.loads(selector.read_bytes())
         assert {k: v for k, v in transferred.items() if k != "reconciliation"} == legacy
@@ -160,7 +161,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     forged["arguments"]["document"]["id"] = "replacement-identity"
     with pytest.raises(AssertionError):
         call({**context, "invocation": forged})
-    assert path.read_bytes() == (ROOT / ref).read_bytes()
+    assert path.read_bytes() == fixture_source(ref).read_bytes()
     applied = call({**context, "invocation": action})
     updated = json.loads(path.read_bytes())
     assert updated["id"] == original["id"]
@@ -525,7 +526,7 @@ def test_creation_preserves_existing_selected_owner(tmp_path: Path, shared_core_
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / reference
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((ROOT / reference).read_bytes())
+    plan.write_bytes(fixture_source(reference).read_bytes())
     selection = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
     selection.parent.mkdir(parents=True)
     selection.write_text(
@@ -854,7 +855,7 @@ def test_quiescent_selected_owner_preserves_task_and_allows_unrelated_work(
 def test_quiescent_disposition_never_acquires_historical_selector(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, state: str
 ) -> None:
-    body = json.loads((ROOT / ".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json").read_text())
+    body = json.loads(fixture_source(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json").read_text())
     body["lifecycle"] = "closed" if state == "closed" else "live" if state == "closeout" else "unknown"
     body["phase"] = state
     reference = ".agentic-workspace/planning/execplans/historical.plan.json"

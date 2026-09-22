@@ -147,3 +147,16 @@ The migrated legacy failure `edfc5fcd80bdec7d` concerned the retired generated
 Python command conformance check. Its boundary remains represented by current
 native command and adapter contract checks; its failed historical execution is
 not a current native failure or a reusable proof result.
+
+## Planning history disposition (#3552, #3574)
+
+Stable former-Planning inputs now live in `tests/fixtures/native_planning`, so
+native owner migration can retire dogfood records without invalidating transport
+or reconciliation fixtures. Historical Memory/decision tests use their admitted
+scope; moving product paths does not silently rewrite source authority.
+
+The existing terminal-lifetime case now includes Assignment judgment, actual
+native proof, Planning closeout and proof expiry, with an unresolved-owner control
+and a bounded tracked footprint. Closed-group, outside-consumer and read-only
+nomination cases cover the new selection boundaries. Long cycle counts remain an
+explicit proof run, rather than a permanent expensive default for every test run.

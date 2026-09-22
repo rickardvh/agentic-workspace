@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import pytest
+from tests.native_planning_fixtures import fixture_source
 from tests.test_native_proof_producer import fixture
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
@@ -60,7 +61,8 @@ def test_current_manual_observation_does_not_gain_proof(tmp_path: Path, shared_c
     second = call({**context, "invocation": next_invocation})
     assert second["value"]["publication"]["reference"] != result["value"]["publication"]["reference"]
     index = json.loads((tmp_path / ".agentic-workspace/proof/receipts/index.json").read_text())
-    assert len(index["receipts"]) == 2
+    assert len(index["receipts"]) == 1
+    assert not (tmp_path / ".agentic-workspace/proof/receipts" / f"{publication_id}.json").exists()
 
 
 @pytest.mark.parametrize("surface", ["native", "python", "typescript", "json"])
@@ -68,11 +70,10 @@ def test_planning_claim_cannot_use_published_manual_result(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
     context = fixture(tmp_path)
-    root = Path(__file__).resolve().parents[1]
     ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / ref
     plan.parent.mkdir(parents=True)
-    plan.write_bytes((root / ref).read_bytes())
+    plan.write_bytes(fixture_source(ref).read_bytes())
     (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{ref.as_posix()}"\nstatus="active"\n'
     )
@@ -104,7 +105,7 @@ def test_planning_claim_cannot_use_published_manual_result(
     assert checked["verification"]["evidence"][0]["task_judgment"]["current_judgment_count"] == 0
 
 
-def test_subsequent_native_execution_appends_without_replaying_prior_shell(
+def test_subsequent_native_execution_supersedes_without_replaying_prior_shell(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path
 ) -> None:
     context = fixture(tmp_path)
@@ -122,7 +123,7 @@ def test_subsequent_native_execution_appends_without_replaying_prior_shell(
         assert call({**context, "invocation": action})["value"] == result["value"]
     assert len(set(references)) == 2
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed", "executed"]
-    assert len(json.loads((tmp_path / ".agentic-workspace/proof/receipts/index.json").read_text())["receipts"]) == 2
+    assert len(json.loads((tmp_path / ".agentic-workspace/proof/receipts/index.json").read_text())["receipts"]) == 1
 
 
 def test_prior_native_run_custody_survives_receipt_format_transition(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
