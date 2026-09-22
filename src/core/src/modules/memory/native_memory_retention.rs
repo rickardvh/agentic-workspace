@@ -106,8 +106,7 @@ fn observe_sources(root: &Dir) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
 
 fn inventory_for(target: &Path, preferred: &[String]) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let mut sources = observe_sources(&root)?;
-    let Some(raw) = sources.remove(MANIFEST) else {
+    let Some(raw) = read(&root, MANIFEST)? else {
         return Ok(json!({"sources":{}}));
     };
     let text = std::str::from_utf8(&raw).map_err(err)?;
@@ -124,6 +123,8 @@ fn inventory_for(target: &Path, preferred: &[String]) -> Result<Value, CoreError
         return Err(err("Memory manifest cannot be preserved exactly"));
     }
     let manifest: toml::Value = toml::from_str(text).map_err(err)?;
+    let mut sources = BTreeMap::new();
+    let mut consumers_observed = false;
     let mut protected = Vec::new();
     let mut offered = json!({});
     let mut post = String::new();
@@ -140,7 +141,7 @@ fn inventory_for(target: &Path, preferred: &[String]) -> Result<Value, CoreError
         if !source.starts_with(HOME) || !source.ends_with(".md") || source == MANIFEST {
             continue;
         }
-        let Some(bytes) = sources.get(source) else {
+        let Some(bytes) = read(&root, source)? else {
             continue;
         };
         let status = note
@@ -165,6 +166,13 @@ fn inventory_for(target: &Path, preferred: &[String]) -> Result<Value, CoreError
             && !matches!(status, Some("retire" | "promote"))
         {
             continue;
+        }
+        // Cross-owner discovery is needed only for a nominated disposition.
+        // Effects and recovery still observe the complete source boundary.
+        if !consumers_observed {
+            sources = observe_sources(&root)?;
+            sources.remove(MANIFEST);
+            consumers_observed = true;
         }
         let mut proposed_document = document.clone();
         proposed_document["notes"]
@@ -210,7 +218,7 @@ fn inventory_for(target: &Path, preferred: &[String]) -> Result<Value, CoreError
             protected.push(json!({"source":source,"consumers":consumers}));
             continue;
         }
-        offered[source] = json!(revision(bytes));
+        offered[source] = json!(revision(&bytes));
         post = if crlf {
             proposed.replace("\n", "\r\n")
         } else {
@@ -884,6 +892,29 @@ mod tests {
         #[cfg(unix)]
         std::os::unix::fs::symlink(external.0.join("outside"), &link).unwrap();
         assert!(inventory_for(&f.0, &[]).is_err());
+        assert!(f.0.join(&source).exists());
+        #[cfg(windows)]
+        junction::delete(&link).unwrap();
+        #[cfg(unix)]
+        std::fs::remove_file(&link).unwrap();
+
+        // Quiet discovery must not walk unrelated owners, while an actual
+        // disposition still observes and confines every possible consumer.
+        let link = f.0.join(".agentic-workspace/proof");
+        #[cfg(windows)]
+        junction::create(external.0.join("outside"), &link).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(external.0.join("outside"), &link).unwrap();
+        let manifest = std::fs::read_to_string(f.0.join(MANIFEST)).unwrap();
+        std::fs::remove_file(f.0.join(MANIFEST)).unwrap();
+        assert_eq!(inventory_for(&f.0, &[]).unwrap()["sources"], json!({}));
+        std::fs::write(
+            f.0.join(MANIFEST),
+            manifest.replace("disposition={status='retire'}\n", ""),
+        )
+        .unwrap();
+        assert_eq!(inventory_for(&f.0, &[]).unwrap()["sources"], json!({}));
+        assert!(inventory_for(&f.0, std::slice::from_ref(&source)).is_err());
         assert!(f.0.join(source).exists());
         #[cfg(windows)]
         junction::delete(&link).unwrap();
