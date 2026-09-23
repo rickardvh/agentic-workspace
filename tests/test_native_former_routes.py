@@ -110,6 +110,15 @@ def test_former_selection_requires_exact_current_agent_request(
             authority for authority in contract["restriction_authorities"] if authority["owner"] != "workspace-resources"
         ],
     }
+    # Activation adds one introspection-only judgment schema, never an effect
+    # or a quiet-work state contribution. Keep its allowance separate so other
+    # owners cannot consume this budget and compact/current-state limits stand.
+    activation = next(owner for owner in contract["owners"] if owner["owner"] == "activation")
+    assert len(activation["requests"]) == 1
+    assert not activation.get("operations") and not activation.get("effects")
+    activation_bytes = len(json.dumps(activation))
+    assert activation_bytes < 900
+    assert "activation" not in first
     retention_bytes = 0
     for owner_name in ("planning", "memory", "verification"):
         owner = next(row for row in contract["owners"] if row["owner"] == owner_name)
@@ -129,8 +138,8 @@ def test_former_selection_requires_exact_current_agent_request(
         size = sum(len(json.dumps(row)) for row in retention)
         assert len(retention) == 4 and size < 2_200, (owner_name, size)
         retention_bytes += size
-    assert len(json.dumps(non_resource_contract)) - retention_bytes < 81_000
-    assert len(json.dumps(contract)) - retention_bytes < 86_000
+    assert len(json.dumps(non_resource_contract)) - retention_bytes - activation_bytes < 81_000
+    assert len(json.dumps(contract)) - retention_bytes - activation_bytes < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
     assert len(json.dumps(first["planning"]["terminal_retention"])) < 500
     state = {key: value for key, value in first.items() if key != "capability_contract"}
