@@ -102,7 +102,12 @@
     "Cargo.toml",
     "Cargo.lock"
   ],
-  "non_semver_generated_metadata": [],
+  "non_semver_generated_metadata": [
+    {
+      "path": "src/tooling/contracts/support_bearing_install.json",
+      "reason": "Repository-only post-publication projection of accepted public release receipts, excluded from shipped packages; refreshing current installation facts does not require another release."
+    }
+  ],
   "packages": [
     {
       "name": "agentic-workspace",

@@ -146,7 +146,12 @@ def test_package_affecting_scope_excludes_github_automation() -> None:
     assert "src/" in paths
     assert "uv.lock" in paths
 
-    assert ownership["non_semver_generated_metadata"] == []
+    assert [entry["path"] for entry in ownership["non_semver_generated_metadata"]] == ["src/tooling/contracts/support_bearing_install.json"]
+    classify = _load_release_ownership_classifier().classify_changed_paths
+    projection = "src/tooling/contracts/support_bearing_install.json"
+    assert classify([projection], ownership)["package_affecting"] is False
+    assert classify([projection], ownership)["integrity_metadata_paths"] == [projection]
+    assert classify([projection, "src/core/src/lib.rs"], ownership)["package_affecting"] is True
 
 
 def test_release_path_classification_covers_native_sources_and_bindings() -> None:

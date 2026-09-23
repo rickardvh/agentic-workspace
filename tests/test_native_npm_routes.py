@@ -265,6 +265,7 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
     ]:
         assert any(name.endswith("/" + reference) for name in names), reference
     assert not any("/src/native/bin/" in name or "/generated/workspace/" in name for name in names)
+    assert not any(name.endswith("/src/tooling/contracts/support_bearing_install.json") for name in names)
     extracted = tmp_path / "source"
     with tarfile.open(archive) as package:
         package.extractall(extracted, filter="data")
