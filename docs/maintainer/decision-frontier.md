@@ -14,6 +14,13 @@ normal universal-newline SHA-256 source reader. External revisions remain
 caller assertions. Neither a `user` producer label nor matching bytes confer
 truth, human authority, permission, or proof.
 
+An `observation` also carries findings produced by current repository work:
+source/test inspection, repeated friction, unnecessary cost or a positive
+simplification opportunity. Use truthful acting-agent/source-inspection
+provenance and exact source dependencies when known. No failure or human
+message is required. Materiality and the receiving owner's act/report/no-action
+disposition remain semantic judgments; a weak code smell can stay disposable.
+
 For CLI ingress, pass the context object (including `target`, `task` and
 `material`) through `start --input`; explicit flags must match the envelope.
 Python, TypeScript and JSON use the same context shape. Returned material binds
