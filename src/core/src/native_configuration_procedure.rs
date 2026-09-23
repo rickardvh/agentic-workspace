@@ -6,7 +6,7 @@ use std::path::Path;
 
 pub(crate) const READ: &str = "configuration/observe-behavior/v1";
 pub(crate) fn declaration() -> Value {
-    json!({"kind":READ,"result_kind":"agentic-workspace/configuration-behavior/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["concern"],"properties":{"concern":{"enum":["instructions","diagnostics","assignment","modules","invocation","preferences"]}}}})
+    json!({"kind":READ,"result_kind":"agentic-workspace/configuration-behavior/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["concern"],"properties":{"concern":{"enum":["instructions","diagnostics","assignment","modules","invocation","preferences"]},"scope":{"enum":["repository","machine-local"],"default":"repository"}}}})
 }
 pub(crate) fn concern(key: &str) -> Option<&'static str> {
     match key {
@@ -42,7 +42,7 @@ pub(crate) fn observe(target: &Path, concern: &str, current: &Value) -> Result<V
         _ => return Err(CoreError::new("unsupported Configuration behavior concern")),
     };
     Ok(
-        json!({"kind":"agentic-workspace/configuration-behavior/v1","status":"observed","concern":concern,"work":current["current_work"],"configuration_revision":config["revision"],"observation":observation,"remaining_restrictions":current["decision_packet"]["blockers"],"remaining_judgment":"Determine whether the established consumer behavior satisfies the requested human outcome; source publication alone does not.","completion_authority":false}),
+        json!({"kind":"agentic-workspace/configuration-behavior/v1","status":"observed","concern":concern,"work":current["current_work"],"configuration_revision":config["revision"],"observation":observation,"setup_settlement":crate::native_configuration_assessment::settlement(concern),"remaining_restrictions":current["decision_packet"]["blockers"],"remaining_judgment":"Determine whether the established consumer behavior satisfies the requested human outcome; source publication alone does not.","completion_authority":false}),
     )
 }
 pub(crate) fn attach(target: &Path, invocation: &Value, result: &mut Value) {

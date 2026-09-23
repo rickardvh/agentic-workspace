@@ -587,6 +587,10 @@ pub(crate) fn view_selected(
     if request["request_kind"] == crate::native_configuration_procedure::READ {
         result["status"] = json!("behavior-requested");
         result["requested_behavior"] = request["arguments"]["concern"].clone();
+        result["requested_behavior_scope"] = request["arguments"]
+            .get("scope")
+            .cloned()
+            .unwrap_or(json!("repository"));
         return Ok(result);
     }
     if request["request_kind"] == crate::native_configuration_assessment::READ {
