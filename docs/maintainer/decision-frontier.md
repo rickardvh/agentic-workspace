@@ -38,9 +38,22 @@ native owner outcomes. They suppress only the optional method; source-authored
 activation cannot modify native requirements or establish proof.
 
 The existing registry carries a generated `activation_index`, derived from those
-procedure declarations with `python -m aw_maintainer.activation_index REGISTRY.json`.
-Run it after changing a declaration; `--check` detects drift. First-party interface
-generation includes this derivation. Do not hand-maintain the projection. Plain
+procedure declarations through the shipped native command:
+
+```sh
+agentic-workspace activation-index --target . --input index-request.json
+```
+
+The input is `{"registry":"tools/skills/REGISTRY.json","mode":"write"}`.
+Use `"mode":"check"` in authoring validation; drift exits nonzero without writing.
+Run this after adding/removing a declaration or changing its occasions, before
+using or publishing the registry. The explicit authoring pass reads all declared
+procedure resources, so it detects newly relevant membership that lazy operating
+lookup cannot discover. Ordinary `start` does not perform this scan. This works
+with installed native/npm/Python distributions and needs no source checkout,
+Python maintainer module or copied declaration. First-party interface generation
+includes equivalent derivation, checked for parity. Do not hand-maintain the
+projection. Plain
 skills need no index entry. Discovery admits registry membership and reads this
 bounded projection (at most 128 entries), without constructing the route catalogue
 or opening unindexed procedure resources. Only entries matching a current material

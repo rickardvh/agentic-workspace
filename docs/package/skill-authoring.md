@@ -81,3 +81,28 @@ Replace a package method with a distinct repository-owned skill and deliberately
 update the preference through its source owner. Do not edit installed package
 bodies or treat local exposure as an override of shared policy. Durable unfinished
 work stays with its existing continuation owner, not a new state file in the skill.
+
+## Publish situation-driven activation
+
+Keep optional activation declarations in the existing `agentic-procedure` source.
+After adding, removing or changing a declaration, derive the registry projection
+with the installed executable (no source checkout or maintainer Python required):
+
+```sh
+agentic-workspace activation-index --target . --input index-request.json
+```
+
+Use this JSON input, changing the repository-relative registry path as needed:
+
+```json
+{"registry":"tools/skills/REGISTRY.json","mode":"write"}
+```
+
+Commit the generated registry with the procedure source. In authoring checks, use
+`"mode":"check"`; stale membership or declarations exit nonzero without mutation.
+This explicit pass inspects every declared procedure, including those absent from
+the previous index. Run it before exercising or publishing edited skills. Ordinary
+operating lookup remains lazy and cannot detect newly relevant unindexed sources;
+it validates only entries selected by the compact index. Never duplicate activation
+metadata by hand. The command changes only the named registry's derived index,
+retaining its other fields; it grants no procedure, policy or outcome authority.

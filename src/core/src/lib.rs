@@ -1,3 +1,4 @@
+mod activation_index;
 pub mod assignment;
 pub mod assignment_packet;
 #[path = "modules/verification/assurance_applicability.rs"]
