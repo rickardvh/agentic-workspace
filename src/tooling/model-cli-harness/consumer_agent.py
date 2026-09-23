@@ -481,8 +481,7 @@ class CodexActor:
         with replacement:
             replacement.install()
             fresh = Workspace(replacement)
-            for name, data in retained.items():
-                fresh.write(name, data)
+            fresh.restore(retained)
             if fresh.files() != retained:
                 raise ValueError("Fresh continuation transfer differs from portable repository state")
             source.observation["continuation_transfer"] = "repository-only-no-machine-local-state"

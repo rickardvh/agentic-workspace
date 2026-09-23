@@ -9,7 +9,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src/tooling/release"))
 import pytest
-from consumer_journeys import INDEPENDENT_NOTES, check_removed, check_stale_rejection  # noqa: E402
+from consumer_journeys import INDEPENDENT_NOTES, Workspace, check_removed, check_stale_rejection  # noqa: E402
 from first_contact import journey  # noqa: E402
 
 
@@ -44,3 +44,13 @@ def test_stale_guard_crash_is_not_a_successful_rejection():
 
     with pytest.raises(ValueError):
         check_stale_rejection(Broken(), {})
+
+
+@pytest.mark.parametrize("name", ["../outside", "/absolute", "nested/../../outside", "..\\outside", "node_modules/tool", ".git/config"])
+def test_continuation_rejects_unsafe_transfer_before_writing(name):
+    class Consumer:
+        def write_file(self, *args):
+            pytest.fail("Unsafe snapshot transferred")
+
+    with pytest.raises(ValueError, match="Unsafe continuation"):
+        Workspace(Consumer()).restore({name: b"untrusted"})

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -130,6 +131,35 @@ class Workspace:
                 proc.kill()
             proc.wait()
         return files
+
+    def restore(self, files):
+        """Transfer a bounded inert snapshot once, without replaying shell code."""
+        if len(files) > MAX_FILES or sum(len(data) for data in files.values()) > MAX_BYTES:
+            raise ValueError("Oversized continuation snapshot")
+        for name in files:
+            path = PurePosixPath(name)
+            if (
+                path.is_absolute()
+                or ".." in path.parts
+                or "\\" in name
+                or not path.parts
+                or path.parts[0] in {".git", ".agents", ".venv", "node_modules"}
+            ):
+                raise ValueError("Unsafe continuation path")
+        if hasattr(self.consumer, "repo"):
+            for name, data in files.items():
+                self.write(name, data)
+            return
+        packed = io.BytesIO()
+        with tarfile.open(fileobj=packed, mode="w") as archive:
+            for name, data in files.items():
+                member = tarfile.TarInfo(name)
+                member.size, member.mode = len(data), 0o600
+                archive.addfile(member, io.BytesIO(data))
+        destination = "/home/consumer/input/reentry.tar"
+        self.consumer.write_file(destination, packed.getvalue())
+        self.consumer.exec(["tar", "--no-same-owner", "--no-same-permissions", "-xf", destination, "-C", "/home/consumer/repo"])
+        self.consumer.exec(["rm", "--", destination])
 
     def start(self, request=None):
         arguments = ["--task", TASK, "--projection", "full"]
