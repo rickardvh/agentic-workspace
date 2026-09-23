@@ -61,6 +61,17 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     policy.write_bytes(disabled)
     assert json.loads(setup("--dry-run", "--format", "json").stdout)["status"] == "authorization-required"
     read = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    removal = next(r for r in read["adoption_requests"] if r["arguments"]["mode"] == "remove")
+    removal_proposal = call(request=removal)
+    removal_answer = next(
+        d
+        for d in removal_proposal["decision_packet"]["pending_consequences"]["decisions"]
+        if d["id"] == "repository-adoption-authorization"
+    )["response_request"]
+    removal_answer["arguments"]["answer"] = "authorize-write"
+    denied = call(request=removal_answer)
+    assert not denied["decision_packet"]["ready_actions"]
+    assert any(b["code"] == "workspace-disabled" and "task" in b["affects"] for b in denied["decision_packet"]["blockers"])
     request = next(r for r in read["adoption_requests"] if r["arguments"]["mode"] == "adopt")
     proposal = call(request=request)
     answer = next(
