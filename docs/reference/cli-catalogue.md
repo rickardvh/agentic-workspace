@@ -4,9 +4,9 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:ba19cf446ca3c3a0e8ea76fde687efd658d7be527df66ae258b951b6482f53af`
+- Contract digest: `sha256:a8f3e5c56efefb85061c533e648aedffac8c8f16d40ba47c5f023ac87b5487bb`
 - Program: `agentic-workspace`
-- Command count: 5
+- Command count: 6
 
 ## Commands
 
@@ -17,6 +17,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `agentic-workspace resources` | yes | Propose with a resource request; execute by passing the exact returned action envelope unchanged to --input. Explicit context flags must match; omitted context comes from the envelope. |
 | `agentic-workspace start` | no | Resolve the current operating decision. |
 | `agentic-workspace invoke` | yes | Invoke the exact operation returned by the current owner. |
+| `agentic-workspace activation-index` | yes | Check or derive a repository registry activation index from its procedure sources; explicit authoring only. |
 
 ## Options
 
