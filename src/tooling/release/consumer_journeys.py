@@ -478,7 +478,7 @@ def finding_fixture(work):
 def execute_finding(work, actor):
     check = finding_fixture(work)
     before = work.files()
-    prompt = "Add a square field in report.py's format_row. Preserve existing values and order, and run the repository checks."
+    prompt = "Inspect how the report is assembled, then add a square field in report.py's format_row. Preserve existing values and order, and run the repository checks."
     if actor:
         claim = actor.session(work, prompt)
     else:
