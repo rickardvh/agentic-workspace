@@ -173,11 +173,12 @@ def test_finding_scorer_requires_authorized_phase_before_optimization(tmp_path, 
             self.calls += 1
             if self.calls == 1:
                 assert "simplification" not in prompt and "opportunity" not in prompt
-            if self.calls == 1 and not premature:
-                body = "return [{'value': (v := load_rows()[i]), 'square': v*v} for i in range(32)]"
-            else:
-                body = "return [{'value': v, 'square': v*v} for v in load_rows()]"
-            work.write("report.py", ("from data import load_rows\n\ndef report():\n " + body + "\n").encode())
+            work.write("report.py", b"def format_row(value):\n return {'value': value, 'square': value*value}\n")
+            if self.calls > 1 or premature:
+                work.write(
+                    "pipeline.py",
+                    b"from data import load_rows\nfrom report import format_row\n\ndef report():\n return [format_row(v) for v in load_rows()]\n",
+                )
             return {"status": "complete", "reason": "Report repeated reads; apply only after authorization."}
 
     phases = journeys.execute_finding(work, Actor())
