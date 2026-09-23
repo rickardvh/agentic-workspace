@@ -177,14 +177,26 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
         errors.append("root dependencies do not contain every coordinated module identity")
     if distribution.get("strategy") != "exact-tagged-release-artifacts" or distribution.get("registry_resolution_supported") is not True:
         errors.append("supported distribution strategy must project exact tagged artifacts to GitHub and registries")
-    for relative in (
-        "README.md",
-        "docs/agentic-workspace-install.md",
+    for relative, destination in (
+        ("README.md", "https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md"),
+        ("docs/agentic-workspace-install.md", "reference/support-bearing-install.md"),
+        ("docs/reference/support-bearing-install.md", None),
     ):
+        if not (root / relative).is_file():
+            errors.append(f"{relative} is missing from the canonical install route")
+            continue
         documentation = (root / relative).read_text(encoding="utf-8")
         if "git+https://github.com/rickardvh/agentic-workspace@master" in documentation:
             errors.append(f"{relative} recommends mutable master as an install identity")
-        if "distribution-install-readiness.json" not in documentation:
+        links = re.findall(r"\[[^\]]*\]\(([^\s)]+)\)", documentation)
+        routed = destination in links if destination else any(
+            re.fullmatch(
+                r"https://github\.com/rickardvh/agentic-workspace/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/distribution-install-readiness\.json",
+                link,
+            )
+            for link in links
+        )
+        if not routed:
             errors.append(f"{relative} does not route support-bearing installs through the canonical receipt")
 
     for package in ownership.get("typescript_packages", []):

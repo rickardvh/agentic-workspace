@@ -88,17 +88,14 @@ Exact package identities, installation commands, runtime versions, operating-sys
 
 ## Get started
 
-1. Install AW: `npm install --global @agentic-workspace/workspace-cli`.
-2. From your Git working-tree root, run `agentic-workspace setup` and authorise
-   the proposed integration.
+1. Install AW using any supported distribution, either as a dev dependency in your repo (recommended) or as a globally accessible tool on your computer. See
+   [Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md).
+2. From your repo root, run `agentic-workspace setup` using that installation and
+   authorise the proposed integration.
 3. Give your agent an ordinary task, such as correcting a documentation error.
 
-The setup command is awaiting stable publication. Check the
-[Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md)
-for the current release boundary, Python/Cargo alternatives and repository-local
-npm invocation. Installation supplies the runtime; setup adds the AW enclave and
-an AGENTS.md pointer. Your agent then follows that pointer without a manual command
-sequence around each task.
+Installation supplies the runtime; setup adds the AW enclave and an AGENTS.md
+pointer. Your agent follows that pointer during ordinary work.
 
 ## Your repository, your rules
 

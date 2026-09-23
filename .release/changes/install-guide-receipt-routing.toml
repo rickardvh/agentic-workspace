@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Correct packaged first-contact guidance to make installation scope explicit across peer distribution routes, remove transient publication prose, and validate guide links to the canonical stable receipt."

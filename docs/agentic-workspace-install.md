@@ -3,44 +3,31 @@
 Install AW, add it to a Git repository, then give your coding agent ordinary work.
 Use an agent that can read repository instructions and run commands.
 
-**Release boundary:** `setup` is in the development version and awaits stable
-publication. The [current stable reference](reference/support-bearing-install.md)
-identifies the published package; check that its help includes `setup` before
-following this journey. Do not substitute internal JSON instructions for a missing
-command.
-
 ## 1. Install AW
 
-Choose one route. The npm and Python packages include native executables; Cargo
-builds them. Your project's language does not restrict the choice.
+Pin AW per repository when repositories need independent versions; otherwise a
+shared installation is fine. Choose npm, Python/uv, Cargo or a standalone archive
+according to your tooling. Keep using that installation when running AW.
 
-| Installation scope | Install | Invoke |
-| --- | --- | --- |
-| npm, user-wide | `npm install --global @agentic-workspace/workspace-cli` | `agentic-workspace` |
-| npm, this repository | `npm install --save-dev @agentic-workspace/workspace-cli` | `npm exec --no -- agentic-workspace` |
-| Python tool | `uv tool install agentic-workspace` | `agentic-workspace` |
-| Cargo | Two exact-version installs below, core first | `agentic-workspace` |
+Replace `<stable-version>` below with the exact version from the
+[current stable reference](reference/support-bearing-install.md). That reference
+also provides platform-specific assets, checksums and installation details.
 
-For Cargo, replace `<stable-version>` with the version in the
-[stable reference](reference/support-bearing-install.md), then run these commands
-in order so both binaries use that exact version:
+| Distribution | Install |
+| --- | --- |
+| npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli@<stable-version>` in the repository; use `--global` instead of `--save-dev --save-exact` for a shared tool |
+| Python/uv | `uv pip install 'agentic-workspace==<stable-version>'` in your repository's virtual environment, or `uv tool install 'agentic-workspace==<stable-version>'` for a shared tool |
+| Cargo | `cargo install --locked agentic-workspace-core --version '=<stable-version>'`, then `cargo install --locked agentic-workspace-cli --version '=<stable-version>'`; use the same `--root` for both if choosing a repository-specific location |
+| Standalone | Extract the exact platform archive from the stable reference into your chosen location, keeping both executables together |
 
-```sh
-cargo install --locked agentic-workspace-core --version '=<stable-version>'
-cargo install --locked agentic-workspace-cli --version '=<stable-version>'
-```
-
-For a standalone archive or exact reproducible install, use that
-reference's platform-specific assets and checksums. [Compatibility and support](evidence-and-support.md)
-describes supported environments.
-
-Run your chosen invocation with `--help` in the environment your agent will use.
-For a repository-local npm install, use the npm invocation throughout; a global
-executable is not required.
+Run `--help` using that installation: `npm exec --no -- agentic-workspace` for
+repository-local npm, `agentic-workspace` in the selected environment or on PATH,
+or the executable's path for a custom location.
 
 ## 2. Add AW to the repository
 
-From the Git working-tree root:
+From the Git working-tree root, append `setup` to your chosen invocation. For a
+shared tool on PATH:
 
 ```sh
 agentic-workspace setup
