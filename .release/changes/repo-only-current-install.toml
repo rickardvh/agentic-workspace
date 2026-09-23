@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Exclude volatile current-install metadata from Python source distributions; keep post-publication installation facts repository-owned."

@@ -70,6 +70,8 @@ dev-mode-dirs = ["src/cli/python", "src/adapters/codex", "src/tooling/python"]
 path = "hatch_build.py"
 
 [tool.hatch.build.targets.sdist]
+# Refreshed after publication; current installation facts belong to the repository.
+exclude = ["/src/tooling/contracts/support_bearing_install.json"]
 include = [
   "/hatch_build.py",
   "/rust-toolchain.toml",
