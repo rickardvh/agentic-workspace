@@ -640,6 +640,7 @@ def _completion_cost_observability(records: list[dict[str, Any]]) -> dict[str, A
 
 
 def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Summarise historical records only; never admit a current consumer run."""
     records = pack["results"]["records"]
     live_runs = pack.get("live_results", {}).get("runs", [])
     dimensions = [item["id"] for item in pack["scorecard"]["dimensions"]]
@@ -734,6 +735,8 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
 
     return {
         "kind": "agentic-workspace/external-agent-lane-closure-report/v1",
+        "evidence_scope": "historical-record-consistency-only",
+        "current_consumer_acceptance": False,
         "lane": "#1600",
         "default_external_agent": pack["scenarios"].get("default_external_agent"),
         "live_evaluation_agent": pack.get("live_results", {}).get("agent", {}),
