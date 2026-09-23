@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   public-consumers:
-    needs: [promotion-admission, agentic-workspace-package, language-packages]
+    needs: [promotion-admission, agentic-workspace-package, language-packages, language-registries]
     if: ${{ always() && !cancelled() && needs.promotion-admission.result == 'success' }}
     uses: ./.github/workflows/consumer-validation.yml
     with:

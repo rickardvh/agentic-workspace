@@ -41,12 +41,16 @@ The subscription actor uses `--driver agent --backend sandbox --model gpt-5.6-lu
 template supplied through `--template`. Docker Sandboxes 0.45.1 supports the
 mountless sandbox and disabled shared skills used here. Configure OpenAI OAuth
 with `sbx secret set openai --oauth`. The controller creates a separate uid and
-private provider home, disables SSH socket access and sudo, excludes the template
+private provider home without an authentication file (the Sandbox proxy holds
+subscription credentials), disables SSH socket access and sudo, excludes the template
 MCP gateway, and denies repository/publishing network routes before model work.
 It never mounts the maintainer checkout or home.
 
 Each actor is limited to three sessions, each at most 900 seconds. A continuation
-uses two sessions and a replacement sandbox with retained repository files only.
+uses two sessions and a replacement sandbox with retained repository files only;
+`.agentic-workspace/local/` custody, configuration effects, and host notes are
+excluded and reconstructed on the replacement machine. Preflight rejects an
+actor-home authentication file or inherited API credentials.
 The optional token threshold stops on observed telemetry; it is not a hard
 provider-side quota. Missing usage and monetary cost remain unknown. Subscription
 OAuth does not establish support for metered API execution.

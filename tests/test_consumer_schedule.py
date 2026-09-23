@@ -111,6 +111,13 @@ def test_recurring_workflow_has_no_pr_provider_ingress_and_seven_day_retention()
                 assert step["with"]["retention-days"] == "7"
 
 
+def test_release_observation_waits_for_both_registry_attempts_even_on_failure():
+    workflow = yaml.load((ROOT / ".github/workflows/release.yml").read_text(), Loader=yaml.BaseLoader)
+    job = workflow["jobs"]["public-consumers"]
+    assert {"language-packages", "language-registries"} <= set(job["needs"])
+    assert "always() && !cancelled() && needs.promotion-admission.result == 'success'" in job["if"]
+
+
 def test_cancel_cleanup_targets_only_exact_owned_resource(tmp_path, monkeypatch):
     name = "aw-consumer-" + "a" * 32
     path = tmp_path / (name + ".resource.json")
