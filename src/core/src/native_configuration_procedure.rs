@@ -6,7 +6,7 @@ use std::path::Path;
 
 pub(crate) const READ: &str = "configuration/observe-behavior/v1";
 pub(crate) fn declaration() -> Value {
-    json!({"kind":READ,"result_kind":"agentic-workspace/configuration-behavior/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["concern"],"properties":{"concern":{"enum":["instructions","diagnostics","assignment","modules","invocation","preferences"]},"scope":{"enum":["repository","machine-local"],"default":"repository","description":"Scope of the setup witness; the behavior observation still describes the current effective consumer."}}}})
+    json!({"kind":READ,"result_kind":"agentic-workspace/configuration-behavior/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["concern"],"properties":{"concern":{"enum":["instructions","diagnostics","assignment","modules","invocation","preferences"]},"scope":{"enum":["repository","machine-local"],"default":"repository"}}}})
 }
 pub(crate) fn concern(key: &str) -> Option<&'static str> {
     match key {
