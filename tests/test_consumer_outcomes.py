@@ -127,7 +127,7 @@ def test_activation_task_only_checks_durable_residue(tmp_path, monkeypatch, resi
 
     import consumer_journeys as journeys
 
-    consumer = SimpleNamespace(repo=tmp_path, observation={})
+    consumer = SimpleNamespace(repo=tmp_path, observation={}, command=["./installed/agentic-workspace"])
     monkeypatch.setattr(journeys, "setup", lambda work: None)
 
     def recipe(work, family):

@@ -443,6 +443,10 @@ def execute_activation(consumer, family, *, actor=None):
     before = {}
     try:
         recipe(work, "first-contact")
+        # An explicitly installed standalone executable is repository-local.
+        # Configure its ordinary invocation, without injecting an AW route into
+        # the actor prompt or exposing a competing global installation.
+        work.write(".agentic-workspace/config.toml", ("[workspace]\ncli_invoke=" + json.dumps(" ".join(consumer.command)) + "\n").encode())
         setup(work)
         if family == "activation-no-retention":
             before = work.files()
@@ -539,6 +543,7 @@ def execute_activation(consumer, family, *, actor=None):
                 timeout=180,
             )
             port = int(run(["docker", "port", service, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1])
+            run([consumer.sbx, "policy", "allow", "network", "--sandbox", consumer.name, f"host.docker.internal:{port},localhost:{port}"])
             run(
                 [
                     consumer.sbx,

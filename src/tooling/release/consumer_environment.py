@@ -465,7 +465,7 @@ class DockerConsumer:
         self.observation["requested"] = self.subject.identity()
         self.observation["route"] = (
             "candidate-asset"
-            if self.subject.mode == "candidate"
+            if self.subject.mode in {"candidate", "target-candidate"}
             else {"node": "npm-registry", "python": "pypi", "cargo": "crates-io", "standalone": "public-release-asset"}[self.profile]
         )
         self.exec([*self.command, "--help"])
