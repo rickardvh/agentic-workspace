@@ -13,6 +13,39 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 # rather than weakening the detector globally.
 ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
 ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
+    # These are fixed disposable container paths, never maintainer host paths.
+    Path("src/tooling/model-cli-harness/sandbox/consumer/Dockerfile"): frozenset(
+        "/" + path
+        for path in (
+            "var/lib/apt/lists/*",
+            "home/consumer",
+            "opt/uv",
+            "opt/uv/bin/pip",
+            "opt/uv/bin/uv",
+            "home/consumer/.cargo",
+            "opt/rustup",
+            "tmp/rustup.sh",
+            "home/consumer/.cargo/bin:$PATH",
+        )
+    ),
+    Path("src/tooling/release/consumer_environment.py"): frozenset(
+        "/" + path
+        for path in (
+            "home/consumer",
+            "home/consumer/repo",
+            "home/consumer/input",
+            "home/consumer/tmp",
+            "tmp",
+            "tmp/input-",
+            "home/consumer/native",
+            "home/consumer/native/agentic-workspace",
+            "home/consumer/input/",
+            "home/consumer/repo/.venv/bin/agentic-workspace",
+            "home/consumer/installed",
+            "home/consumer/input/{crate['name']}-{crate['version",
+            "home/consumer/installed/bin/agentic-workspace",
+        )
+    ),
     Path("src/tooling/model-cli-harness/sandbox/codex/Dockerfile"): frozenset(
         {
             "/" + "home/agent/workspace",
@@ -31,7 +64,7 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "/" + "var/lib/apt/lists/*\\n",
             "/" + "option>;\\n",
         }
-    )
+    ),
 }
 
 _POSIX_ROOT_NAMES = ("Users", "home", "tmp", "var", "etc", "opt", "srv", "mnt", "media", "root", "workspace", "workspaces")
