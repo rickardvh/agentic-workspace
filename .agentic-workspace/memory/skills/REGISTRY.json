@@ -170,12 +170,7 @@
       "path": "memory-hygiene/SKILL.md",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
-        {
-          "id": "memory/hygiene",
-          "match": "exact",
-          "priority": 10,
-          "description": "Inspect bounded Memory declaration hygiene and separately authorized disposition."
-        }
+        "memory/hygiene"
       ],
       "activation": {
         "occasions": [

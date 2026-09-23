@@ -275,12 +275,7 @@
       "path": "pr-review-recheck/SKILL.md",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
-        {
-          "id": "github/pr/review",
-          "match": "exact",
-          "priority": 10,
-          "description": "Apply the repository's independent PR-review eligibility procedure."
-        }
+        "github/pr/review"
       ],
       "activation": {
         "occasions": [

@@ -147,12 +147,7 @@
       "path": "workspace-intent-discovery/SKILL.md",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
-        {
-          "id": "workspace/intent/discovery",
-          "match": "exact",
-          "priority": 10,
-          "description": "Clarify ambiguous human intent or work shape before committing to a solution."
-        }
+        "workspace/intent/discovery"
       ],
       "activation": {
         "occasions": [
@@ -167,12 +162,7 @@
       "path": "workspace-proof-selection/SKILL.md",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
-        {
-          "id": "workspace/proof/selection",
-          "match": "exact",
-          "priority": 10,
-          "description": "Select and interpret evidence for the claim actually being made."
-        }
+        "workspace/proof/selection"
       ],
       "activation": {
         "occasions": [
@@ -191,12 +181,7 @@
       "path": "workspace-setup-jumpstart/SKILL.md",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
-        {
-          "id": "workspace/setup/jumpstart",
-          "match": "exact",
-          "priority": 10,
-          "description": "Apply bounded setup and jumpstart procedure after AW is installed or adopted in a lived-in repository."
-        }
+        "workspace/setup/jumpstart"
       ],
       "activation": {
         "occasions": [
@@ -215,12 +200,7 @@
       "path": "workspace-resources/SKILL.md",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
-        {
-          "id": "workspace/resources/lifecycle",
-          "match": "exact",
-          "priority": 10,
-          "description": "Manage temporary task material or necessary checkout isolation and safely reconcile its lifetime."
-        }
+        "workspace/resources/lifecycle"
       ],
       "activation": {
         "occasions": [
@@ -239,12 +219,7 @@
       "path": "workspace-instruction-correction/SKILL.md",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
-        {
-          "id": "workspace/instructions/correction",
-          "match": "exact",
-          "priority": 10,
-          "description": "Reconcile trusted corrections and material source inconsistencies through the responsible owner; publish scoped instructions only when that is the appropriate destination."
-        }
+        "workspace/instructions/correction"
       ],
       "activation": {
         "occasions": [
