@@ -9,6 +9,11 @@ on:
       - src/tooling/release/platform_release.py
       - src/tooling/release/stage_native_npm.py
       - src/tooling/release/admit_linux_wheel.py
+      - src/tooling/release/first_contact.py
+      - src/tooling/release/consumer_environment.py
+      - src/tooling/release/consumer_journeys.py
+      - src/tooling/model-cli-harness/consumer_outcomes.py
+      - src/tooling/model-cli-harness/run_model_cli_harness.py
       - src/cli/typescript/native/_transport.mjs
       - hatch_build.py
   workflow_call:

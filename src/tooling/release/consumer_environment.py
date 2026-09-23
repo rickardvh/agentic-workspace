@@ -21,7 +21,7 @@ import tomllib
 import uuid
 import zipfile
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 import cargo_release
@@ -40,7 +40,51 @@ PROFILES = {
 
 
 def run(argv, **kwargs):
-    return subprocess.run([str(v) for v in argv], check=True, capture_output=True, text=True, timeout=kwargs.pop("timeout", 120), **kwargs)
+    return subprocess.run(
+        [str(v) for v in argv],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=kwargs.pop("timeout", 120),
+        **kwargs,
+    )
+
+
+def record_cleanup(consumer, backend):
+    directory = getattr(consumer, "cleanup_directory", None)
+    if directory is not None:
+        consumer.cleanup_record = Path(directory) / (consumer.name + ".resource.json")
+        consumer.cleanup_record.write_text(
+            json.dumps({"kind": "consumer-disposable/v1", "name": consumer.name, "backend": backend}), encoding="utf-8"
+        )
+
+
+def cleanup_record_removed(consumer):
+    path = getattr(consumer, "cleanup_record", None)
+    if path is not None:
+        path.unlink(missing_ok=True)
+
+
+def cleanup_remaining(directory, *, sbx="sbx"):
+    """Only resources explicitly owned by this run; never enumerate host sandboxes."""
+    for path in Path(directory).glob("aw-consumer-*.resource.json"):
+        record = json.loads(path.read_text())
+        name = record.get("name", "")
+        if (
+            record.get("kind") != "consumer-disposable/v1"
+            or not re.fullmatch(r"aw-consumer-[a-f0-9]{32}", name)
+            or path.name != name + ".resource.json"
+        ):
+            raise ValueError("Invalid cleanup ownership record")
+        if record.get("backend") == "sandbox":
+            run([sbx, "rm", "--force", name])
+        elif record.get("backend") == "docker":
+            run(["docker", "rm", "--force", name])
+        else:
+            raise ValueError("Unknown cleanup backend")
+        path.unlink()
 
 
 @dataclass(frozen=True)
@@ -196,6 +240,7 @@ class DockerConsumer:
         self.cleanup = "not-started"
 
     def __enter__(self):
+        record_cleanup(self, "docker")
         try:
             run(
                 [
@@ -237,6 +282,15 @@ class DockerConsumer:
         incoming = "/tmp/input-" + uuid.uuid4().hex
         run(["docker", "cp", str(source.resolve()), f"{self.name}:{incoming}"])
         self.exec(["cp", "-R", incoming, destination])
+
+    def write_file(self, destination: str, data: bytes):
+        # Never put exported files or large owner requests in a Windows command
+        # line. The same byte transport serves both deterministic and live actors.
+        with tempfile.TemporaryDirectory(prefix="transfer-", dir=getattr(self, "cleanup_directory", None)) as tmp:
+            source = Path(tmp) / "payload"
+            source.write_bytes(data)
+            self.exec(["mkdir", "-p", str(PurePosixPath(destination).parent)])
+            self.copy_in(source, destination)
 
     def observe_tools(self):
         required, forbidden = PROFILES[self.profile]
@@ -361,6 +415,7 @@ class DockerConsumer:
         try:
             run(["docker", "rm", "--force", self.name])
             self.cleanup = "removed"
+            cleanup_record_removed(self)
         except subprocess.CalledProcessError as error:
             self.cleanup = "failed"
             raise RuntimeError(f"Consumer cleanup failed: {self.name}") from error

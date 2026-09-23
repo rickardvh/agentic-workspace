@@ -33,7 +33,9 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "var/run/docker.sock",
         )
     ),
-    Path("src/tooling/release/consumer_journeys.py"): frozenset({"/" + "home/consumer/repo"}),
+    Path("src/tooling/release/consumer_journeys.py"): frozenset(
+        "/" + path for path in ("home/consumer/repo", "home/consumer/repo/", "home/consumer/request.json", "home/consumer/action.json")
+    ),
     # These are fixed disposable container paths, never maintainer host paths.
     Path("src/tooling/model-cli-harness/sandbox/consumer/Dockerfile"): frozenset(
         "/" + path

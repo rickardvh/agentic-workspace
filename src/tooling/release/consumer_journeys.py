@@ -18,6 +18,9 @@ sys.path.insert(0, str(HARNESS))
 from consumer_outcomes import MAX_BYTES, MAX_FILES, Expected, evaluate, snapshot  # noqa: E402
 from run_model_cli_harness import PublicClient  # noqa: E402
 
+RECIPE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+SCORER_SHA256 = hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest()
+
 TASK = "Change the service port to 8081 in settings.json and update the README example. Preserve repository policy and existing notes."
 INITIAL = {
     "AGENTS.md": b"Repository-owned instructions: preserve policy.md and notes.txt.\n",
@@ -66,6 +69,8 @@ class Workspace:
             path = self.consumer.repo / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
+        elif hasattr(self.consumer, "write_file"):
+            self.consumer.write_file("/home/consumer/repo/" + name, data)
         else:
             self.consumer.exec(
                 ["sh", "-c", 'mkdir -p "$(dirname "$1")"; printf %s "$2" | base64 -d > "$1"', "sh", name, base64.b64encode(data).decode()]
@@ -135,8 +140,7 @@ class Workspace:
                 path.write_text(json.dumps(request), encoding="utf-8")
                 arguments += ["--input", str(path)]
             else:
-                data = base64.b64encode(json.dumps(request).encode()).decode()
-                self.consumer.exec(["sh", "-c", 'printf %s "$1" | base64 -d > ../request.json', "sh", data])
+                self.consumer.write_file("/home/consumer/request.json", json.dumps(request).encode())
                 arguments += ["--input", "../request.json"]
         return self.client.call("start", *arguments)
 
@@ -145,8 +149,7 @@ class Workspace:
             path = self.consumer.root / "action.json"
             path.write_text(json.dumps(action), encoding="utf-8")
             return self.client.call("invoke", "--task", TASK, "--input", str(path))
-        data = base64.b64encode(json.dumps(action).encode()).decode()
-        self.consumer.exec(["sh", "-c", 'printf %s "$1" | base64 -d > ../action.json', "sh", data])
+        self.consumer.write_file("/home/consumer/action.json", json.dumps(action).encode())
         return self.client.call("invoke", "--task", TASK, "--input", "../action.json")
 
 
@@ -324,8 +327,8 @@ def deterministic(work, family):
 
 def execute(consumer, family, *, actor=None):
     started = time.monotonic()
-    recipe_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    scorer_sha256 = hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest()
+    recipe_sha256 = RECIPE_SHA256
+    scorer_sha256 = SCORER_SHA256
     work = Workspace(consumer)
     before = recipe(work, family)
     error = None

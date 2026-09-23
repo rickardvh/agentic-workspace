@@ -24,6 +24,13 @@ permissions:
   checks: read
 
 jobs:
+  public-consumers:
+    needs: [promotion-admission, agentic-workspace-package, language-packages]
+    if: ${{ always() && !cancelled() && needs.promotion-admission.result == 'success' }}
+    uses: ./.github/workflows/consumer-validation.yml
+    with:
+      version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+
   promotion-admission:
     name: Verify exact protected commit
     runs-on: ubuntu-latest

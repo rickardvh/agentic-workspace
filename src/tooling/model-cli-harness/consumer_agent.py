@@ -17,8 +17,10 @@ import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
-from consumer_environment import PROFILES, DockerConsumer, run
+from consumer_environment import PROFILES, DockerConsumer, cleanup_record_removed, record_cleanup, run
 from run_sbx_codex_adapter import _codex_exec_command
+
+SOURCE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
 def portable_continuation(files):
@@ -34,6 +36,7 @@ class SandboxConsumer(DockerConsumer):
             raise ValueError("Require an immutable non-Docker Codex template reference")
         super().__init__(subject, profile, target, "sha256:" + template.rsplit(":", 1)[1])
         self.template, self.scratch, self.sbx = template, scratch, sbx
+        self.cleanup_directory = scratch
         self.observation.update(
             backend="codex-sandbox",
             template=template,
@@ -42,6 +45,7 @@ class SandboxConsumer(DockerConsumer):
         )
 
     def __enter__(self):
+        record_cleanup(self, "sandbox")
         try:
             run(
                 [
@@ -115,7 +119,7 @@ class SandboxConsumer(DockerConsumer):
         """Declared profile dependencies, installed before either driver starts."""
         commands = {
             "node": "npm install --global --prefix /usr/local pnpm@10.30.3",
-            "python": "apt-get update && apt-get install -y python3-venv && python3 -m venv /opt/consumer-uv && /opt/consumer-uv/bin/pip install uv==0.8.22 && ln -s /opt/consumer-uv/bin/uv /usr/local/bin/uv",
+            "python": "apt-get update && apt-get install -y python3-venv && python3 -m venv /opt/consumer-uv && /opt/consumer-uv/bin/pip install uv==0.8.22 && ln -sf /opt/consumer-uv/bin/uv /usr/local/bin/uv",
             "cargo": "apt-get update && apt-get install -y build-essential pkg-config libssl-dev curl",
         }
         if self.profile in commands:
@@ -161,6 +165,7 @@ class SandboxConsumer(DockerConsumer):
     def restrict_actor(self):
         # Provider proxy auth is allowed; publishing, repository write and SSH
         # credentials must not be reachable by the tested actor.
+        run([self.sbx, "exec", "--user", "root", self.name, "sh", "-ec", "test ! -S /run/ssh-agent.sock || chmod 000 /run/ssh-agent.sock"])
         run(
             [
                 self.sbx,
@@ -172,21 +177,35 @@ class SandboxConsumer(DockerConsumer):
                 "github.com,*.github.com,*.githubusercontent.com,registry.npmjs.org,upload.pypi.org,crates.io",
             ]
         )
-        check = self.exec(
-            [
-                "sh",
-                "-c",
-                'test "$(id -u)" != 0 || { echo root-user >&2; exit 1; }; '
-                'test ! -e "$CODEX_HOME/auth.json" || { echo actor-auth-file >&2; exit 1; }; '
-                "test ! -r /home/agent/.codex/auth.json && test ! -r /proc/1/environ || { echo template-state-readable >&2; exit 1; }; "
-                "test ! -w /run/ssh-agent.sock || { echo ssh-socket-accessible >&2; exit 1; }; "
-                'for socket in /var/run/docker.sock /run/docker.sock; do test ! -S "$socket" || { echo docker-socket >&2; exit 1; }; done; '
-                "! command -v agentic-workspace || { echo global-aw >&2; exit 1; }; "
-                '! env | cut -d= -f1 | grep -E "^(OPENAI_API_KEY|CODEX_API_KEY|GH_TOKEN|GITHUB_TOKEN|NPM_TOKEN|CARGO_REGISTRY_TOKEN|SSH_AUTH_SOCK)$" || '
-                "{ echo credential-environment >&2; exit 1; }; "
-                "(! command -v sudo >/dev/null || ! sudo -n true 2>/dev/null) || { echo sudo-enabled >&2; exit 1; }",
-            ]
-        )
+        try:
+            check = self.exec(
+                [
+                    "sh",
+                    "-c",
+                    'test "$(id -u)" != 0 || { echo root-user >&2; exit 1; }; '
+                    'test ! -e "$CODEX_HOME/auth.json" || { echo actor-auth-file >&2; exit 1; }; '
+                    "test ! -r /home/agent/.codex/auth.json && test ! -r /proc/1/environ || { echo template-state-readable >&2; exit 1; }; "
+                    "test ! -w /run/ssh-agent.sock || { echo ssh-socket-accessible >&2; exit 1; }; "
+                    'for socket in /var/run/docker.sock /run/docker.sock; do test ! -S "$socket" || { echo docker-socket >&2; exit 1; }; done; '
+                    "! command -v agentic-workspace || { echo global-aw >&2; exit 1; }; "
+                    '! env | cut -d= -f1 | grep -E "^(OPENAI_API_KEY|CODEX_API_KEY|GH_TOKEN|GITHUB_TOKEN|NPM_TOKEN|CARGO_REGISTRY_TOKEN|SSH_AUTH_SOCK)$" || '
+                    "{ echo credential-environment >&2; exit 1; }; "
+                    "(! command -v sudo >/dev/null || ! sudo -n true 2>/dev/null) || { echo sudo-enabled >&2; exit 1; }",
+                ]
+            )
+        except subprocess.CalledProcessError as error:
+            reasons = {
+                "root-user",
+                "actor-auth-file",
+                "template-state-readable",
+                "ssh-socket-accessible",
+                "docker-socket",
+                "global-aw",
+                "credential-environment",
+                "sudo-enabled",
+            }
+            observed = [line for line in (error.stderr or "").splitlines() if line in reasons]
+            raise ValueError("Actor containment preflight failed: " + ", ".join(observed or ["unknown"])) from None
         if check.returncode:
             raise ValueError("Actor containment preflight failed")
         self.observation["actor_containment"] = "non-root-no-sudo-no-docker-socket-no-publish-transport"
@@ -219,6 +238,7 @@ class SandboxConsumer(DockerConsumer):
         try:
             run([self.sbx, "rm", "--force", self.name])
             self.cleanup = "removed"
+            cleanup_record_removed(self)
         except subprocess.CalledProcessError:
             self.cleanup = "failed"
             raise
@@ -332,7 +352,7 @@ class CodexActor:
         self.seconds, self.token_ceiling = seconds, token_ceiling
         self.billing, self.session_limit, self.sessions_started = billing, session_limit, 0
         self.observations = []
-        self.source_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+        self.source_sha256 = SOURCE_SHA256
 
     def session(self, work, prompt):
         if self.sessions_started >= self.session_limit:

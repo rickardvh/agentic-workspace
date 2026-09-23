@@ -95,6 +95,12 @@ and this skill neither supplies nor removes that judgment.
 
 ## Proof and residue
 
+For installed-consumer findings, preserve the first failed exact-subject result
+and distinguish diagnostic retries, deterministic checks, live executions and
+unavailable or historical evidence. Search the smallest existing issue owner
+before creating a finding; link compact reproduction evidence without provider
+credentials. Missing or skipped assignments remain visible, never green coverage.
+
 Prove the finding and repair at the smallest useful boundary. Keep implementation
 proof separate from independent review and parent closure. Preserve only residue
 that makes recurrence, handoff, or verification cheaper; do not create a dogfood
