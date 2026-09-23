@@ -31,6 +31,7 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "home/agent/.codex/auth.json",
             "tmp/input-",
             "var/run/docker.sock",
+            "usr/bin/sha256sum",
         )
     ),
     Path("src/tooling/release/consumer_journeys.py"): frozenset(
@@ -72,6 +73,7 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "home/consumer/input/",
             "home/consumer/repo/.venv/bin/agentic-workspace",
             "home/consumer/installed",
+            "home/consumer/installed/bin",
             "home/consumer/input/{crate['name']}-{crate['version",
             "home/consumer/installed/bin/agentic-workspace",
         )

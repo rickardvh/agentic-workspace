@@ -144,6 +144,33 @@ class SandboxConsumer(DockerConsumer):
         run([self.sbx, "cp", str(source.resolve()), f"{self.name}:{incoming}"])
         self.exec(["cp", "-R", incoming, destination])
 
+    def installation_digest(self):
+        # Read with the trusted root-owned checker, outside actor PATH resolution.
+        return run(
+            [
+                self.sbx,
+                "exec",
+                "--user",
+                "root",
+                "--workdir",
+                "/home/consumer/repo",
+                self.name,
+                "/usr/bin/sha256sum",
+                *self.installed_paths,
+            ]
+        ).stdout
+
+    def install(self, **kwargs):
+        command = super().install(**kwargs)
+        self.installed_digest = self.installation_digest()
+        return command
+
+    def verify_installation_unchanged(self):
+        if self.installation_digest() != self.installed_digest:
+            raise ValueError("Actor changed the installed subject or Node binding")
+        self.observation["post_actor_installation"] = "unchanged"
+        self.observation["post_actor_verified_paths"] = self.installed_paths
+
     def observe_tools(self):
         required, forbidden = PROFILES[self.profile]
         inventory = {}
@@ -380,6 +407,7 @@ class CodexActor:
                 "provider_cli": consumer.observation["provider_cli"],
             }
         )
+        consumer.verify_installation_unchanged()
         if result["status"] != "completed":
             raise RuntimeError("Codex execution " + result["status"])
         return result["claim"]

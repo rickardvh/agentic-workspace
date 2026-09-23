@@ -406,6 +406,7 @@ class DockerConsumer:
                     command += ["--path", f"/home/consumer/input/{crate['name']}-{crate['version']}"]
                 self.exec(command, timeout=900)
             self.command = ["/home/consumer/installed/bin/agentic-workspace"]
+            binaries = "/home/consumer/installed/bin"
             identity = {
                 "package_version": self.subject.inventory["version"],
                 "source_head": self.subject.inventory["source_commit"],
@@ -428,6 +429,15 @@ class DockerConsumer:
         ):
             raise ValueError("Installed package identity mismatch")
         self.observation["installed"] = identity
+        self.installed_paths = [binaries + "/" + name for name in ("agentic-workspace", "agentic-workspace-core")]
+        if self.profile == "node":
+            self.installed_paths += ["node_modules/.bin/agentic-workspace"]
+            self.installed_paths += [
+                "node_modules/@agentic-workspace/workspace-cli/" + name
+                for name in ("package.json", "src/cli.mjs", "src/native/_transport.mjs", "src/native/operating.mjs")
+            ]
+        elif self.profile == "python":
+            self.installed_paths += [self.command[0]]
         self.observation["requested"] = self.subject.identity()
         self.observation["route"] = (
             "candidate-asset"
