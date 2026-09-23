@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 from pathlib import Path, PurePosixPath
 
@@ -21,6 +22,7 @@ from run_model_cli_harness import PublicClient  # noqa: E402
 
 RECIPE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 SCORER_SHA256 = hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest()
+EXPORT_SECONDS = 30
 
 TASK = "Change the service port to 8081 in settings.json and update the README example. Preserve repository policy and existing notes."
 INITIAL = {
@@ -107,6 +109,10 @@ class Workspace:
         if hasattr(self.consumer, "archive_command"):
             command = self.consumer.archive_command()
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        # Bound reading the header/body too, not just wait() after stream EOF.
+        timer = threading.Timer(EXPORT_SECONDS, proc.kill)
+        timer.daemon = True
+        timer.start()
         files = {}
         size = 0
         try:
@@ -127,6 +133,7 @@ class Workspace:
             if proc.wait(timeout=30):
                 raise ValueError("Consumer export failed")
         finally:
+            timer.cancel()
             if proc.poll() is None:
                 proc.kill()
             proc.wait()

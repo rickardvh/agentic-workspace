@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from tests.test_native_public_cli import native_cli as native_cli
@@ -54,3 +55,21 @@ def test_continuation_rejects_unsafe_transfer_before_writing(name):
 
     with pytest.raises(ValueError, match="Unsafe continuation"):
         Workspace(Consumer()).restore({name: b"untrusted"})
+
+
+def test_stalled_export_is_bounded_before_archive_header(monkeypatch):
+    import tarfile
+
+    import consumer_journeys
+
+    class Consumer:
+        name = "fixture"
+
+        def archive_command(self):
+            return [sys.executable, "-c", "import time; time.sleep(60)"]
+
+    monkeypatch.setattr(consumer_journeys, "EXPORT_SECONDS", 0.1)
+    started = time.monotonic()
+    with pytest.raises((ValueError, tarfile.ReadError)):
+        Workspace(Consumer()).files()
+    assert time.monotonic() - started < 5
