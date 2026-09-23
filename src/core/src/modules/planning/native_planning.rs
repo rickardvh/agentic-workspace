@@ -170,7 +170,13 @@ fn error(path: &str, reason: impl std::fmt::Display) -> CoreError {
         "Planning source {path}: {reason}; reconcile the current Planning owner"
     ))
 }
+#[cfg(test)]
+thread_local! {
+    pub(crate) static TEST_READS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
 pub(crate) fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, CoreError> {
+    #[cfg(test)]
+    TEST_READS.with(|reads| reads.borrow_mut().push(path.to_owned()));
     decision_source::relative(path)?;
     let mut current = PathBuf::new();
     for part in path.split('/') {
