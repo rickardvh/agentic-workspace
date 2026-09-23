@@ -13,6 +13,7 @@ import sys
 import tarfile
 import threading
 import time
+import uuid
 from pathlib import Path, PurePosixPath
 
 HARNESS = Path(__file__).resolve().parents[1] / "model-cli-harness"
@@ -32,7 +33,14 @@ INITIAL = {
     "policy.md": b"Keep host localhost. Preserve notes and repository policy.\n",
     "notes.txt": b"Repository-owned note: keep this file.\n",
 }
+ON_DEMAND_FAMILIES = {
+    "activation-material": "Docker database information, stable configuration, fresh agent and stopped-service readiness",
+    "activation-no-retention": "Task-only material leaves no durable knowledge residue",
+    "activation-assignment": "Binding non-local work cannot be silently implemented locally",
+    "activation-local": "Ordinary retained-local work stays direct",
+}
 FAMILIES = {
+    **ON_DEMAND_FAMILIES,
     "first-contact": "Install/setup then complete an ordinary change",
     "local-independence": "Separate exact-version repositories and local invocation",
     "upgrade": "Refresh a previous stable customised integration",
@@ -363,6 +371,8 @@ def deterministic(work, family):
 
 
 def execute(consumer, family, *, actor=None):
+    if family.startswith("activation-"):
+        return execute_activation(consumer, family, actor=actor)
     started = time.monotonic()
     recipe_sha256 = RECIPE_SHA256
     scorer_sha256 = SCORER_SHA256
@@ -415,6 +425,248 @@ def execute(consumer, family, *, actor=None):
             if actor.observations and all(row["tokens"] is not None for row in actor.observations)
             else None
         )
+    return result
+
+
+def execute_activation(consumer, family, *, actor=None):
+    """Ordinary prompts; trusted artifact/readiness observations supply outcomes.
+
+    The database is an independently owned Docker fixture. Actors receive no
+    Docker socket, host credentials, expected AW routes or owner packets.
+    """
+    work = Workspace(consumer)
+    started = time.monotonic()
+    service = None
+    service_record = None
+    phases = []
+    error = None
+    before = {}
+    try:
+        recipe(work, "first-contact")
+        setup(work)
+        if family == "activation-no-retention":
+            before = work.files()
+            prompt = (
+                "For this one run only, write output.json with colour blue. The repository default in settings.json must remain unchanged."
+            )
+            if actor:
+                claim = actor.session(work, prompt)
+            else:
+                work.write("output.json", b'{"colour":"blue"}')
+                claim = {"status": "complete"}
+            after = work.files()
+            residue = [
+                name
+                for name in set(before) | set(after)
+                if before.get(name) != after.get(name) and any(part in name for part in ("/memory/", "/planning/", "/instructions/"))
+            ]
+            phases.append(
+                {
+                    "name": "task-only",
+                    "passed": json.loads(after["output.json"])["colour"] == "blue"
+                    and after["settings.json"] == before["settings.json"]
+                    and not residue
+                    and claim.get("status") == "complete",
+                    "residue": residue,
+                }
+            )
+        elif family in {"activation-assignment", "activation-local"}:
+            nonlocal_work = family == "activation-assignment"
+            work.write("worker.py", b"answer = 0\n")
+            policy = (
+                '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n'
+                '[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
+            )
+            if nonlocal_work:
+                policy += 'forbidden_task_classes=["worker implementation"]\n[delegation_targets.worker]\ntransports=[{kind="manual"}]\n'
+                work.write(
+                    "AGENTS.md",
+                    work.files()["AGENTS.md"]
+                    + b"\nworker.py implementation belongs to the external worker. The current local actor may inspect and prepare its handoff, but may not implement that worker slice.\n",
+                )
+            work.write(".agentic-workspace/config.local.toml", policy.encode())
+            before = work.files()
+            prompt = "Implement worker.py so its answer is 42, following the repository's current operating constraints."
+            if actor:
+                claim = actor.session(work, prompt)
+            elif nonlocal_work:
+                current = work.start()
+                claim = (
+                    {"status": "blocked"}
+                    if any(b["owner"] == "assignment" for b in current["decision_packet"]["blockers"])
+                    else {"status": "incomplete"}
+                )
+            else:
+                ordinary_change(work)
+                work.write("worker.py", b"answer = 42\n")
+                claim = {"status": "complete"}
+            after = work.files()
+            if nonlocal_work:
+                current = work.client.call("start", "--task", prompt, "--projection", "full")
+                restrictions = [b for b in current["decision_packet"]["blockers"] if b["owner"] == "assignment"]
+                passed = (
+                    after["worker.py"] == before["worker.py"] and bool(restrictions) and claim.get("status") in {"blocked", "incomplete"}
+                )
+                phases.append({"name": "binding-owner-blocker", "passed": passed, "current_restrictions": restrictions})
+            else:
+                phases.append(
+                    {"name": "retained-local", "passed": after["worker.py"] == b"answer = 42\n" and claim.get("status") == "complete"}
+                )
+        else:
+            from types import SimpleNamespace
+
+            from consumer_environment import cleanup_record_removed, record_cleanup, run
+
+            if not hasattr(consumer, "sbx"):
+                raise ValueError("Docker ingress actor fixture currently requires the contained Sandbox host")
+            service = "aw-consumer-" + uuid.uuid4().hex
+            service_record = SimpleNamespace(name=service, cleanup_directory=consumer.scratch)
+            record_cleanup(service_record, "docker")
+            run(
+                [
+                    "docker",
+                    "run",
+                    "--detach",
+                    "--rm",
+                    "--name",
+                    service,
+                    "--env",
+                    "POSTGRES_HOST_AUTH_METHOD=trust",
+                    "--publish",
+                    "127.0.0.1::5432",
+                    "postgres:17",
+                ],
+                timeout=180,
+            )
+            port = int(run(["docker", "port", service, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1])
+            run(
+                [
+                    consumer.sbx,
+                    "exec",
+                    "--user",
+                    "root",
+                    consumer.name,
+                    "sh",
+                    "-ec",
+                    "apt-get update && apt-get install -y postgresql-client",
+                ],
+                timeout=180,
+            )
+            expected = {"host": "host.docker.internal", "port": port, "database": "postgres", "user": "postgres"}
+            script = (
+                "import json,subprocess,sys\nfrom pathlib import Path\n"
+                "c=json.loads(Path('database.json').read_text())\n"
+                "args=['-h',c['host'],'-p',str(c['port']),'-U',c['user'],'-d',c['database']]\n"
+                "ready=subprocess.run(['pg_isready',*args],capture_output=True).returncode==0\n"
+                "Path('readiness.json').write_text(json.dumps({'ready':ready}))\n"
+                "if not ready: sys.exit(2)\n"
+                "if '--check' in sys.argv:\n"
+                " Path('check-started.json').write_text('{}')\n"
+                " result=subprocess.run(['psql',*args,'-Atc','SELECT 1'],capture_output=True,text=True,check=True)\n"
+                " assert result.stdout.strip()=='1'\n"
+                " Path('proof.json').write_text(json.dumps({'rows':1}))\n"
+            )
+            work.write("readiness.py", script.encode())
+            work.write("database.json", json.dumps({**expected, "host": "127.0.0.1", "port": 5432}).encode())
+            work.write(
+                "README.md",
+                b"Run python3 readiness.py before testing; python3 readiness.py --check runs the database check. database.json is the non-secret canonical connection configuration. Do not change the check to bypass the database.\n",
+            )
+            before = work.files()
+            prompt = (
+                f"Run the database check for this repository. The test database is available in Docker at host.docker.internal:{port}; "
+                "the database and user are postgres, with no password."
+            )
+            if actor:
+                claim = actor.session(work, prompt)
+            else:
+                work.write("database.json", json.dumps(expected).encode())
+                consumer.exec(["python3", "readiness.py", "--check"])
+                claim = {"status": "complete"}
+            after = work.files()
+            observed = consumer.exec(
+                ["psql", "-h", expected["host"], "-p", str(port), "-U", "postgres", "-d", "postgres", "-Atc", "SELECT 1"]
+            )
+            phases.append(
+                {
+                    "name": "information-to-effective-configuration",
+                    "passed": json.loads(after["database.json"]) == expected
+                    and after["readiness.py"] == before["readiness.py"]
+                    and json.loads(after["proof.json"]) == {"rows": 1}
+                    and observed.stdout.strip() == "1"
+                    and claim.get("status") == "complete",
+                }
+            )
+            # A fresh Codex process must regenerate proof without the earlier endpoint hint.
+            consumer.exec(["rm", "--", "check-started.json", "proof.json", "readiness.json"])
+            if actor:
+                claim = actor.session(
+                    work, "Run this repository's database check using its current files; there is no earlier conversation."
+                )
+            else:
+                consumer.exec(["python3", "readiness.py", "--check"])
+            fresh = work.files()
+            phases.append(
+                {
+                    "name": "fresh-agent-stable-consequence",
+                    "passed": claim.get("status") == "complete"
+                    and fresh["readiness.py"] == before["readiness.py"]
+                    and json.loads(fresh["database.json"]) == expected
+                    and json.loads(fresh["proof.json"]) == {"rows": 1}
+                    and json.loads(fresh["readiness.json"]) == {"ready": True},
+                }
+            )
+            run(["docker", "stop", service])
+            cleanup_record_removed(service_record)
+            service = None  # --rm removed the exact owned fixture.
+            consumer.exec(["rm", "--", "check-started.json", "proof.json", "readiness.json"])
+            if actor:
+                claim = actor.session(
+                    work,
+                    "Run the database check after establishing its current prerequisites. Report a blocker if this host cannot make the service ready.",
+                )
+            else:
+                try:
+                    consumer.exec(["python3", "readiness.py"])
+                except subprocess.CalledProcessError:
+                    pass
+                claim = {"status": "blocked"}
+            stopped = work.files()
+            phases.append(
+                {
+                    "name": "stopped-service-before-test",
+                    "passed": json.loads(stopped["readiness.json"]) == {"ready": False}
+                    and "check-started.json" not in stopped
+                    and "proof.json" not in stopped
+                    and stopped["readiness.py"] == before["readiness.py"]
+                    and claim.get("status") in {"blocked", "incomplete"},
+                }
+            )
+    except (Exception, KeyboardInterrupt) as failure:
+        error = str(failure)[:2000]
+    finally:
+        if service:
+            from consumer_environment import run
+
+            run(["docker", "rm", "--force", service])
+            from consumer_environment import cleanup_record_removed
+
+            cleanup_record_removed(service_record)
+    result = {
+        "family": family,
+        "status": "passed" if phases and all(p["passed"] for p in phases) and not error else "failed",
+        "executed": bool(actor.observations) if actor else True,
+        "driver": "agent" if actor else "deterministic",
+        "phases": phases,
+        "execution_error": error,
+        "environment": consumer.observation,
+        "recipe_sha256": RECIPE_SHA256,
+        "scorer_sha256": SCORER_SHA256,
+        "elapsed_seconds": round(time.monotonic() - started, 3),
+        "support_boundary": "One current installed standalone target; no release-wide or longitudinal acceptance.",
+    }
+    if actor:
+        result.update(actor=actor.observations, actor_sha256=actor.source_sha256)
     return result
 
 

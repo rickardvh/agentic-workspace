@@ -36,6 +36,17 @@
       "description": "Interpret local hygiene",
       "next": "references/hygiene.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "need",
+      "binding"
+    ],
+    "applicability": "Current work actually needs scratch, isolation, resource recovery or terminal cleanup.",
+    "outcome": "The smallest authorised resource is acquired or cleaned up through its current owner.",
+    "binding_owners": [
+      "workspace-resources"
+    ]
+  }
 }
 ```

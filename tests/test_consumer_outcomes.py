@@ -119,3 +119,33 @@ def test_offline_cli_cannot_claim_executed_consumer(case, tmp_path):
         == 1
     )
     assert json.loads((tmp_path / "result.json").read_text())["executed"] is False
+
+
+@pytest.mark.parametrize("residue", [None, "new", "changed"])
+def test_activation_task_only_checks_durable_residue(tmp_path, monkeypatch, residue):
+    from types import SimpleNamespace
+
+    import consumer_journeys as journeys
+
+    consumer = SimpleNamespace(repo=tmp_path, observation={})
+    monkeypatch.setattr(journeys, "setup", lambda work: None)
+
+    def recipe(work, family):
+        work.write("settings.json", b'{"port":8080}')
+        work.write(".agentic-workspace/memory/existing.md", b"preserved")
+
+    monkeypatch.setattr(journeys, "recipe", recipe)
+
+    class Actor:
+        observations = ["bounded fixture"]
+        source_sha256 = "fixture"
+
+        def session(self, work, prompt):
+            work.write("output.json", b'{"colour":"blue"}')
+            if residue:
+                name = "existing" if residue == "changed" else "new"
+                work.write(f".agentic-workspace/memory/{name}.md", b"remember blue")
+            return {"status": "complete"}
+
+    result = journeys.execute_activation(consumer, "activation-no-retention", actor=Actor())
+    assert result["status"] == ("failed" if residue else "passed")

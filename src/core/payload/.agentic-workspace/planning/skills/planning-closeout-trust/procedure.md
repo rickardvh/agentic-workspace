@@ -16,6 +16,13 @@
       "description": "Reconcile proof, residue and continuation",
       "next": "references/finish.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "need"
+    ],
+    "applicability": "A Planning closeout claim has unresolved evidence, accepted progress or external review custody.",
+    "outcome": "Truthful current Planning status with proof and independent acceptance kept separate."
+  }
 }
 ```

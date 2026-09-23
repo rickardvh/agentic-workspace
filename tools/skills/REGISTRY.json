@@ -73,13 +73,7 @@
           "priority": 10,
           "description": "Apply the repository's independent PR-review eligibility procedure."
         }
-      ],
-      "activation_hints": {
-        "verbs": ["audit independently", "externally re-review"],
-        "nouns": ["independent external reviewer", "external review authority", "independent merge-readiness audit"],
-        "phrases": ["act as independent external reviewer", "independent external review of PR", "review a patch you did not implement"],
-        "when": ["a distinct external review agent is evaluating another agent's implementation", "the current agent did not implement modify or push the reviewed patch"]
-      }
+      ]
     },
     {
       "id": "github-issue-shaping",

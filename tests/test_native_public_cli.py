@@ -1200,3 +1200,34 @@ def test_material_activates_repository_procedure_through_public_start(tmp_path, 
     request = first["activation"]["requests"][0]
     request["arguments"]["judgments"][0].update(status="no-match", reason="This sample is already validated elsewhere.")
     assert "activation" not in consume("native", shared_core_binary, native_cli, {**context, "request": request})
+
+
+def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_core_binary, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
+    subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes", "--format", "json"], check=True, capture_output=True)
+    context = {"target": str(tmp_path), "task": "Validate current behaviour"}
+    material = [
+        {
+            "id": "environment",
+            "kind": "observation",
+            "summary": "The test database is available through the repository container service.",
+            "source": {"producer": "user", "reference": "current clarification", "coverage": "bounded"},
+        },
+        {
+            "id": "prerequisite",
+            "kind": "need",
+            "summary": "Establish current test readiness before execution.",
+            "source": {"producer": "external-domain", "reference": "current requirement", "coverage": "partial"},
+        },
+    ]
+    current = consume("native", shared_core_binary, native_cli, {**context, "material": material})
+    candidates = current["activation"]["candidates"]
+    assert {"workspace-instruction-correction", "workspace-proof-selection"} <= {c["entry"]["skill_id"] for c in candidates}
+    assert all(isinstance(c["entry"]["route"], str) for c in candidates)
+    native_blockers = current["decision_packet"]["blockers"]
+    request = current["activation"]["requests"][0]
+    for judgment in request["arguments"]["judgments"]:
+        judgment.update(status="no-retention", reason="Task-only information; no future value or owner waiver.")
+    quiet = consume("native", shared_core_binary, native_cli, {**context, "material": material, "request": request})
+    assert quiet["decision_packet"]["blockers"] == native_blockers
+    assert all(c["status"] == "binding-consequence" for c in quiet.get("activation", {}).get("candidates", []))

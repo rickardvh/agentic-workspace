@@ -21,6 +21,13 @@
       "description": "Inspect bounded declaration hygiene",
       "next": "references/declarations.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "need"
+    ],
+    "applicability": "Known Memory residue is stale, duplicated or no longer useful for current work.",
+    "outcome": "Current owner disposition preserves unique value and removes misleading applicability."
+  }
 }
 ```

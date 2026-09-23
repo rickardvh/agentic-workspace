@@ -42,45 +42,6 @@
       "scope": "bundled",
       "stability": "package-managed",
       "summary": "Compare original/larger intent, proof and residue before native owner-admitted closeout.",
-      "activation_hints": {
-        "verbs": [
-          "close",
-          "archive",
-          "distill",
-          "finish",
-          "validate",
-          "resolve",
-          "satisfy"
-        ],
-        "nouns": [
-          "closeout",
-          "closeout trust",
-          "residue",
-          "proof",
-          "intent satisfaction",
-          "intent resolution",
-          "larger intent",
-          "archive-plan"
-        ],
-        "phrases": [
-          "closeout trust",
-          "intent resolution",
-          "intent satisfaction",
-          "larger intent satisfaction",
-          "separate proof from intent",
-          "residue distillation",
-          "archive plan",
-          "after implementation",
-          "proof and intent satisfaction"
-        ],
-        "when": [
-          "planned work is done",
-          "before closing an issue",
-          "completed work may leave reusable knowledge",
-          "validation success may not satisfy the larger request",
-          "local task completion and original intent need separate answers"
-        ]
-      },
       "procedure_resource": "procedure.md",
       "semantic_routes": [
         "planning/work/closeout"

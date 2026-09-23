@@ -1,6 +1,6 @@
 ## Corrections and retention
 
-Treat an explicit user or reviewer correction intended to change future behavior (for example, "work like this from now on") as reconciliation input. Apply it to the current work and route it through the current correction/instruction owner when available, using that owner's current scope and retention semantics. Do not broaden a task-local correction into repository or global policy. Keep one-off requests non-retained; if future intent or scope is unclear, clarify only what is needed before retaining it.
+Material corrections, acquired conclusions, environment facts and source conflicts can require reconciliation even without a request to remember them. Carry that material through ordinary current resolution and apply it to the task. Follow its useful activation occasion or exact current owner, preserving scope and retention semantics. Do not broaden a task-local fact into policy. One-off material can be explicitly non-retained; clarify only unresolved future intent or scope that affects retention.
 
 For correction destinations and bounded owner changes, use the [correction procedure](../../workspace-instruction-correction/SKILL.md). It also supports current material owner friction and repo-directed opportunities when current policy and task scope justify action; absent such a signal, no reflection phase is required.
 

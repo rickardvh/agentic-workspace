@@ -21,6 +21,16 @@
       "description": "Explicit candidate consequences",
       "next": "references/candidate.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "binding"
+    ],
+    "applicability": "Current future-value material has an unresolved receiving-owner or retention disposition.",
+    "outcome": "Current strongest-owner consequence evidence, authorised advisory Memory, or justified no-retention.",
+    "binding_owners": [
+      "memory"
+    ]
+  }
 }
 ```

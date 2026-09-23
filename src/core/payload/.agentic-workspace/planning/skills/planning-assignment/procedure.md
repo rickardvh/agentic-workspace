@@ -31,6 +31,17 @@
       "description": "Preserve uncertain transport and continuity",
       "next": "references/recovery.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "binding"
+    ],
+    "applicability": "A current binding Assignment or dispatch/handoff consequence needs exact continuation.",
+    "outcome": "An admitted local continuation, exact dispatch/handoff, or truthful current owner blocker.",
+    "binding_owners": [
+      "assignment",
+      "delegation"
+    ]
+  }
 }
 ```

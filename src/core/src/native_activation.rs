@@ -319,7 +319,8 @@ pub(crate) fn view(
                 }
                 candidates.push(json!({"id":id,"revision":revision,"status":status,"source":reference,
                     "occasion":signal,"applicability":occasion.applicability,"outcome":occasion.outcome,
-                    "entry":{"source_ref":source,"skill_id":skill["id"],"resource":reference,"route":skill["semantic_routes"][0]},
+                    "entry":{"source_ref":source,"skill_id":skill["id"],"resource":reference,
+                        "route":skill["semantic_routes"][0].as_str().map(|s|json!(s)).unwrap_or_else(||skill["semantic_routes"][0]["id"].clone())},
                     "outcome_status":"unsettled","judgment":judgment,
                     "authority":"procedure discovery only; selection or reading does not discharge owner consequences"}));
                 if candidates.len() > 128 {

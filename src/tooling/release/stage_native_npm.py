@@ -106,7 +106,14 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--profile", choices=["dev", "release"], default="release")
     parser.add_argument("--native-archive-dir", type=Path)
+    parser.add_argument(
+        "--consumer-candidate",
+        action="store_true",
+        help="Freeze this one standalone target for bounded consumer proof, not release publication",
+    )
     args = parser.parse_args()
+    if args.consumer_candidate and not args.native_archive_dir:
+        parser.error("--consumer-candidate requires --native-archive-dir")
     output = stage(args.output.resolve(), profile=args.profile)
     if args.native_archive_dir:
         native = output / "src/native/bin"
@@ -119,6 +126,29 @@ def main() -> None:
             for path in sorted(native.iterdir()):
                 bundle.write(path, path.name)
             bundle.write(ROOT / "LICENSE", "LICENSE")
+        if args.consumer_candidate:
+            import platform_release
+
+            if manifest["source_dirty"] or not manifest["source_head"]:
+                raise ValueError("Consumer candidate requires an exact clean source commit")
+            inventory = args.native_archive_dir / platform_release.MANIFEST
+            with inventory.open("x", encoding="utf-8") as stream:
+                json.dump(
+                    {
+                        "kind": "agentic-workspace/target-consumer-candidate/v1",
+                        "version": manifest["package_version"],
+                        "source_commit": manifest["source_head"],
+                        "platforms": [
+                            {
+                                **platform_release.current_platform(),
+                                "native_archive": {"asset": archive.name, "sha256": platform_release.digest(archive)},
+                            }
+                        ],
+                    },
+                    stream,
+                    indent=2,
+                )
+                stream.write("\n")
     print(output)
 
 

@@ -9,29 +9,10 @@
       "scope": "bundled",
       "stability": "package-managed",
       "summary": "capture durable repo knowledge into checked-in memory",
-      "activation_hints": {
-        "verbs": [
-          "capture",
-          "record",
-          "store"
-        ],
-        "nouns": [
-          "durable knowledge",
-          "trap",
-          "invariant",
-          "runbook",
-          "decision"
-        ],
-        "phrases": [
-          "capture this in memory",
-          "record durable knowledge"
-        ],
-        "when": [
-          "knowledge should survive the session",
-          "anti-rediscovery capture"
-        ]
-      },
-      "procedure_resource": "procedure.md"
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "memory/capture"
+      ]
     },
     {
       "id": "memory-consultation-and-residue",
@@ -71,28 +52,6 @@
       "scope": "bundled",
       "stability": "package-managed",
       "summary": "keep checked-in memory compact, current, and well-routed",
-      "activation_hints": {
-        "verbs": [
-          "clean",
-          "tighten",
-          "prune"
-        ],
-        "nouns": [
-          "memory note",
-          "note shape",
-          "overlap",
-          "noise"
-        ],
-        "phrases": [
-          "clean up memory",
-          "tighten memory note shape",
-          "prune memory noise"
-        ],
-        "when": [
-          "memory hygiene",
-          "note-shape cleanup"
-        ]
-      },
       "semantic_routes": [
         {
           "id": "memory/hygiene",

@@ -3,8 +3,14 @@
   "owner": "agentic-workspace",
   "source_kind": "installed-workspace-skills",
   "registry_sources": [
-    {"path": ".agentic-workspace/memory/skills/REGISTRY.json", "optional": true},
-    {"path": ".agentic-workspace/planning/skills/REGISTRY.json", "optional": true}
+    {
+      "path": ".agentic-workspace/memory/skills/REGISTRY.json",
+      "optional": true
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/REGISTRY.json",
+      "optional": true
+    }
   ],
   "skills": [
     {
@@ -64,49 +70,6 @@
           "description": "Clarify ambiguous human intent or work shape before committing to a solution."
         }
       ],
-      "activation_hints": {
-        "verbs": [
-          "ask",
-          "clarify",
-          "discover",
-          "resolve",
-          "classify",
-          "shape",
-          "triage"
-        ],
-        "nouns": [
-          "intent discovery",
-          "human intent",
-          "vague prompt",
-          "vague outcome",
-          "candidate interpretations",
-          "work shape",
-          "direct task",
-          "bounded task",
-          "lane",
-          "epic",
-          "non-goals",
-          "first slice",
-          "stakes if wrong",
-          "clarification"
-        ],
-        "phrases": [
-          "intent-discovery dialogue",
-          "clarify human intent",
-          "classify work shape",
-          "shape this work",
-          "candidate interpretations",
-          "ask before implementation",
-          "what outcome is desired"
-        ],
-        "when": [
-          "prompt is vague or under-specified",
-          "stakes if wrong are high and inferred intent confidence is low",
-          "task size is unclear",
-          "the user describes an outcome rather than a solution",
-          "why, desired outcome, non-goals, or acceptable first slice are missing"
-        ]
-      },
       "procedure_resource": "procedure.md"
     },
     {
@@ -124,36 +87,6 @@
           "description": "Select and interpret evidence for the claim actually being made."
         }
       ],
-      "activation_hints": {
-        "verbs": [
-          "prove",
-          "validate",
-          "verify",
-          "select"
-        ],
-        "nouns": [
-          "proof selection",
-          "completion claim",
-          "validation evidence",
-          "negative proof",
-          "skipped tests",
-          "proof gap",
-          "claim level"
-        ],
-        "phrases": [
-          "proof selection",
-          "completion claim allowed",
-          "negative proof",
-          "proof gap",
-          "claim level",
-          "proof before completion"
-        ],
-        "when": [
-          "proof must match task, slice, lane, or epic scope",
-          "validation passed but completion may not be justified",
-          "skips, retries, warnings, crashes, or negative evidence need interpretation"
-        ]
-      },
       "procedure_resource": "procedure.md"
     },
     {
@@ -171,38 +104,6 @@
           "description": "Apply bounded setup and jumpstart procedure after AW is installed or adopted in a lived-in repository."
         }
       ],
-      "activation_hints": {
-        "verbs": [
-          "setup",
-          "jumpstart",
-          "populate",
-          "seed",
-          "adopt",
-          "install"
-        ],
-        "nouns": [
-          "lived-in repo",
-          "mature repo",
-          "post-bootstrap",
-          "setup findings",
-          "seed surfaces",
-          "durable surfaces",
-          "new repo adoption"
-        ],
-        "phrases": [
-          "setup jumpstart",
-          "mature repo jumpstart",
-          "post-bootstrap setup",
-          "seed surfaces",
-          "newly installed workspace",
-          "new repo adoption"
-        ],
-        "when": [
-          "Agentic Workspace was newly installed or adopted in a lived-in repo",
-          "workspace surfaces need to be populated after init or install",
-          "mature repo discovery needs bounded pre-seed routing"
-        ]
-      },
       "procedure_resource": "procedure.md"
     },
     {
@@ -220,26 +121,6 @@
           "description": "Manage temporary task material or necessary checkout isolation and safely reconcile its lifetime."
         }
       ],
-      "activation_hints": {
-        "verbs": [
-          "isolate",
-          "clean",
-          "recover"
-        ],
-        "nouns": [
-          "task scratch",
-          "worktree",
-          "temporary resources"
-        ],
-        "phrases": [
-          "necessary checkout isolation",
-          "task resource cleanup"
-        ],
-        "when": [
-          "temporary task material or isolated checkout has a real need",
-          "terminal or interrupted work owns disposable resources"
-        ]
-      },
       "procedure_resource": "procedure.md"
     },
     {
@@ -257,23 +138,6 @@
           "description": "Reconcile trusted corrections and material source inconsistencies through the responsible owner; publish scoped instructions only when that is the appropriate destination."
         }
       ],
-      "activation_hints": {
-        "verbs": [
-          "correct",
-          "retain",
-          "instruct"
-        ],
-        "nouns": [
-          "future behavior",
-          "repository instructions"
-        ],
-        "phrases": [
-          "work like this from now on"
-        ],
-        "when": [
-          "a trusted correction should change later repository behavior"
-        ]
-      },
       "procedure_resource": "procedure.md"
     }
   ]
