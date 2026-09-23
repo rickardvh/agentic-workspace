@@ -16,6 +16,7 @@ public command and option declarations come from `source_decision_contract.json`
 | `invoke` | Execute an exact action returned by its current owner. |
 | `worker` | Project sealed Assignment input or assemble unproven return re-entry. |
 | `resources` | Inspect hygiene and propose or execute an admitted resource operation. |
+| `activation-index` | Check or derive a repository registry from procedure sources; `--input` supplies `registry` and `mode` (`check` or `write`). |
 
 `start --target <repository> --task "<task>" --format json` reads current owner
 sources. Repeated `--changed` arguments declare changed paths. Supply a returned
