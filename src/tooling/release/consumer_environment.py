@@ -8,7 +8,6 @@ or an actor sandbox. Target and artifact authority stays in platform_release.
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import json
 import os
