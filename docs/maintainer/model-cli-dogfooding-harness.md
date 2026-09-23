@@ -51,10 +51,13 @@ The optional token threshold stops on observed telemetry; it is not a hard
 provider-side quota. Missing usage and monetary cost remain unknown. Subscription
 OAuth does not establish support for metered API execution.
 
-Currently only first-contact and continuation have a live actor path. Other
-families fail before model execution until their lifecycle-stage observations
-are implemented; a final task diff alone cannot prove removal or stale-action
-handling. Native Windows/macOS actor execution and minimal-profile absence remain
+All seven families have a live path. Removal is checked before re-adoption;
+maintenance must preserve disabled policy and restore the local boundary;
+interruption checks the public stale-source rejection before fresh recovery.
+Continuation checks that work really remains before transferring repository bytes
+to a new sandbox. Upgrade and local-independence use an exact earlier public
+subject as their declared starting recipe. A final task diff alone cannot prove
+these transitions. Native actor execution and minimal-profile absence remain
 unavailable in this backend. A Linux guest on Windows supplies Linux evidence.
 
 Matched comparisons require equal task, underlying information, tools, permissions

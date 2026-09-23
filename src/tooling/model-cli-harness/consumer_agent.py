@@ -83,6 +83,7 @@ class SandboxConsumer(DockerConsumer):
             )
             self.exec(["sh", "-c", 'printf %s "$1" > "$HOME/.codex/config.toml"', "sh", config])
             self.exec(["git", "init", "-q"])
+            self.prepare_tools()
             self.observe_tools()
             return self
         except BaseException:
@@ -99,12 +100,36 @@ class SandboxConsumer(DockerConsumer):
         # A different uid cannot read the provider template's process environments
         # or home. Carry only model transport and certificate configuration.
         clean = (
-            'exec env -i PATH="$PATH" HOME=/home/consumer CODEX_HOME=/home/consumer/.codex '
+            'exec env -i PATH="/home/consumer/.cargo/bin:$PATH" HOME=/home/consumer CODEX_HOME=/home/consumer/.codex '
             'TMPDIR=/home/consumer/tmp HTTPS_PROXY="$HTTPS_PROXY" HTTP_PROXY="$HTTP_PROXY" '
             'SSL_CERT_FILE="$SSL_CERT_FILE" NODE_EXTRA_CA_CERTS="$NODE_EXTRA_CA_CERTS" '
             'REQUESTS_CA_BUNDLE="$REQUESTS_CA_BUNDLE" NODE_USE_ENV_PROXY=1 "$@"'
         )
         return [self.sbx, "exec", "--user", "10002:10002", "--workdir", "/home/consumer/repo", self.name, "sh", "-c", clean, "sh", *argv]
+
+    def prepare_tools(self):
+        """Declared profile dependencies, installed before either driver starts."""
+        commands = {
+            "node": "npm install --global --prefix /usr/local pnpm@10.30.3",
+            "python": "apt-get update && apt-get install -y python3-venv && python3 -m venv /opt/consumer-uv && /opt/consumer-uv/bin/pip install uv==0.8.22 && ln -s /opt/consumer-uv/bin/uv /usr/local/bin/uv",
+            "cargo": "apt-get update && apt-get install -y build-essential pkg-config libssl-dev curl",
+        }
+        if self.profile in commands:
+            run([self.sbx, "exec", "--user", "root", self.name, "sh", "-ec", commands[self.profile]], timeout=300)
+        if self.profile == "cargo":
+            import tomllib
+
+            version = tomllib.loads((Path(__file__).resolve().parents[3] / "rust-toolchain.toml").read_text())["toolchain"]["channel"]
+            self.exec(
+                [
+                    "sh",
+                    "-ec",
+                    'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs -o ../tmp/rustup.sh; sh ../tmp/rustup.sh -y --profile minimal --default-toolchain "$1"',
+                    "sh",
+                    version,
+                ],
+                timeout=300,
+            )
 
     def copy_in(self, source, destination):
         incoming = "/tmp/input-" + uuid.uuid4().hex
@@ -335,8 +360,20 @@ class CodexActor:
         return result["claim"]
 
     def __call__(self, work, family, task):
-        if family not in {"first-contact", "continuation"}:
-            raise ValueError("This live family lacks independent lifecycle-stage checks; no model run or deterministic substitution")
+        from consumer_journeys import (
+            INDEPENDENT_NOTES,
+            adoption_action,
+            check_assessment,
+            check_continuation_checkpoint,
+            check_disabled_maintenance,
+            check_preserved,
+            check_removed,
+            check_stale_rejection,
+            validate_pointer_files,
+        )
+
+        if family not in {"first-contact", "continuation", "readoption", "maintenance", "interruption"}:
+            raise ValueError("This family requires the paired-subject recipe")
         goals = {
             "first-contact": "Set up this repository using its installed Agentic Workspace, then ",
             "continuation": "Read the retained repository continuation and finish the task. Set up the installed Agentic Workspace as needed, then ",
@@ -344,9 +381,65 @@ class CodexActor:
         # Package invocation is ordinary install guidance, never hidden setup
         # procedure, expected commands, owner requests or a pre-solved task.
         invocation = " ".join(work.consumer.command)
-        prompt = goals[family] + task + "\nThe installed package is available through: " + invocation
-        if family != "continuation":
+        prompt = goals.get(family, "") + task + "\nThe installed package is available through: " + invocation
+        if family == "first-contact":
             return self.session(work, prompt)
+        if family in {"readoption", "maintenance", "interruption"}:
+            self.session(
+                work,
+                "Set up this repository using its installed Agentic Workspace. Preserve policy and notes. "
+                + (task if family == "maintenance" else "Leave the port change unfinished for now.")
+                + "\nInstalled package: "
+                + invocation,
+            )
+            validate_pointer_files(work.files())
+            if family == "readoption":
+                for name, data in INDEPENDENT_NOTES.items():
+                    work.write(name, data)
+                before = work.files()
+                self.session(
+                    work,
+                    "Remove the Agentic Workspace package integration using its supported public procedure. Preserve independently owned local, Memory and Planning notes, policy.md and notes.txt. Do not re-adopt it yet.\nInstalled package: "
+                    + invocation,
+                )
+                check_removed(before, work.files())
+                claim = self.session(
+                    work,
+                    "Re-adopt the installed Agentic Workspace, preserving independent state, then "
+                    + task
+                    + "\nInstalled package: "
+                    + invocation,
+                )
+                check_preserved(before, work.files(), INDEPENDENT_NOTES)
+                return claim
+            if family == "maintenance":
+                check_assessment(work)
+                work.write(".agentic-workspace/config.toml", b"[workspace]\nenabled = false\n")
+                work.remove(".agentic-workspace/local/.gitignore")
+                before = work.files()
+                claim = self.session(
+                    work,
+                    "The workspace is deliberately disabled, and its local ignore boundary is missing. Perform supported setup maintenance to repair that boundary while preserving disabled policy and the completed port change. Assess setup concerns through the public package without claiming unobserved capabilities.\nInstalled package: "
+                    + invocation,
+                )
+                check_disabled_maintenance(before, work.files())
+                return claim
+            action = adoption_action(work, "remove")
+            original = work.files()["AGENTS.md"]
+            work.write("AGENTS.md", original + b"\nConcurrent repository-owned instruction.\n")
+            # Exercise the stale source guard through the same public negative as
+            # the deterministic driver. The agent gets only the resulting repo.
+            check_stale_rejection(work, action)
+            claim = self.session(
+                work,
+                "An interrupted integration removal was rejected because repository instructions changed concurrently. Recover from the current repository state and "
+                + task
+                + "\nInstalled package: "
+                + invocation,
+            )
+            if b"Concurrent repository-owned instruction." not in work.files()["AGENTS.md"]:
+                raise ValueError("Recovery discarded concurrent repository instructions")
+            return claim
         self.session(
             work,
             "Begin this two-step task: set up the installed Agentic Workspace and change settings.json to port 8081. "
@@ -354,6 +447,7 @@ class CodexActor:
             "The installed package is available through: " + invocation,
         )
         retained = work.files()
+        check_continuation_checkpoint(retained)
         source = work.consumer
         replacement = SandboxConsumer(source.subject, source.profile, source.target, source.template, source.scratch, source.sbx)
         from consumer_journeys import Workspace

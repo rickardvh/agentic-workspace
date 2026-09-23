@@ -119,12 +119,10 @@ def run_case(args):
                 return NativeConsumer(selected, args.profile, args.target, args.scratch)
 
             if args.family in {"local-independence", "upgrade"}:
-                if actor:
-                    raise ValueError("Paired-subject live execution is not yet supported; no deterministic substitution")
                 if not args.previous_public_version:
                     raise ValueError("Paired family requires --previous-public-version")
                 previous = Subject.public(args.previous_public_version, root / "previous")
-                result.update(execute_pair(lambda: prepare(subject), lambda: prepare(previous), args.family, subject))
+                result.update(execute_pair(lambda: prepare(subject), lambda: prepare(previous), args.family, subject, actor=actor))
             else:
                 consumer = prepare(subject)
                 with consumer:
