@@ -1158,3 +1158,33 @@ def test_current_material_is_disposable_and_does_not_reidentify_work(tmp_path, s
     assert carried["carriage"]["context"]["material"] == material
     assert "material" not in consume(surface, shared_core_binary, native_cli, context)
     assert not list(tmp_path.iterdir())
+
+
+def test_internal_finding_has_current_dependencies_without_retention(tmp_path, shared_core_binary, native_cli):
+    import hashlib
+
+    source = tmp_path / "checks.py"
+    source.write_text("prepare()\ncheck_a()\nprepare()\ncheck_b()\n", encoding="utf-8")
+    original = source.read_bytes()
+    context = {"target": str(tmp_path), "task": "Add the requested check"}
+    quiet = consume("native", shared_core_binary, native_cli, context)
+    finding = {
+        "id": "repeated-preparation",
+        "kind": "observation",
+        "summary": "Source inspection found that both checks rebuild the same immutable input; sharing preparation may reduce repeated work.",
+        "source": {"producer": "acting-agent/source-inspection", "reference": "checks.py", "coverage": "bounded"},
+        "dependencies": [{"reference": "checks.py", "revision": "sha256:" + hashlib.sha256(original.replace(b"\r\n", b"\n")).hexdigest()}],
+    }
+    current = consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
+    assert current["current_work"] == quiet["current_work"]
+    assert current["decision_packet"] == quiet["decision_packet"]
+    assert current["material"]["items"][0]["currentness"] == "dependencies-current"
+    assert current["material"]["items"][0]["trust"] == "caller-asserted"
+    assert "material" not in consume("native", shared_core_binary, native_cli, context)
+    noise = {**finding, "summary": "A local variable name could be prettier."}
+    assert consume("native", shared_core_binary, native_cli, {**context, "material": [noise]})["current_work"] == quiet["current_work"]
+    assert list(tmp_path.iterdir()) == [source]
+    assert source.read_bytes() == original
+    source.write_text("prepare_once()\ncheck_a()\ncheck_b()\n", encoding="utf-8")
+    with pytest.raises(Exception, match="dependency changed"):
+        consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
