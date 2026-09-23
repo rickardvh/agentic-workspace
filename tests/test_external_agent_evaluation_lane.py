@@ -4,12 +4,9 @@ import copy
 import hashlib
 import importlib.util
 import json
-import posixpath
-import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -615,102 +612,8 @@ def test_future_context_live_evaluation_is_head_bound_and_cost_complete() -> Non
         assert {"commands", "package_context_bytes", "selector_calls", "reconciliation_actions", "retained_residue"} <= section.keys()
 
 
-def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
+def test_retired_sbx_launcher_cannot_create_or_remove_sandboxes(capsys):
     module = _load_sbx_adapter_module()
-    commands: list[list[str]] = []
-    prompt_file = tmp_path / "prompt.txt"
-    prompt_file.write_text("large prompt\n" * 100, encoding="utf-8")
-    share_path = tmp_path / "work" / "share" / "final.md"
-
-    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
-        commands.append(command)
-        if command[:5] == ["sbx", "exec", "aw-test", "sh", "-lc"] and "codex exec" in command[-1]:
-            share_path.parent.mkdir(parents=True, exist_ok=True)
-            share_path.write_text("Done.", encoding="utf-8")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
-    monkeypatch.setattr(module, "_run", fake_run)
-    monkeypatch.setattr(module.sys, "platform", "win32")
-    monkeypatch.setattr(module, "WINDOWS_COMMAND_LINE_LIMIT", 1000)
-
-    result = module.main(
-        [
-            "--sbx",
-            "sbx",
-            "--sandbox-name",
-            "aw-test",
-            "--repo",
-            "work/repo",
-            "--model",
-            "gpt-test",
-            "--share-path",
-            str(share_path),
-            "--prompt-file",
-            str(prompt_file),
-        ]
-    )
-
-    captured = capsys.readouterr()
-    assert result == 0
-    assert captured.err == ""
-    sandbox_prompt_dir = posixpath.join(posixpath.sep, "tmp", "agentic-workspace-model-cli-harness")
-    sandbox_prompt_path = posixpath.join(sandbox_prompt_dir, "prompt.txt")
-    sandbox_share_dir = module._sandbox_path(str(share_path.parent))
-    assert commands[0] == ["sbx", "create", "--name", "aw-test", "codex", "work/repo"]
-    assert commands[1] == [
-        "sbx",
-        "exec",
-        "aw-test",
-        "sh",
-        "-lc",
-        f"mkdir -p {sandbox_share_dir} {sandbox_prompt_dir}",
-    ]
-    assert commands[2] == [
-        "sbx",
-        "cp",
-        str(prompt_file),
-        f"aw-test:{sandbox_prompt_path}",
-    ]
-    assert commands[3][:5] == ["sbx", "exec", "aw-test", "sh", "-lc"]
-    assert "codex exec" in commands[3][-1]
-    assert f"- < {sandbox_prompt_path}" in commands[3][-1]
-    assert "large prompt" not in subprocess.list2cmdline(commands[3])
-    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
-    assert share_path.read_text(encoding="utf-8") == "Done."
-    assert not Path(f"{share_path}.admission.json").exists()
-
-
-def test_sbx_codex_adapter_removes_named_sandbox_after_failed_run(monkeypatch: pytest.MonkeyPatch) -> None:
-    module = _load_sbx_adapter_module()
-    commands: list[list[str]] = []
-
-    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
-        commands.append(command)
-        returncode = 17 if command[:5] == ["sbx", "exec", "aw-test", "codex", "exec"] else 0
-        return subprocess.CompletedProcess(command, returncode, stdout="", stderr="")
-
-    monkeypatch.setattr(module, "_run", fake_run)
-
-    result = module.main(
-        [
-            "--sbx",
-            "sbx",
-            "--sandbox-name",
-            "aw-test",
-            "--repo",
-            "work/repo",
-            "--model",
-            "gpt-test",
-            "--share-path",
-            "work/share/final.md",
-            "--prompt",
-            "do work",
-        ]
-    )
-
-    assert result == 17
-    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
+    assert module.main(["--sandbox-name", "existing-user-sandbox"]) == 2
+    assert "Retired launcher" in capsys.readouterr().err
+    assert not hasattr(module, "_run")

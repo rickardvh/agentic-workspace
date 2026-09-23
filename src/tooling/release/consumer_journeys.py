@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 from pathlib import Path, PurePosixPath
 
@@ -17,6 +19,10 @@ HARNESS = Path(__file__).resolve().parents[1] / "model-cli-harness"
 sys.path.insert(0, str(HARNESS))
 from consumer_outcomes import MAX_BYTES, MAX_FILES, Expected, evaluate, snapshot  # noqa: E402
 from run_model_cli_harness import PublicClient  # noqa: E402
+
+RECIPE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+SCORER_SHA256 = hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest()
+EXPORT_SECONDS = 30
 
 TASK = "Change the service port to 8081 in settings.json and update the README example. Preserve repository policy and existing notes."
 INITIAL = {
@@ -66,6 +72,8 @@ class Workspace:
             path = self.consumer.repo / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
+        elif hasattr(self.consumer, "write_file"):
+            self.consumer.write_file("/home/consumer/repo/" + name, data)
         else:
             self.consumer.exec(
                 ["sh", "-c", 'mkdir -p "$(dirname "$1")"; printf %s "$2" | base64 -d > "$1"', "sh", name, base64.b64encode(data).decode()]
@@ -101,6 +109,10 @@ class Workspace:
         if hasattr(self.consumer, "archive_command"):
             command = self.consumer.archive_command()
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        # Bound reading the header/body too, not just wait() after stream EOF.
+        timer = threading.Timer(EXPORT_SECONDS, proc.kill)
+        timer.daemon = True
+        timer.start()
         files = {}
         size = 0
         try:
@@ -121,10 +133,40 @@ class Workspace:
             if proc.wait(timeout=30):
                 raise ValueError("Consumer export failed")
         finally:
+            timer.cancel()
             if proc.poll() is None:
                 proc.kill()
             proc.wait()
         return files
+
+    def restore(self, files):
+        """Transfer a bounded inert snapshot once, without replaying shell code."""
+        if len(files) > MAX_FILES or sum(len(data) for data in files.values()) > MAX_BYTES:
+            raise ValueError("Oversized continuation snapshot")
+        for name in files:
+            path = PurePosixPath(name)
+            if (
+                path.is_absolute()
+                or ".." in path.parts
+                or "\\" in name
+                or not path.parts
+                or path.parts[0] in {".git", ".agents", ".venv", "node_modules"}
+            ):
+                raise ValueError("Unsafe continuation path")
+        if hasattr(self.consumer, "repo"):
+            for name, data in files.items():
+                self.write(name, data)
+            return
+        packed = io.BytesIO()
+        with tarfile.open(fileobj=packed, mode="w") as archive:
+            for name, data in files.items():
+                member = tarfile.TarInfo(name)
+                member.size, member.mode = len(data), 0o600
+                archive.addfile(member, io.BytesIO(data))
+        destination = "/home/consumer/input/reentry.tar"
+        self.consumer.write_file(destination, packed.getvalue())
+        self.consumer.exec(["tar", "--no-same-owner", "--no-same-permissions", "-xf", destination, "-C", "/home/consumer/repo"])
+        self.consumer.exec(["rm", "--", destination])
 
     def start(self, request=None):
         arguments = ["--task", TASK, "--projection", "full"]
@@ -135,8 +177,7 @@ class Workspace:
                 path.write_text(json.dumps(request), encoding="utf-8")
                 arguments += ["--input", str(path)]
             else:
-                data = base64.b64encode(json.dumps(request).encode()).decode()
-                self.consumer.exec(["sh", "-c", 'printf %s "$1" | base64 -d > ../request.json', "sh", data])
+                self.consumer.write_file("/home/consumer/request.json", json.dumps(request).encode())
                 arguments += ["--input", "../request.json"]
         return self.client.call("start", *arguments)
 
@@ -145,8 +186,7 @@ class Workspace:
             path = self.consumer.root / "action.json"
             path.write_text(json.dumps(action), encoding="utf-8")
             return self.client.call("invoke", "--task", TASK, "--input", str(path))
-        data = base64.b64encode(json.dumps(action).encode()).decode()
-        self.consumer.exec(["sh", "-c", 'printf %s "$1" | base64 -d > ../action.json', "sh", data])
+        self.consumer.write_file("/home/consumer/action.json", json.dumps(action).encode())
         return self.client.call("invoke", "--task", TASK, "--input", "../action.json")
 
 
@@ -324,8 +364,8 @@ def deterministic(work, family):
 
 def execute(consumer, family, *, actor=None):
     started = time.monotonic()
-    recipe_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    scorer_sha256 = hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest()
+    recipe_sha256 = RECIPE_SHA256
+    scorer_sha256 = SCORER_SHA256
     work = Workspace(consumer)
     before = recipe(work, family)
     error = None

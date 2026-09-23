@@ -77,7 +77,7 @@ def main(argv=None):
     return 1
 
 
-def run_case(args):
+def run_case(args, *, frozen_subject=None, frozen_previous=None):
     from consumer_environment import DockerConsumer, NativeConsumer, Subject, build_image
     from consumer_journeys import FAMILIES, execute, execute_pair
 
@@ -91,6 +91,7 @@ def run_case(args):
         "cleanup": "not-started",
     }
     consumer = None
+    actor = None
     try:
         if args.family not in FAMILIES:
             raise ValueError("Unknown scenario family")
@@ -105,7 +106,9 @@ def run_case(args):
             )
         with tempfile.TemporaryDirectory(prefix="subjects-", dir=args.scratch) as directory:
             root = Path(directory)
-            subject = Subject.candidate(args.candidate) if args.candidate else Subject.public(args.public_version, root / "current")
+            subject = frozen_subject or (
+                Subject.candidate(args.candidate) if args.candidate else Subject.public(args.public_version, root / "current")
+            )
             result["requested"] = subject.identity()
             image = (args.image or build_image(args.profile, args.target)) if args.backend == "docker" else None
 
@@ -115,13 +118,15 @@ def run_case(args):
 
                     return SandboxConsumer(selected, args.profile, args.target, args.template or "", args.scratch, args.sbx)
                 if image:
-                    return DockerConsumer(selected, args.profile, args.target, image)
+                    prepared = DockerConsumer(selected, args.profile, args.target, image)
+                    prepared.cleanup_directory = args.scratch
+                    return prepared
                 return NativeConsumer(selected, args.profile, args.target, args.scratch)
 
             if args.family in {"local-independence", "upgrade"}:
                 if not args.previous_public_version:
                     raise ValueError("Paired family requires --previous-public-version")
-                previous = Subject.public(args.previous_public_version, root / "previous")
+                previous = frozen_previous or Subject.public(args.previous_public_version, root / "previous")
                 result.update(execute_pair(lambda: prepare(subject), lambda: prepare(previous), args.family, subject, actor=actor))
             else:
                 consumer = prepare(subject)
@@ -133,6 +138,8 @@ def run_case(args):
     finally:
         if consumer:
             result["cleanup"] = consumer.cleanup
+        if actor:
+            result["sessions_started"] = actor.sessions_started
         result["elapsed_seconds"] = round(time.monotonic() - started, 3)
         with args.result.open("x", encoding="utf-8") as output:
             output.write(json.dumps(result, indent=2) + "\n")

@@ -40,7 +40,73 @@ PROFILES = {
 
 
 def run(argv, **kwargs):
-    return subprocess.run([str(v) for v in argv], check=True, capture_output=True, text=True, timeout=kwargs.pop("timeout", 120), **kwargs)
+    if os.name == "nt" and Path(str(argv[0])).stem.lower() == "sbx":
+        # The Sandbox daemon may inherit pipe handles after its launcher exits.
+        # File handles let wait() enforce the deadline without communicate()
+        # waiting indefinitely for that daemon to close an inherited pipe.
+        with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+            completed = subprocess.run(
+                [str(v) for v in argv],
+                stdout=stdout,
+                stderr=stderr,
+                timeout=kwargs.pop("timeout", 120),
+                **kwargs,
+            )
+            stdout.seek(0)
+            stderr.seek(0)
+            result = subprocess.CompletedProcess(
+                completed.args,
+                completed.returncode,
+                stdout.read().decode("utf-8", errors="replace"),
+                stderr.read().decode("utf-8", errors="replace"),
+            )
+            result.check_returncode()
+            return result
+    return subprocess.run(
+        [str(v) for v in argv],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=kwargs.pop("timeout", 120),
+        **kwargs,
+    )
+
+
+def record_cleanup(consumer, backend):
+    directory = getattr(consumer, "cleanup_directory", None)
+    if directory is not None:
+        consumer.cleanup_record = Path(directory) / (consumer.name + ".resource.json")
+        consumer.cleanup_record.write_text(
+            json.dumps({"kind": "consumer-disposable/v1", "name": consumer.name, "backend": backend}), encoding="utf-8"
+        )
+
+
+def cleanup_record_removed(consumer):
+    path = getattr(consumer, "cleanup_record", None)
+    if path is not None:
+        path.unlink(missing_ok=True)
+
+
+def cleanup_remaining(directory, *, sbx="sbx"):
+    """Only resources explicitly owned by this run; never enumerate host sandboxes."""
+    for path in Path(directory).glob("aw-consumer-*.resource.json"):
+        record = json.loads(path.read_text())
+        name = record.get("name", "")
+        if (
+            record.get("kind") != "consumer-disposable/v1"
+            or not re.fullmatch(r"aw-consumer-[a-f0-9]{32}", name)
+            or path.name != name + ".resource.json"
+        ):
+            raise ValueError("Invalid cleanup ownership record")
+        if record.get("backend") == "sandbox":
+            run([sbx, "rm", "--force", name])
+        elif record.get("backend") == "docker":
+            run(["docker", "rm", "--force", name])
+        else:
+            raise ValueError("Unknown cleanup backend")
+        path.unlink()
 
 
 @dataclass(frozen=True)
@@ -196,6 +262,7 @@ class DockerConsumer:
         self.cleanup = "not-started"
 
     def __enter__(self):
+        record_cleanup(self, "docker")
         try:
             run(
                 [
@@ -227,9 +294,10 @@ class DockerConsumer:
             raise
 
     def exec(self, argv, *, timeout=120):
-        return run(
-            ["docker", "exec", "--workdir=/home/consumer/repo", "--env", "TMPDIR=/home/consumer/tmp", self.name, *argv], timeout=timeout
-        )
+        return run(self.exec_command(argv), timeout=timeout)
+
+    def exec_command(self, argv):
+        return ["docker", "exec", "--workdir=/home/consumer/repo", "--env", "TMPDIR=/home/consumer/tmp", self.name, *argv]
 
     def copy_in(self, source: Path, destination: str):
         # No added root capabilities: copy through world-readable container /tmp,
@@ -237,6 +305,18 @@ class DockerConsumer:
         incoming = "/tmp/input-" + uuid.uuid4().hex
         run(["docker", "cp", str(source.resolve()), f"{self.name}:{incoming}"])
         self.exec(["cp", "-R", incoming, destination])
+
+    def write_file(self, destination: str, data: bytes):
+        # Never put exported files or large owner requests in a Windows command
+        # line. The same byte transport serves both deterministic and live actors.
+        # Use the exec channel after containment too: Sandbox's cp transport may
+        # become unavailable under the actor's publishing-network restrictions.
+        with tempfile.TemporaryFile() as source:
+            source.write(data)
+            source.seek(0)
+            command = self.exec_command(["sh", "-ec", 'mkdir -p "$(dirname "$1")"; cat > "$1"', "sh", destination])
+            command.insert(2, "--interactive")
+            run(command, stdin=source)
 
     def observe_tools(self):
         required, forbidden = PROFILES[self.profile]
@@ -326,6 +406,7 @@ class DockerConsumer:
                     command += ["--path", f"/home/consumer/input/{crate['name']}-{crate['version']}"]
                 self.exec(command, timeout=900)
             self.command = ["/home/consumer/installed/bin/agentic-workspace"]
+            binaries = "/home/consumer/installed/bin"
             identity = {
                 "package_version": self.subject.inventory["version"],
                 "source_head": self.subject.inventory["source_commit"],
@@ -348,6 +429,15 @@ class DockerConsumer:
         ):
             raise ValueError("Installed package identity mismatch")
         self.observation["installed"] = identity
+        self.installed_paths = [binaries + "/" + name for name in ("agentic-workspace", "agentic-workspace-core")]
+        if self.profile == "node":
+            self.installed_paths += ["node_modules/.bin/agentic-workspace"]
+            self.installed_paths += [
+                "node_modules/@agentic-workspace/workspace-cli/" + name
+                for name in ("package.json", "src/cli.mjs", "src/native/_transport.mjs", "src/native/operating.mjs")
+            ]
+        elif self.profile == "python":
+            self.installed_paths += [self.command[0]]
         self.observation["requested"] = self.subject.identity()
         self.observation["route"] = (
             "candidate-asset"
@@ -361,6 +451,7 @@ class DockerConsumer:
         try:
             run(["docker", "rm", "--force", self.name])
             self.cleanup = "removed"
+            cleanup_record_removed(self)
         except subprocess.CalledProcessError as error:
             self.cleanup = "failed"
             raise RuntimeError(f"Consumer cleanup failed: {self.name}") from error

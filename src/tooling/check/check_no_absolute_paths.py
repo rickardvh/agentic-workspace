@@ -31,9 +31,19 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "home/agent/.codex/auth.json",
             "tmp/input-",
             "var/run/docker.sock",
+            "usr/bin/sha256sum",
         )
     ),
-    Path("src/tooling/release/consumer_journeys.py"): frozenset({"/" + "home/consumer/repo"}),
+    Path("src/tooling/release/consumer_journeys.py"): frozenset(
+        "/" + path
+        for path in (
+            "home/consumer/repo",
+            "home/consumer/repo/",
+            "home/consumer/request.json",
+            "home/consumer/action.json",
+            "home/consumer/input/reentry.tar",
+        )
+    ),
     # These are fixed disposable container paths, never maintainer host paths.
     Path("src/tooling/model-cli-harness/sandbox/consumer/Dockerfile"): frozenset(
         "/" + path
@@ -63,6 +73,7 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "home/consumer/input/",
             "home/consumer/repo/.venv/bin/agentic-workspace",
             "home/consumer/installed",
+            "home/consumer/installed/bin",
             "home/consumer/input/{crate['name']}-{crate['version",
             "home/consumer/installed/bin/agentic-workspace",
         )

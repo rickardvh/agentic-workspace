@@ -41,12 +41,16 @@ The subscription actor uses `--driver agent --backend sandbox --model gpt-5.6-lu
 template supplied through `--template`. Docker Sandboxes 0.45.1 supports the
 mountless sandbox and disabled shared skills used here. Configure OpenAI OAuth
 with `sbx secret set openai --oauth`. The controller creates a separate uid and
-private provider home, disables SSH socket access and sudo, excludes the template
+private provider home without an authentication file (the Sandbox proxy holds
+subscription credentials), disables SSH socket access and sudo, excludes the template
 MCP gateway, and denies repository/publishing network routes before model work.
 It never mounts the maintainer checkout or home.
 
 Each actor is limited to three sessions, each at most 900 seconds. A continuation
-uses two sessions and a replacement sandbox with retained repository files only.
+uses two sessions and a replacement sandbox with retained repository files only;
+`.agentic-workspace/local/` custody, configuration effects, and host notes are
+excluded and reconstructed on the replacement machine. Preflight rejects an
+actor-home authentication file or inherited API credentials.
 The optional token threshold stops on observed telemetry; it is not a hard
 provider-side quota. Missing usage and monetary cost remain unknown. Subscription
 OAuth does not establish support for metered API execution.
@@ -64,6 +68,30 @@ Matched comparisons require equal task, underlying information, tools, permissio
 and opportunities to improve ordinary repository guidance. Retain both assigned
 arms, including aborts. The comparison helper supplies no economic superiority
 claim or automatic policy admission.
+
+The installed-consumer workflow freezes public current/previous inventories once,
+then calls the same runner. Relevant candidate checks remain in platform-release;
+publication attempts call the public workflow even when a registry job fails.
+Daily selection rotates seven scenario families and four profiles across the six
+declared targets, reserving at most three subscription sessions of 900 seconds.
+macOS is explicitly skipped for the current acceptance scope. Native actor and
+unavailable architecture assignments remain non-passing in the denominator.
+
+Manual dispatch accepts exact public versions. Live dispatch requires master,
+the protected `consumer-live` environment, a dedicated `consumer-sandbox` runner
+with Python and authenticated Docker Sandboxes, and repository variable
+`CONSUMER_LIVE_RUNNER_READY=true`. `CONSUMER_TEMPLATE` may name another immutable
+Codex template digest. Provision these only after independent review; source
+tests do not establish trusted hosted execution. No PR job receives provider state.
+
+`consumer_schedule.py` supplies `freeze`, `run`, `summary` and `cleanup` operations.
+Keep frozen subjects and initial result files together; diagnostic retries need
+separate output directories. Summaries retain missing installations, provider
+unavailability, skipped targets, exhausted budget, usage unknowns and evidence age.
+The always-run cleanup step deletes only recorded disposable resource names.
+Sanitized CI artifacts expire after seven days. Route actionable failures through
+the existing dogfooding owner, searching existing issues before filing another;
+the actor and reporting jobs have no issue-writing credentials.
 
 The former command-mention suites, pinned AW fixtures, long-horizon executor and
 reference state machine are retired. Dated records in the

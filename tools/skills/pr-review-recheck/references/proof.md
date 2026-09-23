@@ -2,6 +2,12 @@
 
 Check proof separately from intent satisfaction:
 
+Installed-consumer evidence distinguishes deterministic driver checks, actual
+live provider execution, unavailable/skipped assignments and historical records.
+Match exact subject and harness identity, evidence age, outcome/authority/claim
+checks, cleanup and known or unknown cost. Missing assigned cases do not pass.
+Workflow source tests establish wiring, not trusted dispatch or model execution.
+
 - Resolve every `owner_currentness` obligation in trusted preparation for this
   PR's exact base and head. When a governing source changes, run its existing
   owner/currentness check at that head and record the owner, check, base, head,
