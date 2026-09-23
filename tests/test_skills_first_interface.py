@@ -284,7 +284,10 @@ def test_canonical_procedure_preserves_correction_retention_boundary():
     shared = (ROOT / Path(MAIN).parent / "references/reconcile.md").read_text()
     section = shared.split("## Corrections and retention\n", 1)[1].split("\n## ", 1)[0]
     for obligation in (
-        "Material corrections, acquired conclusions, environment facts and source conflicts",
+        "Material findings from current work, corrections, acquired conclusions, environment facts and source conflicts",
+        "Awareness does not grant authority",
+        "Keep the requested task primary",
+        "Weak cosmetic findings need no record",
         "even without a request to remember",
         "Carry that material through ordinary current resolution",
         "exact current owner",

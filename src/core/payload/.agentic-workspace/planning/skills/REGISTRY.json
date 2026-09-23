@@ -117,5 +117,75 @@
       ],
       "procedure_resource": "procedure.md"
     }
+  ],
+  "activation_index": [
+    {
+      "id": "planning-closeout-trust",
+      "path": "planning-closeout-trust/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/work/closeout"
+      ],
+      "activation": {
+        "occasions": [
+          "need"
+        ],
+        "applicability": "A Planning closeout claim has unresolved evidence, accepted progress or external review custody.",
+        "outcome": "Truthful current Planning status with proof and independent acceptance kept separate."
+      }
+    },
+    {
+      "id": "planning-work",
+      "path": "planning-work/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/work/continuity"
+      ],
+      "activation": {
+        "occasions": [
+          "need",
+          "binding"
+        ],
+        "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
+        "outcome": "Current bounded Planning custody, or justified direct work without retained planning.",
+        "binding_owners": [
+          "planning"
+        ]
+      }
+    },
+    {
+      "id": "planning-assignment",
+      "path": "planning-assignment/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/assignment/lifecycle"
+      ],
+      "activation": {
+        "occasions": [
+          "binding"
+        ],
+        "applicability": "A current binding Assignment or dispatch/handoff consequence needs exact continuation.",
+        "outcome": "An admitted local continuation, exact dispatch/handoff, or truthful current owner blocker.",
+        "binding_owners": [
+          "assignment",
+          "delegation"
+        ]
+      }
+    },
+    {
+      "id": "planning-review-continuation",
+      "path": "planning-review-continuation/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/review/continuation"
+      ],
+      "activation": {
+        "occasions": [
+          "need"
+        ],
+        "applicability": "Review findings or a worker return require current accepted continuation rather than assumed progress.",
+        "outcome": "Current receiving-owner admission and a bounded continuation; no self-approval."
+      }
+    }
   ]
 }

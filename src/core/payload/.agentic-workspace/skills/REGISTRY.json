@@ -140,5 +140,124 @@
       ],
       "procedure_resource": "procedure.md"
     }
+  ],
+  "activation_index": [
+    {
+      "id": "workspace-intent-discovery",
+      "path": "workspace-intent-discovery/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        {
+          "id": "workspace/intent/discovery",
+          "match": "exact",
+          "priority": 10,
+          "description": "Clarify ambiguous human intent or work shape before committing to a solution."
+        }
+      ],
+      "activation": {
+        "occasions": [
+          "observation"
+        ],
+        "applicability": "New information changes the intended outcome or leaves a material scope or instruction conflict unresolved.",
+        "outcome": "A scoped intent judgment or exact source-owner reconciliation."
+      }
+    },
+    {
+      "id": "workspace-proof-selection",
+      "path": "workspace-proof-selection/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        {
+          "id": "workspace/proof/selection",
+          "match": "exact",
+          "priority": 10,
+          "description": "Select and interpret evidence for the claim actually being made."
+        }
+      ],
+      "activation": {
+        "occasions": [
+          "need",
+          "binding"
+        ],
+        "applicability": "A test, claim, review finding or missing prerequisite needs current evidence or readiness before proceeding.",
+        "outcome": "Current prerequisite readiness, admitted evidence and an accurately bounded claim.",
+        "binding_owners": [
+          "verification"
+        ]
+      }
+    },
+    {
+      "id": "workspace-setup-jumpstart",
+      "path": "workspace-setup-jumpstart/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        {
+          "id": "workspace/setup/jumpstart",
+          "match": "exact",
+          "priority": 10,
+          "description": "Apply bounded setup and jumpstart procedure after AW is installed or adopted in a lived-in repository."
+        }
+      ],
+      "activation": {
+        "occasions": [
+          "observation",
+          "binding"
+        ],
+        "applicability": "Installation, invocation, environment or configuration information requires a current durable choice or repair.",
+        "outcome": "Usable current configuration with unresolved owner readiness stated.",
+        "binding_owners": [
+          "configuration"
+        ]
+      }
+    },
+    {
+      "id": "workspace-resources",
+      "path": "workspace-resources/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        {
+          "id": "workspace/resources/lifecycle",
+          "match": "exact",
+          "priority": 10,
+          "description": "Manage temporary task material or necessary checkout isolation and safely reconcile its lifetime."
+        }
+      ],
+      "activation": {
+        "occasions": [
+          "need",
+          "binding"
+        ],
+        "applicability": "Current work actually needs scratch, isolation, resource recovery or terminal cleanup.",
+        "outcome": "The smallest authorised resource is acquired or cleaned up through its current owner.",
+        "binding_owners": [
+          "workspace-resources"
+        ]
+      }
+    },
+    {
+      "id": "workspace-instruction-correction",
+      "path": "workspace-instruction-correction/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        {
+          "id": "workspace/instructions/correction",
+          "match": "exact",
+          "priority": 10,
+          "description": "Reconcile trusted corrections and material source inconsistencies through the responsible owner; publish scoped instructions only when that is the appropriate destination."
+        }
+      ],
+      "activation": {
+        "occasions": [
+          "observation",
+          "binding"
+        ],
+        "applicability": "A material finding from source/test work, repeated friction, positive optimisation opportunity, correction, acquired conclusion, environment fact or source inconsistency can change current or future work.",
+        "outcome": "The strongest useful source absorbs the consequence, or scoped advisory retention/no-retention is justified.",
+        "binding_owners": [
+          "instructions",
+          "system-intent"
+        ]
+      }
+    }
   ]
 }

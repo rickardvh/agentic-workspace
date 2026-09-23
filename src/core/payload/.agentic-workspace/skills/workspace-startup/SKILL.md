@@ -9,7 +9,7 @@ Read the task and applicable repository instructions. Obtain current AW context
 once at session entry, and again if its dependencies change; reuse a current
 answer. Follow [ordinary use](references/ordinary.md) for the configured command.
 
-During work, carry material new information or an unmet prerequisite through
+During work, carry a material finding from current work, new information or an unmet prerequisite through
 ordinary `start` before its consequence can be lost or a dependent action fails.
 Use its current binding consequences and activation occasions; keep direct work
 direct and retain only through the responsible owner. See [current material](references/ordinary.md).

@@ -32,7 +32,7 @@
       "observation",
       "binding"
     ],
-    "applicability": "A material correction, acquired conclusion, environment fact or source inconsistency can change current or future work.",
+    "applicability": "A material finding from source/test work, repeated friction, positive optimisation opportunity, correction, acquired conclusion, environment fact or source inconsistency can change current or future work.",
     "outcome": "The strongest useful source absorbs the consequence, or scoped advisory retention/no-retention is justified.",
     "binding_owners": [
       "instructions",

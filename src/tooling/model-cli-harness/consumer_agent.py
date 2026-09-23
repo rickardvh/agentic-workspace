@@ -25,7 +25,11 @@ SOURCE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 def portable_continuation(files):
     """Machine-local custody is reconstructed, never transported to a new host."""
-    return {name: data for name, data in files.items() if name != ".agentic-workspace/local" and not name.startswith(".agentic-workspace/local/")}
+    return {
+        name: data
+        for name, data in files.items()
+        if name != ".agentic-workspace/local" and not name.startswith(".agentic-workspace/local/")
+    }
 
 
 class SandboxConsumer(DockerConsumer):
@@ -306,6 +310,7 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
     status = "running"
     message = None
     diagnostics = []
+    operating_calls = []
     try:
         while time.monotonic() < deadline:
             try:
@@ -338,6 +343,16 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
                     status = "observed-token-budget-exhausted"
                     break
             item = event.get("item", {})
+            if event.get("type") == "item.completed" and item.get("type") == "command_execution":
+                command_text = item.get("command", "")
+                if "agentic-workspace" in command_text and "start" in command_text and len(operating_calls) < 16:
+                    operating_calls.append(
+                        {
+                            "command": command_text[:8192],
+                            "exit_code": item.get("exit_code"),
+                            "output": item.get("aggregated_output", "")[:16384],
+                        }
+                    )
             if event.get("type") == "item.completed" and item.get("type") == "agent_message":
                 message = item.get("text")
         else:
@@ -364,6 +379,7 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
         "cost": None,
         "calls": calls,
         "diagnostics": diagnostics,
+        "operating_calls": operating_calls,
         "token_ceiling": token_ceiling,
         "budget_enforcement": "wall-time-output" + ("-and-observed-token-stop" if token_ceiling is not None else ""),
     }

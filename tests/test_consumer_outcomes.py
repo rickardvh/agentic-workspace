@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src/tooling/release"))
+
 PATH = Path(__file__).resolve().parents[1] / "src/tooling/model-cli-harness/consumer_outcomes.py"
 SPEC = importlib.util.spec_from_file_location("consumer_outcomes", PATH)
 scorer = importlib.util.module_from_spec(SPEC)
@@ -149,3 +151,34 @@ def test_activation_task_only_checks_durable_residue(tmp_path, monkeypatch, resi
 
     result = journeys.execute_activation(consumer, "activation-no-retention", actor=Actor())
     assert result["status"] == ("failed" if residue else "passed")
+
+
+@pytest.mark.parametrize("premature", [False, True])
+def test_finding_scorer_requires_authorized_phase_before_optimization(tmp_path, premature):
+    import subprocess
+    import sys
+    from types import SimpleNamespace
+
+    import consumer_journeys as journeys
+
+    consumer = SimpleNamespace(repo=tmp_path)
+    consumer.exec = lambda argv: subprocess.run([sys.executable, *argv[1:]], cwd=tmp_path, check=True, capture_output=True)
+    work = journeys.Workspace(consumer)
+
+    class Actor:
+        calls = 0
+
+        def session(self, work, prompt):
+            self.calls += 1
+            if self.calls == 1:
+                assert "simplification" not in prompt and "opportunity" not in prompt
+            if self.calls == 1 and not premature:
+                body = "return [{'value': (v := load_rows()[i]), 'square': v*v} for i in range(32)]"
+            else:
+                body = "return [{'value': v, 'square': v*v} for v in load_rows()]"
+            work.write("report.py", ("from data import load_rows\n\ndef report():\n " + body + "\n").encode())
+            return {"status": "complete", "reason": "Report repeated reads; apply only after authorization."}
+
+    phases = journeys.execute_finding(work, Actor())
+    assert all(p["passed"] for p in phases) is not premature
+    assert len(phases) == (1 if premature else 3)
