@@ -769,18 +769,18 @@ fn resolve_selected(
             }
         }
     }
-    // Enabling the workspace permits only its exact Configuration repair.
+    // Disablement still permits exact source repair and bounded package maintenance.
     if config_write["contribution"]["actions"]
         .as_array()
         .is_some_and(|actions| {
             actions.iter().any(|action| {
-                matches!(
+                (matches!(
                     action["operation_id"].as_str(),
                     Some("configuration.write" | "configuration.recover-write")
                 ) && matches!(
                     action["arguments"]["request"]["arguments"]["source"].as_str(),
                     Some(".agentic-workspace/config.toml" | ".agentic-workspace/config.local.toml")
-                )
+                )) || crate::native_adoption::disabled_maintenance(action)
             })
         })
     {

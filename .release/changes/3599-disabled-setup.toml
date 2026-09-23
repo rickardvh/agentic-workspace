@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Allow bounded setup refresh and recovery while ordinary workspace operation is disabled, and report setup policy blockers before authorization."

@@ -667,6 +667,18 @@ pub(crate) fn view(
     result["contribution"]["actions"] = json!([{"operation_id":OP,"dependency_revision":digest(&json!([bound,request]))?,"arguments":{"target":target,"request":request,"binding":bound,"post_revision":digest(&state["updates"])?},"effects":["configuration-source"],"source_requests":[request]}]);
     Ok(())
 }
+pub(crate) fn disabled_maintenance(action: &Value) -> bool {
+    if action["operation_id"] != OP {
+        return false;
+    }
+    let mut mode = &action["arguments"]["request"]["arguments"]["mode"];
+    if mode == "recover" {
+        mode = &action["arguments"]["binding"]["state"]["pending"]["invocation"]["arguments"]["request"]
+            ["arguments"]["mode"];
+    }
+    matches!(mode.as_str(), Some("adopt" | "reconcile-payload"))
+}
+
 fn outcome(i: &Value) -> Value {
     json!({"status":"applied","effects":["configuration-source"],"value":{"kind":"agentic-workspace/repository-adoption-result/v1","mode":i["arguments"]["request"]["arguments"]["mode"],"completion_authority":false}})
 }
