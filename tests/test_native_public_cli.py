@@ -1289,3 +1289,17 @@ def test_consumer_assignment_fixture_is_native_compatible(tmp_path, shared_core_
         "native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Implement worker.py so its answer is 42"}
     )
     assert any(b["owner"] == "assignment" for b in current["decision_packet"]["blockers"])
+
+
+def test_consumer_finding_latitude_is_repository_scoped(tmp_path, shared_core_binary, native_cli):
+    from types import SimpleNamespace
+
+    sys.path.insert(0, str(ROOT / "src/tooling/release"))
+    from consumer_journeys import Workspace, finding_fixture
+
+    work = Workspace(SimpleNamespace(repo=tmp_path))
+    work.write(".agentic-workspace/config.toml", b"[workspace]\n")
+    finding_fixture(work)
+    current = consume("native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Add a square field to the report"})
+    assert current["configuration"]["improvement_latitude"] == "reporting"
+    assert "decision_packet" in current

@@ -164,6 +164,7 @@ def test_finding_scorer_requires_authorized_phase_before_optimization(tmp_path, 
     consumer = SimpleNamespace(repo=tmp_path)
     consumer.exec = lambda argv: subprocess.run([sys.executable, *argv[1:]], cwd=tmp_path, check=True, capture_output=True)
     work = journeys.Workspace(consumer)
+    work.write(".agentic-workspace/config.toml", b"[workspace]\n")
 
     class Actor:
         calls = 0
