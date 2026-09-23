@@ -21,7 +21,7 @@ import tomllib
 import uuid
 import zipfile
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from urllib.parse import quote
 
 import cargo_release
@@ -294,9 +294,10 @@ class DockerConsumer:
             raise
 
     def exec(self, argv, *, timeout=120):
-        return run(
-            ["docker", "exec", "--workdir=/home/consumer/repo", "--env", "TMPDIR=/home/consumer/tmp", self.name, *argv], timeout=timeout
-        )
+        return run(self.exec_command(argv), timeout=timeout)
+
+    def exec_command(self, argv):
+        return ["docker", "exec", "--workdir=/home/consumer/repo", "--env", "TMPDIR=/home/consumer/tmp", self.name, *argv]
 
     def copy_in(self, source: Path, destination: str):
         # No added root capabilities: copy through world-readable container /tmp,
@@ -308,11 +309,14 @@ class DockerConsumer:
     def write_file(self, destination: str, data: bytes):
         # Never put exported files or large owner requests in a Windows command
         # line. The same byte transport serves both deterministic and live actors.
-        with tempfile.TemporaryDirectory(prefix="transfer-", dir=getattr(self, "cleanup_directory", None)) as tmp:
-            source = Path(tmp) / "payload"
-            source.write_bytes(data)
-            self.exec(["mkdir", "-p", str(PurePosixPath(destination).parent)])
-            self.copy_in(source, destination)
+        # Use the exec channel after containment too: Sandbox's cp transport may
+        # become unavailable under the actor's publishing-network restrictions.
+        with tempfile.TemporaryFile() as source:
+            source.write(data)
+            source.seek(0)
+            command = self.exec_command(["sh", "-ec", 'mkdir -p "$(dirname "$1")"; cat > "$1"', "sh", destination])
+            command.insert(2, "--interactive")
+            run(command, stdin=source)
 
     def observe_tools(self):
         required, forbidden = PROFILES[self.profile]
