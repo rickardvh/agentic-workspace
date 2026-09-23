@@ -81,6 +81,8 @@ def inventory(tmp_path):
     ],
 )
 def test_publication_requires_complete_exact_platforms_and_compiler_free_proof(inventory, failure):
+    from tests import native_artifact_consumers
+
     root, data = inventory
     row = data["platforms"][0]
     receipt_path = root / f"platform-consumer-{row['target']}.json"
@@ -106,8 +108,15 @@ def test_publication_requires_complete_exact_platforms_and_compiler_free_proof(i
     if failure:
         with pytest.raises((ValueError, OSError)):
             release.verify_consumers(root)
+        if failure not in {"missing-proof", "stale-proof", "compiler-present"}:
+            with pytest.raises((ValueError, OSError)):
+                native_artifact_consumers.artifacts(root)
     else:
         assert len(release.verify_consumers(root)["platforms"]) == 6
+        selected = next(row for row in data["platforms"] if row["target"] == release.current_platform()["target"])
+        assert native_artifact_consumers.artifacts(root) == tuple(
+            (root / item["asset"]).resolve() for item in (selected["wheel"], data["npm"], selected["native_archive"])
+        )
 
 
 def test_platform_receipts_do_not_change_when_manifest_is_extended(inventory):
