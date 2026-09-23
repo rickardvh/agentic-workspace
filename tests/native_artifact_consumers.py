@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import shutil
@@ -14,16 +15,27 @@ from pathlib import Path
 CURRENT: dict[str, Path] | None = None
 
 
-def install(directory: Path, work: Path) -> dict[str, Path]:
+def artifacts(directory: Path) -> tuple[Path, Path, Path]:
+    if (directory / "platform-release-manifest.json").exists():
+        root = Path(__file__).resolve().parents[1]
+        spec = importlib.util.spec_from_file_location("admission_platform_release", root / "src/tooling/release/platform_release.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        data = module.load(directory)
+        row = next(row for row in data["platforms"] if row["target"] == module.current_platform()["target"])
+        return tuple((directory / item["asset"]).resolve() for item in (row["wheel"], data["npm"], row["native_archive"]))
+
     def one(pattern: str) -> Path:
         paths = list(directory.glob(pattern))
         if len(paths) != 1:
             raise ValueError(f"Expected one admission artifact {pattern}: {paths}")
         return paths[0].resolve()
 
-    wheel = one("agentic_workspace-*.whl")
-    npm_archive = one("agentic-workspace-workspace-cli-*.tgz")
-    archive = one("agentic-workspace-native-*.zip")
+    return one("agentic_workspace-*.whl"), one("agentic-workspace-workspace-cli-*.tgz"), one("agentic-workspace-native-*.zip")
+
+
+def install(directory: Path, work: Path) -> dict[str, Path]:
+    wheel, npm_archive, archive = artifacts(directory)
     root = Path(__file__).resolve().parents[1]
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True, encoding="utf-8").strip()
     native = work / "native"
@@ -62,7 +74,10 @@ def install(directory: Path, work: Path) -> dict[str, Path]:
         capture_output=True,
     )
     package = consumer / "node_modules/@agentic-workspace/workspace-cli"
-    node_manifest = json.loads((package / "src/native/bin/artifact.json").read_text(encoding="utf-8"))
+    node_native = package / "src/native/bin"
+    if not (node_native / "artifact.json").exists():
+        node_native /= f"{manifest['platform']}-{manifest['arch']}"
+    node_manifest = json.loads((node_native / "artifact.json").read_text(encoding="utf-8"))
     python_manifest_path = next(venv.rglob("agentic_workspace/_native/artifact.json"))
     python_manifest = json.loads(python_manifest_path.read_text(encoding="utf-8"))
     for identity in (node_manifest, python_manifest):
@@ -73,16 +88,14 @@ def install(directory: Path, work: Path) -> dict[str, Path]:
             raise ValueError("Installed admission package identities disagree")
     for name in ("agentic-workspace", "agentic-workspace-core"):
         data = (native / (name + suffix)).read_bytes()
-        if (package / "src/native/bin" / (name + suffix)).read_bytes() != data or (
-            python_manifest_path.parent / (name + suffix)
-        ).read_bytes() != data:
+        if (node_native / (name + suffix)).read_bytes() != data or (python_manifest_path.parent / (name + suffix)).read_bytes() != data:
             raise ValueError("Installed admission binary bytes disagree")
     return {
         "core": native / ("agentic-workspace-core" + suffix),
         "cli": native / ("agentic-workspace" + suffix),
         "python": python,
         "python_cli": python_manifest_path.parent / ("agentic-workspace" + suffix),
-        "typescript_cli": package / "src/native/bin" / ("agentic-workspace" + suffix),
+        "typescript_cli": node_native / ("agentic-workspace" + suffix),
         "node": Path(node),
         "package": package,
         "cwd": consumer,

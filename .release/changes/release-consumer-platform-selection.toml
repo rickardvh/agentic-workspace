@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Correct release proof consumers to select the current host from validated multi-platform artifacts and universal npm packages."
