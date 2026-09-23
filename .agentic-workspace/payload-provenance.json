@@ -76,7 +76,7 @@
   "payload_schema": "agentic-workspace/payload/v1",
   "release_identity": {
     "package": "agentic-workspace",
-    "version": "1.3.0"
+    "version": "1.3.1"
   },
   "rule": "Artifact-derived payload identity; native admission also checks every shipped byte. No domain-state or completion authority."
 }
