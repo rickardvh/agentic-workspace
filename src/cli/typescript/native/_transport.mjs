@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { dirname, join } from "node:path";
+import { dirname, join, toNamespacedPath } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const nativeDirectory = () => {
@@ -45,13 +45,13 @@ export function runNativeCli(args) {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     if (createHash("sha256").update(readFileSync(binary)).digest("hex") !== manifest.cli_sha256) throw new Error("paired native CLI digest mismatch");
   }
-  const result = spawnSync(binary, args, {stdio: "inherit", windowsHide: true});
+  const result = spawnSync(toNamespacedPath(binary), args, {stdio: "inherit", windowsHide: true});
   if (result.error) throw result.error;
   return result.status ?? 1;
 }
 
 export function request(payload) {
-  const result = spawnSync(coreBinary(), [], {
+  const result = spawnSync(toNamespacedPath(coreBinary()), [], {
     input: JSON.stringify(payload),
     encoding: "utf8",
     windowsHide: true,
@@ -63,4 +63,3 @@ export function request(payload) {
   }
   return JSON.parse(result.stdout);
 }
-

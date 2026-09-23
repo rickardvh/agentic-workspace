@@ -106,6 +106,32 @@ def test_packed_npm_includes_registry_readme_and_product_summary(packed: Path) -
     assert metadata["description"] == product["project"]["description"]
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows extended-length process executable paths")
+def test_packed_npm_launches_cli_and_core_beyond_max_path(packed: Path, tmp_path: Path) -> None:
+    # Distinct transport boundary: both public entry points must launch real
+    # packaged native binaries when a normal npm installation exceeds MAX_PATH.
+    package = tmp_path / ("nested-install-" + "x" * 90) / ("dependency-" + "y" * 90) / "package"
+    shutil.copytree(packed, package)
+    assert len(str(package / "src/native/bin/agentic-workspace.exe")) > 260
+    node = shutil.which("node")
+    assert node
+    environment = {key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"}
+    environment["PATH"] = ""
+    cli = subprocess.run(
+        [node, str(package / "src/cli.mjs"), "--help"],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert cli.returncode == 0, cli.stderr
+    assert "start" in cli.stdout
+    target = tmp_path / "target"
+    target.mkdir()
+    assert run(package, target, "routes")["status"] == "current"
+
+
 def test_real_packed_npm_discovers_without_python_or_source_checkout(packed: Path, tmp_path: Path) -> None:
     registry = tmp_path / "tools/skills/REGISTRY.json"
     registry.parent.mkdir(parents=True)
