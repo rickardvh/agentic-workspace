@@ -17,7 +17,8 @@ RUN arch="$(dpkg --print-architecture)"; case "$arch" in amd64) arch=x64;; arm64
     curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt" && \
     grep " ${name}.tar.xz$" SHASUMS256.txt | sha256sum -c - && \
     tar -xJf "${name}.tar.xz" -C /usr/local --strip-components=1 && \
-    rm "${name}.tar.xz" SHASUMS256.txt && npm install -g "pnpm@${PNPM_VERSION}"
+    rm "${name}.tar.xz" SHASUMS256.txt && npm install -g "pnpm@${PNPM_VERSION}" && \
+    rm -rf .npm
 USER 10001:10001
 
 FROM base AS python
