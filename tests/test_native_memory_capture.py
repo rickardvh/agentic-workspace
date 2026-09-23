@@ -300,13 +300,20 @@ def test_observable_future_value_disposition_without_memory_prompt(tmp_path, sha
     import hashlib
     import json
     import os
+    import sys
 
     from tests.test_native_proof_procedure import install, procedure
     from tests.test_native_public_cli import consume
 
     install(tmp_path)
     (tmp_path / "a.txt").write_text("subject")
-    context = {"target": str(tmp_path), "task": "Check the repaired export and preserve its result", "changed": ["a.txt"]}
+    receiver = tmp_path / "export-settings.json"
+    receiver.write_text(json.dumps({"missing_optional": "skip", "corrupt_required": "error"}))
+    context = {
+        "target": str(tmp_path),
+        "task": "Check the repaired export and preserve its result",
+        "changed": ["a.txt", "export-settings.json"],
+    }
     source = tmp_path / ".agentic-workspace/verification/manifest.toml"
     source.parent.mkdir()
     signal = json.dumps(
@@ -317,7 +324,18 @@ def test_observable_future_value_disposition_without_memory_prompt(tmp_path, sha
             }
         }
     )
-    command = "Write-Output '" + signal + "'" if os.name == "nt" else "printf '%s' '" + signal + "'"
+    import shlex
+
+    check = (
+        "import json; from pathlib import Path; c=json.loads(Path('export-settings.json').read_text()); assert c['missing_optional']=='skip' and c['corrupt_required']=='error'; print("
+        + repr(signal)
+        + ")"
+    )
+    command = (
+        ("& '" + sys.executable.replace("'", "''") + "' -c '" + check.replace("'", "''") + "'")
+        if os.name == "nt"
+        else shlex.join([sys.executable, "-c", check])
+    )
     source.write_text(
         'schema_version="agentic-workspace/verification-manifest/v1"\n[proof_routes]\n[protocols.check]\napplies_to_paths=["a.txt"]\ncommands=['
         + json.dumps(command)
@@ -349,13 +367,27 @@ def test_observable_future_value_disposition_without_memory_prompt(tmp_path, sha
     assert call(dismissed)["memory"]["future_value"]["dispositions"][0]["status"] == "not-retained"
     assert not (tmp_path / ".agentic-workspace/memory/repo/manifest.toml").exists()
     stronger = json.loads(json.dumps(request))
-    receiver = tmp_path / "export-guidance.md"
-    receiver.write_text(request["arguments"]["lesson"])
     stronger["arguments"].update(
         disposition="already-absorbed",
-        receiving_source={"reference": "export-guidance.md", "revision": "sha256:" + hashlib.sha256(receiver.read_bytes()).hexdigest()},
+        receiving_source={"reference": "export-settings.json", "revision": "sha256:" + hashlib.sha256(receiver.read_bytes()).hexdigest()},
     )
+    # Source identity alone (including a literal copied lesson) supplies no consequence.
+    with pytest.raises(AssertionError, match="consequence|insufficient"):
+        call(stronger)
+    evidence = call(request)["verification"]["evidence"][0]
+    stronger["arguments"]["receiving_consequence"] = {
+        "claim": "The current export configuration selects skip for missing optional profiles and error for corrupt required profiles.",
+        "evidence_reference": evidence["reference"],
+        "proof_subject": evidence["proof_subject"],
+    }
     assert call(stronger)["memory"]["future_value"]["dispositions"][0]["retained"] is False
+    (tmp_path / "unrelated.txt").write_text("unrelated source")
+    assert call(stronger)["memory"]["future_value"]["dispositions"][0]["receiving_consequence"]["claim"]
+    original_receiver = receiver.read_bytes()
+    receiver.write_text(request["arguments"]["lesson"])
+    with pytest.raises(AssertionError, match="changed|stale|unavailable"):
+        call(stronger)
+    receiver.write_bytes(original_receiver)
     request["arguments"]["disposition"] = "advisory-memory"
     proposed = call(request)
     assert proposed["decision_packet"]["primary_action"] is None  # No nomination grants publication authority.
