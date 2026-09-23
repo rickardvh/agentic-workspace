@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Exercise installed setup, lifecycle transitions and ordinary task completion through shared public consumer journeys."
