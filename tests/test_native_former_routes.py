@@ -119,6 +119,18 @@ def test_former_selection_requires_exact_current_agent_request(
     activation_bytes = len(json.dumps(activation))
     assert activation_bytes < 900
     assert "activation" not in first
+    # Stronger-owner absorption adds only the explicit receiving-proof link.
+    # Bound that named schema extension instead of widening unrelated APIs.
+    memory = next(owner for owner in contract["owners"] if owner["owner"] == "memory")
+    consequence = [
+        row["input_schema"]["properties"]["receiving_consequence"]
+        for row in memory["requests"]
+        if "receiving_consequence" in row["input_schema"].get("properties", {})
+    ]
+    assert len(consequence) == 1
+    assert set(consequence[0]["required"]) == {"claim", "evidence_reference", "proof_subject"}
+    consequence_bytes = len(json.dumps({"receiving_consequence": consequence[0]}))
+    assert consequence_bytes < 400
     retention_bytes = 0
     for owner_name in ("planning", "memory", "verification"):
         owner = next(row for row in contract["owners"] if row["owner"] == owner_name)
@@ -138,8 +150,8 @@ def test_former_selection_requires_exact_current_agent_request(
         size = sum(len(json.dumps(row)) for row in retention)
         assert len(retention) == 4 and size < 2_200, (owner_name, size)
         retention_bytes += size
-    assert len(json.dumps(non_resource_contract)) - retention_bytes - activation_bytes < 81_000
-    assert len(json.dumps(contract)) - retention_bytes - activation_bytes < 86_000
+    assert len(json.dumps(non_resource_contract)) - retention_bytes - activation_bytes - consequence_bytes < 81_000
+    assert len(json.dumps(contract)) - retention_bytes - activation_bytes - consequence_bytes < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
     assert len(json.dumps(first["planning"]["terminal_retention"])) < 500
     state = {key: value for key, value in first.items() if key != "capability_contract"}
