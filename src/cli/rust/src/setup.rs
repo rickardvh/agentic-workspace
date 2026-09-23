@@ -101,6 +101,23 @@ fn render(value: &Value, json_output: bool) {
     }
 }
 
+fn policy_blockers(current: &Value, disabled_maintenance: bool) -> Vec<Value> {
+    current["decision_packet"]["blockers"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|b| {
+            (!disabled_maintenance || b["code"] != "workspace-disabled")
+                && b["affects"].as_array().is_some_and(|scopes| {
+                    scopes
+                        .iter()
+                        .any(|s| s == "task" || s == "effect:configuration-source")
+                })
+        })
+        .cloned()
+        .collect()
+}
+
 pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
     for key in &parsed.explicit {
         if !["target", "format", "yes", "dry_run", "recover"].contains(&key.as_str()) {
@@ -159,10 +176,29 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
                 .find(|d| d["id"] == "repository-adoption-authorization")
         });
     let state = decision.map_or(&owner["repository_adoption"], |d| &d["material"]);
-    let summary = report(state, status);
+    let mut summary = report(state, status);
     if status == "already-current" {
         render(&summary, json_output);
         return Ok(());
+    }
+    let mode = if state["mode"] == "recover" {
+        &state["pending"]["invocation"]["arguments"]["request"]["arguments"]["mode"]
+    } else {
+        &state["mode"]
+    };
+    let blockers = policy_blockers(
+        &proposed,
+        matches!(mode.as_str(), Some("adopt" | "reconcile-payload")),
+    );
+    if !blockers.is_empty() {
+        summary["status"] = json!("policy-blocked");
+        summary["policy_blockers"] = json!(blockers);
+        summary["recovery"] = proposed["consequence_recovery"].clone();
+        render(&summary, json_output);
+        return Err(format!(
+            "Setup is blocked by current owner restrictions: {}",
+            summary["policy_blockers"]
+        ));
     }
     if decision.is_none() {
         render(&summary, json_output);
@@ -198,9 +234,19 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
     let mut answer = decision.unwrap()["response_request"].clone();
     answer["arguments"]["answer"] = json!("authorize-write");
     let authorised = call(&context, Some(answer), false)?;
-    let action=authorised["decision_packet"]["ready_actions"].as_array().and_then(|a| a.iter().find(|a| a["operation_id"]=="configuration.repository-adoption")).ok_or("The exact setup proposal is no longer actionable. Re-run setup to inspect current changes.")?;
+    let action = authorised["decision_packet"]["ready_actions"].as_array()
+        .and_then(|a| a.iter().find(|a| a["operation_id"] == "configuration.repository-adoption"))
+        .ok_or_else(|| {
+            // An admitted maintenance action already narrows disablement to
+            // unrelated effects. Any remaining task restriction is real policy.
+            let blockers = policy_blockers(&authorised, false);
+            if blockers.is_empty() {
+                "The exact setup proposal is no longer actionable. Re-run setup to inspect current changes.".to_owned()
+            } else {
+                format!("Setup is blocked by current owner restrictions: {}", json!(blockers))
+            }
+        })?;
     let result = call(&context, Some(action.clone()), true)?;
-    let mut summary = summary;
     summary["status"] = result["status"].clone();
     summary["effect_outcome"] = result["effect_outcome"].clone();
     summary["custody"] = result["custody"].clone();

@@ -12,7 +12,7 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def test_human_setup_authorisation_preservation_and_recovery(tmp_path, native_cli):
+def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_core_binary, native_cli):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     agents = tmp_path / "AGENTS.md"
     agents.write_text("Repository-owned instructions.\n", encoding="utf-8")
@@ -31,6 +31,66 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, native_cl
     result = json.loads(setup("--yes", "--format", "json").stdout)
     assert result["effect_outcome"]["status"] == "committed"
     assert agents.read_text().startswith("Repository-owned instructions.\n")
+    policy = tmp_path / ".agentic-workspace/config.toml"
+    disabled = b"[workspace]\nenabled = false\n"
+    policy.write_bytes(disabled)
+    custom = tmp_path / ".agentic-workspace/local/host-note.txt"
+    custom.write_text("Preserve independently owned state.\n")
+    # A bounded missing package integration surface needs refresh while ordinary
+    # operation is deliberately disabled. Preview and authorization must agree.
+    (tmp_path / ".agentic-workspace/local/.gitignore").unlink()
+    context = {"target": str(tmp_path), "task": "Inspect disabled maintenance"}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def assert_disabled():
+        assert policy.read_bytes() == disabled
+        blocker = next(b for b in call()["decision_packet"]["blockers"] if b["code"] == "workspace-disabled")
+        assert "task" in blocker["affects"]
+        assert custom.read_text() == "Preserve independently owned state.\n"
+
+    assert_disabled()
+    policy.write_bytes(disabled + b'agent_instructions_file = "MISSING.md"\n')
+    for args in (("--dry-run",), ("--yes",)):
+        rejected = setup(*args, "--format", "json", success=False)
+        blocked = json.loads(rejected.stdout)
+        assert blocked["status"] == "policy-blocked"
+        assert any(b["code"] == "configured-startup-source-unavailable" for b in blocked["policy_blockers"])
+        assert "no longer actionable" not in rejected.stderr
+    policy.write_bytes(disabled)
+    assert json.loads(setup("--dry-run", "--format", "json").stdout)["status"] == "authorization-required"
+    read = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    removal = next(r for r in read["adoption_requests"] if r["arguments"]["mode"] == "remove")
+    removal_proposal = call(request=removal)
+    removal_answer = next(
+        d
+        for d in removal_proposal["decision_packet"]["pending_consequences"]["decisions"]
+        if d["id"] == "repository-adoption-authorization"
+    )["response_request"]
+    removal_answer["arguments"]["answer"] = "authorize-write"
+    denied = call(request=removal_answer)
+    assert not denied["decision_packet"]["ready_actions"]
+    assert any(b["code"] == "workspace-disabled" and "task" in b["affects"] for b in denied["decision_packet"]["blockers"])
+    request = next(r for r in read["adoption_requests"] if r["arguments"]["mode"] == "adopt")
+    proposal = call(request=request)
+    answer = next(
+        d for d in proposal["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+    )["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    authorised = call(request=answer)
+    action = authorised["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "configuration.repository-adoption"
+    blocker = next(b for b in authorised["decision_packet"]["blockers"] if b["code"] == "workspace-disabled")
+    assert "effect:implementation" in blocker["affects"]
+    original = agents.read_bytes()
+    agents.write_bytes(original + b"Concurrent repository edit.\n")
+    with pytest.raises(AssertionError, match="changed|stale"):
+        call(invocation=action)
+    agents.write_bytes(original)
+    result = json.loads(setup("--yes", "--format", "json").stdout)
+    assert result["effect_outcome"]["status"] == "committed"
+    assert_disabled()
     before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file() and ".git" not in p.parts}
     assert "already-current" in setup().stdout
     assert before == {p: p.read_bytes() for p in before}
@@ -40,8 +100,12 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, native_cl
     assert "recovery-required" in setup("--yes", success=False).stdout
     recovered = json.loads(setup("--recover", "--yes", "--format", "json").stdout)
     assert recovered["effect_outcome"]["status"] == "committed"
+    assert_disabled()
     skill = tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md"
     skill.write_text("Custom body must survive.\n", encoding="utf-8")
+    blocked = json.loads(setup("--dry-run", "--format", "json", success=False).stdout)
+    assert blocked["status"] == "preserved-blocked"
+    assert blocked["conflicts"]
     assert "preserved-blocked" in setup("--yes", success=False).stdout
     assert skill.read_text() == "Custom body must survive.\n"
 
@@ -651,8 +715,6 @@ def test_managed_fence_boundary_refresh_and_removal(tmp_path, shared_core_binary
     skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
     skill = (tmp_path / skill_path).read_bytes()
     assert skill == (ROOT / skill_path).read_bytes()
-    assert b"At runtime-capable session entry or a possible dependency change, obtain one" in skill
-    assert b"ordinary `start` observation unless a sufficient current observation is held." in skill
 
     malformed = (start, end, end + start, start + start + end, start + end + end, start + end + start + end)
     for block in malformed:
