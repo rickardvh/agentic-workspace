@@ -63,6 +63,8 @@ def _codex_exec_command(
         "exec",
         "--model",
         args.model,
+        "--config",
+        'model_reasoning_effort="' + getattr(args, "reasoning_effort", "medium") + '"',
         "--cd",
         sandbox_repo,
         "--dangerously-bypass-approvals-and-sandbox",
@@ -119,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--template")
     parser.add_argument("--repo", required=True)
     parser.add_argument("--model", required=True)
+    parser.add_argument("--reasoning-effort", choices=["low", "medium", "high"], default="medium")
     parser.add_argument("--share-path", required=True)
     parser.add_argument("--exec-env", action="append", default=[])
     parser.add_argument("--keep-sandbox", action="store_true", help="Leave the named sandbox running for debugging.")

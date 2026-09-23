@@ -43,7 +43,15 @@ def main(argv=None):
     subject.add_argument("--public-version")
     run.add_argument("--previous-public-version")
     run.add_argument("--family", required=True)
-    run.add_argument("--backend", choices=["native", "docker"], required=True)
+    run.add_argument("--backend", choices=["native", "docker", "sandbox"], required=True)
+    run.add_argument("--driver", choices=["deterministic", "agent"], default="deterministic")
+    run.add_argument("--model")
+    run.add_argument("--reasoning", choices=["low", "medium", "high"], default="medium")
+    run.add_argument("--seconds", type=int, default=900)
+    run.add_argument("--token-ceiling", type=int)
+    run.add_argument("--billing", choices=["subscription", "metered"], default="subscription")
+    run.add_argument("--sbx", default="sbx")
+    run.add_argument("--template", help="Immutable non-Docker Codex template reference for Sandbox backend")
     run.add_argument("--profile", choices=["node", "python", "standalone", "cargo"], required=True)
     run.add_argument("--target", required=True)
     run.add_argument("--image")
@@ -77,7 +85,7 @@ def run_case(args):
     result = {
         "kind": "agentic-workspace/consumer-run/v1",
         "family": args.family,
-        "driver": "deterministic",
+        "driver": args.driver,
         "status": "assigned",
         "executed": False,
         "cleanup": "not-started",
@@ -86,6 +94,15 @@ def run_case(args):
     try:
         if args.family not in FAMILIES:
             raise ValueError("Unknown scenario family")
+        actor = None
+        if args.driver == "agent":
+            if args.backend != "sandbox" or not args.model:
+                raise ValueError("Live execution requires the Sandbox backend and explicit model")
+            from consumer_agent import CodexActor
+
+            actor = CodexActor(
+                model=args.model, reasoning=args.reasoning, seconds=args.seconds, token_ceiling=args.token_ceiling, billing=args.billing
+            )
         with tempfile.TemporaryDirectory(prefix="subjects-", dir=args.scratch) as directory:
             root = Path(directory)
             subject = Subject.candidate(args.candidate) if args.candidate else Subject.public(args.public_version, root / "current")
@@ -93,6 +110,10 @@ def run_case(args):
             image = (args.image or build_image(args.profile, args.target)) if args.backend == "docker" else None
 
             def prepare(selected):
+                if args.backend == "sandbox":
+                    from consumer_agent import SandboxConsumer
+
+                    return SandboxConsumer(selected, args.profile, args.target, args.template or "", args.scratch, args.sbx)
                 if image:
                     return DockerConsumer(selected, args.profile, args.target, image)
                 return NativeConsumer(selected, args.profile, args.target, args.scratch)
@@ -101,12 +122,12 @@ def run_case(args):
                 if not args.previous_public_version:
                     raise ValueError("Paired family requires --previous-public-version")
                 previous = Subject.public(args.previous_public_version, root / "previous")
-                result.update(execute_pair(lambda: prepare(subject), lambda: prepare(previous), args.family, subject))
+                result.update(execute_pair(lambda: prepare(subject), lambda: prepare(previous), args.family, subject, actor=actor))
             else:
                 consumer = prepare(subject)
                 with consumer:
                     consumer.install()
-                    result.update(execute(consumer, args.family))
+                    result.update(execute(consumer, args.family, actor=actor))
     except (Exception, KeyboardInterrupt) as error:
         result.update(status="failed", error=str(error)[:2000], failure_class="environment-or-installation")
     finally:

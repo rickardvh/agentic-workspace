@@ -36,6 +36,30 @@ not establish physical tool absence or an actor sandbox. Docker profiles contain
 environment dependencies, never AW or a prepared repository. Provider tooling must
 remain outside a minimal consumer or its additional tools must be disclosed.
 
+The subscription actor uses `--driver agent --backend sandbox --model gpt-5.6-luna
+--reasoning medium --billing subscription` with an immutable non-Docker Codex
+template supplied through `--template`. Docker Sandboxes 0.45.1 supports the
+mountless sandbox and disabled shared skills used here. Configure OpenAI OAuth
+with `sbx secret set openai --oauth`. The controller creates a separate uid and
+private provider home, disables SSH socket access and sudo, excludes the template
+MCP gateway, and denies repository/publishing network routes before model work.
+It never mounts the maintainer checkout or home.
+
+Each actor is limited to three sessions, each at most 900 seconds. A continuation
+uses two sessions and a replacement sandbox with retained repository files only.
+The optional token threshold stops on observed telemetry; it is not a hard
+provider-side quota. Missing usage and monetary cost remain unknown. Subscription
+OAuth does not establish support for metered API execution.
+
+All seven families have a live path. Removal is checked before re-adoption;
+maintenance must preserve disabled policy and restore the local boundary;
+interruption checks the public stale-source rejection before fresh recovery.
+Continuation checks that work really remains before transferring repository bytes
+to a new sandbox. Upgrade and local-independence use an exact earlier public
+subject as their declared starting recipe. A final task diff alone cannot prove
+these transitions. Native actor execution and minimal-profile absence remain
+unavailable in this backend. A Linux guest on Windows supplies Linux evidence.
+
 Matched comparisons require equal task, underlying information, tools, permissions
 and opportunities to improve ordinary repository guidance. Retain both assigned
 arms, including aborts. The comparison helper supplies no economic superiority

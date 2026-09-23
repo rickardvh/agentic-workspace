@@ -98,6 +98,8 @@ class Workspace:
             "-",
             ".",
         ]
+        if hasattr(self.consumer, "archive_command"):
+            command = self.consumer.archive_command()
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         files = {}
         size = 0
@@ -179,6 +181,63 @@ def validate_pointer_files(files):
         raise ValueError("Installed startup identity mismatch")
 
 
+INDEPENDENT_NOTES = {
+    ".agentic-workspace/local/host-note.txt": b"independent local note\n",
+    ".agentic-workspace/memory/consumer-note.md": b"independent Memory note\n",
+    ".agentic-workspace/planning/consumer-note.md": b"independent Planning note\n",
+}
+
+
+def check_preserved(before, after, names):
+    for name in names:
+        if name not in before or after.get(name) != before[name]:
+            raise ValueError("Lifecycle transition changed independently owned content: " + name)
+
+
+def check_removed(before, after):
+    if ".agentic-workspace/skills/workspace-startup/SKILL.md" in after or b"<!-- agentic-workspace:workflow:start -->" in after.get(
+        "AGENTS.md", b""
+    ):
+        raise ValueError("Removal did not remove the package foothold")
+    check_preserved(before, after, (*INDEPENDENT_NOTES, "policy.md", "notes.txt"))
+
+
+def check_disabled_maintenance(before, after):
+    import tomllib
+
+    if tomllib.loads(after[".agentic-workspace/config.toml"].decode()).get("workspace", {}).get("enabled") is not False:
+        raise ValueError("Disabled maintenance enabled ordinary work (#3599)")
+    if ".agentic-workspace/local/.gitignore" not in after:
+        raise ValueError("Maintenance did not restore the missing local boundary")
+    check_preserved(before, after, ("policy.md", "notes.txt", ".agentic-workspace/config.toml"))
+    validate_pointer_files(after)
+
+
+def check_continuation_checkpoint(files):
+    if json.loads(files["settings.json"])["port"] != 8081 or b"8080" not in files["README.md"] or not files.get("CONTINUE.md"):
+        raise ValueError("Continuation did not leave the declared unfinished repository task")
+    validate_pointer_files(files)
+
+
+def check_assessment(work):
+    current = work.start()
+    assessment = work.start(current["configuration_write"]["setup_assessment"]["request"])["configuration_write"]["setup_assessment"]
+    concerns = {row["concern"] for row in assessment.get("concerns", [])}
+    if concerns != {"instructions", "preferences", "diagnostics", "assignment", "modules", "invocation"}:
+        raise ValueError("Setup assessment lacks the current six-concern contract (#3598)")
+
+
+def check_stale_rejection(work, action):
+    before = work.files()
+    try:
+        result = work.invoke(action)
+    except subprocess.CalledProcessError as error:
+        # A process crash or missing executable is not a successful stale guard.
+        result = json.loads(error.stdout)
+    if result.get("effect_outcome", {}).get("status") != "rejected-before-effect" or work.files() != before:
+        raise ValueError("Changed-source action was not rejected without effects")
+
+
 def setup(work):
     before = work.files()
     proposal = work.client.call("setup", "--dry-run")
@@ -218,11 +277,7 @@ def adoption_action(work, mode):
 def deterministic(work, family):
     setup(work)
     if family == "maintenance":
-        current = work.start()
-        assessment = work.start(current["configuration_write"]["setup_assessment"]["request"])["configuration_write"]["setup_assessment"]
-        concerns = {row["concern"]: row["settlement"] for row in assessment.get("concerns", [])}
-        if set(concerns) != {"instructions", "preferences", "diagnostics", "assignment", "modules", "invocation"}:
-            raise ValueError("Setup assessment lacks the current six-concern contract (#3598)")
+        check_assessment(work)
         ordinary_change(work)
         disabled = b"[workspace]\nenabled = false\n"
         work.write(".agentic-workspace/config.toml", disabled)
@@ -237,13 +292,7 @@ def deterministic(work, family):
         action = adoption_action(work, "remove")
         original = work.files()["AGENTS.md"]
         work.write("AGENTS.md", original + b"\nConcurrent repository-owned instruction.\n")
-        before = work.files()
-        try:
-            result = work.invoke(action)
-        except subprocess.CalledProcessError:
-            result = {"effect_outcome": {"status": "rejected-before-effect"}}
-        if result.get("effect_outcome", {}).get("status") != "rejected-before-effect" or work.files() != before:
-            raise ValueError("Changed-source action was not rejected without effects")
+        check_stale_rejection(work, action)
         # Fresh public entry, no blind retry of the stale action.
         ordinary_change(work)
     elif family == "readoption":
@@ -255,13 +304,7 @@ def deterministic(work, family):
         removed = work.files()
         if result["effect_outcome"]["status"] != "committed" or ".agentic-workspace/skills/workspace-startup/SKILL.md" in removed:
             raise ValueError("Removal did not remove the package foothold")
-        for name in (
-            ".agentic-workspace/local/host-note.txt",
-            ".agentic-workspace/memory/consumer-note.md",
-            ".agentic-workspace/planning/consumer-note.md",
-        ):
-            if removed.get(name) != before[name]:
-                raise ValueError("Removal lost independently owned data")
+        check_removed(before, removed)
         setup(work)
         ordinary_change(work)
     elif family == "first-contact":
@@ -281,25 +324,37 @@ def deterministic(work, family):
 
 def execute(consumer, family, *, actor=None):
     started = time.monotonic()
+    recipe_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    scorer_sha256 = hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest()
     work = Workspace(consumer)
     before = recipe(work, family)
     error = None
     claim = None
+    exported = None
     try:
         if actor:
             claim = actor(work, family, TASK)
+            if isinstance(claim, dict) and "exported" in claim:
+                exported, claim = claim["exported"], claim["claim"]
         else:
             deterministic(work, family)
             claim = {"status": "complete"}
-        validate_pointer_files(work.files())
+        after = exported if exported is not None else work.files()
+        validate_pointer_files(after)
+        if family == "maintenance":
+            import tomllib
+
+            config = tomllib.loads(after[".agentic-workspace/config.toml"].decode())
+            if config.get("workspace", {}).get("enabled") is not False:
+                raise ValueError("Maintenance outcome did not preserve requested disablement")
     except (Exception, KeyboardInterrupt) as failure:
         error = str(failure)[:2000]
     result = evaluate(
         before,
-        work.files(),
+        exported if exported is not None else work.files(),
         expected_task(),
         claim=claim,
-        executed=True,
+        executed=bool(actor.observations) if actor else True,
         subject_verified=bool(consumer.observation.get("installed")),
         execution_error=error,
     )
@@ -308,14 +363,22 @@ def execute(consumer, family, *, actor=None):
         driver="agent" if actor else "deterministic",
         elapsed_seconds=round(time.monotonic() - started, 3),
         environment=consumer.observation,
-        recipe_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        scorer_sha256=hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest(),
+        recipe_sha256=recipe_sha256,
+        scorer_sha256=scorer_sha256,
         reused_owner_evidence=OWNER_EVIDENCE.get(family, []),
     )
+    if actor:
+        result["actor_sha256"] = actor.source_sha256
+        result["actor"] = actor.observations
+        result["tokens"] = (
+            sum(row["tokens"] for row in actor.observations)
+            if actor.observations and all(row["tokens"] is not None for row in actor.observations)
+            else None
+        )
     return result
 
 
-def execute_pair(current_factory, previous_factory, family, destination):
+def execute_pair(current_factory, previous_factory, family, destination, *, actor=None):
     """Exact previously published version, never a reserved tag or synthetic pin."""
     if family not in {"local-independence", "upgrade"}:
         raise ValueError("Not a paired-subject family")
@@ -342,7 +405,7 @@ def execute_pair(current_factory, previous_factory, family, destination):
             if current is not None:
                 with current:
                     current.install()
-                    result = execute(current, "first-contact")
+                    result = execute(current, "first-contact", actor=actor)
                     if result["status"] != "passed":
                         raise ValueError("Current repository did not finish ordinary work")
                     if work.files() != preserved:
@@ -358,21 +421,39 @@ def execute_pair(current_factory, previous_factory, family, destination):
             else:
                 previous.subject = destination
                 previous.install()
-                refreshed = work.client.call("setup", "--yes")
-                if (
-                    refreshed["status"] not in {"already-current", "applied"}
-                    and refreshed.get("effect_outcome", {}).get("status") != "committed"
-                ):
-                    raise ValueError("Installed upgrade did not refresh")
+                claim = {"status": "complete"}
+                if actor:
+                    claim = actor.session(
+                        work,
+                        "The installed Agentic Workspace has been upgraded from an earlier stable release. Refresh this customised repository integration, preserve independent notes and policy, then "
+                        + TASK
+                        + "\nInstalled package: "
+                        + " ".join(previous.command),
+                    )
+                else:
+                    refreshed = work.client.call("setup", "--yes")
+                    if (
+                        refreshed["status"] not in {"already-current", "applied"}
+                        and refreshed.get("effect_outcome", {}).get("status") != "committed"
+                    ):
+                        raise ValueError("Installed upgrade did not refresh")
                 for name in ("notes.txt", "policy.md", ".agentic-workspace/local/custom-note.txt"):
                     if work.files().get(name) != preserved[name]:
                         raise ValueError("Upgrade changed independently owned content")
-                ordinary_change(work)
+                if not actor:
+                    ordinary_change(work)
                 validate_pointer_files(work.files())
                 if hasattr(previous, "repo") and previous.profile == "standalone":
                     linked_worktree_control(previous)
                     results["linked_worktree"] = "native-installed-setup-and-reentry"
-                result = evaluate(before, work.files(), expected_task(), claim={"status": "complete"}, executed=True, subject_verified=True)
+                result = evaluate(
+                    before,
+                    work.files(),
+                    expected_task(),
+                    claim=claim,
+                    executed=bool(actor.observations) if actor else True,
+                    subject_verified=True,
+                )
                 if result["status"] != "passed":
                     raise ValueError("Upgrade task did not complete")
                 results["current"] = result
@@ -381,6 +462,10 @@ def execute_pair(current_factory, previous_factory, family, destination):
         results.update(status="failed", execution_error=str(error)[:2000])
     finally:
         results["cleanup"] = [previous.cleanup, *([current.cleanup] if current else [])]
+        if actor:
+            results["actor"] = actor.observations
+            results["actor_sha256"] = actor.source_sha256
+            results["driver"] = "agent"
     return results
 
 
