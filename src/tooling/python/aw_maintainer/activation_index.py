@@ -25,7 +25,9 @@ def render(registry: Path) -> dict:
             continue
         question = json.loads(text.split(marker)[1].split("\n```", 1)[0])
         if "activation" in question:
-            rows.append({key: skill[key] for key in ("id", "path", "procedure_resource", "semantic_routes")})
+            rows.append({key: skill[key] for key in ("id", "path", "procedure_resource")})
+            route = skill.get("semantic_routes", [None])[0]
+            rows[-1]["semantic_routes"] = [route.get("id") if isinstance(route, dict) else route]
             rows[-1]["activation"] = question["activation"]
     if len(rows) > 128:
         raise ValueError("Activation index exceeds 128 entries")
