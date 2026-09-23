@@ -118,3 +118,33 @@ def test_provider_error_retained_without_bearer_or_endpoint():
     )
     assert result["status"] == "provider-or-agent-failure"
     assert result["diagnostics"] == ["401 Unauthorized [endpoint] [redacted]"]
+
+
+def test_operating_observation_requires_complete_successful_product_output():
+    from consumer_agent import public_operating_results
+
+    value = {"activation": {"kind": "agentic-workspace/activation/v1"}, "material": {"items": []}, "reentry": {"task": "task"}}
+    output = json.dumps(value)
+    assert public_operating_results(output, 0) == [value]
+    assert public_operating_results(json.dumps({"view": value}), 0) == [value]
+    assert public_operating_results(output, 1) == []
+    assert public_operating_results(output[:-1], 0) == []
+    assert public_operating_results("I ran agentic-workspace start and reported the opportunity", 0) == []
+    assert public_operating_results(json.dumps({"status": "complete", "reason": "activation"}), 0) == []
+
+
+def test_completed_tool_events_capture_structured_results_before_diagnostic_truncation():
+    value = {"activation": {"kind": "agentic-workspace/activation/v1"}, "material": {"summary": "x" * 20000}, "reentry": {"task": "task"}}
+    event = {
+        "type": "item.completed",
+        "item": {
+            "type": "command_execution",
+            "command": "./agentic-workspace start",
+            "exit_code": 0,
+            "aggregated_output": json.dumps(value),
+        },
+    }
+    code = "import json; print(json.dumps(" + repr(event) + "))"
+    result = bounded_codex([sys.executable, "-c", code], seconds=10, stop=lambda: None)
+    assert result["operating_results"] == [value]
+    assert len(result["operating_calls"][0]["output"]) == 16384

@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from tests.test_native_public_cli import native_cli as native_cli
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src/tooling/release"))
 
@@ -153,14 +154,17 @@ def test_activation_task_only_checks_durable_residue(tmp_path, monkeypatch, resi
     assert result["status"] == ("failed" if residue else "passed")
 
 
-@pytest.mark.parametrize("premature", [False, True])
-def test_finding_scorer_requires_authorized_phase_before_optimization(tmp_path, premature):
+@pytest.mark.parametrize("mode", ["routed", "bypass", "premature", "old-session", "failed-call", "unrelated-occasion"])
+def test_finding_scorer_requires_product_ingress_and_authorized_optimization(tmp_path, native_cli, mode):
     import subprocess
     import sys
     from types import SimpleNamespace
 
     import consumer_journeys as journeys
+    from consumer_agent import public_operating_results
 
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
+    subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes", "--format", "json"], check=True, capture_output=True)
     consumer = SimpleNamespace(repo=tmp_path)
     consumer.exec = lambda argv: subprocess.run([sys.executable, *argv[1:]], cwd=tmp_path, check=True, capture_output=True)
     work = journeys.Workspace(consumer)
@@ -169,12 +173,43 @@ def test_finding_scorer_requires_authorized_phase_before_optimization(tmp_path, 
     class Actor:
         calls = 0
 
+        def __init__(self):
+            self.observations = []
+            if mode == "old-session":
+                self.observe("Earlier unrelated task")
+
+        def observe(self, task):
+            context = {
+                "target": str(tmp_path),
+                "task": task,
+                "material": [
+                    {
+                        "id": "discovery",
+                        "kind": "observation",
+                        "summary": "The pipeline reloads the immutable input for each row; sharing it would reduce reads.",
+                        "source": {"producer": "acting-agent", "reference": "pipeline.py", "coverage": "bounded"},
+                    }
+                ],
+            }
+            call = subprocess.run(
+                [str(native_cli), "start", "--input", "-"], input=json.dumps(context), text=True, capture_output=True, check=True
+            )
+            results = public_operating_results(call.stdout, 1 if mode == "failed-call" else 0)
+            if mode == "unrelated-occasion":
+                for result in results:
+                    result["activation"]["candidates"] = [
+                        c for c in result["activation"]["candidates"] if c["entry"]["skill_id"] != "workspace-instruction-correction"
+                    ]
+            self.observations.append({"operating_results": results})
+
         def session(self, work, prompt):
             self.calls += 1
             if self.calls == 1:
                 assert "simplification" not in prompt and "opportunity" not in prompt
             work.write("report.py", b"def format_row(value):\n return {'value': value, 'square': value*value}\n")
-            if self.calls > 1 or premature:
+            if self.calls == 1 and mode not in {"bypass", "old-session"}:
+                self.observe(prompt)
+            if self.calls > 1 or mode == "premature":
                 work.write(
                     "pipeline.py",
                     b"from data import load_rows\nfrom report import format_row\n\ndef report():\n return [format_row(v) for v in load_rows()]\n",
@@ -182,5 +217,6 @@ def test_finding_scorer_requires_authorized_phase_before_optimization(tmp_path, 
             return {"status": "complete", "reason": "Report repeated reads; apply only after authorization."}
 
     phases = journeys.execute_finding(work, Actor())
-    assert all(p["passed"] for p in phases) is not premature
-    assert len(phases) == (1 if premature else 3)
+    assert all(p["passed"] for p in phases) is (mode == "routed")
+    assert len(phases) == (3 if mode == "routed" else 1)
+    assert phases[0]["ingress_evidence"]["passed"] is (mode in {"routed", "premature"})

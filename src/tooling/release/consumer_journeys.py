@@ -475,13 +475,102 @@ def finding_fixture(work):
     return check
 
 
+def finding_ingress(observations):
+    """Require observed low-authority ingress linked to its product consequence.
+
+    No final-answer or command-name score. The fixture independently verifies
+    reporting policy and unchanged sources; this checks the distinct AW path.
+    """
+    for observation in observations:
+        for result in observation.get("operating_results", []):
+            material = result.get("material") or {}
+            activation = result.get("activation") or {}
+            if (
+                material.get("kind") != "agentic-workspace/current-material/v1"
+                or activation.get("kind") != "agentic-workspace/activation/v1"
+            ):
+                continue
+            for item in material.get("items", []):
+                signal = item.get("material", {})
+                source = signal.get("source", {})
+                work = signal.get("work", {})
+                if (
+                    item.get("trust") != "caller-asserted"
+                    or item.get("currentness") not in {"unverified", "dependencies-current"}
+                    or signal.get("kind") != "observation"
+                    or source.get("coverage") != "bounded"
+                    or source.get("producer") not in {"acting-agent", "acting-agent/source-inspection"}
+                    or not source.get("reference")
+                    or not signal.get("summary")
+                    or work.get("kind") != "current-work"
+                    or not work.get("id")
+                ):
+                    continue
+                # The response must bind the actual admitted material, rather
+                # than an unrelated occasion or an unbound mention of a skill.
+                revision = (
+                    "sha256:"
+                    + hashlib.sha256(json.dumps(signal, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+                )
+                if item.get("revision") != revision:
+                    continue
+                for candidate in activation.get("candidates", []):
+                    entry = candidate.get("entry", {})
+                    if (
+                        entry.get("skill_id") == "workspace-instruction-correction"
+                        and entry.get("route") == "workspace/instructions/correction"
+                        and entry.get("source_ref") == ".agentic-workspace/skills/REGISTRY.json"
+                        and candidate.get("occasion") == item
+                        and candidate.get("status") in {"applicability-required", "applicable"}
+                        and candidate.get("outcome_status") == "unsettled"
+                        and any(
+                            request.get("owner") == "activation"
+                            and request.get("task_identity") == work
+                            and any(
+                                j.get("id") == candidate.get("id") and j.get("revision") == candidate.get("revision")
+                                for j in request.get("arguments", {}).get("judgments", [])
+                            )
+                            for request in activation.get("requests", [])
+                        )
+                    ):
+                        return {
+                            "passed": True,
+                            "material_revision": revision,
+                            "candidate_id": candidate["id"],
+                            "candidate_revision": candidate["revision"],
+                            "work": work,
+                        }
+    return {
+        "passed": False,
+        "reason": "No complete observed material ingress linked to the current correction activation in the first phase.",
+    }
+
+
 def execute_finding(work, actor):
     check = finding_fixture(work)
     before = work.files()
     prompt = "Inspect how the report is assembled, then add a square field in report.py's format_row. Preserve existing values and order, and run the repository checks."
+    observation_start = len(getattr(actor, "observations", []))
+    deterministic_observations = []
     if actor:
         claim = actor.session(work, prompt)
     else:
+        response = work.start(
+            {
+                "target": ".",
+                "task": TASK,
+                "projection": "full",
+                "material": [
+                    {
+                        "id": "source-finding",
+                        "kind": "observation",
+                        "summary": "The pipeline repeats the same immutable input read for every row.",
+                        "source": {"producer": "acting-agent", "reference": "pipeline.py", "coverage": "bounded"},
+                    }
+                ],
+            }
+        )
+        deterministic_observations.append({"operating_results": [response]})
         work.write("report.py", b"def format_row(value):\n return {'value': value, 'square': value*value}\n")
         claim = {
             "status": "complete",
@@ -490,6 +579,7 @@ def execute_finding(work, actor):
     work.consumer.exec(["python3", "verify_report.py"])
     after = work.files()
     observed = json.loads(after["result.json"])
+    ingress = finding_ingress(getattr(actor, "observations", [])[observation_start:] if actor else deterministic_observations)
 
     def residue(files):
         return [
@@ -501,7 +591,9 @@ def execute_finding(work, actor):
     phases = [
         {
             "name": "internal-finding-reporting",
-            "passed": claim.get("status") == "complete"
+            "ingress_evidence": ingress,
+            "passed": ingress["passed"]
+            and claim.get("status") == "complete"
             and observed["source_reads"] == 32
             and after["data.py"] == before["data.py"]
             and after["pipeline.py"] == before["pipeline.py"]
@@ -510,7 +602,7 @@ def execute_finding(work, actor):
             and after[".agentic-workspace/config.toml"] == before[".agentic-workspace/config.toml"],
             "source_reads": observed["source_reads"],
             "report_evidence": claim,
-            "semantic_boundary": "Artifact checks establish the task and report-only mutation boundary. Inspect the actor's report and operating calls for endogenous discovery and applicability; no keyword score establishes that judgment.",
+            "semantic_boundary": "Observed typed ingress and its linked current activation are mandatory alongside artifacts and reporting policy. This does not establish semantic acceptance of the opportunity or independent PR review.",
         }
     ]
     if not phases[0]["passed"]:

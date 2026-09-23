@@ -275,6 +275,41 @@ class SandboxConsumer(DockerConsumer):
             raise
 
 
+def public_operating_results(output, exit_code):
+    """Extract complete product envelopes from observed command stdout, not prose.
+
+    Parsing precedes diagnostic truncation. Missing/truncated/failed output is
+    not evidence. This is public tool observation, never a model final claim.
+    """
+    if exit_code != 0:
+        return []
+    results = []
+    for line in output.splitlines():
+        if len(line) > 262144 or not line.startswith("{"):
+            continue
+        try:
+            value = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(value, dict):
+            continue
+        view = value.get("view", value)
+        if (
+            not isinstance(view, dict)
+            or not isinstance(view.get("activation"), dict)
+            or view["activation"].get("kind") != "agentic-workspace/activation/v1"
+        ):
+            continue
+        # Keep exact typed input/consequence linkage; branch prose and unrelated
+        # owner state need not be copied into this bounded observation.
+        result = {key: view.get(key) for key in ("activation", "material", "reentry")}
+        if len(json.dumps(result)) <= 65536:
+            results.append(result)
+        if len(results) == 16:
+            break
+    return results
+
+
 def bounded_codex(command, *, seconds, token_ceiling=None, stop):
     """Bound wall time/output and stop on observed usage; no cost is fabricated.
 
@@ -311,6 +346,7 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
     message = None
     diagnostics = []
     operating_calls = []
+    operating_results = []
     try:
         while time.monotonic() < deadline:
             try:
@@ -344,6 +380,9 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
                     break
             item = event.get("item", {})
             if event.get("type") == "item.completed" and item.get("type") == "command_execution":
+                operating_results.extend(
+                    public_operating_results(item.get("aggregated_output", ""), item.get("exit_code"))[: 16 - len(operating_results)]
+                )
                 command_text = item.get("command", "")
                 if "agentic-workspace" in command_text and "start" in command_text and len(operating_calls) < 16:
                     operating_calls.append(
@@ -380,6 +419,7 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
         "calls": calls,
         "diagnostics": diagnostics,
         "operating_calls": operating_calls,
+        "operating_results": operating_results,
         "token_ceiling": token_ceiling,
         "budget_enforcement": "wall-time-output" + ("-and-observed-token-stop" if token_ceiling is not None else ""),
     }
