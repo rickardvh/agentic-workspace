@@ -200,9 +200,9 @@ def consume(
             command += ["--delivered", reference]
         for path in context.get("changed", []):
             command += ["--changed", path]
-        if context.get("request") or context.get("invocation"):
+        if context.get("request") or context.get("invocation") or "material" in context:
             command += ["--input", "-"]
-        stdin = json.dumps(context.get("invocation", context.get("request")))
+        stdin = json.dumps(context if "material" in context else context.get("invocation", context.get("request")))
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":
@@ -1136,3 +1136,25 @@ def test_resource_transport_matches_native_contract(tmp_path, shared_core_binary
     expected = resource("json", shared_core_binary, native_cli, context)
     assert resource(surface, shared_core_binary, native_cli, context) == expected
     assert not (tmp_path / ".agentic-workspace").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_current_material_is_disposable_and_does_not_reidentify_work(tmp_path, shared_core_binary, native_cli, surface):
+    context = {"target": str(tmp_path), "task": "Establish current readiness"}
+    quiet = consume(surface, shared_core_binary, native_cli, context)
+    material = [
+        {
+            "id": "readiness",
+            "kind": "need",
+            "summary": "Establish the service prerequisite before testing",
+            "source": {"producer": "independent-lab", "reference": "result:17", "coverage": "partial"},
+        }
+    ]
+    current = consume(surface, shared_core_binary, native_cli, {**context, "material": material})
+    assert current["current_work"] == quiet["current_work"]
+    assert current["decision_packet"] == quiet["decision_packet"]
+    assert current["material"]["items"][0]["trust"] == "caller-asserted"
+    carried = consume(surface, shared_core_binary, native_cli, {**context, "material": material, "projection": "carried"})
+    assert carried["carriage"]["context"]["material"] == material
+    assert "material" not in consume(surface, shared_core_binary, native_cli, context)
+    assert not list(tmp_path.iterdir())

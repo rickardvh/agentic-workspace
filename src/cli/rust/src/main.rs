@@ -181,7 +181,10 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<()
         .find(|command| command["name"] == parsed.command)
         .unwrap();
     let field = command["input_field"].as_str().unwrap();
-    if command["accepts_input_envelope"] == true && input.get(field).is_some() {
+    if command["accepts_input_envelope"] == true
+        && (input.get(field).is_some()
+            || (parsed.command == "start" && input.get("material").is_some()))
+    {
         // Preserve the exact owner envelope. Explicit argv is an assertion,
         // never an override; absent defaults must not replace bound context.
         for (key, value) in parsed.values.as_object().unwrap() {

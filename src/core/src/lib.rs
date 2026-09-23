@@ -31,6 +31,7 @@ mod native_instruction_write;
 mod native_instructions;
 mod native_intent;
 mod native_intent_write;
+mod native_material;
 mod native_measurement;
 #[path = "modules/memory/native_memory.rs"]
 mod native_memory;

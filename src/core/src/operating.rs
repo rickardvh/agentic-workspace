@@ -297,6 +297,10 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
+    if let Some(material) = full.get("material") {
+        result["material"] = material.clone();
+        result["reentry"]["material"] = context["material"].clone();
+    }
     let retention = &full["memory"]["terminal_retention"];
     if matches!(
         retention["status"].as_str(),
@@ -710,10 +714,9 @@ fn operate_current(
                 .context
                 .as_object()
                 .ok_or_else(|| error("invalid carried context"))?;
-            if carried_context
-                .keys()
-                .any(|key| !["target", "task", "changed", "request"].contains(&key.as_str()))
-            {
+            if carried_context.keys().any(|key| {
+                !["target", "task", "changed", "request", "material"].contains(&key.as_str())
+            }) {
                 return Err(error("unknown carried context field"));
             }
             // Explicit context is either identical or rejected, never silently
