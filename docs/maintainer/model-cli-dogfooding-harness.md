@@ -11,6 +11,20 @@ Use a run-owned directory under `.agentic-workspace/local/scratch/` and a new re
 filename for each attempt. Never replace a failed public installation with a
 checkout build. Preserve the first failure when making a diagnostic retry.
 
+For a native Windows standalone first-contact run, for example:
+
+```sh
+python src/tooling/model-cli-harness/run_model_cli_harness.py run --public-version 1.3.2 --family first-contact --backend native --profile standalone --target x86_64-pc-windows-msvc --scratch <owned-scratch> --result <new-result.json>
+```
+
+Use the seven family names from `consumer_journeys.py`. `local-independence` and
+`upgrade` also require `--previous-public-version` naming a different published
+stable. A missing version fails; reserved tags are not upgrade fixtures. Existing
+release consumers call the same complete first-contact case. Other families reuse
+named native owner tests for detailed semantics and add installed composition
+checks. A failed released product remains a failed observation, even when its fix
+has landed in source.
+
 The scorer reads bounded inert exports after the actor stops. It checks task
 artifacts, allowed changes, preserved policy and claim honesty separately. It does
 not execute actor-modified tests or reward command mentions. Offline exports have

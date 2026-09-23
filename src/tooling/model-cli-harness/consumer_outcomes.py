@@ -15,7 +15,7 @@ from pathlib import Path
 
 MAX_FILES = 5000
 MAX_BYTES = 32 * 1024 * 1024
-IGNORED = {".git", "node_modules", ".venv"}
+IGNORED = {".git", "node_modules", ".venv", ".agents"}
 
 
 def snapshot(root: Path) -> dict[str, bytes]:

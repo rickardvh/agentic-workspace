@@ -99,6 +99,7 @@ def test_native_registry_wrapper_mismatch_fails_before_install(tmp_path, monkeyp
     item = {"asset": "admitted.whl", "sha256": hashlib.sha256(b"admitted package").hexdigest()}
     row = {"target": "fixture", "native_archive": {"asset": "native.zip"}, "wheel": item}
     subject = Subject("public", tmp_path, {"version": "1.3.2", "npm": item, "platforms": [row]})
+    monkeypatch.setattr(Subject, "identity", lambda _: {"inventory_sha256": "a" * 64})
     monkeypatch.setattr(environment.platform_release, "current_platform", lambda: {"target": "fixture"})
     monkeypatch.setattr(environment.platform_release, "load", lambda _: subject.inventory)
     monkeypatch.setattr(environment, "safe_native_archive", lambda *a: {})
