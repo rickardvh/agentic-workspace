@@ -33,7 +33,11 @@ def harness_identity():
         ROOT / "src/tooling/release/consumer_environment.py",
         ROOT / "src/tooling/release/consumer_journeys.py",
     ]
-    return {str(path.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
+    # Git may check the same trusted text out with CRLF on a native Windows job.
+    return {
+        str(path.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        for path in paths
+    }
 
 
 PROFILES = ("standalone", "node", "python", "cargo")

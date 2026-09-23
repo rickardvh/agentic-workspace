@@ -40,6 +40,28 @@ PROFILES = {
 
 
 def run(argv, **kwargs):
+    if os.name == "nt" and Path(str(argv[0])).stem.lower() == "sbx":
+        # The Sandbox daemon may inherit pipe handles after its launcher exits.
+        # File handles let wait() enforce the deadline without communicate()
+        # waiting indefinitely for that daemon to close an inherited pipe.
+        with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+            completed = subprocess.run(
+                [str(v) for v in argv],
+                stdout=stdout,
+                stderr=stderr,
+                timeout=kwargs.pop("timeout", 120),
+                **kwargs,
+            )
+            stdout.seek(0)
+            stderr.seek(0)
+            result = subprocess.CompletedProcess(
+                completed.args,
+                completed.returncode,
+                stdout.read().decode("utf-8", errors="replace"),
+                stderr.read().decode("utf-8", errors="replace"),
+            )
+            result.check_returncode()
+            return result
     return subprocess.run(
         [str(v) for v in argv],
         check=True,
