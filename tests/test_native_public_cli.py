@@ -1158,3 +1158,45 @@ def test_current_material_is_disposable_and_does_not_reidentify_work(tmp_path, s
     assert carried["carriage"]["context"]["material"] == material
     assert "material" not in consume(surface, shared_core_binary, native_cli, context)
     assert not list(tmp_path.iterdir())
+
+
+def test_material_activates_repository_procedure_through_public_start(tmp_path, shared_core_binary, native_cli):
+    folder = tmp_path / "tools/skills/lab"
+    folder.mkdir(parents=True)
+    (folder / "SKILL.md").write_text("Establish laboratory readiness using procedure.md.")
+    (folder.parent / "REGISTRY.json").write_text(
+        json.dumps(
+            {"skills": [{"id": "lab", "path": "lab/SKILL.md", "semantic_routes": ["lab/readiness"], "procedure_resource": "procedure.md"}]}
+        )
+    )
+    declaration = {
+        "kind": "agentic-workspace/procedure/v1",
+        "id": "readiness",
+        "question": "Which prerequisite is missing?",
+        "branches": [{"id": "check", "description": "Observe readiness", "next": "check.md"}],
+        "activation": {
+            "occasions": ["need"],
+            "applicability": "A laboratory prerequisite affects this task.",
+            "outcome": "Current laboratory readiness established.",
+        },
+    }
+    (folder / "procedure.md").write_text("```agentic-procedure\n" + json.dumps(declaration) + "\n```\n")
+    context = {
+        "target": str(tmp_path),
+        "task": "Validate the sample",
+        "material": [
+            {
+                "id": "prerequisite",
+                "kind": "need",
+                "summary": "Establish readiness before validation",
+                "source": {"producer": "independent-lab", "reference": "sample:17", "coverage": "bounded"},
+            }
+        ],
+    }
+    first = consume("native", shared_core_binary, native_cli, context)
+    candidate = first["activation"]["candidates"][0]
+    assert candidate["entry"]["skill_id"] == "lab"
+    assert candidate["status"] == "applicability-required"
+    request = first["activation"]["requests"][0]
+    request["arguments"]["judgments"][0].update(status="no-match", reason="This sample is already validated elsewhere.")
+    assert "activation" not in consume("native", shared_core_binary, native_cli, {**context, "request": request})

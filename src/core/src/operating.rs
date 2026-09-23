@@ -301,6 +301,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         result["material"] = material.clone();
         result["reentry"]["material"] = context["material"].clone();
     }
+    if let Some(activation) = full.get("activation") {
+        result["activation"] = activation.clone();
+    }
     let retention = &full["memory"]["terminal_retention"];
     if matches!(
         retention["status"].as_str(),

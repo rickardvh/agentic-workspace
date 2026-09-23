@@ -19,6 +19,8 @@ struct Question {
     branches: Vec<Branch>,
     #[serde(default)]
     context: Vec<String>,
+    #[serde(default)]
+    activation: Option<Value>,
 }
 
 #[derive(Deserialize)]
@@ -95,6 +97,9 @@ pub(crate) fn detail(
             .ok_or_else(|| error("procedure fence is not closed"))?;
         let question: Question =
             serde_json::from_str(&lines[start..end].join("\n")).map_err(error)?;
+        if let Some(activation) = &question.activation {
+            crate::native_activation::validate(activation)?;
+        }
         if question.kind != "agentic-workspace/procedure/v1" {
             return Err(error("incompatible procedure resource"));
         }

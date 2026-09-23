@@ -21,6 +21,23 @@ Python, TypeScript and JSON use the same context shape. Returned material binds
 Material does not change task identity or create retained state. A fresh start
 without it is quiet; retain useful consequences only through an existing owner.
 
+An existing `agentic-procedure` resource may declare optional `activation` with
+`occasions` (`observation`, `need`, `binding`), natural-language `applicability`
+and `outcome`. The resource itself is the entry; its existing qualified skill
+and route identify it. `binding_owners` nominates current native blocker owners,
+so their consequence can make the method visible without another semantic
+question. Optional `settled_by` pairs (`selector`, scalar `value`) observe exact
+native owner outcomes. They suppress only the optional method; source-authored
+activation cannot modify native requirements or establish proof.
+
+On material or binding signals, the current activation frontier exposes these
+occasions without loading branch bodies. The acting agent supplies only unresolved
+applicability through the returned request. Each answer binds its own material,
+procedure and declared context; unrelated material does not invalidate peers.
+`unknown` and `defer` remain visible. `no-match` and justified `no-retention`
+suppress their optional occasion while binding restrictions remain. Selecting or
+reading a procedure leaves its outcome unsettled. There is no durable cursor.
+
 ## Construction and authority
 
 All resolutions retain configuration/source grammar and compatibility admission,

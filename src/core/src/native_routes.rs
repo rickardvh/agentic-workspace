@@ -430,6 +430,14 @@ pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
         json!({"revision":catalogue["revision"],"routes":catalogue["routes"].as_array().unwrap().iter().map(|route|route["id"].clone()).collect::<Vec<_>>()}),
     )
 }
+pub(crate) fn registry_sources(target: &Path) -> Result<Vec<String>, CoreError> {
+    Ok(catalogue(target, None)?["sources"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s.as_str().unwrap().to_owned())
+        .collect())
+}
 
 /// Resolve a short skill identity or qualified semantic route through the same
 /// bounded registry discovery; identity does not grant execution authority.
