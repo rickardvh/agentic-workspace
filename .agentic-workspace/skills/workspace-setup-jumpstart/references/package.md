@@ -80,6 +80,12 @@ behavior's `setup_settlement` state the supported claim and its owner boundary.
 Only `instructions` and `preferences` support `effective` or `already-effective`:
 copy the consumer's non-null `configuration_behavior.setup_witness`. Configuration
 reobserves it before publication and reuse; a null witness is not verification.
+Request behavior with the same `scope` as the assessment (`repository` is the
+default). Witnesses bind that scope and cannot be substituted across scopes.
+Repository preference evidence covers shared improvement latitude only;
+machine-local preference evidence also covers effective local clarification.
+Local preference changes require local reassessment, without invalidating the
+shared assessment or adding local sources to its dependencies.
 For relevant `diagnostics`, `assignment`, `modules` and `invocation`, use
 `owner-managed` when consideration is complete and no authorized setup action
 remains here. Explain the responsible owner and boundary; do not supply an

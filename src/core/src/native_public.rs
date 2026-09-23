@@ -1701,7 +1701,16 @@ fn resolve_selected(
         public["configuration_behavior"] =
             crate::native_configuration_procedure::observe(target, &concern, &public)?;
         public["configuration_behavior"]["setup_witness"] =
-            crate::native_configuration_assessment::consumer_witness(target, &concern, &public)?;
+            crate::native_configuration_assessment::consumer_witness(
+                target,
+                &concern,
+                public["configuration_write"]["requested_behavior_scope"]
+                    .as_str()
+                    .unwrap_or("repository"),
+                &public,
+            )?;
+        public["configuration_behavior"]["setup_scope"] =
+            public["configuration_write"]["requested_behavior_scope"].clone();
     }
     crate::native_configuration_assessment::validate_consumers(target, &public)?;
     Ok(public)

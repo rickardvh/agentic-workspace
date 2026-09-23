@@ -90,7 +90,7 @@ pub(crate) fn settlement(concern: &str) -> Value {
             "Effectiveness means the selected startup source was delivered by the startup adapter."
         }
         "preferences" => {
-            "Effectiveness means Configuration currently observes the selected advisory preferences; no effect authorization."
+            "Repository effectiveness covers the shared improvement preference only. Machine-local effectiveness covers the effective clarification and improvement preferences. Witnesses are scope-bound; neither grants effect authorization."
         }
         "diagnostics" => {
             "Actual capture belongs to the session-logging transport on this machine and target. Configuration assessment certifies neither capture nor diagnostic readiness, in either scope."
@@ -439,7 +439,7 @@ fn view_inner(
                     "status":{"enum":["effective","already-effective","owner-managed","irrelevant","excluded","pending","deferred","blocked","unavailable"]},
                     "reason":{"type":"string","minLength":1},
                     "concern":{"enum":["instructions","diagnostics","assignment","modules","invocation","preferences"]},
-                    "observation":{"type":"object","description":"Only instructions/preferences support effective/already-effective: copy the non-null configuration_behavior.setup_witness exactly. It is reobserved before publication and reuse. Never supply observation for owner-managed."},
+                    "observation":{"type":"object","description":"Only instructions/preferences support effective/already-effective: request behavior with this assessment's scope and copy the non-null configuration_behavior.setup_witness exactly. It is reobserved in that scope before publication and reuse. Never supply observation for owner-managed."},
                     "resume":{"type":"string","description":"Required for pending/deferred/blocked/unavailable: precise owner and next action."}
                 },"allOf":[
                     {"if":{"properties":{"status":{"enum":["effective","already-effective"]}}},"then":{"required":["concern","observation"],"properties":{"concern":{"enum":["instructions","preferences"]}}}},
@@ -586,7 +586,12 @@ pub(crate) fn validate_consumers(target: &Path, current: &Value) -> Result<(), C
         })
     {
         let concern = row["concern"].as_str().unwrap_or("");
-        let witness = consumer_witness(target, concern, current)?;
+        let witness = consumer_witness(
+            target,
+            concern,
+            proposal["scope"].as_str().unwrap_or(""),
+            current,
+        )?;
         if witness.is_null() || witness != row["observation"] {
             return Err(err(
                 "setup consumer effectiveness not established; preserve pending owner verification",
@@ -622,7 +627,12 @@ pub(crate) fn revalidate_saved(
                 Some("effective" | "already-effective")
             ) {
                 let concern = row["concern"].as_str().unwrap_or("");
-                let observed = consumer_witness(target, concern, &current)?;
+                let observed = consumer_witness(
+                    target,
+                    concern,
+                    assessment["scope"].as_str().unwrap_or(""),
+                    &current,
+                )?;
                 if observed.is_null() || observed != row["observation"] {
                     changed.push(concern.to_owned());
                 }
@@ -648,16 +658,28 @@ pub(crate) fn revalidate_saved(
 pub(crate) fn consumer_witness(
     target: &Path,
     concern: &str,
+    scope: &str,
     current: &Value,
 ) -> Result<Value, CoreError> {
+    if !matches!(scope, "repository" | "machine-local") {
+        return Err(err("unsupported setup witness scope"));
+    }
     let actual = crate::native_configuration_procedure::observe(target, concern, current)?;
     let o = &actual["observation"];
     let material = match concern {
         "instructions" if o["current"]["status"] == "source-context-delivered" => {
             json!({"owner":"startup-adapter","source":o["current"]["source"]})
         }
+        // clarification is owned by local configuration, while improvement
+        // latitude is shared. Never hash the merged local view into a shared
+        // assessment or add local sources to repository dependencies.
+        "preferences" if scope == "repository" => {
+            json!({"owner":o["owner"],"improvement_latitude":o["improvement_latitude"]})
+        }
         "preferences" => o.clone(),
         _ => return Ok(Value::Null),
     };
-    Ok(json!({"owner":o["owner"],"revision":digest(&material)?}))
+    Ok(
+        json!({"owner":o["owner"],"scope":scope,"revision":digest(&json!({"scope":scope,"material":material}))?}),
+    )
 }

@@ -128,26 +128,81 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     assert set(settled["owner_managed_concerns"]) == {"diagnostics", "assignment", "modules", "invocation"}
     assert "no readiness" in settled["settlement_boundary"]
     assert settled["machine_readiness"] == "not-certified-by-configuration-assessment"
-    # A local preference changes the actual consumer independently of shared
-    # dependency paths. Reuse fails and exposes a fresh assessment write route.
+    # Shared preference evidence must not incorporate machine-local choices.
+    # Persist each scope with its own witness, and reject cross-scope substitution.
     local_source = workspace / "config.local.toml"
-    local_source.write_text('[clarification]\nmode="ask-first"\n')
-    stale = assessment()
-    assert stale["integration_complete"] is False
-    assert stale["changed_consumers"] == ["preferences"]
-    assert stale["record_request"]
-    assert "configuration-assessment-required" in json.dumps(call()["decision_packet"])
-    local_source.unlink()
-    assert assessment()["status"] == "settled"
-    selected = call()["configuration_write"]["setup_assessment"]["request"]
-    selected["arguments"]["scope"] = "machine-local"
-    local = call(request=selected)["configuration_write"]["setup_assessment"]["record_request"]
-    local["arguments"]["value"]["coverage"] = "Local concern consideration is complete; no capture or launch readiness is certified."
+
+    def preference_witness(scope):
+        request = call()["configuration_write"]["behavior_request"]
+        request["arguments"].update(concern="preferences", scope=scope)
+        behavior = call(request=request)["configuration_behavior"]
+        assert behavior["setup_scope"] == scope
+        return behavior["setup_witness"]
+
+    def scoped_assessment(scope, reconsider=False):
+        request = call()["configuration_write"]["setup_assessment"]["request"]
+        request["arguments"].update(scope=scope, reconsider=reconsider)
+        return call(request=request)["configuration_write"]["setup_assessment"]
+
+    shared_witness = preference_witness("repository")
+    local_witness = preference_witness("machine-local")
+    assert shared_witness["scope"] == "repository"
+    assert local_witness["scope"] == "machine-local"
+    assert shared_witness != local_witness
+    local = scoped_assessment("machine-local")["record_request"]
+    local["arguments"]["value"]["coverage"] = "Local preferences observed; no capture or launch readiness is certified."
     local["arguments"]["value"]["dispositions"] = [
         row for row in record["arguments"]["value"]["dispositions"] if row["status"] == "owner-managed"
     ]
+    local["arguments"]["value"]["dispositions"].append(
+        {
+            "subject": "preferences",
+            "concern": "preferences",
+            "status": "effective",
+            "reason": "Local consumer observed",
+            "observation": local_witness,
+        }
+    )
+    shared_record = scoped_assessment("repository", reconsider=True)["record_request"]
+    for request, wrong_witness in ((shared_record, local_witness), (local, shared_witness)):
+        invalid = copy.deepcopy(request)
+        preference = next(row for row in invalid["arguments"]["value"]["dispositions"] if row.get("concern") == "preferences")
+        preference["observation"] = copy.deepcopy(wrong_witness)
+        with pytest.raises(AssertionError, match="consumer effectiveness"):
+            call(request=invalid)
+        # Altering the visible scope cannot relabel the digest's evidence domain.
+        preference["observation"]["scope"] = invalid["arguments"]["value"]["scope"]
+        with pytest.raises(AssertionError, match="consumer effectiveness"):
+            call(request=invalid)
     assert call(invocation=call(request=local)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
     assert call()["configuration_write"]["local_setup_assessment"]["status"] == "settled"
+    local_saved = (workspace / "local/configuration-assessment.json").read_bytes()
+    for path, original, wrong_witness in (
+        (workspace / "configuration-assessment.json", saved, local_witness),
+        (workspace / "local/configuration-assessment.json", local_saved, shared_witness),
+    ):
+        crossed = json.loads(original)
+        next(row for row in crossed["dispositions"] if row.get("concern") == "preferences")["observation"] = wrong_witness
+        path.write_text(json.dumps(crossed))
+        rejected = scoped_assessment(crossed["scope"])
+        assert rejected["assessment_due"] is True
+        assert rejected["changed_consumers"] == ["preferences"]
+        assert rejected["record_request"]
+        path.write_bytes(original)
+    local_source.write_text('[clarification]\nmode="ask-first"\n')
+    assert assessment()["status"] == "settled"
+    assert (workspace / "configuration-assessment.json").read_bytes() == saved
+    stale = scoped_assessment("machine-local")
+    assert stale["integration_complete"] is False
+    assert stale["assessment_due"] is True
+    assert stale["record_request"]
+    assert ".agentic-workspace/config.local.toml" in stale["changed_dependencies"]
+    assert ".agentic-workspace/config.local.toml" not in [d["identity"] for d in assessment()["record"]["dependencies"]]
+    assert preference_witness("repository") == shared_witness
+    assert preference_witness("machine-local") != local_witness
+    local_source.unlink()
+    assert call()["configuration_write"]["local_setup_assessment"]["status"] == "settled"
+    assert (workspace / "local/configuration-assessment.json").read_bytes() == local_saved
     context["task"] = "Document a parser example"
     (tmp_path / "unrelated.txt").write_text("Unrelated repository change")
     assert assessment()["status"] == "settled"
