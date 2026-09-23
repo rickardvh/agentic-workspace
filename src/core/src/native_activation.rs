@@ -31,29 +31,71 @@ mod tests {
         std::fs::write(target.join("tools/skills/REGISTRY.json"),json!({"skills":[{"id":"lab","path":"lab/SKILL.md","semantic_routes":["lab/readiness"],"procedure_resource":"procedure.md"}]}).to_string()).unwrap();
         let declaration = json!({"kind":"agentic-workspace/procedure/v1","id":"readiness","question":"What readiness is missing?",
             "branches":[{"id":"check","description":"Establish readiness","next":"check.md"}],
-            "activation":{"occasions":["observation","need","binding"],"applicability":"A laboratory prerequisite affects current work.","outcome":"The current laboratory owner establishes readiness.","binding_owners":["laboratory"],"settled_by":[{"selector":"/laboratory/status","value":"ready"}]}});
+            "activation":{"occasions":["observation","need","binding"],"applicability":"Repeated construction cost or a laboratory prerequisite affects current work.","outcome":"The current laboratory owner establishes readiness.","binding_owners":["laboratory"],"settled_by":[{"selector":"/laboratory/status","value":"ready"}]}});
         let body = format!("```agentic-procedure\n{}\n```\n", declaration);
         std::fs::write(folder.join("procedure.md"), &body).unwrap();
+        let registry = target.join("tools/skills/REGISTRY.json");
+        let mut indexed: Value =
+            serde_json::from_slice(&std::fs::read(&registry).unwrap()).unwrap();
+        let mut entry = indexed["skills"][0].clone();
+        entry["activation"] = declaration["activation"].clone();
+        indexed["activation_index"] = json!([entry]);
+        std::fs::write(&registry, indexed.to_string()).unwrap();
         let work = json!({"kind":"current-work","id":"work"});
         let c = contract().unwrap();
         let mut full =
             json!({"current_work":work,"capability_contract":c,"decision_packet":{"blockers":[]}});
         assert!(view(&target, &full, None).unwrap().is_null());
         full["material"] = json!({"items":[
-            {"material":{"id":"discovered","kind":"observation","summary":"A new laboratory fact"},"revision":"one"},
+            {"material":{"id":"discovered","kind":"observation","summary":"Source inspection found both checks reconstruct the same immutable sample before every check; sharing preparation could reduce repeated work.","source":{"producer":"acting-agent/source-inspection","reference":"checks.py","coverage":"bounded"}},"revision":"one"},
             {"material":{"id":"upcoming","kind":"need","summary":"Readiness before proof"},"revision":"two"}]});
+        crate::native_planning::TEST_READS.with(|reads| reads.borrow_mut().clear());
         let first = view(&target, &full, None).unwrap();
+        let baseline_reads =
+            crate::native_planning::TEST_READS.with(|reads| reads.borrow().clone());
+        // Unrelated capabilities add neither procedure reads nor activation construction.
+        // Invalid bodies would fail if discovered eagerly; branch detail stays lazy too.
+        for n in 0..500 {
+            indexed["skills"].as_array_mut().unwrap().push(json!({"id":format!("unused-{n}"),"path":format!("unused-{n}/SKILL.md"),"procedure_resource":"procedure.md","semantic_routes":[format!("unused/{n}")]}));
+            let unused = target.join(format!("tools/skills/unused-{n}"));
+            std::fs::create_dir_all(&unused).unwrap();
+            std::fs::write(unused.join("procedure.md"), [255; 100]).unwrap();
+        }
+        std::fs::write(&registry, indexed.to_string()).unwrap();
+        crate::native_planning::TEST_READS.with(|reads| reads.borrow_mut().clear());
+        assert_eq!(view(&target, &full, None).unwrap(), first);
+        assert_eq!(
+            crate::native_planning::TEST_READS.with(|reads| reads.borrow().clone()),
+            baseline_reads
+        );
+        assert!(!baseline_reads.iter().any(|path| path.contains("check.md")));
+
         assert_eq!(first["candidates"].as_array().unwrap().len(), 2);
         assert_eq!(
             first["candidates"][0]["entry"]["resource"],
             "tools/skills/lab/procedure.md"
         );
         let mut request = first["requests"][0].clone();
-        request["arguments"]["judgments"][0]["status"] = json!("no-match");
+        request["arguments"]["judgments"][0]["status"] = json!("applicable");
         request["arguments"]["judgments"][1]["status"] = json!("applicable");
         let next = view(&target, &full, Some(&request)).unwrap();
-        assert_eq!(next["candidates"].as_array().unwrap().len(), 1);
+        assert_eq!(next["candidates"].as_array().unwrap().len(), 2);
         assert_eq!(next["candidates"][0]["outcome_status"], "unsettled");
+        let mut weak = full.clone();
+        weak["material"]["items"][0]["material"]["summary"] =
+            json!("A local variable name could be prettier.");
+        weak["material"]["items"][0]["revision"] = json!("weak");
+        let noise = view(&target, &weak, None).unwrap();
+        let mut dismissed = noise["requests"][0].clone();
+        dismissed["arguments"]["judgments"][0]["status"] = json!("no-retention");
+        assert_eq!(
+            view(&target, &weak, Some(&dismissed)).unwrap()["candidates"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(!target.join(".agentic-workspace").exists());
         std::fs::write(target.join("unrelated.txt"), "unrelated").unwrap();
         assert_eq!(view(&target, &full, Some(&request)).unwrap(), next);
         for status in ["unknown", "defer", "no-retention"] {
@@ -193,141 +235,153 @@ pub(crate) fn view(
     }
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|_| err("activation root unavailable"))?;
-    let sources = crate::native_routes::registry_sources(target)?;
+    let entries = crate::native_routes::activation_entries(target)?;
     let mut candidates = Vec::new();
     let mut seen = BTreeSet::new();
-    for source in sources {
-        let registry: Value = serde_json::from_slice(&decision_source::read(&root, &source)?)
-            .map_err(|_| err("activation registry invalid"))?;
-        for skill in registry["skills"].as_array().into_iter().flatten() {
-            let (Some(path), Some(resource)) =
-                (skill["path"].as_str(), skill["procedure_resource"].as_str())
-            else {
-                continue;
-            };
-            decision_source::relative(path)?;
-            decision_source::relative(resource)?;
-            let base = source.rsplit_once('/').map(|v| v.0).unwrap_or("");
-            let skill_path = format!("{base}/{path}");
-            let parent = skill_path.rsplit_once('/').unwrap().0;
-            let reference = format!("{parent}/{resource}");
-            if !seen.insert(reference.clone()) {
-                continue;
-            }
-            let Some(bytes) = crate::native_planning::read(&root, &reference)? else {
-                continue;
-            };
-            if bytes.len() > 65536 {
-                return Err(err("activation procedure exceeds bound"));
-            }
-            let text = std::str::from_utf8(&bytes)
-                .map_err(|_| err("activation procedure is not UTF-8"))?;
-            let lines: Vec<_> = text.lines().collect();
-            let starts: Vec<_> = lines
+    for indexed in entries {
+        let source = indexed["source"].as_str().unwrap();
+        let skill = &indexed["entry"];
+        let value = &skill["activation"];
+        validate(value)?;
+        let occasion: Occasion = serde_json::from_value(value.clone()).unwrap();
+        let has_signal = materials.iter().any(|m| {
+            occasion
+                .occasions
                 .iter()
-                .enumerate()
-                .filter(|(_, s)| **s == "```agentic-procedure")
-                .map(|(i, _)| i + 1)
-                .collect();
-            if starts.len() != 1 {
-                continue;
-            }
-            let start = starts[0];
-            let Some(end) = lines[start..].iter().position(|s| *s == "```") else {
-                continue;
-            };
-            let Ok(question) = serde_json::from_str::<Value>(&lines[start..start + end].join("\n"))
-            else {
-                continue;
-            };
-            let Some(value) = question.get("activation") else {
-                continue;
-            };
-            validate(value)?;
-            let Some(skill_bytes) = crate::native_planning::read(&root, &skill_path)? else {
-                continue;
-            };
-            let detail = crate::native_procedure::detail(
-                &root,
-                &json!({"source_ref":source,"procedure":{"reference":skill_path,"revision":decision_source::hash(&skill_bytes),"status":"available"}}),
-                &json!(resource),
-                None,
-            );
-            if detail["status"] != "current" {
-                return Err(err(
-                    "activation entry procedure unavailable; repair its current source",
-                ));
-            }
-            let occasion: Occasion = serde_json::from_value(value.clone()).unwrap();
-            let facts: Vec<_> = occasion
+                .any(|k| m["material"]["kind"] == *k)
+        }) || (occasion.occasions.iter().any(|k| k == "binding")
+            && blockers
+                .iter()
+                .any(|b| occasion.binding_owners.iter().any(|o| b["owner"] == *o)));
+        if !has_signal {
+            continue;
+        }
+        let (Some(path), Some(resource)) =
+            (skill["path"].as_str(), skill["procedure_resource"].as_str())
+        else {
+            return Err(err("invalid activation index entry"));
+        };
+        decision_source::relative(path)?;
+        decision_source::relative(resource)?;
+        let base = source.rsplit_once('/').map(|v| v.0).unwrap_or("");
+        let skill_path = format!("{base}/{path}");
+        let parent = skill_path.rsplit_once('/').unwrap().0;
+        let reference = format!("{parent}/{resource}");
+        if !seen.insert(reference.clone()) {
+            continue;
+        }
+        let Some(bytes) = crate::native_planning::read(&root, &reference)? else {
+            continue;
+        };
+        if bytes.len() > 65536 {
+            return Err(err("activation procedure exceeds bound"));
+        }
+        let text =
+            std::str::from_utf8(&bytes).map_err(|_| err("activation procedure is not UTF-8"))?;
+        let lines: Vec<_> = text.lines().collect();
+        let starts: Vec<_> = lines
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| **s == "```agentic-procedure")
+            .map(|(i, _)| i + 1)
+            .collect();
+        if starts.len() != 1 {
+            continue;
+        }
+        let start = starts[0];
+        let Some(end) = lines[start..].iter().position(|s| *s == "```") else {
+            continue;
+        };
+        let Ok(question) = serde_json::from_str::<Value>(&lines[start..start + end].join("\n"))
+        else {
+            continue;
+        };
+        if question.get("activation") != Some(value) {
+            return Err(err(
+                "activation index stale; regenerate from procedure sources",
+            ));
+        }
+        let Some(skill_bytes) = crate::native_planning::read(&root, &skill_path)? else {
+            continue;
+        };
+        let detail = crate::native_procedure::detail(
+            &root,
+            &json!({"source_ref":source,"procedure":{"reference":skill_path,"revision":decision_source::hash(&skill_bytes),"status":"available"}}),
+            &json!(resource),
+            None,
+        );
+        if detail["status"] != "current" {
+            return Err(err(
+                "activation entry procedure unavailable; repair its current source",
+            ));
+        }
+        let facts: Vec<_> = occasion
+            .settled_by
+            .iter()
+            .map(|f| json!({"selector":f.selector,"observed":full.pointer(&f.selector)}))
+            .collect();
+        let settled = !occasion.settled_by.is_empty()
+            && occasion
                 .settled_by
                 .iter()
-                .map(|f| json!({"selector":f.selector,"observed":full.pointer(&f.selector)}))
-                .collect();
-            let settled = !occasion.settled_by.is_empty()
-                && occasion
-                    .settled_by
+                .all(|f| full.pointer(&f.selector) == Some(&f.value));
+        let binding: Vec<_> = blockers
+            .iter()
+            .filter(|b| occasion.binding_owners.iter().any(|o| b["owner"] == *o))
+            .cloned()
+            .collect();
+        let mut signals: Vec<Value> = materials
+            .iter()
+            .filter(|m| {
+                occasion
+                    .occasions
                     .iter()
-                    .all(|f| full.pointer(&f.selector) == Some(&f.value));
-            let binding: Vec<_> = blockers
-                .iter()
-                .filter(|b| occasion.binding_owners.iter().any(|o| b["owner"] == *o))
-                .cloned()
-                .collect();
-            let mut signals: Vec<Value> = materials
-                .iter()
-                .filter(|m| {
-                    occasion
-                        .occasions
-                        .iter()
-                        .any(|k| m["material"]["kind"] == *k)
-                })
-                .cloned()
-                .collect();
-            if occasion.occasions.iter().any(|k| k == "binding") && !binding.is_empty() {
-                signals.push(json!({"binding":binding}));
-            }
-            for signal in signals {
-                let id = digest(&json!([
-                    reference,
-                    signal["material"]["id"],
-                    signal.get("binding").map(|_| "binding")
-                ]))?;
-                let revision =
-                    digest(&json!([work, reference, detail["revision"], signal, facts]))?;
-                let mut status = if settled {
-                    "outcome-satisfied"
-                } else if signal.get("binding").is_some() {
-                    "binding-consequence"
-                } else {
-                    "applicability-required"
-                };
-                let judgment = request
-                    .and_then(|r| r["arguments"]["judgments"].as_array())
-                    .into_iter()
-                    .flatten()
-                    .find(|j| j["id"] == id);
-                if let Some(j) = judgment {
-                    if !settled && j["revision"] != revision {
-                        return Err(err(
-                            "activation basis changed; reconsider dependent judgment",
-                        ));
-                    }
-                    if !settled && signal.get("binding").is_none() {
-                        status = j["status"].as_str().unwrap();
-                    }
+                    .any(|k| m["material"]["kind"] == *k)
+            })
+            .cloned()
+            .collect();
+        if occasion.occasions.iter().any(|k| k == "binding") && !binding.is_empty() {
+            signals.push(json!({"binding":binding}));
+        }
+        for signal in signals {
+            let id = digest(&json!([
+                reference,
+                signal["material"]["id"],
+                signal.get("binding").map(|_| "binding")
+            ]))?;
+            let revision = digest(&json!([work, reference, detail["revision"], signal, facts]))?;
+            let mut status = if settled {
+                "outcome-satisfied"
+            } else if signal.get("binding").is_some() {
+                "binding-consequence"
+            } else {
+                "applicability-required"
+            };
+            let judgment = request
+                .and_then(|r| r["arguments"]["judgments"].as_array())
+                .into_iter()
+                .flatten()
+                .find(|j| j["id"] == id);
+            if let Some(j) = judgment {
+                if !settled && j["revision"] != revision {
+                    return Err(err(
+                        "activation basis changed; reconsider dependent judgment",
+                    ));
                 }
-                candidates.push(json!({"id":id,"revision":revision,"status":status,"source":reference,
+                if !settled && signal.get("binding").is_none() {
+                    status = j["status"].as_str().unwrap();
+                }
+            }
+            candidates.push(json!({"id":id,"revision":revision,"status":status,"source":reference,
                     "occasion":signal,"applicability":occasion.applicability,"outcome":occasion.outcome,
                     "entry":{"source_ref":source,"skill_id":skill["id"],"resource":reference,
                         "route":skill["semantic_routes"][0].as_str().map(|s|json!(s)).unwrap_or_else(||skill["semantic_routes"][0]["id"].clone())},
                     "outcome_status":"unsettled","judgment":judgment,
                     "authority":"procedure discovery only; selection or reading does not discharge owner consequences"}));
-                if candidates.len() > 128 {
-                    return Err(err(
-                        "activation frontier exceeds bound; narrow current material",
-                    ));
-                }
+            if candidates.len() > 128 {
+                return Err(err(
+                    "activation frontier exceeds bound; narrow current material",
+                ));
             }
         }
     }
