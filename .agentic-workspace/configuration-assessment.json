@@ -1,9 +1,7 @@
 {
-  "basis": "configuration-setup-v1",
-  "continuation": {
-    "task": "Fix #3588 native delegation dispatch currentness and actionable rejection diagnostics"
-  },
-  "coverage": "Assessed current delivered setup procedure and existing configuration against standing repository intent. The changed README describes the merged first-contact install/setup journey; this source checkout already has the native invocation, startup source, modules and required-best-fit Assignment. No new setup policy is needed for #3588. Preserve source admissions, optional choices and local transport/privacy policy. Current source-checkout build, startup delivery, native Planning and actual configured Terra dispatch were observed; public-release first-contact acceptance remains owned by #3558.",
+  "basis": "configuration-setup-v2",
+  "continuation": null,
+  "coverage": "Assessed delivered setup procedure, current shared Configuration, AGENTS.md, README.md and SYSTEM_INTENT.md for #3617. Source-owned material/activation procedures are migrated and generated sources match. Payload provenance and the retained System Intent interpretation were reconciled through their current owners. Existing modules and required-best-fit Assignment remain configured; their readiness, exact work admission and independent PR acceptance remain owner-local. No new policy or optional capability choice is required here.",
   "dependencies": [
     {
       "identity": ".agentic-workspace/config.toml",
@@ -19,7 +17,7 @@
     },
     {
       "identity": "README.md",
-      "revision": "sha256:756932059516e5146ed570b5c4650a4bb358c13a9719c875f944a940af3c5fb1",
+      "revision": "sha256:c467d785de2d4bd58814a7cfedaf85c79caf2f3504bfb85c355171a30fbc21cf",
       "scheme": "universal-newline-utf8",
       "status": "current"
     },
@@ -35,9 +33,10 @@
       "concern": "instructions",
       "observation": {
         "owner": "startup-adapter",
-        "revision": "sha256:b6d35b063156720af6827f1ee5342787051e7ea9a0a3eb6c19779a1a591fd772"
+        "revision": "sha256:409a835ea3970759c99bcd9f1d6d118528e856458f0b04927b03b72fe04f3035",
+        "scope": "repository"
       },
-      "reason": "Existing source-selected consumer observation remains effective; no policy change.",
+      "reason": "Current repository-scoped consumer witness establishes the selected startup source or shared improvement preference; no policy change.",
       "status": "already-effective",
       "subject": "instructions"
     },
@@ -45,26 +44,40 @@
       "concern": "preferences",
       "observation": {
         "owner": "configuration",
-        "revision": "sha256:f18e27e13a596b03de1453831796ea5a507075f768c269177caa52e642091b9a"
+        "revision": "sha256:cd8fd04ecfe1704d7ef99a55fc45e740e9dd1343fb17ded9088d1d75727721fe",
+        "scope": "repository"
       },
-      "reason": "Existing source-selected consumer observation remains effective; no policy change.",
+      "reason": "Current repository-scoped consumer witness establishes the selected startup source or shared improvement preference; no policy change.",
       "status": "already-effective",
       "subject": "preferences"
     },
     {
-      "reason": "Native Planning and configured Assignment are exercised for #3588. Existing system-intent source-currentness remains unresolved; these observations do not settle its source admission.",
-      "resume": "System-intent owner must reconcile its exact retained interpretation before dependent system-direction or whole-integration claims.",
-      "status": "blocked",
-      "subject": "Native module and source admissions"
+      "concern": "diagnostics",
+      "reason": "Existing local transport/privacy policy remains unchanged. Actual capture belongs to its machine-local transport; this lane requests no new capture integration.",
+      "status": "owner-managed",
+      "subject": "diagnostics"
     },
     {
-      "reason": "This repository assessment preserves existing local invocation/privacy choices. Native and installed launches are exercised in migration proof; a shared record cannot certify machine-local diagnostic capture.",
-      "status": "irrelevant",
-      "subject": "Shared invocation and machine diagnostics"
+      "concern": "assignment",
+      "reason": "Existing required-best-fit targets remain configured. Exact current requirements, comparative judgment and continuation belong to Assignment; Configuration does not admit implementation or worker results.",
+      "status": "owner-managed",
+      "subject": "assignment"
+    },
+    {
+      "concern": "modules",
+      "reason": "Existing Planning, Memory, Verification and independent module setup and proof remain with their current owners. Generated first-party procedures are current; this assessment certifies no module readiness or independent acceptance.",
+      "status": "owner-managed",
+      "subject": "modules"
+    },
+    {
+      "concern": "invocation",
+      "reason": "Shared source-checkout native invocation remains current. The obsolete machine-local Python override was corrected through Configuration separately; actual launch is machine-local evidence, not inferred from this record.",
+      "status": "owner-managed",
+      "subject": "invocation"
     }
   ],
   "kind": "agentic-workspace/configuration-assessment/v1",
-  "runtime_version": "1.2.0",
+  "runtime_version": "1.3.2",
   "scope": "repository",
   "selected_dependencies": []
 }

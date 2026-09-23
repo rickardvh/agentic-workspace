@@ -1231,3 +1231,17 @@ def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_cor
     quiet = consume("native", shared_core_binary, native_cli, {**context, "material": material, "request": request})
     assert quiet["decision_packet"]["blockers"] == native_blockers
     assert all(c["status"] == "binding-consequence" for c in quiet.get("activation", {}).get("candidates", []))
+
+
+@pytest.mark.parametrize("nonlocal_work", [False, True])
+def test_consumer_assignment_fixture_is_native_compatible(tmp_path, shared_core_binary, native_cli, nonlocal_work):
+    sys.path.insert(0, str(ROOT / "src/tooling/release"))
+    from consumer_journeys import assignment_fixture_policy
+
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(assignment_fixture_policy(nonlocal_work), encoding="utf-8")
+    current = consume(
+        "native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Implement worker.py so its answer is 42"}
+    )
+    assert any(b["owner"] == "assignment" for b in current["decision_packet"]["blockers"])
