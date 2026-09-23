@@ -14,6 +14,10 @@ on:
         description: Commit the tag must resolve to.
         required: true
         type: string
+      registries_only:
+        description: Publish existing admitted GitHub assets to registries without rebuilding them.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -59,12 +63,14 @@ jobs:
           if-no-files-found: error
 
   platform-packages:
+    if: ${{ !inputs.registries_only }}
     needs: promotion-admission
     uses: ./.github/workflows/platform-release.yml
     with:
       source_ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
   release-runtime-matrix:
+    if: ${{ !inputs.registries_only }}
     name: Release runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
@@ -124,6 +130,7 @@ jobs:
           if-no-files-found: error
 
   agentic-workspace-package:
+    if: ${{ !inputs.registries_only }}
     needs: [promotion-admission, release-runtime-matrix, platform-packages]
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -573,7 +580,8 @@ jobs:
           fail_on_unmatched_files: true
 
   language-registries:
-    needs: agentic-workspace-package
+    needs: [promotion-admission, agentic-workspace-package]
+    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (inputs.registries_only && needs.agentic-workspace-package.result == 'skipped')) }}
     permissions:
       contents: read
       id-token: write
@@ -583,7 +591,8 @@ jobs:
       tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
 
   current-install-projection:
-    needs: agentic-workspace-package
+    needs: [promotion-admission, agentic-workspace-package]
+    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (inputs.registries_only && needs.agentic-workspace-package.result == 'skipped')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -598,7 +607,8 @@ jobs:
 
   # PyPI trusts the top-level workflow; publishing from workflow_call is unsupported.
   language-packages:
-    needs: agentic-workspace-package
+    needs: [promotion-admission, agentic-workspace-package]
+    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (inputs.registries_only && needs.agentic-workspace-package.result == 'skipped')) }}
     runs-on: ubuntu-latest
     environment: package-registries
     permissions:
@@ -627,7 +637,12 @@ jobs:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
         run: |
           mkdir dist
-          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir dist
+          set -euo pipefail
+          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" --jq '.[].browser_download_url' |
+          while IFS= read -r url; do
+            curl --fail --location --retry 3 --output "dist/${url##*/}" "$url"
+          done
           publisher=release.yml
           if [[ "$RELEASE_TAG" == v1.0.0-rc.* ]]; then publisher=preview-release.yml; fi
           for artifact in dist/*.whl dist/*.tar.gz dist/*.tgz dist/*release-manifest.json; do
