@@ -88,3 +88,34 @@ def test_public_subject_rejects_alias_before_network(tmp_path):
     for alias in ("latest", "v1.3.2", "1.3.2rc1", "../1.3.2"):
         with pytest.raises(ValueError, match="exact stable"):
             Subject.public(alias, tmp_path / "subject")
+
+
+@pytest.mark.parametrize("profile", ["node", "python"])
+def test_native_registry_wrapper_mismatch_fails_before_install(tmp_path, monkeypatch, profile):
+    from types import SimpleNamespace
+
+    import consumer_environment as environment
+
+    item = {"asset": "admitted.whl", "sha256": hashlib.sha256(b"admitted package").hexdigest()}
+    row = {"target": "fixture", "native_archive": {"asset": "native.zip"}, "wheel": item}
+    subject = Subject("public", tmp_path, {"version": "1.3.2", "npm": item, "platforms": [row]})
+    monkeypatch.setattr(environment.platform_release, "current_platform", lambda: {"target": "fixture"})
+    monkeypatch.setattr(environment.platform_release, "load", lambda _: subject.inventory)
+    monkeypatch.setattr(environment, "safe_native_archive", lambda *a: {})
+    responses = iter(
+        [json.dumps({"dist": {"tarball": "registry-asset"}}).encode(), b"same native bytes but changed wrapper"]
+        if profile == "node"
+        else [json.dumps({"urls": [{"filename": item["asset"], "digests": {"sha256": "different"}, "url": "registry-asset"}]}).encode()]
+    )
+    monkeypatch.setattr(environment, "fetch", lambda _: next(responses))
+    consumer = environment.NativeConsumer(subject, profile, "fixture", tmp_path)
+    consumer.root = consumer.repo = tmp_path
+    consumer.tools = {"npm": "npm", "uv": "uv"}
+
+    def execute(command):
+        assert "install" not in command, "Mismatched package reached the package manager"
+        return SimpleNamespace(stdout="")
+
+    consumer.exec = execute
+    with pytest.raises(ValueError, match="Public"):
+        consumer.install()

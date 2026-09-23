@@ -106,6 +106,25 @@ class Subject:
         }
 
 
+def registry_package(subject, profile, row):
+    """Authenticate registry packaging separately from the native execution floor."""
+    version = subject.inventory["version"]
+    if profile == "node":
+        version = coordinated_release.npm_version(version)
+        item = subject.inventory["npm"]
+        metadata = json.loads(fetch(f"https://registry.npmjs.org/@agentic-workspace%2fworkspace-cli/{quote(version)}"))
+        content = fetch(metadata["dist"]["tarball"])
+        if hashlib.sha256(content).hexdigest() != item["sha256"]:
+            raise ValueError("Public npm bytes differ from selected subject")
+        return f"@agentic-workspace/workspace-cli@{version}"
+    item = row["wheel"]
+    metadata = json.loads(fetch(f"https://pypi.org/pypi/agentic-workspace/{version}/json"))
+    published = next((entry for entry in metadata["urls"] if entry["filename"] == item["asset"]), None)
+    if published is None or published["digests"]["sha256"] != item["sha256"]:
+        raise ValueError("Public wheel missing or different")
+    return published["url"]
+
+
 def safe_native_archive(archive: Path, destination: Path, subject: Subject, target: str):
     suffix = ".exe" if "windows" in target else ""
     with zipfile.ZipFile(archive) as packed:
@@ -253,12 +272,7 @@ class DockerConsumer:
             self.copy_in(self.subject.directory / item["asset"], package)
             self.exec(["sh", "-c", "printf '{\"private\":true}' > package.json"])
             if self.subject.mode == "public":
-                version = coordinated_release.npm_version(self.subject.inventory["version"])
-                metadata = json.loads(fetch(f"https://registry.npmjs.org/@agentic-workspace%2fworkspace-cli/{quote(version)}"))
-                content = fetch(metadata["dist"]["tarball"])
-                if hashlib.sha256(content).hexdigest() != item["sha256"]:
-                    raise ValueError("Public npm bytes differ from selected subject")
-                package = f"@agentic-workspace/workspace-cli@{version}"
+                package = registry_package(self.subject, "node", row)
             self.exec([manager, "install", "--ignore-scripts", package])
             self.command = [manager, "exec", *(["--no", "--"] if manager == "npm" else []), "agentic-workspace"]
             binaries = f"node_modules/@agentic-workspace/workspace-cli/src/native/bin/linux-{row['node_arch']}"
@@ -270,12 +284,7 @@ class DockerConsumer:
             self.exec(["uv", "venv", "--python", "python3", ".venv"])
             options = ["--no-index"]
             if self.subject.mode == "public":
-                version = self.subject.inventory["version"]
-                metadata = json.loads(fetch(f"https://pypi.org/pypi/agentic-workspace/{version}/json"))
-                published = next((entry for entry in metadata["urls"] if entry["filename"] == item["asset"]), None)
-                if published is None or published["digests"]["sha256"] != item["sha256"]:
-                    raise ValueError("Public wheel missing or different")
-                package, options = published["url"], []
+                package, options = registry_package(self.subject, "python", row), []
             self.exec(["uv", "pip", "install", "--python", ".venv/bin/python", *options, "--no-deps", package])
             self.command = ["/home/consumer/repo/.venv/bin/agentic-workspace"]
             identity = json.loads(
@@ -444,7 +453,7 @@ class NativeConsumer:
             (self.repo / "package.json").write_text('{"private":true}', encoding="utf-8")
             package = str(self.subject.directory / self.subject.inventory["npm"]["asset"])
             if self.subject.mode == "public":
-                package = "@agentic-workspace/workspace-cli@" + coordinated_release.npm_version(self.subject.inventory["version"])
+                package = registry_package(self.subject, "node", row)
             self.exec([self.tools["npm"], "install", "--ignore-scripts", "--no-audit", "--no-fund", package])
             binaries = self.repo / f"node_modules/@agentic-workspace/workspace-cli/src/native/bin/{row['node_platform']}-{row['node_arch']}"
             self.command = [self.tools["npm"], "exec", "--no", "--", "agentic-workspace"]
@@ -454,7 +463,7 @@ class NativeConsumer:
             package = str(self.subject.directory / row["wheel"]["asset"])
             options = ["--no-index"]
             if self.subject.mode == "public":
-                package, options = "agentic-workspace==" + self.subject.inventory["version"], ["--only-binary=:all:"]
+                package, options = registry_package(self.subject, "python", row), ["--only-binary=:all:"]
             self.exec([self.tools["uv"], "pip", "install", "--python", str(python), "--no-deps", *options, package])
             binaries = next((self.repo / ".venv").rglob("agentic_workspace/_native/artifact.json")).parent
             self.command = [str(python.parent / ("agentic-workspace" + suffix))]
