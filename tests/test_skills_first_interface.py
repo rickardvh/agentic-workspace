@@ -284,11 +284,13 @@ def test_canonical_procedure_preserves_correction_retention_boundary():
     shared = (ROOT / Path(MAIN).parent / "references/reconcile.md").read_text()
     section = shared.split("## Corrections and retention\n", 1)[1].split("\n## ", 1)[0]
     for obligation in (
-        "explicit user or reviewer correction intended to change future behavior",
-        "as reconciliation input",
-        "current correction/instruction owner",
-        "current scope and retention semantics",
-        "Keep one-off requests non-retained",
+        "Material corrections, acquired conclusions, environment facts and source conflicts",
+        "even without a request to remember",
+        "Carry that material through ordinary current resolution",
+        "exact current owner",
+        "preserving scope and retention semantics",
+        "Do not broaden a task-local fact into policy",
+        "One-off material can be explicitly non-retained",
         "verify its outcome before claiming the correction was retained",
         "surface the exact owner/path gap",
         "retention is not established",
