@@ -88,18 +88,15 @@ Exact package identities, installation commands, runtime versions, operating-sys
 
 ## Get started
 
-1. Install AW for this repository with a pinned version, or deliberately share
-   one installation across repositories. Choose npm, Python/uv, Cargo or a
-   standalone release archive in the
+1. Install AW using any supported distribution. Pin its version per repository
+   when independence matters; otherwise a shared installation is fine. See
    [Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md).
-2. From your Git working-tree root, run `setup` with that installation's
-   invocation and authorise the proposed integration.
+2. From your Git working-tree root, run `setup` using that installation and
+   authorise the proposed integration.
 3. Give your agent an ordinary task, such as correcting a documentation error.
 
 Installation supplies the runtime; setup adds the AW enclave and an AGENTS.md
-pointer. Your agent then follows that pointer without a manual command sequence
-around each task. Keep using the chosen installation's invocation so repositories
-with different pinned versions remain independent.
+pointer. Your agent follows that pointer during ordinary work.
 
 ## Your repository, your rules
 

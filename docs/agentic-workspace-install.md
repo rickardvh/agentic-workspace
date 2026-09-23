@@ -5,55 +5,24 @@ Use an agent that can read repository instructions and run commands.
 
 ## 1. Install AW
 
-Choose the installation scope first:
-
-- **Repository-scoped and pinned:** keep this repository's AW version independent
-  of other repositories. Record the chosen version and installation command with
-  the project; keep local environments and extracted binaries out of Git.
-- **Intentionally shared:** reuse one tool installation across repositories.
-  Updating it changes the runtime used by every repository that invokes it.
-
-Then choose a distribution route. npm, Python/uv, Cargo and standalone archives
-provide the same AW product; your project's language does not restrict the choice.
-The npm and Python packages include native executables, while Cargo builds them.
+Pin AW per repository when repositories need independent versions; otherwise a
+shared installation is fine. Choose npm, Python/uv, Cargo or a standalone archive
+according to your tooling. Keep using that installation when running AW.
 
 Replace `<stable-version>` below with the exact version from the
 [current stable reference](reference/support-bearing-install.md). That reference
-owns release identities, supported platforms, assets, checksums and receipts.
+also provides platform-specific assets, checksums and installation details.
 
-| Route | Repository-scoped and pinned | Intentionally shared | Invocation |
-| --- | --- | --- | --- |
-| npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli@<stable-version>` | `npm install --global @agentic-workspace/workspace-cli@<stable-version>` | Local: `npm exec --no -- agentic-workspace`; shared: `agentic-workspace` |
-| Python/uv | Create `.aw-venv` and install the exact version as below | `uv tool install 'agentic-workspace==<stable-version>'` | Local: `.aw-venv/bin/agentic-workspace`; shared: `agentic-workspace` |
-| Cargo | Use both installs below with `--root .aw-tools` | Use both installs below with the default Cargo root | Local: `.aw-tools/bin/agentic-workspace`; shared: `agentic-workspace` on Cargo's PATH |
-| Standalone archive | Extract the exact platform archive into a repository-local directory | Extract it into a deliberately shared tools directory | Use that directory's `agentic-workspace` executable, keeping its paired core beside it |
+| Distribution | Install |
+| --- | --- |
+| npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli@<stable-version>` in the repository; use `--global` instead of `--save-dev --save-exact` for a shared tool |
+| Python/uv | `uv pip install 'agentic-workspace==<stable-version>'` in your repository's virtual environment, or `uv tool install 'agentic-workspace==<stable-version>'` for a shared tool |
+| Cargo | `cargo install --locked agentic-workspace-core --version '=<stable-version>'`, then `cargo install --locked agentic-workspace-cli --version '=<stable-version>'`; use the same `--root` for both if choosing a repository-specific location |
+| Standalone | Extract the exact platform archive from the stable reference into your chosen location, keeping both executables together |
 
-For a repository-local Python environment:
-
-```sh
-uv venv .aw-venv
-uv pip install --python .aw-venv/bin/python 'agentic-workspace==<stable-version>'
-```
-
-On Windows, use `.aw-venv\Scripts\python.exe` for installation and
-`.aw-venv\Scripts\agentic-workspace.exe` for invocation. Cargo and standalone
-executables also use the `.exe` suffix on Windows.
-
-For Cargo, install core first, then CLI at the same exact version. Add
-`--root .aw-tools` to **both** commands for repository scope:
-
-```sh
-cargo install --locked agentic-workspace-core --version '=<stable-version>'
-cargo install --locked agentic-workspace-cli --version '=<stable-version>'
-```
-
-For a standalone archive or an install pinned to artifact bytes, use the
-reference's platform-specific assets and checksums. [Compatibility and support](evidence-and-support.md)
-describes supported environments.
-
-Run your chosen invocation with `--help` in the environment your agent will use.
-For a repository-local npm install, use the npm invocation throughout; a global
-executable is not required.
+Run `--help` using that installation: `npm exec --no -- agentic-workspace` for
+repository-local npm, `agentic-workspace` in the selected environment or on PATH,
+or the executable's path for a custom location.
 
 ## 2. Add AW to the repository
 
