@@ -88,10 +88,9 @@ Exact package identities, installation commands, runtime versions, operating-sys
 
 ## Get started
 
-1. Install AW using any supported distribution. Pin its version per repository
-   when independence matters; otherwise a shared installation is fine. See
+1. Install AW using any supported distribution, either as a dev dependency in your repo (recommended) or as a globally accessible tool on your computer. See
    [Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md).
-2. From your Git working-tree root, run `setup` using that installation and
+2. From your repo root, run `agentic-workspace setup` using that installation and
    authorise the proposed integration.
 3. Give your agent an ordinary task, such as correcting a documentation error.
 
