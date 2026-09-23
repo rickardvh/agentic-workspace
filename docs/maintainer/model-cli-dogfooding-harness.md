@@ -55,6 +55,22 @@ The optional token threshold stops on observed telemetry; it is not a hard
 provider-side quota. Missing usage and monetary cost remain unknown. Subscription
 OAuth does not establish support for metered API execution.
 
+Standalone Sandbox runs record product calls through a test-only root-owned
+observer. Its transparent CLI wrapper forwards arguments and stdin to a fixed
+copy of the admitted native pair, running as the consumer uid. The actor cannot
+write that pair, the observer or its receipts, and cannot submit output as a
+receipt. The controller exports only calls made during the actor session; setup
+and post-run fixture queries cannot supply actor evidence. Provider transcripts
+and final claims remain diagnostics. This transport requires the provider
+template's Python and establishes no minimal-profile absence claim.
+
+The on-demand finding case requires authenticated material ingress linked to
+the current activation, alongside the repository outcome and reporting policy.
+The binding Assignment case requires the actor to observe the same current
+owner blocker that the fixture independently confirms. An unchanged file and an
+arbitrary refusal cannot pass that case. These bounded cases do not establish
+independent review or general reliability.
+
 All seven families have a live path. Removal is checked before re-adoption;
 maintenance must preserve disabled policy and restore the local boundary;
 interruption checks the public stale-source rejection before fresh recovery.

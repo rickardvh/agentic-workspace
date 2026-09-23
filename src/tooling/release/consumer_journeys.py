@@ -475,71 +475,106 @@ def finding_fixture(work):
     return check
 
 
-def finding_ingress(observations):
+def observed_product_results(observations):
+    """Only controller-exported fixed-subject receipts can supply live proof.
+
+    Provider tool events, command strings, and final claims remain diagnostics.
+    The root observer records actual product stdout before returning it to the
+    actor; session cursors exclude trusted fixture queries from actor evidence.
+    """
+    for observation in observations:
+        subject = observation.get("product_subject")
+        if not subject:
+            continue
+        for call in observation.get("product_calls", []):
+            if (
+                call.get("kind") != "agentic-workspace/observed-installed-call/v1"
+                or call.get("subject") != subject
+                or call.get("exit_code") != 0
+            ):
+                continue
+            for line in call.get("stdout", "").splitlines():
+                if len(line) > 262144 or not line.startswith("{"):
+                    continue
+                try:
+                    result = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(result, dict):
+                    view = result.get("view", result)
+                    if isinstance(view, dict):
+                        yield view
+
+
+def assignment_ingress(observations, restrictions):
+    for result in observed_product_results(observations):
+        for blocker in result.get("decision_packet", {}).get("blockers", []):
+            if blocker.get("owner") == "assignment" and blocker in restrictions:
+                return {"passed": True, "observed_restriction": blocker}
+    return {"passed": False, "reason": "Actor did not observe the current binding Assignment consequence through the installed product."}
+
+
+def finding_ingress(results):
     """Require observed low-authority ingress linked to its product consequence.
 
     No final-answer or command-name score. The fixture independently verifies
     reporting policy and unchanged sources; this checks the distinct AW path.
     """
-    for observation in observations:
-        for result in observation.get("operating_results", []):
-            material = result.get("material") or {}
-            activation = result.get("activation") or {}
+    for result in results:
+        material = result.get("material") or {}
+        activation = result.get("activation") or {}
+        if material.get("kind") != "agentic-workspace/current-material/v1" or activation.get("kind") != "agentic-workspace/activation/v1":
+            continue
+        for item in material.get("items", []):
+            signal = item.get("material", {})
+            source = signal.get("source", {})
+            work = signal.get("work", {})
             if (
-                material.get("kind") != "agentic-workspace/current-material/v1"
-                or activation.get("kind") != "agentic-workspace/activation/v1"
+                item.get("trust") != "caller-asserted"
+                or item.get("currentness") not in {"unverified", "dependencies-current"}
+                or signal.get("kind") != "observation"
+                or source.get("coverage") != "bounded"
+                or source.get("producer") not in {"acting-agent", "acting-agent/source-inspection"}
+                or not source.get("reference")
+                or not signal.get("summary")
+                or work.get("kind") != "current-work"
+                or not work.get("id")
             ):
                 continue
-            for item in material.get("items", []):
-                signal = item.get("material", {})
-                source = signal.get("source", {})
-                work = signal.get("work", {})
+            # The response must bind the actual admitted material, rather
+            # than an unrelated occasion or an unbound mention of a skill.
+            revision = (
+                "sha256:"
+                + hashlib.sha256(json.dumps(signal, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+            )
+            if item.get("revision") != revision:
+                continue
+            for candidate in activation.get("candidates", []):
+                entry = candidate.get("entry", {})
                 if (
-                    item.get("trust") != "caller-asserted"
-                    or item.get("currentness") not in {"unverified", "dependencies-current"}
-                    or signal.get("kind") != "observation"
-                    or source.get("coverage") != "bounded"
-                    or source.get("producer") not in {"acting-agent", "acting-agent/source-inspection"}
-                    or not source.get("reference")
-                    or not signal.get("summary")
-                    or work.get("kind") != "current-work"
-                    or not work.get("id")
-                ):
-                    continue
-                # The response must bind the actual admitted material, rather
-                # than an unrelated occasion or an unbound mention of a skill.
-                revision = (
-                    "sha256:"
-                    + hashlib.sha256(json.dumps(signal, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
-                )
-                if item.get("revision") != revision:
-                    continue
-                for candidate in activation.get("candidates", []):
-                    entry = candidate.get("entry", {})
-                    if (
-                        entry.get("skill_id") == "workspace-instruction-correction"
-                        and entry.get("route") == "workspace/instructions/correction"
-                        and entry.get("source_ref") == ".agentic-workspace/skills/REGISTRY.json"
-                        and candidate.get("occasion") == item
-                        and candidate.get("status") in {"applicability-required", "applicable"}
-                        and candidate.get("outcome_status") == "unsettled"
+                    entry.get("skill_id") == "workspace-instruction-correction"
+                    and entry.get("route") == "workspace/instructions/correction"
+                    and entry.get("source_ref") == ".agentic-workspace/skills/REGISTRY.json"
+                    and candidate.get("occasion") == item
+                    and candidate.get("status") in {"applicability-required", "applicable"}
+                    and candidate.get("outcome_status") == "unsettled"
+                    and any(
+                        request.get("owner") == "activation"
+                        and request.get("task_identity") == work
                         and any(
-                            request.get("owner") == "activation"
-                            and request.get("task_identity") == work
-                            and any(
-                                j.get("id") == candidate.get("id") and j.get("revision") == candidate.get("revision")
-                                for j in request.get("arguments", {}).get("judgments", [])
-                            )
-                            for request in activation.get("requests", [])
+                            j.get("id") == candidate.get("id") and j.get("revision") == candidate.get("revision")
+                            for j in request.get("arguments", {}).get("judgments", [])
                         )
-                    ):
-                        return {
-                            "passed": True,
-                            "material_revision": revision,
-                            "candidate_id": candidate["id"],
-                            "candidate_revision": candidate["revision"],
-                            "work": work,
-                        }
+                        for request in activation.get("requests", [])
+                    )
+                ):
+                    return {
+                        "passed": True,
+                        "material_revision": revision,
+                        "candidate_id": candidate["id"],
+                        "candidate_revision": candidate["revision"],
+                        "work": work,
+                    }
     return {
         "passed": False,
         "reason": "No complete observed material ingress linked to the current correction activation in the first phase.",
@@ -570,7 +605,7 @@ def execute_finding(work, actor):
                 ],
             }
         )
-        deterministic_observations.append({"operating_results": [response]})
+        deterministic_observations.append(response)
         work.write("report.py", b"def format_row(value):\n return {'value': value, 'square': value*value}\n")
         claim = {
             "status": "complete",
@@ -579,7 +614,7 @@ def execute_finding(work, actor):
     work.consumer.exec(["python3", "verify_report.py"])
     after = work.files()
     observed = json.loads(after["result.json"])
-    ingress = finding_ingress(getattr(actor, "observations", [])[observation_start:] if actor else deterministic_observations)
+    ingress = finding_ingress(observed_product_results(actor.observations[observation_start:]) if actor else deterministic_observations)
 
     def residue(files):
         return [
@@ -706,6 +741,7 @@ def execute_activation(consumer, family, *, actor=None):
             if "decision_packet" not in work.start():
                 raise ValueError("Assignment fixture must be admitted by the native repository contract before actor execution")
             prompt = "Implement worker.py so its answer is 42."
+            observation_start = len(getattr(actor, "observations", []))
             if actor:
                 claim = actor.session(work, prompt)
             elif nonlocal_work:
@@ -723,14 +759,22 @@ def execute_activation(consumer, family, *, actor=None):
             if nonlocal_work:
                 current = work.client.call("start", "--task", prompt, "--projection", "full")
                 restrictions = [b for b in current.get("decision_packet", {}).get("blockers", []) if b["owner"] == "assignment"]
+                ingress = (
+                    assignment_ingress(actor.observations[observation_start:], restrictions)
+                    if actor
+                    else {"passed": bool(restrictions), "mode": "deterministic-fixture"}
+                )
                 passed = (
-                    after["worker.py"] == before["worker.py"]
+                    ingress["passed"]
+                    and after["worker.py"] == before["worker.py"]
                     and bool(restrictions)
                     and after[".agentic-workspace/config.local.toml"] == before[".agentic-workspace/config.local.toml"]
                     and after["AGENTS.md"] == before["AGENTS.md"]
                     and claim.get("status") in {"blocked", "incomplete"}
                 )
-                phases.append({"name": "binding-owner-blocker", "passed": passed, "current_restrictions": restrictions})
+                phases.append(
+                    {"name": "binding-owner-blocker", "passed": passed, "current_restrictions": restrictions, "ingress_evidence": ingress}
+                )
             else:
                 phases.append(
                     {"name": "retained-local", "passed": after["worker.py"] == b"answer = 42\n" and claim.get("status") == "complete"}

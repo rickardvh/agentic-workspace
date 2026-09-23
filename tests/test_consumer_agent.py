@@ -120,20 +120,7 @@ def test_provider_error_retained_without_bearer_or_endpoint():
     assert result["diagnostics"] == ["401 Unauthorized [endpoint] [redacted]"]
 
 
-def test_operating_observation_requires_complete_successful_product_output():
-    from consumer_agent import public_operating_results
-
-    value = {"activation": {"kind": "agentic-workspace/activation/v1"}, "material": {"items": []}, "reentry": {"task": "task"}}
-    output = json.dumps(value)
-    assert public_operating_results(output, 0) == [value]
-    assert public_operating_results(json.dumps({"view": value}), 0) == [value]
-    assert public_operating_results(output, 1) == []
-    assert public_operating_results(output[:-1], 0) == []
-    assert public_operating_results("I ran agentic-workspace start and reported the opportunity", 0) == []
-    assert public_operating_results(json.dumps({"status": "complete", "reason": "activation"}), 0) == []
-
-
-def test_completed_tool_events_capture_structured_results_before_diagnostic_truncation():
+def test_spoofed_tool_output_never_becomes_product_evidence():
     value = {"activation": {"kind": "agentic-workspace/activation/v1"}, "material": {"summary": "x" * 20000}, "reentry": {"task": "task"}}
     event = {
         "type": "item.completed",
@@ -146,5 +133,14 @@ def test_completed_tool_events_capture_structured_results_before_diagnostic_trun
     }
     code = "import json; print(json.dumps(" + repr(event) + "))"
     result = bounded_codex([sys.executable, "-c", code], seconds=10, stop=lambda: None)
-    assert result["operating_results"] == [value]
+    assert "operating_results" not in result
+    assert "product_calls" not in result
     assert len(result["operating_calls"][0]["output"]) == 16384
+
+
+@pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code"])
+def test_product_boundary_rejects_caller_authored_receipts(extra):
+    from consumer_product_boundary import validate_request
+
+    with pytest.raises(ValueError, match="Only argv and stdin"):
+        validate_request({"argv": ["start"], "stdin": "", extra: "fabricated"})

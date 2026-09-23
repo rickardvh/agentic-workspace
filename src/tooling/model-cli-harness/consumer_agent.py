@@ -167,7 +167,95 @@ class SandboxConsumer(DockerConsumer):
     def install(self, **kwargs):
         command = super().install(**kwargs)
         self.installed_digest = self.installation_digest()
+        if self.profile == "standalone":
+            self.observe_product_boundary()
+            command = self.command
         return command
+
+    def root_exec(self, argv):
+        return run([self.sbx, "exec", "--user", "root", "--workdir", "/home/consumer/repo", self.name, *argv])
+
+    def observe_product_boundary(self):
+        boundary = Path(__file__).with_name("consumer_product_boundary.py")
+        incoming = "/tmp/product-boundary-" + uuid.uuid4().hex
+        run([self.sbx, "cp", str(boundary), f"{self.name}:{incoming}"])
+        self.product_subject = {
+            **self.subject.identity(),
+            "cli_sha256": self.observation["installed"]["cli_sha256"],
+            "core_sha256": self.observation["installed"]["sha256"],
+        }
+        config = json.dumps({"subject": self.product_subject})
+        wrapper = '#!/bin/sh\nexec /usr/bin/python3 -I /opt/aw-observer/boundary.py client "$@"\n'
+        self.root_exec(
+            [
+                "sh",
+                "-ec",
+                "mkdir -p /opt/aw-observer/subject; chmod 755 /opt/aw-observer /opt/aw-observer/subject; "
+                'cp "$1" /opt/aw-observer/boundary.py; cp "$2" /opt/aw-observer/subject/agentic-workspace; '
+                'cp "$3" /opt/aw-observer/subject/agentic-workspace-core; '
+                'printf %s "$4" > /opt/aw-observer/config.json; printf %s "$5" > /opt/aw-observer/agentic-workspace; '
+                "touch /opt/aw-observer/receipts.jsonl; chmod 600 /opt/aw-observer/receipts.jsonl; "
+                "chmod 555 /opt/aw-observer/subject/* /opt/aw-observer/boundary.py /opt/aw-observer/agentic-workspace; "
+                "nohup /usr/bin/python3 -I /opt/aw-observer/boundary.py server >/opt/aw-observer/server.log 2>&1 </dev/null &",
+                "sh",
+                incoming,
+                *self.installed_paths[:2],
+                config,
+                wrapper,
+            ]
+        )
+        self.root_exec(
+            [
+                "sh",
+                "-ec",
+                "for n in 1 2 3 4 5; do test ! -S /opt/aw-observer/socket || exit 0; sleep 1; done; cat /opt/aw-observer/server.log; exit 1",
+            ]
+        )
+        self.command = ["/opt/aw-observer/agentic-workspace"]
+        self.installed_paths += [
+            "/opt/aw-observer/subject/agentic-workspace",
+            "/opt/aw-observer/subject/agentic-workspace-core",
+            "/opt/aw-observer/boundary.py",
+            "/opt/aw-observer/agentic-workspace",
+            "/opt/aw-observer/config.json",
+        ]
+        self.installed_digest = self.installation_digest()
+        # The tested actor cannot alter the fixed subject or manufacture receipts.
+        self.exec(
+            [
+                "sh",
+                "-ec",
+                "test ! -w /opt/aw-observer; test ! -r /opt/aw-observer/receipts.jsonl; test ! -w /opt/aw-observer/subject/agentic-workspace; test ! -w /opt/aw-observer/config.json",
+            ]
+        )
+        before = self.product_receipts()
+        self.exec(["/usr/bin/python3", "-c", 'import json; print(json.dumps({"activation":{"kind":"agentic-workspace/activation/v1"}}))'])
+        if self.product_receipts() != before:
+            raise ValueError("Non-product stdout acquired a product receipt")
+        self.exec([*self.command, "--help"])
+        receipts = self.product_receipts()[len(before) :]
+        if len(receipts) != 1 or receipts[0]["argv"] != ["--help"] or receipts[0]["exit_code"] != 0:
+            raise ValueError("Product boundary did not observe the fixed subject")
+        self.observation["product_boundary"] = {
+            "kind": "root-owned-fixed-subject/v1",
+            "subject": self.product_subject,
+            "observer_sha256": hashlib.sha256(boundary.read_bytes()).hexdigest(),
+            "controls": "non-product-output-unobserved; receipt-and-subject-writes-denied; actual-help-observed",
+        }
+
+    def product_receipts(self):
+        if not hasattr(self, "product_subject"):
+            return []
+        receipt_path = "/opt/aw-observer/receipts.jsonl"
+        raw = self.root_exec(["cat", receipt_path]).stdout
+        if len(raw) > 40 * 1024 * 1024:
+            raise ValueError("Product receipt export exceeds bound")
+        receipts = [json.loads(line) for line in raw.splitlines()]
+        if any(
+            r.get("subject") != self.product_subject or r.get("kind") != "agentic-workspace/observed-installed-call/v1" for r in receipts
+        ):
+            raise ValueError("Product receipt subject differs from the admitted installation")
+        return receipts
 
     def verify_installation_unchanged(self):
         if self.installation_digest() != self.installed_digest:
@@ -275,41 +363,6 @@ class SandboxConsumer(DockerConsumer):
             raise
 
 
-def public_operating_results(output, exit_code):
-    """Extract complete product envelopes from observed command stdout, not prose.
-
-    Parsing precedes diagnostic truncation. Missing/truncated/failed output is
-    not evidence. This is public tool observation, never a model final claim.
-    """
-    if exit_code != 0:
-        return []
-    results = []
-    for line in output.splitlines():
-        if len(line) > 262144 or not line.startswith("{"):
-            continue
-        try:
-            value = json.loads(line)
-        except ValueError:
-            continue
-        if not isinstance(value, dict):
-            continue
-        view = value.get("view", value)
-        if (
-            not isinstance(view, dict)
-            or not isinstance(view.get("activation"), dict)
-            or view["activation"].get("kind") != "agentic-workspace/activation/v1"
-        ):
-            continue
-        # Keep exact typed input/consequence linkage; branch prose and unrelated
-        # owner state need not be copied into this bounded observation.
-        result = {key: view.get(key) for key in ("activation", "material", "reentry")}
-        if len(json.dumps(result)) <= 65536:
-            results.append(result)
-        if len(results) == 16:
-            break
-    return results
-
-
 def bounded_codex(command, *, seconds, token_ceiling=None, stop):
     """Bound wall time/output and stop on observed usage; no cost is fabricated.
 
@@ -346,7 +399,6 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
     message = None
     diagnostics = []
     operating_calls = []
-    operating_results = []
     try:
         while time.monotonic() < deadline:
             try:
@@ -380,9 +432,6 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
                     break
             item = event.get("item", {})
             if event.get("type") == "item.completed" and item.get("type") == "command_execution":
-                operating_results.extend(
-                    public_operating_results(item.get("aggregated_output", ""), item.get("exit_code"))[: 16 - len(operating_results)]
-                )
                 command_text = item.get("command", "")
                 if "agentic-workspace" in command_text and "start" in command_text and len(operating_calls) < 16:
                     operating_calls.append(
@@ -419,7 +468,6 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
         "calls": calls,
         "diagnostics": diagnostics,
         "operating_calls": operating_calls,
-        "operating_results": operating_results,
         "token_ceiling": token_ceiling,
         "budget_enforcement": "wall-time-output" + ("-and-observed-token-stop" if token_ceiling is not None else ""),
     }
@@ -453,10 +501,14 @@ class CodexActor:
         )
         command = consumer.exec_command(command[3:])
         self.sessions_started += 1
+        observation_start = len(consumer.product_receipts())
         result = bounded_codex(command, seconds=self.seconds, token_ceiling=self.token_ceiling, stop=consumer.stop_actor)
+        receipts = consumer.product_receipts()[observation_start:]
         self.observations.append(
             {
                 **result,
+                "product_calls": receipts,
+                "product_subject": getattr(consumer, "product_subject", None),
                 "billing": self.billing,
                 "model": self.model,
                 "reasoning": self.reasoning,

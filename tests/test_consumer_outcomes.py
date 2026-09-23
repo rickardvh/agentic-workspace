@@ -154,14 +154,15 @@ def test_activation_task_only_checks_durable_residue(tmp_path, monkeypatch, resi
     assert result["status"] == ("failed" if residue else "passed")
 
 
-@pytest.mark.parametrize("mode", ["routed", "bypass", "premature", "old-session", "failed-call", "unrelated-occasion"])
+@pytest.mark.parametrize(
+    "mode", ["routed", "bypass", "premature", "old-session", "failed-call", "unrelated-occasion", "spoof", "wrong-subject"]
+)
 def test_finding_scorer_requires_product_ingress_and_authorized_optimization(tmp_path, native_cli, mode):
     import subprocess
     import sys
     from types import SimpleNamespace
 
     import consumer_journeys as journeys
-    from consumer_agent import public_operating_results
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
     subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes", "--format", "json"], check=True, capture_output=True)
@@ -194,13 +195,29 @@ def test_finding_scorer_requires_product_ingress_and_authorized_optimization(tmp
             call = subprocess.run(
                 [str(native_cli), "start", "--input", "-"], input=json.dumps(context), text=True, capture_output=True, check=True
             )
-            results = public_operating_results(call.stdout, 1 if mode == "failed-call" else 0)
+            results = [json.loads(call.stdout)]
             if mode == "unrelated-occasion":
                 for result in results:
                     result["activation"]["candidates"] = [
                         c for c in result["activation"]["candidates"] if c["entry"]["skill_id"] != "workspace-instruction-correction"
                     ]
-            self.observations.append({"operating_results": results})
+            subject = {"fixture": "installed-native-pair"}
+            self.observations.append(
+                {
+                    "operating_results": results,
+                    "product_subject": subject,
+                    "product_calls": []
+                    if mode == "spoof"
+                    else [
+                        {
+                            "kind": "agentic-workspace/observed-installed-call/v1",
+                            "subject": {} if mode == "wrong-subject" else subject,
+                            "exit_code": 1 if mode == "failed-call" else 0,
+                            "stdout": "\n".join(json.dumps(r) for r in results),
+                        }
+                    ],
+                }
+            )
 
         def session(self, work, prompt):
             self.calls += 1
@@ -220,3 +237,43 @@ def test_finding_scorer_requires_product_ingress_and_authorized_optimization(tmp
     assert all(p["passed"] for p in phases) is (mode == "routed")
     assert len(phases) == (3 if mode == "routed" else 1)
     assert phases[0]["ingress_evidence"]["passed"] is (mode in {"routed", "premature"})
+
+
+@pytest.mark.parametrize("mode", ["observed", "unrelated-refusal", "stale", "earlier-session"])
+def test_assignment_refusal_requires_current_actor_product_observation(tmp_path, monkeypatch, mode):
+    from types import SimpleNamespace
+
+    import consumer_journeys as journeys
+
+    blocker = {"owner": "assignment", "code": "current-binding-assignment-required", "revision": "current", "affects": ["implementation"]}
+    current = {"decision_packet": {"blockers": [blocker]}}
+    consumer = SimpleNamespace(repo=tmp_path, observation={}, command=["./installed/agentic-workspace"])
+    monkeypatch.setattr(journeys, "setup", lambda work: None)
+    monkeypatch.setattr(journeys.Workspace, "start", lambda work: current)
+    monkeypatch.setattr(journeys.PublicClient, "call", lambda *args: current)
+    subject = {"fixture": "installed-pair"}
+    observed_blocker = {**blocker, "revision": "old"} if mode == "stale" else blocker
+    observation = {
+        "product_subject": subject,
+        "product_calls": [
+            {
+                "kind": "agentic-workspace/observed-installed-call/v1",
+                "subject": subject,
+                "exit_code": 0,
+                "stdout": json.dumps({"decision_packet": {"blockers": [observed_blocker]}}),
+            }
+        ],
+    }
+
+    class Actor:
+        source_sha256 = "fixture"
+        observations = [observation] if mode == "earlier-session" else []
+
+        def session(self, work, prompt):
+            self.observations.append(observation if mode in {"observed", "stale"} else {"operating_results": [current]})
+            return {"status": "blocked", "reason": "Unrelated refusal"}
+
+    result = journeys.execute_activation(consumer, "activation-assignment", actor=Actor())
+    assert result["execution_error"] is None
+    assert result["status"] == ("passed" if mode == "observed" else "failed")
+    assert result["phases"][0]["ingress_evidence"]["passed"] is (mode == "observed")
