@@ -100,6 +100,8 @@ Use this JSON input, changing the repository-relative registry path as needed:
 
 Commit the generated registry with the procedure source. In authoring checks, use
 `"mode":"check"`; stale membership or declarations exit nonzero without mutation.
+`"mode":"render"` returns the proposed registry as `projection`, plus `drift`,
+without mutation; source-maintenance tools use this same native derivation.
 This explicit pass inspects every declared procedure, including those absent from
 the previous index. Run it before exercising or publishing edited skills. Ordinary
 operating lookup remains lazy and cannot detect newly relevant unindexed sources;

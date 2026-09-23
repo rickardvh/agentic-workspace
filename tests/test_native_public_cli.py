@@ -1382,3 +1382,34 @@ def test_installed_native_activation_index_repairs_new_membership(tmp_path, shar
     assert "activation_index" not in json.loads(registry.read_text())
     assert author("write", "../REGISTRY.json").returncode != 0
     assert author("unexpected").returncode != 0
+
+
+@pytest.mark.parametrize("invalid", ["ambiguous", "invalid-activation"])
+def test_maintenance_and_shipped_index_share_negative_authority(tmp_path, native_cli, invalid):
+    from aw_maintainer.activation_index import render, synchronize
+
+    registry = tmp_path / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {"skills": [{"id": "lab", "path": "SKILL.md", "procedure_resource": "procedure.md", "semantic_routes": ["lab/readiness"]}]}
+        )
+    )
+    activation = {"occasions": ["need"], "applicability": "A prerequisite exists", "outcome": "Readiness"}
+    if invalid == "invalid-activation":
+        activation["occasions"] = ["unsupported"]
+    fence = "```agentic-procedure\n" + json.dumps({"activation": activation}) + "\n```\n"
+    (tmp_path / "procedure.md").write_text(fence * (2 if invalid == "ambiguous" else 1))
+    before = registry.read_bytes()
+    native = subprocess.run(
+        [str(native_cli), "activation-index", "--target", str(tmp_path), "--input", "-"],
+        input=json.dumps({"registry": "REGISTRY.json", "mode": "check"}),
+        capture_output=True,
+        text=True,
+    )
+    assert native.returncode == 2
+    message = json.loads(native.stderr)["error"]["message"]
+    for operation in (lambda: render(registry), lambda: synchronize(registry, check=True), lambda: synchronize(registry)):
+        with pytest.raises(Exception) as error:
+            operation()
+        assert str(error.value) == message
+        assert registry.read_bytes() == before
