@@ -117,7 +117,15 @@ class Workspace:
         ]
         if hasattr(self.consumer, "archive_command"):
             command = self.consumer.archive_command()
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        diagnostics = bytearray()
+
+        def read_diagnostics():
+            while chunk := proc.stderr.read(1024):
+                diagnostics[:] = (diagnostics + chunk)[-4096:]
+
+        diagnostic_reader = threading.Thread(target=read_diagnostics, daemon=True)
+        diagnostic_reader.start()
         # Bound reading the header/body too, not just wait() after stream EOF.
         timer = threading.Timer(EXPORT_SECONDS, proc.kill)
         timer.daemon = True
@@ -140,7 +148,8 @@ class Workspace:
                     if member.isfile():
                         files[str(name)] = archive.extractfile(member).read()
             if proc.wait(timeout=30):
-                raise ValueError("Consumer export failed")
+                diagnostic_reader.join(timeout=1)
+                raise ValueError(f"Consumer export failed ({proc.returncode}): {diagnostics.decode(errors='replace')}")
         finally:
             timer.cancel()
             if proc.poll() is None:
