@@ -8,6 +8,7 @@ or an actor sandbox. Target and artifact authority stays in platform_release.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -261,9 +262,9 @@ class DockerConsumer:
             with tempfile.TemporaryDirectory() as tmp:
                 native = Path(tmp) / "native"
                 identity = safe_native_archive(self.subject.directory / row["native_archive"]["asset"], native, self.subject, self.target)
-                self.copy_in(native, "/home/consumer/native")
-            self.command = ["/home/consumer/native/agentic-workspace"]
-            binaries = "/home/consumer/native"
+                binaries = "/home/consumer/native" + "-" + self.subject.identity()["inventory_sha256"][:12]
+                self.copy_in(native, binaries)
+            self.command = [binaries + "/agentic-workspace"]
         elif self.profile == "node":
             if manager not in {"npm", "pnpm"}:
                 raise ValueError("Unsupported Node manager")
@@ -281,7 +282,7 @@ class DockerConsumer:
             item = row["wheel"]
             package = "/home/consumer/input/" + item["asset"]
             self.copy_in(self.subject.directory / item["asset"], package)
-            self.exec(["uv", "venv", "--python", "python3", ".venv"])
+            self.exec(["uv", "venv", "--allow-existing", "--python", "python3", ".venv"])
             options = ["--no-index"]
             if self.subject.mode == "public":
                 package, options = registry_package(self.subject, "python", row), []
@@ -443,11 +444,10 @@ class NativeConsumer:
             raise ValueError("Frozen subject changed before installation")
         row = self.subject.row(self.target)
         suffix = ".exe" if os.name == "nt" else ""
-        expected = safe_native_archive(
-            self.subject.directory / row["native_archive"]["asset"], self.root / "native", self.subject, self.target
-        )
+        native = self.root / ("native-" + self.subject.identity()["inventory_sha256"][:12])
+        expected = safe_native_archive(self.subject.directory / row["native_archive"]["asset"], native, self.subject, self.target)
         if self.profile == "standalone":
-            binaries = self.root / "native"
+            binaries = native
             self.command = [str(binaries / ("agentic-workspace" + suffix))]
         elif self.profile == "node":
             (self.repo / "package.json").write_text('{"private":true}', encoding="utf-8")
@@ -458,7 +458,7 @@ class NativeConsumer:
             binaries = self.repo / f"node_modules/@agentic-workspace/workspace-cli/src/native/bin/{row['node_platform']}-{row['node_arch']}"
             self.command = [self.tools["npm"], "exec", "--no", "--", "agentic-workspace"]
         else:
-            self.exec([self.tools["uv"], "venv", "--python", sys.executable, ".venv"])
+            self.exec([self.tools["uv"], "venv", "--allow-existing", "--python", sys.executable, ".venv"])
             python = self.repo / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             package = str(self.subject.directory / row["wheel"]["asset"])
             options = ["--no-index"]
