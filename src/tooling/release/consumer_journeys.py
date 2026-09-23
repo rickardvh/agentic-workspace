@@ -98,6 +98,8 @@ class Workspace:
             "-",
             ".",
         ]
+        if hasattr(self.consumer, "archive_command"):
+            command = self.consumer.archive_command()
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         files = {}
         size = 0
@@ -281,25 +283,37 @@ def deterministic(work, family):
 
 def execute(consumer, family, *, actor=None):
     started = time.monotonic()
+    recipe_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    scorer_sha256 = hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest()
     work = Workspace(consumer)
     before = recipe(work, family)
     error = None
     claim = None
+    exported = None
     try:
         if actor:
             claim = actor(work, family, TASK)
+            if isinstance(claim, dict) and "exported" in claim:
+                exported, claim = claim["exported"], claim["claim"]
         else:
             deterministic(work, family)
             claim = {"status": "complete"}
-        validate_pointer_files(work.files())
+        after = exported if exported is not None else work.files()
+        validate_pointer_files(after)
+        if family == "maintenance":
+            import tomllib
+
+            config = tomllib.loads(after[".agentic-workspace/config.toml"].decode())
+            if config.get("workspace", {}).get("enabled") is not False:
+                raise ValueError("Maintenance outcome did not preserve requested disablement")
     except (Exception, KeyboardInterrupt) as failure:
         error = str(failure)[:2000]
     result = evaluate(
         before,
-        work.files(),
+        exported if exported is not None else work.files(),
         expected_task(),
         claim=claim,
-        executed=True,
+        executed=bool(actor.observations) if actor else True,
         subject_verified=bool(consumer.observation.get("installed")),
         execution_error=error,
     )
@@ -308,10 +322,18 @@ def execute(consumer, family, *, actor=None):
         driver="agent" if actor else "deterministic",
         elapsed_seconds=round(time.monotonic() - started, 3),
         environment=consumer.observation,
-        recipe_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        scorer_sha256=hashlib.sha256((HARNESS / "consumer_outcomes.py").read_bytes()).hexdigest(),
+        recipe_sha256=recipe_sha256,
+        scorer_sha256=scorer_sha256,
         reused_owner_evidence=OWNER_EVIDENCE.get(family, []),
     )
+    if actor:
+        result["actor_sha256"] = actor.source_sha256
+        result["actor"] = actor.observations
+        result["tokens"] = (
+            sum(row["tokens"] for row in actor.observations)
+            if actor.observations and all(row["tokens"] is not None for row in actor.observations)
+            else None
+        )
     return result
 
 

@@ -13,6 +13,22 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 # rather than weakening the detector globally.
 ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
 ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
+    Path("src/tooling/model-cli-harness/consumer_agent.py"): frozenset(
+        "/" + path
+        for path in (
+            "home/consumer",
+            "home/consumer/repo",
+            "home/consumer/input",
+            "home/consumer/tmp",
+            "home/consumer/.codex",
+            "home/consumer/.codex/auth.json",
+            "home/consumer/final.json",
+            "home/agent",
+            "home/agent/.codex/auth.json",
+            "tmp/input-",
+            "var/run/docker.sock",
+        )
+    ),
     Path("src/tooling/release/consumer_journeys.py"): frozenset({"/" + "home/consumer/repo"}),
     # These are fixed disposable container paths, never maintainer host paths.
     Path("src/tooling/model-cli-harness/sandbox/consumer/Dockerfile"): frozenset(
