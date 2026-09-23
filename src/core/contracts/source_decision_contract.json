@@ -236,6 +236,12 @@
         "description": "Invoke the exact operation returned by the current owner.",
         "input_field": "invocation",
         "input_required": true
+      },
+      {
+        "name": "activation-index",
+        "description": "Check or derive a repository registry activation index from its procedure sources; explicit authoring only.",
+        "input_field": "request",
+        "input_required": true
       }
     ],
     "options": [

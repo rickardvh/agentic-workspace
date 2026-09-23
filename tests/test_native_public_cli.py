@@ -1303,3 +1303,82 @@ def test_consumer_finding_latitude_is_repository_scoped(tmp_path, shared_core_bi
     current = consume("native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Add a square field to the report"})
     assert current["configuration"]["improvement_latitude"] == "reporting"
     assert "decision_packet" in current
+
+
+def test_installed_native_activation_index_repairs_new_membership(tmp_path, shared_core_binary, native_cli):
+    # Only the shipped executable pair is present in this separate installation.
+    install = tmp_path / "install"
+    install.mkdir()
+    cli = install / native_cli.name
+    shutil.copy2(native_cli, cli)
+    shutil.copy2(shared_core_binary, install / shared_core_binary.name)
+    host = tmp_path / "host"
+    folder = host / "tools/skills/lab"
+    folder.mkdir(parents=True)
+    registry = folder.parent / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {"skills": [{"id": "lab", "path": "lab/SKILL.md", "procedure_resource": "procedure.md", "semantic_routes": ["lab/readiness"]}]}
+        )
+    )
+    (folder / "SKILL.md").write_text("Use procedure.md")
+    declaration = {
+        "kind": "agentic-workspace/procedure/v1",
+        "id": "lab",
+        "question": "What is needed?",
+        "branches": [{"id": "check", "description": "Check", "next": "check.md"}],
+    }
+
+    def source():
+        (folder / "procedure.md").write_text("```agentic-procedure\n" + json.dumps(declaration) + "\n```\n")
+
+    def author(mode, reference="tools/skills/REGISTRY.json"):
+        return subprocess.run(
+            [str(cli), "activation-index", "--target", str(host), "--input", "-"],
+            input=json.dumps({"registry": reference, "mode": mode}),
+            text=True,
+            capture_output=True,
+            cwd=host,
+        )
+
+    source()
+    assert author("check").returncode == 0
+    declaration["activation"] = {"occasions": ["need"], "applicability": "Readiness is needed", "outcome": "Readiness established"}
+    source()
+    original = registry.read_bytes()
+    assert "activation index stale" in author("check").stderr
+    assert registry.read_bytes() == original
+    assert author("write").returncode == 0
+    from aw_maintainer.activation_index import render
+
+    assert json.loads(registry.read_text()) == render(registry)
+    # A newly relevant occasion was absent from the old projection. Check must
+    # open sources independently of that projection's membership/filtering.
+    declaration["activation"]["occasions"] = ["observation"]
+    source()
+    assert author("check").returncode != 0
+    assert author("write").returncode == 0
+    context = {
+        "target": str(host),
+        "task": "Inspect sample",
+        "projection": "full",
+        "material": [
+            {
+                "id": "finding",
+                "kind": "observation",
+                "summary": "Source inspection found repeated preparation",
+                "source": {"producer": "acting-agent", "reference": "sample.py", "coverage": "bounded"},
+            }
+        ],
+    }
+    result = subprocess.run([str(cli), "start", "--input", "-"], input=json.dumps(context), text=True, capture_output=True, cwd=host)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["activation"]["candidates"][0]["entry"]["skill_id"] == "lab"
+    assert author("check").returncode == 0
+    del declaration["activation"]
+    source()
+    assert author("check").returncode != 0
+    assert author("write").returncode == 0
+    assert "activation_index" not in json.loads(registry.read_text())
+    assert author("write", "../REGISTRY.json").returncode != 0
+    assert author("unexpected").returncode != 0
