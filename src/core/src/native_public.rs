@@ -738,6 +738,12 @@ fn resolve_selected(
         request_for("configuration"),
         resolution.detail("configuration_write"),
     )?;
+    crate::native_configuration_assessment::revalidate_saved(
+        target,
+        &configuration,
+        &startup_adapter,
+        &mut config_write,
+    )?;
     if config_write["contribution"]["actions"]
         .as_array()
         .is_some_and(|actions| {

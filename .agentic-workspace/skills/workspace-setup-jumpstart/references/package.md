@@ -72,10 +72,26 @@ repository source paths in its `dependencies` argument; Configuration also binds
 Configuration sources and explicitly declared intent/instruction sources. Add
 README, AGENTS or other repository sources only when they informed the judgment;
 their filenames alone create no dependency. Ordinary entry does not scan directories. Select
-`machine-local` for local readiness. Shared assessment never certifies another
-machine. Fill the returned record's coverage rationale and grounded dispositions.
-Use the consumer's `configuration_behavior.setup_witness` for supported effective
-observations; a null witness is not successful verification. Preserve a precise
+`machine-local` for local setup choices. Neither assessment scope certifies launch,
+capture, Assignment admission or module readiness. Fill the returned record's
+coverage rationale and grounded dispositions. The returned `concerns` and each
+behavior's `setup_settlement` state the supported claim and its owner boundary.
+
+Only `instructions` and `preferences` support `effective` or `already-effective`:
+copy the consumer's non-null `configuration_behavior.setup_witness`. Configuration
+reobserves it before publication and reuse; a null witness is not verification.
+For relevant `diagnostics`, `assignment`, `modules` and `invocation`, use
+`owner-managed` when consideration is complete and no authorized setup action
+remains here. Explain the responsible owner and boundary; do not supply an
+`observation` or infer effectiveness. This is a terminal Configuration disposition,
+not an exclusion and not evidence of readiness. Actual diagnostics capture and
+configured-command execution remain machine/target-local; saved command text or
+the running process cannot certify a launch. Assignment and modules retain their
+current requirements, setup, evidence and admission. Use those owners when the
+task requires readiness; their missing or failed evidence is never success.
+
+Keep actual unfinished setup work pending rather than hiding it behind
+`owner-managed`. Preserve a precise
 owner/next-action continuation for pending, deferred, blocked or unavailable work.
 Keep the original ordinary task in the returned record's `continuation.task` when
 work remains, so a fresh session can resume without another user explanation.
@@ -90,7 +106,9 @@ reuse; unrelated tasks, commits and unchanged setup across versions do not.
 Unknown formats, major transitions and newer integration are preserved. Resume
 the original work: optional unresolved setup restricts its dependent integration
 claim, not unrelated repository execution. Do not declare package integration
-complete while any relevant assessment or consumer verification remains open.
+complete while any relevant assessment or supported consumer verification remains
+open. `integration_complete` refers only to this bounded Configuration assessment;
+the returned `owner_managed_concerns` remain outside its readiness certification.
 
 An unchanged deferred/blocked choice completes review, not integration. Keep its
 reason and resume condition available without asking again on unrelated entry.

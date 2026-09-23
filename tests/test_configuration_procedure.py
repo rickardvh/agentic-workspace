@@ -6,6 +6,7 @@ import copy
 import json
 
 import pytest
+from jsonschema import Draft202012Validator
 from tests.test_native_maintainer_logging import events
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
@@ -18,7 +19,7 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     workspace = tmp_path / ".agentic-workspace"
     workspace.mkdir()
     source = workspace / "config.toml"
-    source.write_text("[workspace]\nenabled=true\n")
+    source.write_text('[workspace]\nenabled=true\ncli_invoke="nonexistent-configured-launch"\n')
     (tmp_path / "README.md").write_text("Repository rules live in GUIDE.md and must reach ordinary agents.\n")
     guide = tmp_path / "GUIDE.md"
     guide.write_text("Use the repository's required review convention.\n")
@@ -43,6 +44,15 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     assert offered["status"] == "assessment-required"
     assert "optional" in json.dumps(offered["material"])
     assert not (workspace / "configuration-assessment.json").exists()
+    missing = copy.deepcopy(offered["record_request"])
+    missing["arguments"]["value"].update(
+        coverage="Instruction delivery has not been established.",
+        dispositions=[
+            {"subject": "instructions", "concern": "instructions", "status": "effective", "reason": "Unproven", "observation": {}}
+        ],
+    )
+    with pytest.raises(AssertionError, match="consumer effectiveness"):
+        call(request=missing)
 
     request = next(r for r in call()["configuration_write"]["requests"] if r["arguments"]["key"] == "workspace.agent_instructions_file")
     request["arguments"]["value"] = "GUIDE.md"
@@ -75,10 +85,69 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
             "reason": "This repository has no delegation, retained planning or diagnostic requirement.",
         },
     ]
+    # One concern-class matrix covers every advertised path. Owners outside this
+    # assessment settle consideration, never readiness or fabricated effectiveness.
+    schema = offered["judgment_schema"]
+    validator = Draft202012Validator(schema)
+    concerns = {row["concern"]: row["settlement"] for row in offered["concerns"]}
+    assert set(concerns) == {"instructions", "preferences", "diagnostics", "assignment", "modules", "invocation"}
+    for concern, contract in concerns.items():
+        behavior_request["arguments"]["concern"] = concern
+        behavior = call(request=behavior_request)["configuration_behavior"]
+        assert behavior["setup_settlement"] == contract
+        if concern == "instructions":
+            continue
+        row = {"subject": concern, "concern": concern, "reason": contract["boundary"]}
+        if contract["effective_supported"]:
+            assert behavior["setup_witness"] is not None
+            row.update(status="already-effective", observation=behavior["setup_witness"])
+        else:
+            assert behavior["setup_witness"] is None
+            row["status"] = "owner-managed"
+            for scope in ("repository", "machine-local"):
+                selected = call()["configuration_write"]["setup_assessment"]["request"]
+                selected["arguments"]["scope"] = scope
+                invalid = call(request=selected)["configuration_write"]["setup_assessment"]["record_request"]
+                value = invalid["arguments"]["value"]
+                value["coverage"] = "Attempt an unsupported effectiveness claim."
+                value["dispositions"] = [{**row, "status": "effective", "observation": {"owner": "fabricated"}}]
+                assert list(validator.iter_errors(value))
+                with pytest.raises(AssertionError, match="unsupported setup settlement"):
+                    call(request=invalid)
+            invalid = copy.deepcopy(record)
+            invalid["arguments"]["value"]["dispositions"] = [{**row, "observation": {"capture": "success"}}]
+            with pytest.raises(AssertionError, match="unsupported setup settlement"):
+                call(request=invalid)
+        record["arguments"]["value"]["dispositions"].append(row)
+    validator.validate(record["arguments"]["value"])
     action = call(request=record)["decision_packet"]["primary_action"]
     assert action["operation_id"] == "configuration.write"
     assert call(invocation=action)["effect_outcome"]["status"] == "committed"
     saved = (workspace / "configuration-assessment.json").read_bytes()
+    settled = assessment()
+    assert set(settled["owner_managed_concerns"]) == {"diagnostics", "assignment", "modules", "invocation"}
+    assert "no readiness" in settled["settlement_boundary"]
+    assert settled["machine_readiness"] == "not-certified-by-configuration-assessment"
+    # A local preference changes the actual consumer independently of shared
+    # dependency paths. Reuse fails and exposes a fresh assessment write route.
+    local_source = workspace / "config.local.toml"
+    local_source.write_text('[clarification]\nmode="ask-first"\n')
+    stale = assessment()
+    assert stale["integration_complete"] is False
+    assert stale["changed_consumers"] == ["preferences"]
+    assert stale["record_request"]
+    assert "configuration-assessment-required" in json.dumps(call()["decision_packet"])
+    local_source.unlink()
+    assert assessment()["status"] == "settled"
+    selected = call()["configuration_write"]["setup_assessment"]["request"]
+    selected["arguments"]["scope"] = "machine-local"
+    local = call(request=selected)["configuration_write"]["setup_assessment"]["record_request"]
+    local["arguments"]["value"]["coverage"] = "Local concern consideration is complete; no capture or launch readiness is certified."
+    local["arguments"]["value"]["dispositions"] = [
+        row for row in record["arguments"]["value"]["dispositions"] if row["status"] == "owner-managed"
+    ]
+    assert call(invocation=call(request=local)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
+    assert call()["configuration_write"]["local_setup_assessment"]["status"] == "settled"
     context["task"] = "Document a parser example"
     (tmp_path / "unrelated.txt").write_text("Unrelated repository change")
     assert assessment()["status"] == "settled"
@@ -170,7 +239,7 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
     invalid["arguments"]["value"]["dispositions"] = [
         {"subject": "Modules", "status": "effective", "reason": "Enabled flag", "concern": "modules", "observation": {}}
     ]
-    with pytest.raises(AssertionError, match="consumer effectiveness"):
+    with pytest.raises(AssertionError, match="unsupported setup settlement"):
         call(request=invalid)
 
     # The same filename is relevant when deliberately selected for a judgment.

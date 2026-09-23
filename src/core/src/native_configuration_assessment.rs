@@ -70,7 +70,56 @@ fn material() -> Result<Value, CoreError> {
 // Bump only when repository setup needs reconsideration, including same-version
 // development changes. Cosmetic/package-only changes use PAYLOAD_REVISION instead.
 fn basis() -> &'static str {
-    "configuration-setup-v1"
+    "configuration-setup-v2"
+}
+// Configuration can settle consideration without acquiring another owner's
+// readiness authority. This is a disposition in the existing assessment, not
+// another evidence store or a substitute for that owner's admission.
+fn owner_managed(concern: &str) -> bool {
+    matches!(
+        concern,
+        "diagnostics" | "assignment" | "modules" | "invocation"
+    )
+}
+fn effective(concern: &str) -> bool {
+    matches!(concern, "instructions" | "preferences")
+}
+pub(crate) fn settlement(concern: &str) -> Value {
+    let boundary = match concern {
+        "instructions" => {
+            "Effectiveness means the selected startup source was delivered by the startup adapter."
+        }
+        "preferences" => {
+            "Effectiveness means Configuration currently observes the selected advisory preferences; no effect authorization."
+        }
+        "diagnostics" => {
+            "Actual capture belongs to the session-logging transport on this machine and target. Configuration assessment certifies neither capture nor diagnostic readiness, in either scope."
+        }
+        "assignment" => {
+            "Task-specific feasibility, selection and result admission belong to current Assignment requirements and admission. Configuration assessment certifies none of those outcomes."
+        }
+        "modules" => {
+            "Readiness belongs to each enabled module's current setup, state and admission. Configuration assessment does not certify modules from enablement or replace their owner evidence."
+        }
+        "invocation" => {
+            "Assess repository invocation configuration against intent. Launch readiness belongs to actual execution on the target machine; saved command text and the running AW process prove no configured launch. Configuration assessment certifies no launch in either scope."
+        }
+        _ => "Unsupported concern.",
+    };
+    json!({"effective_supported":effective(concern),"terminal_disposition":if owner_managed(concern){"owner-managed"}else{"effective"},"boundary":boundary})
+}
+fn valid_settlement(row: &Value) -> bool {
+    let concern = row["concern"].as_str().unwrap_or("");
+    match row["status"].as_str() {
+        Some("effective" | "already-effective") => {
+            effective(concern) && row["observation"].is_object()
+        }
+        Some("owner-managed") => owner_managed(concern) && row.get("observation").is_none(),
+        Some("irrelevant" | "excluded" | "pending" | "deferred" | "blocked" | "unavailable") => {
+            true
+        }
+        _ => false,
+    }
 }
 pub(crate) fn declaration() -> Value {
     json!({"kind":READ,"result_kind":KIND,"input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{"scope":{"enum":["repository","machine-local"]},"reconsider":{"type":"boolean"},"dependencies":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","maxLength":4096}}}}})
@@ -229,7 +278,17 @@ pub(crate) fn view(
     Ok(())
 }
 pub(crate) fn restrict(result: &mut Value) {
-    result["contribution"]["blockers"] = json!([{"code":"configuration-assessment-required","message":"Current package setup needs Configuration assessment. Read its exact current material, integrate useful authorized capabilities and verify their consumers; preserve unresolved choices and the original task.","affects":["claim:configuration-integration-complete"]}]);
+    let mut blockers = result["contribution"]["blockers"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    if !blockers
+        .iter()
+        .any(|b| b["code"] == "configuration-assessment-required")
+    {
+        blockers.push(json!({"code":"configuration-assessment-required","message":"Current package setup needs Configuration assessment. Read its exact current material, integrate useful authorized capabilities and verify their consumers; preserve unresolved choices and the original task.","affects":["claim:configuration-integration-complete"]}));
+    }
+    result["contribution"]["blockers"] = json!(blockers);
 }
 fn view_inner(
     target: &Path,
@@ -297,19 +356,7 @@ fn view_inner(
                     ["subject", "reason"]
                         .iter()
                         .all(|k| r[k].as_str().is_some_and(|s| !s.trim().is_empty()))
-                        && matches!(
-                            r["status"].as_str(),
-                            Some(
-                                "effective"
-                                    | "already-effective"
-                                    | "irrelevant"
-                                    | "excluded"
-                                    | "pending"
-                                    | "deferred"
-                                    | "blocked"
-                                    | "unavailable"
-                            )
-                        )
+                        && valid_settlement(r)
                 })
         });
     let settled = reviewed
@@ -317,7 +364,13 @@ fn view_inner(
             rows.iter().all(|r| {
                 matches!(
                     r["status"].as_str(),
-                    Some("effective" | "already-effective" | "irrelevant" | "excluded")
+                    Some(
+                        "effective"
+                            | "already-effective"
+                            | "owner-managed"
+                            | "irrelevant"
+                            | "excluded"
+                    )
                 )
             })
         });
@@ -330,7 +383,19 @@ fn view_inner(
     } else {
         "assessment-required"
     };
-    result["setup_assessment"] = json!({"status":status,"scope":scope,"basis":setup,"currentness":comparison.status,"changed_dependencies":comparison.changed,"record":record,"integration_complete":settled,"review_complete":reviewed,"assessment_due":!reviewed,"machine_readiness":"not-certified-by-repository-assessment","request":template(READ,json!({"scope":scope})),"authority":"Current Configuration judgment only; no policy consent, domain proof or whole-task completion."});
+    result["setup_assessment"] = json!({"status":status,"scope":scope,"basis":setup,"currentness":comparison.status,"changed_dependencies":comparison.changed,"record":record,"integration_complete":settled,"review_complete":reviewed,"assessment_due":!reviewed,"machine_readiness":"not-certified-by-configuration-assessment","request":template(READ,json!({"scope":scope})),"authority":"Current Configuration judgment only; no policy consent, domain proof or whole-task completion."});
+    result["setup_assessment"]["settlement_boundary"] = json!(
+        "integration_complete settles Configuration assessment only. Owner-managed concerns certify no readiness: use the responsible current owner when readiness is needed. Pending authorized setup work must retain an unfinished disposition."
+    );
+    result["setup_assessment"]["owner_managed_concerns"] = json!(
+        record["dispositions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|r| r["status"] == "owner-managed")
+            .map(|r| r["concern"].clone())
+            .collect::<Vec<_>>()
+    );
     if !reviewed {
         restrict(result);
     }
@@ -351,6 +416,19 @@ fn view_inner(
     }
     if selected {
         result["setup_assessment"]["material"] = material()?;
+        result["setup_assessment"]["concerns"] = json!(
+            [
+                "instructions",
+                "diagnostics",
+                "assignment",
+                "modules",
+                "invocation",
+                "preferences"
+            ]
+            .into_iter()
+            .map(|concern| json!({"concern":concern,"settlement":settlement(concern)}))
+            .collect::<Vec<_>>()
+        );
         result["setup_assessment"]["judgment_schema"] = json!({
             "type":"object","required":["coverage","dispositions"],
             "description":"Fill only semantic judgment in record_request.arguments.value; preserve returned kind, scope, runtime_version, basis and dependency observations. Re-request with extra dependency paths when needed.",
@@ -358,17 +436,20 @@ fn view_inner(
                 "coverage":{"type":"string","minLength":1,"description":"Explain consideration of the current setup material against standing repository intent, including useful optional additions."},
                 "dispositions":{"type":"array","minItems":1,"maxItems":64,"items":{"type":"object","required":["subject","status","reason"],"properties":{
                     "subject":{"type":"string","minLength":1},
-                    "status":{"enum":["effective","already-effective","irrelevant","excluded","pending","deferred","blocked","unavailable"]},
+                    "status":{"enum":["effective","already-effective","owner-managed","irrelevant","excluded","pending","deferred","blocked","unavailable"]},
                     "reason":{"type":"string","minLength":1},
                     "concern":{"enum":["instructions","diagnostics","assignment","modules","invocation","preferences"]},
-                    "observation":{"type":"object","description":"For effective/already-effective, copy the affected consumer's non-null configuration_behavior.setup_witness exactly; it will be reobserved."},
+                    "observation":{"type":"object","description":"Only instructions/preferences support effective/already-effective: copy the non-null configuration_behavior.setup_witness exactly. It is reobserved before publication and reuse. Never supply observation for owner-managed."},
                     "resume":{"type":"string","description":"Required for pending/deferred/blocked/unavailable: precise owner and next action."}
-                }}},
+                },"allOf":[
+                    {"if":{"properties":{"status":{"enum":["effective","already-effective"]}}},"then":{"required":["concern","observation"],"properties":{"concern":{"enum":["instructions","preferences"]}}}},
+                    {"if":{"properties":{"status":{"const":"owner-managed"}}},"then":{"required":["concern"],"properties":{"concern":{"enum":["diagnostics","assignment","modules","invocation"]}},"not":{"required":["observation"]}}}
+                ],"description":"owner-managed settles consideration of a relevant concern whose effectiveness is outside Configuration assessment in both scopes. Explain the responsible owner and why no setup action remains here; never use it to hide pending authorized setup work or to claim readiness."}},
                 "continuation":{"type":["object","null"],"properties":{"task":{"type":"string","minLength":1}},"description":"Required original ordinary task when any disposition remains unfinished."}
             }
         });
         result["setup_assessment"]["remaining_routes"] = json!({"payload":result["payload_discovery_request"],"adoption":result["repository_adoption_request"],"behavior":result["behavior_request"],"exposure":result["skill_exposure_request"]});
-        if compatibility == "compatible" && !settled {
+        if compatibility == "compatible" {
             let mut value = json!({"kind":KIND,"runtime_version":version(),"scope":scope,"basis":setup,"selected_dependencies":extra,"dependencies":observed,"coverage":"","dispositions":[],"continuation":null});
             if !record.is_null() {
                 for field in ["coverage", "dispositions", "continuation"] {
@@ -450,6 +531,11 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
         .filter(|a| !a.is_empty() && a.len() <= 64)
         .ok_or_else(|| err("bounded setup dispositions required"))?;
     for row in rows {
+        if !valid_settlement(row) {
+            return Err(err(
+                "unsupported setup settlement: effective requires instructions/preferences consumer evidence; diagnostics/assignment/modules/invocation use owner-managed without a readiness claim, or preserve unfinished work",
+            ));
+        }
         if !["subject", "reason"]
             .iter()
             .all(|k| row[k].as_str().is_some_and(|s| !s.trim().is_empty()))
@@ -459,7 +545,7 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
         match row["status"].as_str() {
             Some("effective" | "already-effective")
                 if row["concern"].is_string() && row["observation"].is_object() => {}
-            Some("irrelevant" | "excluded") => (),
+            Some("irrelevant" | "excluded" | "owner-managed") => (),
             Some("pending" | "deferred" | "blocked" | "unavailable")
                 if row["resume"].as_str().is_some_and(|s| !s.trim().is_empty())
                     && value["continuation"]["task"]
@@ -505,6 +591,56 @@ pub(crate) fn validate_consumers(target: &Path, current: &Value) -> Result<(), C
             return Err(err(
                 "setup consumer effectiveness not established; preserve pending owner verification",
             ));
+        }
+    }
+    Ok(())
+}
+/// Owner observations can change independently of the selected source paths.
+/// Reusing a saved effectiveness claim needs the same evidence as publishing it.
+pub(crate) fn revalidate_saved(
+    target: &Path,
+    configuration: &Value,
+    startup: &Value,
+    config_write: &mut Value,
+) -> Result<(), CoreError> {
+    let current = json!({"configuration":configuration,"startup_adapter":startup});
+    for field in ["setup_assessment", "local_setup_assessment"] {
+        let assessment = &config_write[field];
+        if assessment["review_complete"] != true
+            || assessment["status"] == "publication-recovery-required"
+        {
+            continue;
+        }
+        let mut changed = Vec::new();
+        for row in assessment["record"]["dispositions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            if matches!(
+                row["status"].as_str(),
+                Some("effective" | "already-effective")
+            ) {
+                let concern = row["concern"].as_str().unwrap_or("");
+                let observed = consumer_witness(target, concern, &current)?;
+                if observed.is_null() || observed != row["observation"] {
+                    changed.push(concern.to_owned());
+                }
+            }
+        }
+        if !changed.is_empty() {
+            let assessment = &mut config_write[field];
+            assessment["status"] = json!("assessment-required");
+            assessment["review_complete"] = json!(false);
+            assessment["integration_complete"] = json!(false);
+            assessment["assessment_due"] = json!(true);
+            assessment["changed_consumers"] = json!(changed);
+            restrict(config_write);
+        } else if config_write[field]["status"] == "settled" {
+            config_write[field]
+                .as_object_mut()
+                .unwrap()
+                .remove("record_request");
         }
     }
     Ok(())

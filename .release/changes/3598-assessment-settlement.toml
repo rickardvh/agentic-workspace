@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Align setup settlement with consumer authority: supported effectiveness witnesses are rechecked, and owner-managed concerns settle consideration without certifying launch, capture, Assignment or module readiness."
