@@ -1181,6 +1181,9 @@ def test_material_activates_repository_procedure_through_public_start(tmp_path, 
         },
     }
     (folder / "procedure.md").write_text("```agentic-procedure\n" + json.dumps(declaration) + "\n```\n")
+    from aw_maintainer.activation_index import synchronize
+
+    synchronize(folder.parent / "REGISTRY.json")
     context = {
         "target": str(tmp_path),
         "task": "Validate the sample",
@@ -1200,6 +1203,17 @@ def test_material_activates_repository_procedure_through_public_start(tmp_path, 
     request = first["activation"]["requests"][0]
     request["arguments"]["judgments"][0].update(status="no-match", reason="This sample is already validated elsewhere.")
     assert "activation" not in consume("native", shared_core_binary, native_cli, {**context, "request": request})
+    assert not synchronize(folder.parent / "REGISTRY.json", check=True)
+    declaration["activation"]["applicability"] = "The laboratory service is a current prerequisite."
+    (folder / "procedure.md").write_text("```agentic-procedure\n" + json.dumps(declaration) + "\n```\n")
+    assert synchronize(folder.parent / "REGISTRY.json", check=True)
+    with pytest.raises(Exception, match="activation index stale"):
+        consume("native", shared_core_binary, native_cli, context)
+    synchronize(folder.parent / "REGISTRY.json")
+    assert (
+        consume("native", shared_core_binary, native_cli, context)["activation"]["candidates"][0]["applicability"]
+        == declaration["activation"]["applicability"]
+    )
 
 
 def test_internal_finding_has_current_dependencies_without_retention(tmp_path, shared_core_binary, native_cli):

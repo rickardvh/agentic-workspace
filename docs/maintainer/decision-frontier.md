@@ -37,6 +37,17 @@ question. Optional `settled_by` pairs (`selector`, scalar `value`) observe exact
 native owner outcomes. They suppress only the optional method; source-authored
 activation cannot modify native requirements or establish proof.
 
+The existing registry carries a generated `activation_index`, derived from those
+procedure declarations with `python -m aw_maintainer.activation_index REGISTRY.json`.
+Run it after changing a declaration; `--check` detects drift. First-party interface
+generation includes this derivation. Do not hand-maintain the projection. Plain
+skills need no index entry. Discovery admits registry membership and reads this
+bounded projection (at most 128 entries), without constructing the route catalogue
+or opening unindexed procedure resources. Only entries matching a current material
+kind or binding owner open their skill/procedure sources for currentness validation;
+changed declarations require regeneration. Registry parsing still scales with source
+bytes, but unrelated skills add no procedure reads or activation construction.
+
 On material or binding signals, the current activation frontier exposes these
 occasions without loading branch bodies. The acting agent supplies only unresolved
 applicability through the returned request. Each answer binds its own material,

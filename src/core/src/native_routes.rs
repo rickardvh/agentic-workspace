@@ -183,6 +183,7 @@ fn catalogue_selected(
     target: &Path,
     exact_detail: Option<&str>,
     selected: Option<&Value>,
+    activation_only: bool,
 ) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
     let mut paths = BTreeSet::new();
@@ -204,6 +205,7 @@ fn catalogue_selected(
     )?;
     let mut declarations = BTreeMap::<String, Value>::new();
     let mut material = BTreeMap::new();
+    let mut activation = Vec::new();
     let mut pending = paths.clone();
     let mut declared = paths.clone();
     while let Some(path) = pending.pop_first() {
@@ -265,6 +267,23 @@ fn catalogue_selected(
                     pending.insert(source.to_owned());
                 }
             }
+        }
+        if activation_only {
+            // Membership is still admitted above, but no route/skill catalogue is
+            // constructed. The generated compact projection is the only index.
+            if let Some(rows) = object.get("activation_index") {
+                let rows = rows
+                    .as_array()
+                    .ok_or_else(|| error("invalid activation index"))?;
+                if activation.len() + rows.len() > 128 {
+                    return Err(error("activation index exceeds 128 entries"));
+                }
+                for row in rows {
+                    activation.push(json!({"source":path,"entry":row}));
+                }
+            }
+            material.insert(path.clone(), String::new());
+            continue;
         }
         let skills = match object.get("skills") {
             None => &[][..],
@@ -416,12 +435,12 @@ fn catalogue_selected(
         );
     }
     Ok(
-        json!({"revision":hash(material.values().cloned().collect::<Vec<_>>().join("\n").as_bytes()), "sources":paths, "routes":declarations.into_values().collect::<Vec<_>>()}),
+        json!({"revision":hash(material.values().cloned().collect::<Vec<_>>().join("\n").as_bytes()), "sources":paths, "activation":activation, "routes":declarations.into_values().collect::<Vec<_>>()}),
     )
 }
 
 fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreError> {
-    catalogue_selected(target, exact_detail, None)
+    catalogue_selected(target, exact_detail, None, false)
 }
 
 pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
@@ -430,13 +449,11 @@ pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
         json!({"revision":catalogue["revision"],"routes":catalogue["routes"].as_array().unwrap().iter().map(|route|route["id"].clone()).collect::<Vec<_>>()}),
     )
 }
-pub(crate) fn registry_sources(target: &Path) -> Result<Vec<String>, CoreError> {
-    Ok(catalogue(target, None)?["sources"]
+pub(crate) fn activation_entries(target: &Path) -> Result<Vec<Value>, CoreError> {
+    Ok(catalogue_selected(target, None, None, true)?["activation"]
         .as_array()
         .unwrap()
-        .iter()
-        .map(|s| s.as_str().unwrap().to_owned())
-        .collect())
+        .clone())
 }
 
 /// Resolve a short skill identity or qualified semantic route through the same
@@ -489,6 +506,7 @@ pub fn discovery(value: Value) -> Result<Value, CoreError> {
         Path::new(&input.target),
         if exact.is_empty() { None } else { Some(exact) },
         input.selection.as_ref(),
+        false,
     )?;
     let (level, mut rows) = if !exact.is_empty() {
         (
