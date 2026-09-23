@@ -52,7 +52,8 @@ procedure resources, so it detects newly relevant membership that lazy operating
 lookup cannot discover. Ordinary `start` does not perform this scan. This works
 with installed native/npm/Python distributions and needs no source checkout,
 Python maintainer module or copied declaration. First-party interface generation
-includes equivalent derivation, checked for parity. Do not hand-maintain the
+calls the same native derivation through a thin Python binding. Invalid or
+ambiguous declarations therefore have one parser and validator. Do not hand-maintain the
 projection. Plain
 skills need no index entry. Discovery admits registry membership and reads this
 bounded projection (at most 128 entries), without constructing the route catalogue

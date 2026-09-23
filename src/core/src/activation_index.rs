@@ -22,8 +22,8 @@ pub(crate) fn run(input: Value) -> Result<Value, CoreError> {
         mode: String,
     }
     let request: Request = serde_json::from_value(input["request"].clone()).map_err(err)?;
-    if !["check", "write"].contains(&request.mode.as_str()) {
-        return Err(err("activation-index mode must be check or write"));
+    if !["check", "write", "render"].contains(&request.mode.as_str()) {
+        return Err(err("activation-index mode must be check, write or render"));
     }
     decision_source::relative(&request.registry)?;
     if !request.registry.ends_with("/REGISTRY.json") && request.registry != "REGISTRY.json" {
@@ -106,7 +106,7 @@ pub(crate) fn run(input: Value) -> Result<Value, CoreError> {
             "activation index stale; run activation-index with mode write after editing procedure sources",
         ));
     }
-    if drift {
+    if drift && request.mode == "write" {
         // Confined reads reject linked parents/files. Replace atomically within
         // the same directory; never follow an existing temporary file.
         let temporary = format!("{}.activation-{}", request.registry, std::process::id());
@@ -130,7 +130,9 @@ pub(crate) fn run(input: Value) -> Result<Value, CoreError> {
         }
         write?;
     }
-    Ok(
-        json!({"kind":"agentic-workspace/activation-index/v1","registry":request.registry,"status":"current","updated":drift,"entries":rows.len()}),
-    )
+    let mut result = json!({"kind":"agentic-workspace/activation-index/v1","registry":request.registry,"status":if drift && request.mode == "render" { "stale" } else { "current" },"updated":drift && request.mode == "write","drift":drift,"entries":rows.len()});
+    if request.mode == "render" {
+        result["projection"] = body;
+    }
+    Ok(result)
 }
