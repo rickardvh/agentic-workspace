@@ -21,6 +21,11 @@ from consumer_environment import PROFILES, DockerConsumer, run
 from run_sbx_codex_adapter import _codex_exec_command
 
 
+def portable_continuation(files):
+    """Machine-local custody is reconstructed, never transported to a new host."""
+    return {name: data for name, data in files.items() if name != ".agentic-workspace/local" and not name.startswith(".agentic-workspace/local/")}
+
+
 class SandboxConsumer(DockerConsumer):
     """Both drivers may select this same provider-bearing environment explicitly."""
 
@@ -67,7 +72,6 @@ class SandboxConsumer(DockerConsumer):
                     "-c",
                     "set -eu; useradd -u 10002 -m -d /home/consumer -s /bin/sh consumer; "
                     "mkdir -p /home/consumer/repo /home/consumer/input /home/consumer/tmp /home/consumer/.codex; "
-                    "cp /home/agent/.codex/auth.json /home/consumer/.codex/auth.json; "
                     "chown -R consumer:consumer /home/consumer; chmod 700 /home/agent; "
                     "test ! -S /run/ssh-agent.sock || chmod 000 /run/ssh-agent.sock; "
                     'if command -v sudo >/dev/null; then chmod 000 "$(command -v sudo)"; fi',
@@ -173,11 +177,12 @@ class SandboxConsumer(DockerConsumer):
                 "sh",
                 "-c",
                 'test "$(id -u)" != 0 || { echo root-user >&2; exit 1; }; '
+                'test ! -e "$CODEX_HOME/auth.json" || { echo actor-auth-file >&2; exit 1; }; '
                 "test ! -r /home/agent/.codex/auth.json && test ! -r /proc/1/environ || { echo template-state-readable >&2; exit 1; }; "
                 "test ! -w /run/ssh-agent.sock || { echo ssh-socket-accessible >&2; exit 1; }; "
                 'for socket in /var/run/docker.sock /run/docker.sock; do test ! -S "$socket" || { echo docker-socket >&2; exit 1; }; done; '
                 "! command -v agentic-workspace || { echo global-aw >&2; exit 1; }; "
-                '! env | cut -d= -f1 | grep -E "^(GH_TOKEN|GITHUB_TOKEN|NPM_TOKEN|CARGO_REGISTRY_TOKEN|SSH_AUTH_SOCK)$" || '
+                '! env | cut -d= -f1 | grep -E "^(OPENAI_API_KEY|CODEX_API_KEY|GH_TOKEN|GITHUB_TOKEN|NPM_TOKEN|CARGO_REGISTRY_TOKEN|SSH_AUTH_SOCK)$" || '
                 "{ echo credential-environment >&2; exit 1; }; "
                 "(! command -v sudo >/dev/null || ! sudo -n true 2>/dev/null) || { echo sudo-enabled >&2; exit 1; }",
             ]
@@ -448,6 +453,7 @@ class CodexActor:
         )
         retained = work.files()
         check_continuation_checkpoint(retained)
+        retained = portable_continuation(retained)
         source = work.consumer
         replacement = SandboxConsumer(source.subject, source.profile, source.target, source.template, source.scratch, source.sbx)
         from consumer_journeys import Workspace
@@ -457,6 +463,9 @@ class CodexActor:
             fresh = Workspace(replacement)
             for name, data in retained.items():
                 fresh.write(name, data)
+            if fresh.files() != retained:
+                raise ValueError("Fresh continuation transfer differs from portable repository state")
+            source.observation["continuation_transfer"] = "repository-only-no-machine-local-state"
             claim = self.session(
                 fresh,
                 "Continue the repository task from its retained files; there is no earlier conversation. "

@@ -9,7 +9,37 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
 sys.path.insert(0, str(ROOT / "src/tooling/model-cli-harness"))
-from consumer_agent import CodexActor, SandboxConsumer, bounded_codex  # noqa: E402
+from consumer_agent import CodexActor, SandboxConsumer, bounded_codex, portable_continuation  # noqa: E402
+
+
+def test_fresh_machine_continuation_excludes_local_custody():
+    portable = {"CONTINUE.md": b"Finish README", "settings.json": b'{"port":8081}', ".agentic-workspace/adoption.json": b"{}"}
+    local = {
+        ".agentic-workspace/local/host-note.txt": b"source-machine-sentinel",
+        ".agentic-workspace/local/custody/effect.json": b"secret",
+    }
+    assert portable_continuation(portable | local) == portable
+    assert portable_continuation({".agentic-workspace/local-policy.md": b"keep"}) == {".agentic-workspace/local-policy.md": b"keep"}
+
+
+def test_containment_challenges_actor_auth_file(monkeypatch):
+    import consumer_agent
+
+    commands = []
+    consumer = object.__new__(SandboxConsumer)
+    consumer.sbx, consumer.name, consumer.observation = "sbx", "test-owned-sandbox", {}
+    monkeypatch.setattr(consumer_agent, "run", lambda *args, **kwargs: None)
+
+    def execute(argv):
+        commands.append(argv)
+        from types import SimpleNamespace
+
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(consumer, "exec", execute)
+    consumer.restrict_actor()
+    assert 'test ! -e "$CODEX_HOME/auth.json"' in commands[-1][-1]
+    assert "OPENAI_API_KEY|CODEX_API_KEY" in commands[-1][-1]
 
 
 def test_subscription_records_unknown_cost_without_requiring_tokens():
