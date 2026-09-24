@@ -38,6 +38,8 @@ struct Request {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     route_request: Option<Value>,
     path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    selection: Option<String>,
     need: Option<String>,
     base: Option<String>,
     reason: Option<String>,
@@ -186,7 +188,11 @@ fn audit(target: &Path) -> Result<Value, CoreError> {
 }
 // The custody marker authenticates the disposable container. Contents are not
 // an inventory, a revision dependency, or a source of deletion authority.
-fn scratch_snapshot(target: &Path, relative: &str) -> Result<Value, CoreError> {
+fn scratch_snapshot(
+    target: &Path,
+    relative: &str,
+    selection: Option<&str>,
+) -> Result<Value, CoreError> {
     let path = target.join(relative);
     unlinked(&path)?;
     if !path.exists() {
@@ -250,7 +256,35 @@ fn scratch_snapshot(target: &Path, relative: &str) -> Result<Value, CoreError> {
         identity["inode"] = json!(marker_metadata.ino());
     }
     identity["marker_revision"] = json!(digest(&json!(marker_bytes))?);
-    Ok(json!({"status":"present","marker":marker,"custody":identity}))
+    let mut snapshot = json!({"status":"present","marker":marker,"custody":identity});
+    // Deprecated 1.x compatibility only. Ordinary container removal never
+    // observes temporary contents or inherits this selected-file bound.
+    if let Some(selected) = selection {
+        crate::decision_source::relative(selected)?;
+        if selected == MARKER {
+            return Err(err("scratch marker is not a disposable selection"));
+        }
+        unlinked(&path.join(selected))?;
+        let metadata = dir.symlink_metadata(selected).map_err(err)?;
+        if !metadata.is_file() || metadata.len() > 16_777_216 {
+            return Err(err(
+                "selected scratch material must be one bounded regular file; preserve",
+            ));
+        }
+        let mut bytes = Vec::new();
+        dir.open(selected)
+            .map_err(err)?
+            .take(16_777_217)
+            .read_to_end(&mut bytes)
+            .map_err(err)?;
+        if bytes.len() > 16_777_216 {
+            return Err(err(
+                "selected scratch material must be one bounded regular file; preserve",
+            ));
+        }
+        snapshot["selection"] = json!({"path":selected,"revision":digest(&json!(bytes))?});
+    }
+    Ok(snapshot)
 }
 fn normalized_path(path: &Path) -> String {
     let text = path
@@ -455,7 +489,8 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     let mut seed = String::new();
     let mut outputs = vec![];
     match request.operation.as_str() {
-        "scratch-create" | "scratch-remove" | "scratch-retain" | "scratch-release" => {
+        "scratch-create" | "scratch-remove" | "scratch-prune" | "scratch-retain"
+        | "scratch-release" => {
             crate::decision_source::relative(relative)?;
             if relative
                 .strip_prefix(&format!("{SCRATCH}/"))
@@ -471,8 +506,17 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     "new scratch path must be derived from the explicit current work",
                 ));
             }
-            snapshot = scratch_snapshot(&target, relative)?;
-            if request.operation == "scratch-remove" && snapshot["status"] == "empty-interrupted" {
+            if (request.operation == "scratch-prune") != request.selection.is_some() {
+                return Err(err(
+                    "scratch-prune requires one explicit selection; other operations accept none",
+                ));
+            }
+            snapshot = scratch_snapshot(&target, relative, request.selection.as_deref())?;
+            if matches!(
+                request.operation.as_str(),
+                "scratch-remove" | "scratch-prune"
+            ) && snapshot["status"] == "empty-interrupted"
+            {
                 blockers.push("missing scratch custody; preserve and recover exact task creation");
             }
             if matches!(
@@ -486,7 +530,11 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             {
                 blockers.push("retention disposition requires an existing task container and an explicit reason");
             }
-            if request.operation == "scratch-remove" && snapshot["marker"]["retain"] == true {
+            if matches!(
+                request.operation.as_str(),
+                "scratch-remove" | "scratch-prune"
+            ) && snapshot["marker"]["retain"] == true
+            {
                 blockers.push("retained recovery material requires current owner disposition");
             }
         }
@@ -662,7 +710,10 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             });
         }
     }
-    if (request.operation == "scratch-remove" && snapshot["status"] == "present")
+    if (matches!(
+        request.operation.as_str(),
+        "scratch-remove" | "scratch-prune"
+    ) && snapshot["status"] == "present")
         || (request.operation == "worktree-remove" && !registration.is_null())
     {
         let current = crate::native_public::start(
@@ -737,7 +788,8 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         json!({"decision":{"ready_actions":[invocation]},"invocation":invocation}),
     )?;
     unlinked(&path)?;
-    if request.operation.starts_with("scratch") && scratch_snapshot(&target, relative)? != snapshot
+    if request.operation.starts_with("scratch")
+        && scratch_snapshot(&target, relative, request.selection.as_deref())? != snapshot
     {
         return Err(err(
             "scratch changed at effect barrier; preserve and reobserve",
@@ -772,6 +824,18 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             // Confined native recursive removal does not follow contained links.
             // Only the authenticated, unretained, unreferenced container is removed.
             root.remove_dir_all(relative).map_err(err)?;
+        }
+        "scratch-prune" if snapshot["status"] == "present" => {
+            let dir = Dir::open_ambient_dir(&path, ambient_authority()).map_err(err)?;
+            // Same custody, policy, retention and owner-reference gates as removal,
+            // but dispose only the exact bounded selection for existing 1.x clients.
+            if scratch_snapshot(&target, relative, request.selection.as_deref())? != snapshot {
+                return Err(err(
+                    "scratch changed at deletion barrier; preserve and reobserve",
+                ));
+            }
+            dir.remove_file(request.selection.as_deref().unwrap())
+                .map_err(err)?;
         }
         "scratch-retain" | "scratch-release" => {
             let mut marker = snapshot["marker"].clone();
