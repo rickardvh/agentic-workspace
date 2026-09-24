@@ -228,6 +228,8 @@ def validate_pointer_files(files):
     if agents.count(begin) != 1 or agents.count(end) != 1:
         raise ValueError("Missing or ambiguous installed startup fence")
     skill = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    if skill not in files:
+        raise ValueError("Installed startup skill missing")
     adoption = json.loads(files[".agentic-workspace/adoption.json"])
     provenance = json.loads(files[".agentic-workspace/payload-provenance.json"])
     if (
