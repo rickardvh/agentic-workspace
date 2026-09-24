@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Ship the pre-binding local/delegate/unknown choice in planning-assignment, preserving native Assignment authority and repository-owned method customization."
