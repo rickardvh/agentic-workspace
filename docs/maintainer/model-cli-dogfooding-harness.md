@@ -85,20 +85,19 @@ and opportunities to improve ordinary repository guidance. Retain both assigned
 arms, including aborts. The comparison helper supplies no economic superiority
 claim or automatic policy admission.
 
-The installed-consumer workflow freezes public current/previous inventories once,
-then calls the same runner. Relevant candidate checks remain in platform-release;
-publication attempts call the public workflow even when a registry job fails.
-Daily selection rotates seven scenario families and four profiles across the six
-declared targets, reserving at most three subscription sessions of 900 seconds.
-macOS is explicitly skipped for the current acceptance scope. Native actor and
-unavailable architecture assignments remain non-passing in the denominator.
+The installed-consumer GitHub workflow freezes public current/previous inventories
+once with `--deterministic-only`, then runs and reports only those deterministic
+assignments. Publication attempts call it even when a registry job fails. Missing
+or failed deterministic results still fail the report. Its summary makes no
+live-agent acceptance claim. Manual dispatch accepts exact public versions.
 
-Manual dispatch accepts exact public versions. Live dispatch requires master,
-the protected `consumer-live` environment, a dedicated `consumer-sandbox` runner
-with Python and authenticated Docker Sandboxes, and repository variable
-`CONSUMER_LIVE_RUNNER_READY=true`. `CONSUMER_TEMPLATE` may name another immutable
-Codex template digest. Provision these only after independent review; source
-tests do not establish trusted hosted execution. No PR job receives provider state.
+Live-agent cases run locally through `consumer_schedule.py`: freeze without
+`--deterministic-only`, then run `--kind live --live-ready` with authenticated Docker
+Sandboxes. The local rotation covers seven scenario families and four profiles
+across the declared targets, reserving at most three subscription sessions of 900
+seconds. `CONSUMER_TEMPLATE` may name another immutable Codex template digest.
+macOS is explicitly skipped for the current acceptance scope. Native actor and
+unavailable architecture assignments remain non-passing in local summaries.
 
 `consumer_schedule.py` supplies `freeze`, `run`, `summary` and `cleanup` operations.
 Keep frozen subjects and initial result files together; diagnostic retries need

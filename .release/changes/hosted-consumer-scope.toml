@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Run deterministic consumer validation on GitHub while retaining live-agent cases in the local harness with separate reporting scope."

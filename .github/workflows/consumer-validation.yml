@@ -11,10 +11,6 @@ on:
       previous:
         description: Exact previous public version (empty selects earlier published stable)
         type: string
-      live:
-        description: Run protected subscription sessions when the runner is configured
-        type: boolean
-        default: false
   workflow_call:
     inputs:
       version:
@@ -45,13 +41,12 @@ jobs:
         env:
           PUBLIC_VERSION: ${{ inputs.version }}
           PREVIOUS_VERSION: ${{ inputs.previous }}
-          CONSUMER_TEMPLATE: ${{ vars.CONSUMER_TEMPLATE }}
         shell: bash
         run: |
           args=()
           if [ -n "$PUBLIC_VERSION" ]; then args+=(--version "${PUBLIC_VERSION#v}"); fi
           if [ -n "$PREVIOUS_VERSION" ]; then args+=(--previous "$PREVIOUS_VERSION"); fi
-          python src/tooling/model-cli-harness/consumer_schedule.py freeze --directory frozen "${args[@]}"
+          python src/tooling/model-cli-harness/consumer_schedule.py freeze --directory frozen --deterministic-only "${args[@]}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
@@ -94,44 +89,9 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  live:
-    needs: freeze
-    # Provider state is provisioned on a dedicated protected runner, never in PR
-    # jobs or uploaded artifacts. Only default-branch trusted code can reach it.
-    if: >-
-      github.ref == 'refs/heads/master' &&
-      vars.CONSUMER_LIVE_RUNNER_READY == 'true' &&
-      (github.event_name == 'schedule' || inputs.live == true)
-    environment: consumer-live
-    runs-on: [self-hosted, consumer-sandbox]
-    timeout-minutes: 55
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: consumer-frozen-subjects
-          path: frozen
-      - name: Run at most three protected subscription sessions
-        env:
-          CONSUMER_TEMPLATE: ${{ vars.CONSUMER_TEMPLATE }}
-        shell: bash
-        run: python src/tooling/model-cli-harness/consumer_schedule.py run --directory frozen --output results --scratch scratch --kind live --live-ready --template "$CONSUMER_TEMPLATE"
-      - name: Clean only this run's recorded disposable resources
-        if: always()
-        run: python src/tooling/model-cli-harness/consumer_schedule.py cleanup --directory frozen --scratch scratch
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        if: always()
-        with:
-          name: consumer-result-live
-          path: results/*.json
-          retention-days: 7
-          if-no-files-found: error
-
   report:
     if: always() && needs.freeze.result == 'success'
-    needs: [freeze, deterministic, live]
+    needs: [freeze, deterministic]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -150,10 +110,6 @@ jobs:
         with:
           pattern: consumer-result-*
           path: results
-      - name: Preserve unavailable live assignments
-        if: needs.live.result == 'skipped'
-        continue-on-error: true
-        run: python src/tooling/model-cli-harness/consumer_schedule.py run --directory frozen --output results/unavailable --scratch scratch --kind live
       - name: Summarize all assigned cases, including failures and missing execution
         run: python src/tooling/model-cli-harness/consumer_schedule.py summary --directory frozen --output results
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
