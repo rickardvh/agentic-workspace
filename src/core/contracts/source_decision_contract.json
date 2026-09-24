@@ -192,7 +192,8 @@
     "bounded_answer": "Fill only the absent answer slot of the exact current selected decision; preserve every supplied owner argument.",
     "context": "Carry unchanged target/task/changed/request; explicit differences require fresh start.",
     "source_delivery": "Optional delivered refs suppress only exact unchanged source prose after fresh owner resolution. delivery_refs bind work, source material and producing implementation. They never acknowledge understanding, reconciliation, proof or effects.",
-    "recovery": "Unknown, changed or lost carriage requires fresh source-owner resolution; no durable registry."
+    "recovery": "Unknown, changed or lost carriage requires fresh source-owner resolution; no durable registry.",
+    "configuration_maintenance": "Explicit maintenance: configuration in start/invoke context keeps Configuration repair reachable between package versions. Governing owners, route declarations, policy and exact effect admission remain current; optional selected procedure detail and activation are not evaluated. Only Configuration requests, required startup-source reads and Configuration write/recovery operations are accepted. setup uses this entry. Re-enter ordinary start after repair; stale activation remains an error there."
   },
   "capability_ownership": {
     "domains": "exclusive among current declared owners",
@@ -235,7 +236,8 @@
         "name": "invoke",
         "description": "Invoke the exact operation returned by the current owner.",
         "input_field": "invocation",
-        "input_required": true
+        "input_required": true,
+        "accepts_input_envelope": true
       },
       {
         "name": "activation-index",
@@ -460,7 +462,7 @@
         }
       }
     ],
-    "typescript_declarations": "/** JSON transport declarations, not an executable owner or validation model. */\nexport type Json = null | boolean | number | string | Json[] | { [key: string]: Json };\nexport type JsonObject = { [key: string]: Json };\nexport type Projection = \"compact\" | \"full\" | \"carried\";\nexport interface WorkContext {\n  target?: string;\n  task?: string;\n  changed?: string[];\n  request?: Json;\n  material?: JsonObject[];\n  projection?: Projection;\n  delivered?: string[];\n}\nexport interface StartInput extends WorkContext {\n  reference?: string;\n  answer?: Json;\n}\nexport interface InvokeInput extends WorkContext {\n  invocation?: Json;\n  reference?: string;\n}\n/** Results retain the exact Rust shape, including unknown owner contributions. */\nexport function start(context: StartInput): JsonObject;\nexport function invoke(context: InvokeInput): JsonObject;\n/** Resource request validation and operation variants are native-owned. */\nexport interface ResourceInput extends WorkContext {\n  target: string;\n  request: JsonObject;\n}\nexport function resources(context: ResourceInput): JsonObject;\nexport function selectReference(context: WorkContext, reference: string, answer?: Json): JsonObject;\nexport function answerCarried(carriage: JsonObject, reference: string, answer: Json): JsonObject;\nexport function invokeCarried(carriage: JsonObject, reference: string): JsonObject;\n"
+    "typescript_declarations": "/** JSON transport declarations, not an executable owner or validation model. */\nexport type Json = null | boolean | number | string | Json[] | { [key: string]: Json };\nexport type JsonObject = { [key: string]: Json };\nexport type Projection = \"compact\" | \"full\" | \"carried\";\nexport interface WorkContext {\n  target?: string;\n  task?: string;\n  changed?: string[];\n  request?: Json;\n  material?: JsonObject[];\n  maintenance?: \"configuration\";\n  projection?: Projection;\n  delivered?: string[];\n}\nexport interface StartInput extends WorkContext {\n  reference?: string;\n  answer?: Json;\n}\nexport interface InvokeInput extends WorkContext {\n  invocation?: Json;\n  reference?: string;\n}\n/** Results retain the exact Rust shape, including unknown owner contributions. */\nexport function start(context: StartInput): JsonObject;\nexport function invoke(context: InvokeInput): JsonObject;\n/** Resource request validation and operation variants are native-owned. */\nexport interface ResourceInput extends WorkContext {\n  target: string;\n  request: JsonObject;\n}\nexport function resources(context: ResourceInput): JsonObject;\nexport function selectReference(context: WorkContext, reference: string, answer?: Json): JsonObject;\nexport function answerCarried(carriage: JsonObject, reference: string, answer: Json): JsonObject;\nexport function invokeCarried(carriage: JsonObject, reference: string): JsonObject;\n"
   },
   "current_material": {
     "field": "material",

@@ -52,6 +52,15 @@ Recovery may establish that the effect completed, that it did not start, or that
 
 ## Updating or removing AW reports conflicting files
 
+If a payload update stopped between a registry and its procedure sources, ordinary
+startup may report `activation index stale`. Run `agentic-workspace setup --dry-run`
+to inspect the current Configuration proposal, then `setup --yes` to authorize it.
+If setup reports an interrupted adoption, inspect `setup --recover --dry-run` and
+use `setup --recover --yes` to finish that exact publication. Setup can reach the
+repair owner without evaluating activation against partially updated procedures;
+repository policy and preservation checks still apply. Re-enter ordinary startup
+after repair. Do not roll back files or replay consumed write requests.
+
 Inspect the exact paths in the proposal. Preserve edits to package-managed files and move useful project-specific meaning into project-owned instructions or skills before approving replacement.
 
 Use the same Configuration refresh/removal path again after resolving the conflict. Do not recursively delete the enclave or `.agents/skills/`. Unknown files and independently owned plans, lessons and settings are not package garbage. See [Your repository and data](package/installed-surfaces.md).

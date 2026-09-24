@@ -12,6 +12,165 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_configuration_maintenance_is_bound_and_restricts_effects(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Repair package payload", "maintenance": "configuration"}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, allow_failure=True)
+
+    initial = call()
+    assert initial["activation"]["status"] == "not-evaluated"
+    compact = call(projection="compact")
+    assert compact["reentry"]["maintenance"] == "configuration"
+    request = initial["configuration_write"]["payload_discovery_request"]
+    with pytest.raises(AssertionError, match="work|identity"):
+        call(maintenance=None, request=request)
+    unrelated = {**request, "owner": "activation", "request_kind": "activation/judge/v1"}
+    with pytest.raises(AssertionError, match="only Configuration"):
+        call(request=unrelated)
+    rejected = call(invocation={"operation_id": "proof.report"})
+    assert rejected["effect_outcome"]["status"] == "rejected-before-effect"
+    assert "only Configuration" in rejected["error"]["message"]
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_registry_first_upgrade_reenters_configuration_maintenance(tmp_path, shared_core_binary, native_cli, interrupted):
+    """A fresh process can repair coupled package sources without weakening activation."""
+    from aw_maintainer.native_conformance import admit_stored_attempt, commit_stored_attempt
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    context = {
+        "target": str(tmp_path),
+        "task": "Upgrade adopted package payload",
+        "material": [
+            {
+                "id": "upgrade-proof",
+                "kind": "need",
+                "summary": "Verify the current upgrade before continuing.",
+                "source": {"producer": "acting-agent", "reference": "upgrade requirement", "coverage": "bounded"},
+            }
+        ],
+    }
+
+    def call(maintenance=False, allow_failure=False, **extra):
+        repair = {"maintenance": "configuration"} if maintenance else {}
+        return consume(
+            "native",
+            shared_core_binary,
+            native_cli,
+            {**context, **repair, **extra},
+            host_path=os.environ["PATH"],
+            allow_failure=allow_failure,
+        )
+
+    def authorize(request, maintenance=False):
+        proposed = call(maintenance, request=request)
+        answer = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["owner"] == "configuration")[
+            "response_request"
+        ]
+        answer["arguments"]["answer"] = "authorize-write"
+        return call(maintenance, request=answer)["decision_packet"]["primary_action"]
+
+    # Model a previous artifact through real attempt-store custody, as in the
+    # legacy ownership case below. Never rewrite an authenticated record.
+    owner = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    legacy = authorize(next(r for r in owner["adoption_requests"] if r["arguments"]["mode"] == "adopt"))
+    state = legacy["arguments"]["binding"]["state"]
+    registry = ".agentic-workspace/skills/REGISTRY.json"
+    procedure = ".agentic-workspace/skills/workspace-proof-selection/procedure.md"
+    indexed = json.loads(state["updates"][registry]["after"])
+    entry = next(row for row in indexed["activation_index"] if row["id"] == "workspace-proof-selection")
+    current_applicability = entry["activation"]["applicability"]
+    entry["activation"]["applicability"] = "Previous artifact proof selection."
+    state["updates"][registry]["after"] = json.dumps(indexed)
+    state["updates"][procedure]["after"] = state["updates"][procedure]["after"].replace(
+        current_applicability, entry["activation"]["applicability"]
+    )
+    for path, update in state["updates"].items():
+        if update["after"] is not None:
+            destination = tmp_path / path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(update["after"].encode())
+            if path in state["installed"]:
+                state["installed"][path] = "sha256:" + hashlib.sha256(destination.read_bytes()).hexdigest()
+    admission = admit_stored_attempt(str(tmp_path), {"ready_actions": [legacy]}, legacy)
+    committed = commit_stored_attempt(
+        str(tmp_path),
+        admission["custody"],
+        {
+            "status": "applied",
+            "effects": ["configuration-source"],
+            "value": {"kind": "agentic-workspace/repository-adoption-result/v1", "mode": "adopt", "completion_authority": False},
+        },
+    )
+    (tmp_path / ".agentic-workspace/local/effects/adoption.prepared.json").write_text(
+        json.dumps({"invocation": legacy, "custody": committed["custody"]})
+    )
+    preserved = {
+        ".agentic-workspace/config.toml": b'[workspace]\nenabled=true\nagent_instructions_file="POLICY.md"\n',
+        "POLICY.md": b"Preserve host policy and independent owner state.\n",
+        ".agentic-workspace/local/host-note.txt": b"Independent local state.\n",
+        ".agentic-workspace/memory/repo/domains/host-note.md": b"Independent memory state.\n",
+        ".agentic-workspace/custom/plugin/config.txt": b"Host customization.\n",
+    }
+    for path, content in preserved.items():
+        destination = tmp_path / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+
+    def payload(maintenance=False):
+        request = call(maintenance)["configuration_write"]["payload_discovery_request"]
+        return call(maintenance, request=request)["configuration_write"]["payload_choices"]
+
+    row = next(row for row in payload() if row["source"] == registry)
+    action = authorize(row["request"])
+    assert any(r["owner"] == "startup-adapter" for r in action["source_requests"])
+    result = call(invocation=action)
+    assert result["effect_outcome"]["status"] == "committed"
+    # Registry publication is real even though ordinary continuation cannot read
+    # its now-inconsistent procedure dependency.
+    assert result["continuation_status"] == "unavailable"
+    with pytest.raises(AssertionError, match="activation index stale"):
+        call()
+    if interrupted:
+        (tmp_path / result["custody"]["committed"]["path"]).unlink()
+        recovery = next(row for row in payload(True) if row["source"] == registry)["recovery_request"]
+        repair = call(True, request=recovery)["decision_packet"]["primary_action"]
+        assert call(True, invocation=repair)["effect_outcome"]["status"] == "committed"
+    else:
+        # Reproduce the reported manual rollback after a consumed write. The
+        # supported escape remains fresh adoption, never replay of that effect.
+        (tmp_path / registry).write_bytes(state["updates"][registry]["after"].encode())
+        consumed = call(invocation=action, allow_failure=True)
+        assert consumed["effect_outcome"]["status"] == "uncertain"
+        assert "consumed" in consumed["error"]["message"]
+        assert (tmp_path / registry).read_bytes() == state["updates"][registry]["after"].encode()
+
+    def setup(*args):
+        result = subprocess.run(
+            [str(native_cli), "setup", "--target", str(tmp_path), "--format", "json", *args], capture_output=True, text=True
+        )
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout)
+
+    preview = setup("--dry-run")
+    assert procedure in preview["updated"]
+    completed = setup("--yes")
+    assert completed["effect_outcome"]["status"] == "committed"
+    if interrupted:
+        # Model a stopped grouped publication with a remaining exact preimage
+        # and no committed receipt. Recovery must also ignore stale activation.
+        (tmp_path / procedure).write_bytes(state["updates"][procedure]["after"].encode())
+        (tmp_path / completed["custody"]["committed"]["path"]).unlink()
+        assert setup("--recover", "--yes")["effect_outcome"]["status"] == "committed"
+    assert setup("--dry-run")["status"] == "already-current"
+    assert all(row["status"] == "current" for row in payload())
+    assert call()["activation"].get("status") != "not-evaluated"
+    assert call(invocation=action, allow_failure=True)["effect_outcome"]["status"] == "rejected-before-effect"
+    assert all((tmp_path / path).read_bytes() == content for path, content in preserved.items())
+
+
 def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_core_binary, native_cli):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     agents = tmp_path / "AGENTS.md"

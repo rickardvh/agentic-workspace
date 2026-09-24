@@ -8,6 +8,7 @@ export interface WorkContext {
   changed?: string[];
   request?: Json;
   material?: JsonObject[];
+  maintenance?: "configuration";
   projection?: Projection;
   delivered?: string[];
 }

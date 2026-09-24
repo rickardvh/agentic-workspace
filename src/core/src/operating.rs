@@ -297,6 +297,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
+    if let Some(maintenance) = context.get("maintenance") {
+        result["reentry"]["maintenance"] = maintenance.clone();
+    }
     if let Some(material) = full.get("material") {
         result["material"] = material.clone();
         result["reentry"]["material"] = context["material"].clone();
@@ -718,7 +721,15 @@ fn operate_current(
                 .as_object()
                 .ok_or_else(|| error("invalid carried context"))?;
             if carried_context.keys().any(|key| {
-                !["target", "task", "changed", "request", "material"].contains(&key.as_str())
+                ![
+                    "target",
+                    "task",
+                    "changed",
+                    "request",
+                    "material",
+                    "maintenance",
+                ]
+                .contains(&key.as_str())
             }) {
                 return Err(error("unknown carried context field"));
             }

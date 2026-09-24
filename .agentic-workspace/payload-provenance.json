@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:5fa37bfc92527759015adf03629c01479882408be846bce8ff5222713d953bb4",
+  "managed_revision": "sha256:30f24055d6eec2af5c1fd88298fc586af83c62cc58a492372046dde6a98fa66f",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -51,6 +51,7 @@
     ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
     ".agentic-workspace/planning/skills/planning-assignment/procedure.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/assessment.md",
+    ".agentic-workspace/planning/skills/planning-assignment/references/local.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/binding.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/manual.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/recovery.md",

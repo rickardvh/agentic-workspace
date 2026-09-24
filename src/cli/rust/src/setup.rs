@@ -130,7 +130,7 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
     if yes && dry {
         return Err("--yes and --dry-run cannot be combined".into());
     }
-    let context = json!({"target":parsed.values["target"],"task":"Set up Agentic Workspace in this repository","projection":"full"});
+    let context = json!({"target":parsed.values["target"],"task":"Set up Agentic Workspace in this repository","maintenance":"configuration","projection":"full"});
     let initial = call(&context, None, false)?;
     let request = &initial["configuration_write"]["repository_adoption_request"];
     if request.is_null() {
