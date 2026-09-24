@@ -70,6 +70,15 @@ def render_host_payload(root: Path) -> dict[str, str]:
 
 
 def synchronize(*, check: bool = False) -> list[str]:
+    from aw_maintainer.activation_index import synchronize as activation_index
+
+    registries = [
+        ".agentic-workspace/skills/REGISTRY.json",
+        "tools/skills/REGISTRY.json",
+        ".agentic-workspace/planning/skills/REGISTRY.json",
+        ".agentic-workspace/memory/skills/REGISTRY.json",
+    ]
+    activation_drift = [reference for reference in registries if (ROOT / reference).is_file() and activation_index(ROOT / reference, check=check)]
     manifest = json.loads((ROOT / "src/tooling/contracts/source_maintenance_surfaces.json").read_text())
     # Validate and derive public outputs before any writes. This read capability
     # cannot be widened by the source-maintenance copy set below.
@@ -79,7 +88,7 @@ def synchronize(*, check: bool = False) -> list[str]:
     payload = ROOT / "src/core/payload"
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
-    drift = []
+    drift = activation_drift
     # Provenance stays lifecycle/release-owned source truth. The source-payload
     # checker validates its public-host relation; interface generation cannot
     # repair or overwrite that record, including its release identity.

@@ -1,3 +1,4 @@
+mod activation_index;
 pub mod assignment;
 pub mod assignment_packet;
 #[path = "modules/verification/assurance_applicability.rs"]
@@ -13,6 +14,7 @@ pub mod independent_owner;
 pub mod instruction_applicability;
 pub mod instruction_source;
 pub mod maintainer_logging;
+mod native_activation;
 mod native_adoption;
 mod native_candidate_skill;
 mod native_claim_review;

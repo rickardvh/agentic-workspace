@@ -28,6 +28,48 @@ Python, TypeScript and JSON use the same context shape. Returned material binds
 Material does not change task identity or create retained state. A fresh start
 without it is quiet; retain useful consequences only through an existing owner.
 
+An existing `agentic-procedure` resource may declare optional `activation` with
+`occasions` (`observation`, `need`, `binding`), natural-language `applicability`
+and `outcome`. The resource itself is the entry; its existing qualified skill
+and route identify it. `binding_owners` nominates current native blocker owners,
+so their consequence can make the method visible without another semantic
+question. Optional `settled_by` pairs (`selector`, scalar `value`) observe exact
+native owner outcomes. They suppress only the optional method; source-authored
+activation cannot modify native requirements or establish proof.
+
+The existing registry carries a generated `activation_index`, derived from those
+procedure declarations through the shipped native command:
+
+```sh
+agentic-workspace activation-index --target . --input index-request.json
+```
+
+The input is `{"registry":"tools/skills/REGISTRY.json","mode":"write"}`.
+Use `"mode":"check"` in authoring validation; drift exits nonzero without writing.
+Run this after adding/removing a declaration or changing its occasions, before
+using or publishing the registry. The explicit authoring pass reads all declared
+procedure resources, so it detects newly relevant membership that lazy operating
+lookup cannot discover. Ordinary `start` does not perform this scan. This works
+with installed native/npm/Python distributions and needs no source checkout,
+Python maintainer module or copied declaration. First-party interface generation
+calls the same native derivation through a thin Python binding. Invalid or
+ambiguous declarations therefore have one parser and validator. Do not hand-maintain the
+projection. Plain
+skills need no index entry. Discovery admits registry membership and reads this
+bounded projection (at most 128 entries), without constructing the route catalogue
+or opening unindexed procedure resources. Only entries matching a current material
+kind or binding owner open their skill/procedure sources for currentness validation;
+changed declarations require regeneration. Registry parsing still scales with source
+bytes, but unrelated skills add no procedure reads or activation construction.
+
+On material or binding signals, the current activation frontier exposes these
+occasions without loading branch bodies. The acting agent supplies only unresolved
+applicability through the returned request. Each answer binds its own material,
+procedure and declared context; unrelated material does not invalidate peers.
+`unknown` and `defer` remain visible. `no-match` and justified `no-retention`
+suppress their optional occasion while binding restrictions remain. Selecting or
+reading a procedure leaves its outcome unsettled. There is no durable cursor.
+
 ## Construction and authority
 
 All resolutions retain configuration/source grammar and compatibility admission,

@@ -1160,6 +1160,62 @@ def test_current_material_is_disposable_and_does_not_reidentify_work(tmp_path, s
     assert not list(tmp_path.iterdir())
 
 
+def test_material_activates_repository_procedure_through_public_start(tmp_path, shared_core_binary, native_cli):
+    folder = tmp_path / "tools/skills/lab"
+    folder.mkdir(parents=True)
+    (folder / "SKILL.md").write_text("Establish laboratory readiness using procedure.md.")
+    (folder.parent / "REGISTRY.json").write_text(
+        json.dumps(
+            {"skills": [{"id": "lab", "path": "lab/SKILL.md", "semantic_routes": ["lab/readiness"], "procedure_resource": "procedure.md"}]}
+        )
+    )
+    declaration = {
+        "kind": "agentic-workspace/procedure/v1",
+        "id": "readiness",
+        "question": "Which prerequisite is missing?",
+        "branches": [{"id": "check", "description": "Observe readiness", "next": "check.md"}],
+        "activation": {
+            "occasions": ["need"],
+            "applicability": "A laboratory prerequisite affects this task.",
+            "outcome": "Current laboratory readiness established.",
+        },
+    }
+    (folder / "procedure.md").write_text("```agentic-procedure\n" + json.dumps(declaration) + "\n```\n")
+    from aw_maintainer.activation_index import synchronize
+
+    synchronize(folder.parent / "REGISTRY.json")
+    context = {
+        "target": str(tmp_path),
+        "task": "Validate the sample",
+        "material": [
+            {
+                "id": "prerequisite",
+                "kind": "need",
+                "summary": "Establish readiness before validation",
+                "source": {"producer": "independent-lab", "reference": "sample:17", "coverage": "bounded"},
+            }
+        ],
+    }
+    first = consume("native", shared_core_binary, native_cli, context)
+    candidate = first["activation"]["candidates"][0]
+    assert candidate["entry"]["skill_id"] == "lab"
+    assert candidate["status"] == "applicability-required"
+    request = first["activation"]["requests"][0]
+    request["arguments"]["judgments"][0].update(status="no-match", reason="This sample is already validated elsewhere.")
+    assert "activation" not in consume("native", shared_core_binary, native_cli, {**context, "request": request})
+    assert not synchronize(folder.parent / "REGISTRY.json", check=True)
+    declaration["activation"]["applicability"] = "The laboratory service is a current prerequisite."
+    (folder / "procedure.md").write_text("```agentic-procedure\n" + json.dumps(declaration) + "\n```\n")
+    assert synchronize(folder.parent / "REGISTRY.json", check=True)
+    with pytest.raises(Exception, match="activation index stale"):
+        consume("native", shared_core_binary, native_cli, context)
+    synchronize(folder.parent / "REGISTRY.json")
+    assert (
+        consume("native", shared_core_binary, native_cli, context)["activation"]["candidates"][0]["applicability"]
+        == declaration["activation"]["applicability"]
+    )
+
+
 def test_internal_finding_has_current_dependencies_without_retention(tmp_path, shared_core_binary, native_cli):
     import hashlib
 
@@ -1188,3 +1244,113 @@ def test_internal_finding_has_current_dependencies_without_retention(tmp_path, s
     source.write_text("prepare_once()\ncheck_a()\ncheck_b()\n", encoding="utf-8")
     with pytest.raises(Exception, match="dependency changed"):
         consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
+
+
+def test_installed_native_activation_index_repairs_new_membership(tmp_path, shared_core_binary, native_cli):
+    # Only the shipped executable pair is present in this separate installation.
+    install = tmp_path / "install"
+    install.mkdir()
+    cli = install / native_cli.name
+    shutil.copy2(native_cli, cli)
+    shutil.copy2(shared_core_binary, install / shared_core_binary.name)
+    host = tmp_path / "host"
+    folder = host / "tools/skills/lab"
+    folder.mkdir(parents=True)
+    registry = folder.parent / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {"skills": [{"id": "lab", "path": "lab/SKILL.md", "procedure_resource": "procedure.md", "semantic_routes": ["lab/readiness"]}]}
+        )
+    )
+    (folder / "SKILL.md").write_text("Use procedure.md")
+    declaration = {
+        "kind": "agentic-workspace/procedure/v1",
+        "id": "lab",
+        "question": "What is needed?",
+        "branches": [{"id": "check", "description": "Check", "next": "check.md"}],
+    }
+
+    def source():
+        (folder / "procedure.md").write_text("```agentic-procedure\n" + json.dumps(declaration) + "\n```\n")
+
+    def author(mode, reference="tools/skills/REGISTRY.json"):
+        return subprocess.run(
+            [str(cli), "activation-index", "--target", str(host), "--input", "-"],
+            input=json.dumps({"registry": reference, "mode": mode}),
+            text=True,
+            capture_output=True,
+            cwd=host,
+        )
+
+    source()
+    assert author("check").returncode == 0
+    declaration["activation"] = {"occasions": ["need"], "applicability": "Readiness is needed", "outcome": "Readiness established"}
+    source()
+    original = registry.read_bytes()
+    assert "activation index stale" in author("check").stderr
+    assert registry.read_bytes() == original
+    assert author("write").returncode == 0
+    from aw_maintainer.activation_index import render
+
+    assert json.loads(registry.read_text()) == render(registry)
+    # A newly relevant occasion was absent from the old projection. Check must
+    # open sources independently of that projection's membership/filtering.
+    declaration["activation"]["occasions"] = ["observation"]
+    source()
+    assert author("check").returncode != 0
+    assert author("write").returncode == 0
+    context = {
+        "target": str(host),
+        "task": "Inspect sample",
+        "projection": "full",
+        "material": [
+            {
+                "id": "finding",
+                "kind": "observation",
+                "summary": "Source inspection found repeated preparation",
+                "source": {"producer": "acting-agent", "reference": "sample.py", "coverage": "bounded"},
+            }
+        ],
+    }
+    result = subprocess.run([str(cli), "start", "--input", "-"], input=json.dumps(context), text=True, capture_output=True, cwd=host)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["activation"]["candidates"][0]["entry"]["skill_id"] == "lab"
+    assert author("check").returncode == 0
+    del declaration["activation"]
+    source()
+    assert author("check").returncode != 0
+    assert author("write").returncode == 0
+    assert "activation_index" not in json.loads(registry.read_text())
+    assert author("write", "../REGISTRY.json").returncode != 0
+    assert author("unexpected").returncode != 0
+
+
+@pytest.mark.parametrize("invalid", ["ambiguous", "invalid-activation"])
+def test_maintenance_and_shipped_index_share_negative_authority(tmp_path, native_cli, invalid):
+    from aw_maintainer.activation_index import render, synchronize
+
+    registry = tmp_path / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {"skills": [{"id": "lab", "path": "SKILL.md", "procedure_resource": "procedure.md", "semantic_routes": ["lab/readiness"]}]}
+        )
+    )
+    activation = {"occasions": ["need"], "applicability": "A prerequisite exists", "outcome": "Readiness"}
+    if invalid == "invalid-activation":
+        activation["occasions"] = ["unsupported"]
+    fence = "```agentic-procedure\n" + json.dumps({"activation": activation}) + "\n```\n"
+    (tmp_path / "procedure.md").write_text(fence * (2 if invalid == "ambiguous" else 1))
+    before = registry.read_bytes()
+    native = subprocess.run(
+        [str(native_cli), "activation-index", "--target", str(tmp_path), "--input", "-"],
+        input=json.dumps({"registry": "REGISTRY.json", "mode": "check"}),
+        capture_output=True,
+        text=True,
+    )
+    assert native.returncode == 2
+    message = json.loads(native.stderr)["error"]["message"]
+    for operation in (lambda: render(registry), lambda: synchronize(registry, check=True), lambda: synchronize(registry)):
+        with pytest.raises(Exception) as error:
+            operation()
+        assert str(error.value) == message
+        assert registry.read_bytes() == before

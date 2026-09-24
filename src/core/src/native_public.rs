@@ -458,6 +458,7 @@ fn resolve_selected(
         Value::Null
     };
     let contract = combined_contract(&[
+        &crate::native_activation::contract()?,
         &procedure_contract,
         &config_write_contract,
         &decision_read_contract,
@@ -1720,6 +1721,10 @@ fn resolve_selected(
             public["configuration_write"]["requested_behavior_scope"].clone();
     }
     crate::native_configuration_assessment::validate_consumers(target, &public)?;
+    let activation = crate::native_activation::view(target, &public, request_for("activation"))?;
+    if !activation.is_null() {
+        public["activation"] = activation;
+    }
     Ok(public)
 }
 

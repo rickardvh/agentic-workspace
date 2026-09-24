@@ -61,7 +61,8 @@
         "next"
       ],
       "optional": [
-        "context"
+        "context",
+        "activation"
       ],
       "authoring_boundary": "Natural-language criteria and named branches; no per-question answer schema, predicates, loops, retries or effect controls. Exact typed data belongs to domain owners.",
       "identity": [
@@ -132,6 +133,28 @@
       "currentness": "Exact returned reference binds work context and owner envelope; reobserve before use; missing or ambiguous identities yield. Selection cannot replace arguments, effects or authority.",
       "continuation": "One resolution step, then yield to existing owner request/answer/invoke. No automatic effect traversal or blind replay; confirmed/uncertain truth and typed continuation remain owner-owned.",
       "authority_effect": "none"
+    },
+    "activation": {
+      "source": "Optional activation object in the existing agentic-procedure source; no second trigger catalogue",
+      "required": [
+        "occasions",
+        "applicability",
+        "outcome"
+      ],
+      "optional": [
+        "binding_owners",
+        "settled_by"
+      ],
+      "occasions": [
+        "observation",
+        "need",
+        "binding"
+      ],
+      "settled_by": "Conjunction of exact native view selector/value observations; suppresses optional method only, never grants proof or waives a blocker",
+      "entry": "Qualified existing skill and procedure resource",
+      "judgment": "Exact activation public request with independently revision-bound candidate judgments: applicable, unknown, defer, no-match, no-retention",
+      "outcome": "Selection or reading is never outcome evidence",
+      "retention": "Disposable carriage only"
     }
   },
   "public_requests": {
@@ -212,6 +235,12 @@
         "name": "invoke",
         "description": "Invoke the exact operation returned by the current owner.",
         "input_field": "invocation",
+        "input_required": true
+      },
+      {
+        "name": "activation-index",
+        "description": "Check or derive a repository registry activation index from its procedure sources; explicit authoring only.",
+        "input_field": "request",
         "input_required": true
       }
     ],
