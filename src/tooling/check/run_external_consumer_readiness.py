@@ -58,14 +58,6 @@ def _build_python_artifacts(dist: Path) -> list[Path]:
     return wheels
 
 
-def _build_optional_module_fixtures(dist: Path) -> list[Path]:
-    """Keep source-only presence fixtures outside the coordinated artifact set."""
-    uv = shutil.which("uv") or "uv"
-    for package in ("agentic-workspace-memory", "agentic-workspace-planning", "agentic-workspace-verification"):
-        _run([uv, "build", "--wheel", "--package", package, "--out-dir", dist], cwd=REPO_ROOT)
-    return sorted(dist.glob("*.whl"))
-
-
 def _pack_typescript_artifact(dist: Path, npm: str) -> Path:
     # This archive is subsequently reused verbatim by packed conformance and
     # release validation. Stage its native payload at the originating producer.
@@ -503,12 +495,11 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
         wheel = wheels[0]
         archive = _pack_typescript_artifact(dist, npm)
         host_env = temp_root / "host-env"
-        optional_fixtures = _build_optional_module_fixtures(temp_root / "optional-module-fixtures")
-        _install_python_stack(host_env, [wheel, *optional_fixtures])
+        # The coordinated root wheel owns the native owners. The independent
+        # host must remain usable after removal of either external consumer.
+        _install_python_stack(host_env, [wheel])
         host_cli = _console_script(host_env, "agentic-workspace")
         python_root = temp_root / "python-consumer"
-        # Native owners are artifact-owned: optional Python module distributions
-        # are absent here and present in the independent host environment.
         python, python_script = _prepare_python_consumer(python_root, [wheel])
         typescript_root = temp_root / "typescript-consumer"
         typescript_script = _prepare_typescript_consumer(typescript_root, archive, npm)

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Run external-consumer release proof with the coordinated native root package instead of retired optional Python module distributions."
