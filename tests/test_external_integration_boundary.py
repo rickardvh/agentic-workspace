@@ -80,12 +80,8 @@ def test_lifecycle_preserves_zero_adapter_footprint_and_consumer_removal(tmp_pat
 
 def test_runtime_and_payload_have_no_external_adapter_reverse_dependency() -> None:
     manifests = [ROOT / "pyproject.toml", *(ROOT / "packages").glob("*/pyproject.toml")]
-    allowed_workspace_dependencies = {
-        "agentic-workspace",
-        "agentic-workspace-memory",
-        "agentic-workspace-planning",
-        "agentic-workspace-verification",
-    }
+    ownership = json.loads((ROOT / ".github/release-ownership.json").read_text(encoding="utf-8"))
+    allowed_workspace_dependencies = {package["name"] for package in ownership["packages"]}
     for manifest in manifests:
         project = tomllib.loads(manifest.read_text(encoding="utf-8"))["project"]
         for dependency in project.get("dependencies", []):

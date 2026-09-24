@@ -37,6 +37,23 @@ def test_workspace_has_no_reverse_dependency_on_external_consumers() -> None:
     assert _module()._reverse_dependency_violations() == []
 
 
+@pytest.mark.parametrize("module_name", ["memory", "planning", "verification"])
+@pytest.mark.parametrize("manifest_ref", ["pyproject.toml", "packages/example/pyproject.toml"])
+def test_retired_module_dependency_is_rejected(tmp_path, monkeypatch, module_name, manifest_ref) -> None:
+    checker = _module()
+    monkeypatch.setattr(checker, "REPO_ROOT", tmp_path)
+    ownership = tmp_path / ".github/release-ownership.json"
+    ownership.parent.mkdir()
+    ownership.write_bytes((ROOT / ".github/release-ownership.json").read_bytes())
+    root_manifest = tmp_path / "pyproject.toml"
+    root_manifest.write_text('[project]\nname = "agentic-workspace"\n', encoding="utf-8")
+    manifest = tmp_path / manifest_ref
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    dependency = f"agentic-workspace-{module_name}"
+    manifest.write_text(f'[project]\nname = "example"\ndependencies = ["{dependency}>=1.0"]\n', encoding="utf-8")
+    assert checker._reverse_dependency_violations() == [f"{manifest_ref}: {dependency}"]
+
+
 def test_ci_runs_the_independent_consumer_proof() -> None:
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "run_external_consumer_readiness.py --dist-dir dist --require-node" in workflow
