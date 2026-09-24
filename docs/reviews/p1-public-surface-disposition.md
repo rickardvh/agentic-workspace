@@ -14,7 +14,7 @@ at the post-#3475 head before #3442/#3441 administrative closure.
 | resources/propose/v1 | KEEP_EXACT | Generic start clients and exact owner-reference fragments observe a proposal through the same resource primitive; discovery never executes it. |
 | workspace.resources.scratch-create | KEEP_EXACT | Exact owner action creates one task-owned scratch container. |
 | workspace.resources.scratch-remove | KEEP_EXACT | Exact owner action removes one current owned container, preserving retained or referenced material. |
-| workspace.resources.scratch-prune | KEEP_EXACT | Exact owner action applies the primitive's bounded stale-resource cleanup policy. |
+| workspace.resources.scratch-prune | REMOVE | #3377 makes authenticated container ownership sufficient for terminal cleanup; the selected-file size-limit workaround has no separate supported lifetime. |
 | workspace.resources.scratch-retain | KEEP_EXACT | Exact owner action records an explicit continuing-lifetime reason. |
 | workspace.resources.scratch-release | KEEP_EXACT | Exact owner action releases retention after its owner settles that lifetime. |
 | workspace.resources.worktree-create | KEEP_EXACT | Exact owner action applies current isolation policy and Git custody. |

@@ -75,7 +75,12 @@ def test_task_scratch_reentry_cleanup_and_owner_preservation(tmp_path, shared_co
         (path / "draft.json").write_text('{"temporary":true}')
         # Fresh consumer recovers exactly the interrupted task's disposable container.
         removal = call("scratch-remove", path=proposal["action"]["request"]["path"])
-        (path / "new.txt").write_text("New material invalidates proposed cleanup")
+        (path / "new.txt").write_text("Temporary bytes remain container-owned")
+        assert call("scratch-remove", path=proposal["action"]["request"]["path"])["revision"] == removal["revision"]
+        marker = path / ".aw-scratch.json"
+        body = json.loads(marker.read_text())
+        body["retention_reason"] = "Changed custody invalidates proposed cleanup"
+        marker.write_text(json.dumps(body))
         with pytest.raises(AssertionError, match="changed"):
             resource("json", shared_core_binary, native_cli, removal["action"])
         fresh = call("scratch-remove", path=proposal["action"]["request"]["path"])
@@ -125,18 +130,15 @@ def test_resource_exact_actions_scratch_and_fresh_recovery(tmp_path, shared_core
     blocked = call("scratch-remove", path=relative)
     assert blocked["blockers"] and path.exists() and "action" not in blocked
     call("scratch-release", path=relative, reason="Evidence disposition settled")
-    # Legitimate staged files can exceed the full snapshot without losing the
-    # same container's bounded, fresh-process disposal route.
-    for name in ("first.packet", "second.packet"):
-        (path / name).write_bytes(b"x" * 9_000_000)
-    over = call("scratch-remove", path=relative)
-    assert over["snapshot"]["status"] == "over-capacity"
-    assert "action" not in over and "build cache" not in json.dumps(over)
-    with pytest.raises(AssertionError):
-        call("scratch-prune", path=relative, selection="../outside")
-    pruned = call("scratch-prune", path=relative, selection="first.packet")
-    assert pruned["effect_outcome"] == "committed"
-    assert not (path / "first.packet").exists() and (path / "second.packet").exists()
+    # Content volume and shape do not grant or revoke container disposal custody.
+    nested = path / "nested/build-output"
+    nested.mkdir(parents=True)
+    with (nested / "large.bin").open("wb") as file:
+        file.truncate(160 * 1024 * 1024)
+    for index in range(2050):
+        (nested / str(index)).touch()
+    with pytest.raises(AssertionError, match="unknown resource operation"):
+        call("scratch-prune", path=relative)
     removed = call("scratch-remove", path=relative)
     assert removed["effect_outcome"] == "committed" and not path.exists()
     with pytest.raises(AssertionError):
@@ -295,7 +297,7 @@ def test_worktree_interrupted_unlock_unique_commits_and_stale_registration(tmp_p
     assert (repo / ".git/index").read_bytes() == index
 
 
-def test_scratch_retention_and_empty_interruption_recovery(tmp_path, shared_core_binary, native_cli):
+def test_scratch_retention_and_missing_custody_preservation(tmp_path, shared_core_binary, native_cli):
     context = {"target": str(tmp_path), "task": "Keep interrupted evidence"}
 
     def call(op, **kw):
@@ -312,14 +314,47 @@ def test_scratch_retention_and_empty_interruption_recovery(tmp_path, shared_core
     resource("json", shared_core_binary, native_cli, call("scratch-release", reason="Result transferred to its durable owner")["action"])
     resource("json", shared_core_binary, native_cli, call("scratch-remove")["action"])
     assert not path.exists()
-    path.mkdir()  # Crash after mkdir, before marker publication, or after final marker removal.
-    assert call("scratch-remove")["snapshot"]["status"] == "empty-interrupted"
-    resource("json", shared_core_binary, native_cli, call("scratch-remove")["action"])
-    assert not path.exists()
+    path.mkdir()  # Missing custody cannot authenticate even an empty directory.
+    assert "action" not in call("scratch-remove")
+    assert path.exists()
     with pytest.raises(AssertionError, match="one exact task container"):
         call("scratch-remove", path=".agentic-workspace/local/instructions")
     with pytest.raises(AssertionError, match="absolute external resource"):
         call("worktree-create", path=str(tmp_path))
+
+
+def test_scratch_create_recovers_only_its_exact_empty_interruption(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Recover interrupted creation"}
+
+    def call(operation, **extra):
+        return resource("native", shared_core_binary, native_cli, {**context, "request": {"operation": operation, **extra}})
+
+    proposal = call("scratch-create")
+    path = Path(proposal["path"])
+    path.mkdir(parents=True)  # Simulate a crash between mkdir and marker publication.
+    assert "action" not in call("scratch-remove")
+    recovery = call("scratch-create")  # Each public invocation uses a fresh process.
+    assert recovery["snapshot"]["status"] == "empty-interrupted"
+    assert recovery["path"] == proposal["path"]
+    unknown = path / "unknown.txt"
+    unknown.write_text("Do not adopt unauthenticated contents")
+    for operation in ("scratch-create", "scratch-remove"):
+        with pytest.raises(AssertionError):
+            call(operation)
+    with pytest.raises(AssertionError):
+        resource("native", shared_core_binary, native_cli, recovery["action"])
+    assert unknown.read_text() == "Do not adopt unauthenticated contents"
+    unknown.unlink()  # Dispose only the test-created negative fixture.
+    relative = recovery["action"]["request"]["path"]
+    other = {**context, "task": "Another task", "request": {"operation": "scratch-create", "path": relative}}
+    with pytest.raises(AssertionError, match="derived from the explicit current work"):
+        resource("native", shared_core_binary, native_cli, other)
+    fresh = call("scratch-create")
+    created = resource("native", shared_core_binary, native_cli, fresh["action"])
+    assert created["effect_outcome"] == "committed" and created["path"] == proposal["path"]
+    assert json.loads((path / ".aw-scratch.json").read_text())["task"] == context["task"]
+    resource("native", shared_core_binary, native_cli, call("scratch-remove")["action"])
+    assert not path.exists()
 
 
 def test_protected_resource_write_and_malformed_configuration_preserve_state(tmp_path, shared_core_binary, native_cli):
@@ -359,6 +394,96 @@ def test_scratch_current_owner_reference_blocks_cleanup(tmp_path, shared_core_bi
     blocked = call("scratch-remove")
     assert "action" not in blocked and any("owner references" in b for b in blocked["blockers"])
     assert (path / "needed.md").exists()
+
+
+def test_scratch_teardown_rechecks_custody_policy_and_siblings(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Container ownership"}
+
+    def call(operation, **extra):
+        return resource("native", shared_core_binary, native_cli, {**context, "request": {"operation": operation, **extra}})
+
+    proposal = call("scratch-create")
+    resource("native", shared_core_binary, native_cli, proposal["action"])
+    path = Path(proposal["path"])
+    sibling = path.parent / "unowned"
+    sibling.mkdir()
+    (sibling / "keep.txt").write_text("Unowned material")
+    removal = call("scratch-remove")
+    marker = path / ".aw-scratch.json"
+    original = marker.read_bytes()
+    marker.rename(path / "old-marker")
+    marker.write_bytes(original)
+    with pytest.raises(AssertionError, match="changed"):
+        resource("native", shared_core_binary, native_cli, removal["action"])
+    removal = call("scratch-remove")
+    instructions = tmp_path / ".agentic-workspace/instructions"
+    instructions.mkdir(parents=True)
+    protection = instructions / "protect.md"
+    protection.write_text("---\nprotect: [.agentic-workspace/local/scratch/**]\n---\nKeep this resource.\n")
+    blocked = resource("native", shared_core_binary, native_cli, removal["action"])
+    assert "action" not in blocked and blocked["effect_outcome"] == "not-invoked"
+    assert path.exists()
+    protection.unlink()
+    # Every public invocation runs in a fresh process; current reentry is sufficient.
+    fresh = call("scratch-remove")
+    resource("native", shared_core_binary, native_cli, fresh["action"])
+    assert not path.exists() and (sibling / "keep.txt").read_text() == "Unowned material"
+
+
+def test_scratch_boundary_and_contained_directory_links(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Confined container cleanup"}
+
+    def call(operation):
+        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": operation}})
+
+    def directory_link(target, link):
+        if os.name == "nt":
+            import _winapi
+
+            _winapi.CreateJunction(str(target), str(link))
+        else:
+            link.symlink_to(target, target_is_directory=True)
+
+    proposal = call("scratch-create")
+    resource("json", shared_core_binary, native_cli, proposal["action"])
+    path = Path(proposal["path"])
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_text("Outside ownership boundary")
+    directory_link(outside, path / "external-link")
+    removal = call("scratch-remove")
+    resource("json", shared_core_binary, native_cli, removal["action"])
+    assert not path.exists() and (outside / "keep.txt").exists()
+    directory_link(outside, path)
+    with pytest.raises(AssertionError, match="link"):
+        call("scratch-remove")
+    assert (outside / "keep.txt").exists()
+    # Remove only the test-created link, never its destination.
+    path.rmdir() if os.name == "nt" else path.unlink()
+
+
+@pytest.mark.parametrize("damage", ["missing", "oversized", "path", "target", "task"])
+def test_scratch_custody_damage_preserves_container(tmp_path, shared_core_binary, native_cli, damage):
+    context = {"target": str(tmp_path), "task": "Exact custody"}
+    proposal = resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create"}})
+    resource("json", shared_core_binary, native_cli, proposal["action"])
+    path = Path(proposal["path"])
+    marker = path / ".aw-scratch.json"
+    if damage == "missing":
+        marker.unlink()
+    elif damage == "oversized":
+        marker.write_bytes(b" " * 16385)
+    else:
+        body = json.loads(marker.read_text())
+        body[damage] = "mismatched"
+        marker.write_text(json.dumps(body))
+    removal = {**context, "request": {"operation": "scratch-remove"}}
+    if damage == "missing":
+        assert "action" not in resource("json", shared_core_binary, native_cli, removal)
+    else:
+        with pytest.raises(AssertionError):
+            resource("json", shared_core_binary, native_cli, removal)
+    assert path.exists()
 
 
 def test_malformed_scratch_custody_is_preserved(tmp_path, shared_core_binary, native_cli):
@@ -576,7 +701,10 @@ def test_cli_exact_resource_envelope_preserves_context_and_currentness(tmp_path,
     stale = execute(action)
     assert stale.returncode != 0 and "changed" in stale.stderr
     removal = propose("scratch-remove", path=action["request"]["path"])
-    (path / "new.txt").write_text("New material stales the cleanup proposal")
+    marker = path / ".aw-scratch.json"
+    body = json.loads(marker.read_text())
+    body["retention_reason"] = "Changed custody stales the cleanup proposal"
+    marker.write_text(json.dumps(body))
     assert execute(removal["action"]).returncode != 0 and path.exists()
     fresh = propose("scratch-remove", path=action["request"]["path"])
     result = execute(fresh["action"])
