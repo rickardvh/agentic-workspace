@@ -140,16 +140,19 @@ def observe(artifact, dist, *, get=json_response, download=fetch):
 
 def smoke(identity):
     with tempfile.TemporaryDirectory(prefix="aw-registry-consumer-") as directory:
-        root = Path(directory)
+        workspace = Path(directory)
+        root = workspace / "node-consumer"
+        root.mkdir()
         env = {
             key: value
             for key, value in os.environ.items()
             if key not in {"PYTHONPATH", "AGENTIC_WORKSPACE_CORE_BINARY", "NODE_AUTH_TOKEN", "NPM_TOKEN"}
         }
-        env["NPM_CONFIG_CACHE"] = str(root / "npm-cache")
-        env["UV_TOOL_DIR"] = str(root / "tools")
-        env["UV_TOOL_BIN_DIR"] = str(root / "tool-bin")
-        python = root / "tools/agentic-workspace" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        # Installation storage is outside every repository scored by the journey.
+        env["NPM_CONFIG_CACHE"] = str(workspace / "npm-cache")
+        env["UV_TOOL_DIR"] = str(workspace / "tools")
+        env["UV_TOOL_BIN_DIR"] = str(workspace / "tool-bin")
+        python = workspace / "tools/agentic-workspace" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
         subprocess.run(
             [
                 shutil.which("uv"),
@@ -211,12 +214,12 @@ def smoke(identity):
         if shutil.which("agentic-workspace", path=local_env["PATH"]):
             raise ValueError("npm-local journey exposes a global AW executable")
         journey([npm, "exec", "--no", "--", "agentic-workspace"], root, local_env)
-        python_repo = root / "python-consumer"
+        python_repo = workspace / "python-consumer"
         python_repo.mkdir()
         subprocess.run(["git", "init", "-q", str(python_repo)], check=True, env=env)
         executable = python.parent / ("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
         journey([str(executable)], python_repo, env)
-        prefix = root / "npm-global"
+        prefix = workspace / "npm-global"
         subprocess.run(
             [
                 npm,
@@ -232,7 +235,7 @@ def smoke(identity):
             check=True,
             env=env,
         )
-        global_repo = root / "global-consumer"
+        global_repo = workspace / "global-consumer"
         global_repo.mkdir()
         subprocess.run(["git", "init", "-q", str(global_repo)], check=True, env=env)
         global_env = dict(local_env)
