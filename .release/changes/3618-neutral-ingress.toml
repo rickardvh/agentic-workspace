@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Carry bounded observations and unmet needs through ordinary start without selecting an owner or changing task identity."
