@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Isolate registry install storage from scored repositories and allow same-subject registry recovery with current maintainer tooling bound to immutable release assets."

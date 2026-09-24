@@ -3,6 +3,9 @@
 import base64
 import hashlib
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -151,6 +154,56 @@ def test_registry_workflow_is_gated_projection_without_rebuild():
         assert "${{ inputs.tag }}" not in content
     with pytest.raises(ValueError, match="Exploratory"):
         registry.admitted_artifacts(Path("unused"), "preview-v0.57.0", "a" * 40)
+
+
+@pytest.mark.parametrize("expected", ["matching", "mismatched", "tag-push"])
+def test_registry_recovery_binds_old_tag_independently_of_tooling_head(tmp_path, expected):
+    import yaml
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    steps = workflow["jobs"]["language-packages"]["steps"]
+    assert steps[0]["with"]["ref"] == (
+        "${{ inputs.registries_only && 'master' || "
+        "(github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name) }}"
+    )
+    binding = next(step for step in steps if step.get("id") == "release-source")
+    assert binding["env"]["EXPECTED_SOURCE_COMMIT"] == "${{ inputs.source_commit }}"
+    for step in steps:
+        if "registry_release.py" in step.get("run", ""):
+            assert step["env"]["RELEASE_SOURCE"] == "${{ steps.release-source.outputs.commit }}"
+            assert '--source "$RELEASE_SOURCE"' in step["run"]
+            assert "rev-parse HEAD" not in step["run"]
+
+    def git(*args):
+        return subprocess.check_output(["git", *args], cwd=tmp_path, text=True).strip()
+
+    git("init", "-q")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "release")
+    release = git("rev-parse", "HEAD")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "tag", "-a", "v1.4.0", "-m", "release")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "repaired tooling")
+    assert git("rev-parse", "HEAD") != release
+    bash = str(Path(os.environ["ProgramFiles"]) / "Git/bin/bash.exe") if os.name == "nt" else shutil.which("bash")
+    result = subprocess.run(
+        [bash, "-c", binding["run"]],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "RELEASE_TAG": "v1.4.0",
+            "EXPECTED_SOURCE_COMMIT": {"matching": release, "mismatched": "0" * 40, "tag-push": ""}[expected],
+            "GITHUB_OUTPUT": "subject-output",
+        },
+        capture_output=True,
+        text=True,
+    )
+    output = tmp_path / "subject-output"
+    if expected == "mismatched":
+        assert result.returncode != 0
+        assert "does not match" in result.stderr
+        assert not output.exists()
+    else:
+        assert result.returncode == 0, result.stderr
+        assert output.read_text().strip() == f"commit={release}"
 
 
 def test_linux_wheel_tag_requires_abi_evidence(tmp_path, monkeypatch):
