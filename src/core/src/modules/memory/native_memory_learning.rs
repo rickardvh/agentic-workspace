@@ -39,8 +39,33 @@ pub(crate) fn declaration() -> Value {
         "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"candidate_revision":text,"disposition":{"enum":["unresolved","advisory-memory","stronger-owner","already-absorbed","no-retention"]},
         "lesson":text,"reason":text,"receiving_source":{"type":"object","additionalProperties":false,"properties":{"reference":text,"revision":text},"required":["reference","revision"]},
+        "receiving_consequence":{"type":"object","additionalProperties":false,"required":["claim","evidence_reference","proof_subject"],
+            "properties":{"claim":text,"evidence_reference":text,"proof_subject":text}},
         "candidate_evidence_requests":{"type":"array","maxItems":8,"items":{"type":"object"}}},
         "required":["candidate_revision","disposition","lesson","reason","candidate_evidence_requests"]}})
+}
+
+/// Verification owns command admission/currentness. The acting agent judges
+/// what the current check establishes; Memory cannot infer behaviour from prose.
+fn receiving_consequence(args: &Value, verification: &Value) -> Result<Value, CoreError> {
+    let consequence = &args["receiving_consequence"];
+    if !consequence.is_object() {
+        return Err(err(
+            "stronger-owner absorption requires a bounded consequence and current receiving-source proof; copied lesson text is insufficient",
+        ));
+    }
+    let evidence = verification["evidence"].as_array().into_iter().flatten().find(|e|
+        e["reference"] == consequence["evidence_reference"]
+            && e["proof_subject"] == consequence["proof_subject"]
+            && e["checked_scope"]["claim"] == "selected-command-passed"
+            && e["checked_scope"]["source_inputs"].as_array().into_iter().flatten().any(|s|
+                s["path"] == args["receiving_source"]["reference"])
+    ).ok_or_else(|| err("receiving consequence needs current Verification evidence bound to the exact receiving source"))?;
+    Ok(
+        json!({"claim":consequence["claim"],"evidence_reference":evidence["reference"],
+        "proof_subject":evidence["proof_subject"],"checked_scope":evidence["checked_scope"],
+        "semantic_basis":"acting-agent judgment of the claimed consequence; selected-command success alone is not semantic equivalence or completion"}),
+    )
 }
 
 /// Exact Verification prerequisites travel with the disposition/authorization,
@@ -176,17 +201,10 @@ pub(crate) fn view(
                     if crate::decision_source::hash(&bytes) != receiver["revision"] {
                         return Err(err("receiving source changed"));
                     }
-                    if !std::str::from_utf8(&bytes)
-                        .map_err(err)?
-                        .lines()
-                        .any(|line| line.trim() == args["lesson"].as_str().unwrap().trim())
-                    {
-                        return Err(err(
-                            "receiving source must contain the complete bounded lesson; a source name is not absorption",
-                        ));
-                    }
+                    let consequence = receiving_consequence(args, verification)?;
                     dispositions.push(json!({"candidate_revision":revision,"status":args["disposition"],"receiving_source":receiver,"reason":args["reason"],"retained":false,
-                        "authority":"agent-reported disposition with current source evidence; no source admission, authorship, policy or proof grant"}));
+                        "receiving_consequence":consequence,
+                        "authority":"bounded semantic disposition supported by current Verification evidence; no source admission, authorship, policy, learned-skill promotion, independent review or completion grant"}));
                     continue;
                 }
                 "advisory-memory" => {
@@ -246,6 +264,35 @@ pub(crate) fn view(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn receiving_evidence_is_exact_current_and_semantically_bounded() {
+        for reference in [
+            "config/readiness.json",
+            "tools/skills/method/SKILL.md",
+            "tests/check.rs",
+        ] {
+            let mut args = json!({"lesson":"Do not copy this sentence into the receiving source.",
+                "receiving_source":{"reference":reference,"revision":"current"}});
+            let proof = json!({"evidence":[{"reference":"proof:check","proof_subject":"subject:current",
+                "checked_scope":{"claim":"selected-command-passed","source_inputs":[{"path":reference}]}}]});
+            assert!(receiving_consequence(&args, &proof).is_err());
+            args["receiving_consequence"] = json!({"claim":"The receiving owner enforces the stable behaviour.","evidence_reference":"proof:check","proof_subject":"subject:current"});
+            assert!(receiving_consequence(&args, &proof).is_ok());
+            for (pointer, replacement) in [
+                ("/evidence/0/proof_subject", json!("stale")),
+                ("/evidence/0/checked_scope", Value::Null),
+                (
+                    "/evidence/0/checked_scope/source_inputs",
+                    json!([{"path":"unrelated.txt"}]),
+                ),
+                ("/evidence/0/reference", json!("other-proof")),
+            ] {
+                let mut changed = proof.clone();
+                *changed.pointer_mut(pointer).unwrap() = replacement;
+                assert!(receiving_consequence(&args, &changed).is_err());
+            }
+        }
+    }
     #[test]
     fn only_complete_explicit_producer_signals_nominate() {
         let candidate =
