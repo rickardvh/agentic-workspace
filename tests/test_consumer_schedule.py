@@ -37,7 +37,9 @@ def test_seven_day_rotation_covers_declared_targets_profiles_and_families():
     cases = [case for day in days for case in day["live"]]
     assert {c["target"] for c in cases} == {p["target"] for p in schedule.platform_release.platforms()}
     assert {c["profile"] for c in cases} == set(schedule.PROFILES)
-    assert {c["family"] for c in cases} == set(FAMILIES)
+    from consumer_journeys import ON_DEMAND_FAMILIES
+
+    assert {c["family"] for c in cases} == set(FAMILIES) - set(ON_DEMAND_FAMILIES)
     assert all(sum(c["sessions"] for c in day["live"]) <= 3 for day in days)
     assert all(day["seconds_per_session"] == 900 for day in days)
 

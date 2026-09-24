@@ -120,3 +120,30 @@ def test_native_registry_wrapper_mismatch_fails_before_install(tmp_path, monkeyp
     consumer.exec = execute
     with pytest.raises(ValueError, match="Public"):
         consumer.install()
+
+
+def test_target_candidate_is_standalone_scoped_and_revalidated(tmp_path):
+    import platform_release
+
+    archive = tmp_path / "native.zip"
+    archive.write_bytes(b"bounded candidate bytes")
+    row = {
+        **platform_release.platforms()[0],
+        "native_archive": {"asset": archive.name, "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()},
+    }
+    manifest = tmp_path / platform_release.MANIFEST
+    manifest.write_text(
+        json.dumps(
+            {"kind": "agentic-workspace/target-consumer-candidate/v1", "version": "1.3.2", "source_commit": "a" * 40, "platforms": [row]}
+        )
+    )
+    selected = Subject.candidate(tmp_path)
+    assert selected.mode == "target-candidate"
+    selected.revalidate("standalone")
+    with pytest.raises(ValueError, match="standalone"):
+        selected.revalidate("python")
+    with pytest.raises(ValueError, match="Unsupported"):
+        platform_release.load(tmp_path)
+    archive.write_bytes(b"changed")
+    with pytest.raises(ValueError, match="digest"):
+        selected.revalidate("standalone")

@@ -8,7 +8,7 @@
   "branches": [
     {
       "id": "select",
-      "description": "Select current evidence and strategy",
+      "description": "Establish unmet test/environment readiness before execution, then select current evidence and strategy",
       "next": "references/select.md"
     },
     {
@@ -36,6 +36,17 @@
       "description": "Disposition of observed learning",
       "next": "references/learning.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "need",
+      "binding"
+    ],
+    "applicability": "A test, claim, review finding or missing prerequisite needs current evidence or readiness before proceeding.",
+    "outcome": "Current prerequisite readiness, admitted evidence and an accurately bounded claim.",
+    "binding_owners": [
+      "verification"
+    ]
+  }
 }
 ```

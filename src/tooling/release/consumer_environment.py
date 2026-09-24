@@ -118,7 +118,32 @@ class Subject:
     @classmethod
     def candidate(cls, directory: Path):
         directory = directory.resolve()
+        raw = json.loads((directory / platform_release.MANIFEST).read_text())
+        if raw.get("kind") == "agentic-workspace/target-consumer-candidate/v1":
+            if set(raw) != {"kind", "version", "source_commit", "platforms"} or len(raw["platforms"]) != 1:
+                raise ValueError("Invalid target consumer candidate")
+            row = raw["platforms"][0]
+            declared = next((p for p in platform_release.platforms() if p["target"] == row.get("target")), None)
+            if declared is None or set(row) != {*declared, "native_archive"} or any(row[k] != v for k, v in declared.items()):
+                raise ValueError("Target candidate platform mismatch")
+            item = row["native_archive"]
+            if (
+                set(item) != {"asset", "sha256"}
+                or Path(item["asset"]).name != item["asset"]
+                or "/" in item["asset"]
+                or "\\" in item["asset"]
+                or platform_release.digest(directory / item["asset"]) != item["sha256"]
+            ):
+                raise ValueError("Target candidate archive digest mismatch")
+            return cls("target-candidate", directory, raw)
         return cls("candidate", directory, platform_release.load(directory))
+
+    def revalidate(self, profile):
+        if self.mode == "target-candidate":
+            if profile != "standalone" or Subject.candidate(self.directory).inventory != self.inventory:
+                raise ValueError("Target candidate proves only its frozen standalone target")
+        elif platform_release.load(self.directory) != self.inventory:
+            raise ValueError("Frozen subject changed before installation")
 
     @classmethod
     def public(cls, version: str, directory: Path):
@@ -334,8 +359,7 @@ class DockerConsumer:
             raise ValueError("Container architecture mismatch")
 
     def install(self, *, manager="npm"):
-        if platform_release.load(self.subject.directory) != self.subject.inventory:
-            raise ValueError("Frozen subject changed before installation")
+        self.subject.revalidate(self.profile)
         row = self.subject.row(self.target)
         if self.profile == "standalone":
             with tempfile.TemporaryDirectory() as tmp:
@@ -441,7 +465,7 @@ class DockerConsumer:
         self.observation["requested"] = self.subject.identity()
         self.observation["route"] = (
             "candidate-asset"
-            if self.subject.mode == "candidate"
+            if self.subject.mode in {"candidate", "target-candidate"}
             else {"node": "npm-registry", "python": "pypi", "cargo": "crates-io", "standalone": "public-release-asset"}[self.profile]
         )
         self.exec([*self.command, "--help"])
@@ -530,8 +554,7 @@ class NativeConsumer:
         return run(argv, cwd=self.repo, env=self.env, timeout=timeout)
 
     def install(self):
-        if platform_release.load(self.subject.directory) != self.subject.inventory:
-            raise ValueError("Frozen subject changed before installation")
+        self.subject.revalidate(self.profile)
         row = self.subject.row(self.target)
         suffix = ".exe" if os.name == "nt" else ""
         native = self.root / ("native-" + self.subject.identity()["inventory_sha256"][:12])

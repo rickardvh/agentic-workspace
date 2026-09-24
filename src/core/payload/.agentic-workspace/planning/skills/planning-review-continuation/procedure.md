@@ -16,6 +16,13 @@
       "description": "Route a justified finding to its owner",
       "next": "references/continuation.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "need"
+    ],
+    "applicability": "Review findings or a worker return require current accepted continuation rather than assumed progress.",
+    "outcome": "Current receiving-owner admission and a bounded continuation; no self-approval."
+  }
 }
 ```

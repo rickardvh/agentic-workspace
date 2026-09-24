@@ -26,7 +26,18 @@
       "description": "Source and unavailable-runtime boundaries",
       "next": "references/boundaries.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "observation",
+      "binding"
+    ],
+    "applicability": "Installation, invocation, environment or configuration information requires a current durable choice or repair.",
+    "outcome": "Usable current configuration with unresolved owner readiness stated.",
+    "binding_owners": [
+      "configuration"
+    ]
+  }
 }
 ```
 

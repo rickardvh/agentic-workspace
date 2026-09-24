@@ -29,10 +29,25 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "opt/consumer-uv/bin/uv",
             "home/agent",
             "home/agent/.codex/auth.json",
+            "tmp/product-boundary-",
+            "opt/aw-observer",
+            "opt/aw-observer/subject",
+            "opt/aw-observer/subject/*",
+            "opt/aw-observer/subject/agentic-workspace",
+            "opt/aw-observer/subject/agentic-workspace-core",
+            "opt/aw-observer/boundary.py",
+            "opt/aw-observer/config.json",
+            "opt/aw-observer/agentic-workspace",
+            "opt/aw-observer/receipts.jsonl",
+            "opt/aw-observer/server.log",
+            "opt/aw-observer/socket",
             "tmp/input-",
             "var/run/docker.sock",
             "usr/bin/sha256sum",
         )
+    ),
+    Path("src/tooling/model-cli-harness/consumer_product_boundary.py"): frozenset(
+        "/" + path for path in ("opt/aw-observer", "home/consumer", "home/consumer/repo", "home/consumer/tmp")
     ),
     Path("src/tooling/release/consumer_journeys.py"): frozenset(
         "/" + path

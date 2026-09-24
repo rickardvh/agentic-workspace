@@ -26,6 +26,39 @@ Domain owners hold current state, evidence and effects. Rust is the deterministi
 authority; language bindings carry its requests. The agent judges relevance and
 does the work. A skill or route never grants mutation, proof or completion rights.
 
+## Current material and needs
+
+Supply relevant new material in the same start context, separately from `task`.
+For the CLI, write a context object to a UTF-8 JSON file and pass `start --input`:
+
+```json
+{
+  "target": ".",
+  "task": "The unchanged current task",
+  "material": [{
+    "id": "test-prerequisite",
+    "kind": "need",
+    "summary": "The upcoming test requires current service readiness.",
+    "source": {"producer": "acting-agent", "reference": "current test requirement", "coverage": "bounded"}
+  }]
+}
+```
+
+Use `observation` for a material fact, correction, tool result or external/module
+observation; use `need` before an action whose prerequisite remains unmet. Include
+exact source revisions and repository dependency reference/revision pairs when
+known. Labels remain assertions, never human authority or proof. Carry returned
+work-bound material explicitly on reentry; there is no event store.
+
+Read the current `activation` occasions alongside binding owner consequences.
+Judge only unresolved applicability, filling the exact returned request with
+`applicable`, `unknown`, `defer`, `no-match` or justified `no-retention` and a reason.
+Keep peer judgments when selecting one method. Use the qualified entry to reach
+the existing procedure or use the exact owner directly. Reading a skill does not
+settle its outcome. Verify the receiving owner/repository consequence, distinguish
+stable knowledge from transient availability, and preserve an explicit gap when
+the current owner or required host capability is unavailable.
+
 ## Specialised skills and semantic routes
 
 Select a known useful leaf directly, or inspect one relevant route branch. Follow

@@ -16,6 +16,13 @@
       "description": "Classify continuity and distinguish implementation from reporting targets",
       "next": "references/shape.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "observation"
+    ],
+    "applicability": "New information changes the intended outcome or leaves a material scope or instruction conflict unresolved.",
+    "outcome": "A scoped intent judgment or exact source-owner reconciliation."
+  }
 }
 ```

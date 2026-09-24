@@ -21,6 +21,17 @@
       "description": "Create or tighten accepted custody",
       "next": "references/continuity.md"
     }
-  ]
+  ],
+  "activation": {
+    "occasions": [
+      "need",
+      "binding"
+    ],
+    "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
+    "outcome": "Current bounded Planning custody, or justified direct work without retained planning.",
+    "binding_owners": [
+      "planning"
+    ]
+  }
 }
 ```

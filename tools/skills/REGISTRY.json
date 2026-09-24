@@ -10,10 +10,25 @@
       "stability": "repo-managed",
       "summary": "recheck current Planning and Memory ownership when install or operational-state authority may have shifted",
       "activation_hints": {
-        "verbs": ["recheck", "verify", "audit"],
-        "nouns": ["planning ownership", "memory ownership", "competing operational source"],
-        "phrases": ["check foundation stability", "recheck Planning and Memory ownership", "check for competing operational state"],
-        "when": ["a change touches Planning or Memory install/state authority", "suspected competing operational source"]
+        "verbs": [
+          "recheck",
+          "verify",
+          "audit"
+        ],
+        "nouns": [
+          "planning ownership",
+          "memory ownership",
+          "competing operational source"
+        ],
+        "phrases": [
+          "check foundation stability",
+          "recheck Planning and Memory ownership",
+          "check for competing operational state"
+        ],
+        "when": [
+          "a change touches Planning or Memory install/state authority",
+          "suspected competing operational source"
+        ]
       }
     },
     {
@@ -31,10 +46,24 @@
         }
       ],
       "activation_hints": {
-        "verbs": ["recheck", "verify", "audit"],
-        "nouns": ["ownership ledger", "module boundaries", "workspace ownership"],
-        "phrases": ["check ownership ledger", "audit workspace ownership"],
-        "when": ["ownership drift", "boundary ambiguity"]
+        "verbs": [
+          "recheck",
+          "verify",
+          "audit"
+        ],
+        "nouns": [
+          "ownership ledger",
+          "module boundaries",
+          "workspace ownership"
+        ],
+        "phrases": [
+          "check ownership ledger",
+          "audit workspace ownership"
+        ],
+        "when": [
+          "ownership drift",
+          "boundary ambiguity"
+        ]
       }
     },
     {
@@ -44,10 +73,25 @@
       "stability": "repo-managed",
       "summary": "verify that module-managed Planning and Memory install roots remain consolidated under .agentic-workspace",
       "activation_hints": {
-        "verbs": ["verify", "align", "consolidate"],
-        "nouns": ["installed roots", "payload paths", "install boundaries"],
-        "phrases": ["check path consolidation", "verify Planning and Memory install roots", "verify install boundaries align"],
-        "when": ["install or payload topology changes", "former operational path may be reintroduced"]
+        "verbs": [
+          "verify",
+          "align",
+          "consolidate"
+        ],
+        "nouns": [
+          "installed roots",
+          "payload paths",
+          "install boundaries"
+        ],
+        "phrases": [
+          "check path consolidation",
+          "verify Planning and Memory install roots",
+          "verify install boundaries align"
+        ],
+        "when": [
+          "install or payload topology changes",
+          "former operational path may be reintroduced"
+        ]
       }
     },
     {
@@ -73,13 +117,7 @@
           "priority": 10,
           "description": "Apply the repository's independent PR-review eligibility procedure."
         }
-      ],
-      "activation_hints": {
-        "verbs": ["audit independently", "externally re-review"],
-        "nouns": ["independent external reviewer", "external review authority", "independent merge-readiness audit"],
-        "phrases": ["act as independent external reviewer", "independent external review of PR", "review a patch you did not implement"],
-        "when": ["a distinct external review agent is evaluating another agent's implementation", "the current agent did not implement modify or push the reviewed patch"]
-      }
+      ]
     },
     {
       "id": "github-issue-shaping",
@@ -102,10 +140,37 @@
         }
       ],
       "activation_hints": {
-        "verbs": ["shape", "refine", "split", "prune", "update", "create", "file"],
-        "nouns": ["github issue", "issue lane", "issue refinement", "child issue", "parent issue", "final satisfaction", "non-solutions"],
-        "phrases": ["refine issue", "shape issue", "split into child issues", "create an issue lane", "add concrete suggestions", "final satisfaction"],
-        "when": ["turning findings into durable issue shape", "refining existing issues", "deciding issue hierarchy or closure boundaries"]
+        "verbs": [
+          "shape",
+          "refine",
+          "split",
+          "prune",
+          "update",
+          "create",
+          "file"
+        ],
+        "nouns": [
+          "github issue",
+          "issue lane",
+          "issue refinement",
+          "child issue",
+          "parent issue",
+          "final satisfaction",
+          "non-solutions"
+        ],
+        "phrases": [
+          "refine issue",
+          "shape issue",
+          "split into child issues",
+          "create an issue lane",
+          "add concrete suggestions",
+          "final satisfaction"
+        ],
+        "when": [
+          "turning findings into durable issue shape",
+          "refining existing issues",
+          "deciding issue hierarchy or closure boundaries"
+        ]
       }
     },
     {
@@ -115,10 +180,27 @@
       "stability": "repo-managed",
       "summary": "triage a new improvement finding discovered while dogfooding without turning the skill into an ambient implementation gate",
       "activation_hints": {
-        "verbs": ["triage", "diagnose", "route"],
-        "nouns": ["dogfooding finding", "friction signal", "incidental improvement finding", "new dogfooding defect"],
-        "phrases": ["triage dogfooding finding", "route friction signal", "handle finding discovered while dogfooding", "new improvement finding outside the current task"],
-        "when": ["current work exposed a concrete incidental defect or friction outside its planned outcome", "single observed dogfooding finding needs routing"]
+        "verbs": [
+          "triage",
+          "diagnose",
+          "route"
+        ],
+        "nouns": [
+          "dogfooding finding",
+          "friction signal",
+          "incidental improvement finding",
+          "new dogfooding defect"
+        ],
+        "phrases": [
+          "triage dogfooding finding",
+          "route friction signal",
+          "handle finding discovered while dogfooding",
+          "new improvement finding outside the current task"
+        ],
+        "when": [
+          "current work exposed a concrete incidental defect or friction outside its planned outcome",
+          "single observed dogfooding finding needs routing"
+        ]
       }
     },
     {
@@ -149,10 +231,30 @@
         }
       ],
       "activation_hints": {
-        "verbs": ["create", "file", "open"],
-        "nouns": ["github issue", "issue template", "tracker issue", "dogfooding finding", "review finding"],
-        "phrases": ["create github issue", "file an issue", "open tracker issue", "issue template", "create issues"],
-        "when": ["creating external tracker items", "turning findings into GitHub issues", "filing dogfooding friction"]
+        "verbs": [
+          "create",
+          "file",
+          "open"
+        ],
+        "nouns": [
+          "github issue",
+          "issue template",
+          "tracker issue",
+          "dogfooding finding",
+          "review finding"
+        ],
+        "phrases": [
+          "create github issue",
+          "file an issue",
+          "open tracker issue",
+          "issue template",
+          "create issues"
+        ],
+        "when": [
+          "creating external tracker items",
+          "turning findings into GitHub issues",
+          "filing dogfooding friction"
+        ]
       }
     },
     {
@@ -165,6 +267,42 @@
         "workspace/delegation/method"
       ],
       "procedure_resource": "procedure.md"
+    }
+  ],
+  "activation_index": [
+    {
+      "id": "pr-review-recheck",
+      "path": "pr-review-recheck/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "github/pr/review"
+      ],
+      "activation": {
+        "occasions": [
+          "need"
+        ],
+        "applicability": "An externally initiated review needs an eligible independent reviewer and current proof.",
+        "outcome": "Independent bounded findings and current review judgment; implementation custody cannot review itself."
+      }
+    },
+    {
+      "id": "delegation-handoff",
+      "path": "delegation-handoff/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "workspace/delegation/method"
+      ],
+      "activation": {
+        "occasions": [
+          "binding"
+        ],
+        "applicability": "Current binding non-local work needs its exact prepared dispatch, handoff or return admission.",
+        "outcome": "Exact current Assignment continuation or an explicit unresolved transport/owner gap.",
+        "binding_owners": [
+          "assignment",
+          "delegation"
+        ]
+      }
     }
   ]
 }

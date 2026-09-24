@@ -13,6 +13,7 @@ import sys
 import tarfile
 import threading
 import time
+import uuid
 from pathlib import Path, PurePosixPath
 
 HARNESS = Path(__file__).resolve().parents[1] / "model-cli-harness"
@@ -32,7 +33,15 @@ INITIAL = {
     "policy.md": b"Keep host localhost. Preserve notes and repository policy.\n",
     "notes.txt": b"Repository-owned note: keep this file.\n",
 }
+ON_DEMAND_FAMILIES = {
+    "activation-finding": "Source-discovered positive opportunity, report-only latitude, authorized adaptation and fresh quiet reuse",
+    "activation-material": "Docker database information, stable configuration, fresh agent and stopped-service readiness",
+    "activation-no-retention": "Task-only material leaves no durable knowledge residue",
+    "activation-assignment": "Binding non-local work cannot be silently implemented locally",
+    "activation-local": "Ordinary retained-local work stays direct",
+}
 FAMILIES = {
+    **ON_DEMAND_FAMILIES,
     "first-contact": "Install/setup then complete an ordinary change",
     "local-independence": "Separate exact-version repositories and local invocation",
     "upgrade": "Refresh a previous stable customised integration",
@@ -108,7 +117,15 @@ class Workspace:
         ]
         if hasattr(self.consumer, "archive_command"):
             command = self.consumer.archive_command()
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        diagnostics = bytearray()
+
+        def read_diagnostics():
+            while chunk := proc.stderr.read(1024):
+                diagnostics[:] = (diagnostics + chunk)[-4096:]
+
+        diagnostic_reader = threading.Thread(target=read_diagnostics, daemon=True)
+        diagnostic_reader.start()
         # Bound reading the header/body too, not just wait() after stream EOF.
         timer = threading.Timer(EXPORT_SECONDS, proc.kill)
         timer.daemon = True
@@ -131,7 +148,8 @@ class Workspace:
                     if member.isfile():
                         files[str(name)] = archive.extractfile(member).read()
             if proc.wait(timeout=30):
-                raise ValueError("Consumer export failed")
+                diagnostic_reader.join(timeout=1)
+                raise ValueError(f"Consumer export failed ({proc.returncode}): {diagnostics.decode(errors='replace')}")
         finally:
             timer.cancel()
             if proc.poll() is None:
@@ -363,6 +381,8 @@ def deterministic(work, family):
 
 
 def execute(consumer, family, *, actor=None):
+    if family.startswith("activation-"):
+        return execute_activation(consumer, family, actor=actor)
     started = time.monotonic()
     recipe_sha256 = RECIPE_SHA256
     scorer_sha256 = SCORER_SHA256
@@ -415,6 +435,506 @@ def execute(consumer, family, *, actor=None):
             if actor.observations and all(row["tokens"] is not None for row in actor.observations)
             else None
         )
+    return result
+
+
+def assignment_fixture_policy(nonlocal_work):
+    policy = (
+        '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n'
+        '[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
+    )
+    if nonlocal_work:
+        policy += (
+            'forbidden_task_classes=["boundary-shaping","reasoning-heavy","mixed","mechanical-follow-through"]\n'
+            '[delegation_targets.worker]\ntransports=[{kind="manual"}]\n'
+        )
+    return policy
+
+
+def finding_fixture(work):
+    shared = work.files()[".agentic-workspace/config.toml"]
+    work.write(".agentic-workspace/config.toml", shared.replace(b"[workspace]\n", b'[workspace]\nimprovement_latitude="reporting"\n'))
+    work.write("rows.json", json.dumps(list(range(32))).encode())
+    work.write(
+        "data.py",
+        b"import json\nfrom pathlib import Path\nreads = 0\ndef load_rows():\n global reads\n reads += 1\n return json.loads(Path('rows.json').read_text())\n",
+    )
+    work.write("report.py", b"def format_row(value):\n return {'value': value}\n")
+    work.write(
+        "pipeline.py",
+        b"from data import load_rows\nfrom report import format_row\n\ndef report():\n return [format_row(load_rows()[i]) for i in range(32)]\n",
+    )
+    check = b"import json\nfrom pathlib import Path\nimport data\nfrom pipeline import report\nrows = report()\nassert rows == [{'value': i, 'square': i*i} for i in range(32)]\nresult = {'rows': rows, 'source_reads': data.reads}\nPath('result.json').write_text(json.dumps(result))\nprint(json.dumps(result))\n"
+    work.write("verify_report.py", check)
+    work.write(
+        "README.md",
+        b"# Row report\n\nreport.py formats each row; pipeline.py assembles the ordered report from rows.json. Run python3 verify_report.py to check its values and display source-read telemetry. Keep the verifier and data instrumentation unchanged.\n",
+    )
+    # Harmless cosmetic material must not require a record or retrospective.
+    work.write("style_note.py", b"temporary_variable_name = 1\n")
+    return check
+
+
+def observed_product_results(observations):
+    """Only controller-exported fixed-subject receipts can supply live proof.
+
+    Provider tool events, command strings, and final claims remain diagnostics.
+    The root observer records actual product stdout before returning it to the
+    actor; session cursors exclude trusted fixture queries from actor evidence.
+    """
+    for observation in observations:
+        subject = observation.get("product_subject")
+        if not subject:
+            continue
+        for call in observation.get("product_calls", []):
+            if (
+                call.get("kind") != "agentic-workspace/observed-installed-call/v1"
+                or call.get("subject") != subject
+                or call.get("exit_code") != 0
+            ):
+                continue
+            for line in call.get("stdout", "").splitlines():
+                if len(line) > 262144 or not line.startswith("{"):
+                    continue
+                try:
+                    result = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(result, dict):
+                    view = result.get("view", result)
+                    if isinstance(view, dict):
+                        yield view
+
+
+def assignment_ingress(observations, restrictions):
+    for result in observed_product_results(observations):
+        for blocker in result.get("decision_packet", {}).get("blockers", []):
+            if blocker.get("owner") == "assignment" and blocker in restrictions:
+                return {"passed": True, "observed_restriction": blocker}
+    return {"passed": False, "reason": "Actor did not observe the current binding Assignment consequence through the installed product."}
+
+
+def finding_ingress(results):
+    """Require observed low-authority ingress linked to its product consequence.
+
+    No final-answer or command-name score. The fixture independently verifies
+    reporting policy and unchanged sources; this checks the distinct AW path.
+    """
+    for result in results:
+        material = result.get("material") or {}
+        activation = result.get("activation") or {}
+        if material.get("kind") != "agentic-workspace/current-material/v1" or activation.get("kind") != "agentic-workspace/activation/v1":
+            continue
+        for item in material.get("items", []):
+            signal = item.get("material", {})
+            source = signal.get("source", {})
+            work = signal.get("work", {})
+            if (
+                item.get("trust") != "caller-asserted"
+                or item.get("currentness") not in {"unverified", "dependencies-current"}
+                or signal.get("kind") != "observation"
+                or source.get("coverage") != "bounded"
+                or source.get("producer") not in {"acting-agent", "acting-agent/source-inspection"}
+                or not source.get("reference")
+                or not signal.get("summary")
+                or work.get("kind") != "current-work"
+                or not work.get("id")
+            ):
+                continue
+            # The response must bind the actual admitted material, rather
+            # than an unrelated occasion or an unbound mention of a skill.
+            revision = (
+                "sha256:"
+                + hashlib.sha256(json.dumps(signal, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+            )
+            if item.get("revision") != revision:
+                continue
+            for candidate in activation.get("candidates", []):
+                entry = candidate.get("entry", {})
+                if (
+                    entry.get("skill_id") == "workspace-instruction-correction"
+                    and entry.get("route") == "workspace/instructions/correction"
+                    and entry.get("source_ref") == ".agentic-workspace/skills/REGISTRY.json"
+                    and candidate.get("occasion") == item
+                    and candidate.get("status") in {"applicability-required", "applicable"}
+                    and candidate.get("outcome_status") == "unsettled"
+                    and any(
+                        request.get("owner") == "activation"
+                        and request.get("task_identity") == work
+                        and any(
+                            j.get("id") == candidate.get("id") and j.get("revision") == candidate.get("revision")
+                            for j in request.get("arguments", {}).get("judgments", [])
+                        )
+                        for request in activation.get("requests", [])
+                    )
+                ):
+                    return {
+                        "passed": True,
+                        "material_revision": revision,
+                        "candidate_id": candidate["id"],
+                        "candidate_revision": candidate["revision"],
+                        "work": work,
+                    }
+    return {
+        "passed": False,
+        "reason": "No complete observed material ingress linked to the current correction activation in the first phase.",
+    }
+
+
+def execute_finding(work, actor):
+    check = finding_fixture(work)
+    before = work.files()
+    prompt = "Inspect how the report is assembled, then add a square field in report.py's format_row. Preserve existing values and order, and run the repository checks."
+    observation_start = len(getattr(actor, "observations", []))
+    deterministic_observations = []
+    if actor:
+        claim = actor.session(work, prompt)
+    else:
+        response = work.start(
+            {
+                "target": ".",
+                "task": TASK,
+                "projection": "full",
+                "material": [
+                    {
+                        "id": "source-finding",
+                        "kind": "observation",
+                        "summary": "The pipeline repeats the same immutable input read for every row.",
+                        "source": {"producer": "acting-agent", "reference": "pipeline.py", "coverage": "bounded"},
+                    }
+                ],
+            }
+        )
+        deterministic_observations.append(response)
+        work.write("report.py", b"def format_row(value):\n return {'value': value, 'square': value*value}\n")
+        claim = {
+            "status": "complete",
+            "reason": "The task passes; repeated source reads could be shared. Reporting latitude leaves that opportunity unapplied.",
+        }
+    work.consumer.exec(["python3", "verify_report.py"])
+    after = work.files()
+    observed = json.loads(after["result.json"])
+    ingress = finding_ingress(observed_product_results(actor.observations[observation_start:]) if actor else deterministic_observations)
+
+    def residue(files):
+        return [
+            name
+            for name in set(before) | set(files)
+            if before.get(name) != files.get(name) and any(part in name for part in ("/memory/", "/planning/", "/instructions/"))
+        ]
+
+    phases = [
+        {
+            "name": "internal-finding-reporting",
+            "ingress_evidence": ingress,
+            "passed": ingress["passed"]
+            and claim.get("status") == "complete"
+            and observed["source_reads"] == 32
+            and after["data.py"] == before["data.py"]
+            and after["pipeline.py"] == before["pipeline.py"]
+            and after["verify_report.py"] == check
+            and not residue(after)
+            and after[".agentic-workspace/config.toml"] == before[".agentic-workspace/config.toml"],
+            "source_reads": observed["source_reads"],
+            "report_evidence": claim,
+            "semantic_boundary": "Observed typed ingress and its linked current activation are mandatory alongside artifacts and reporting policy. This does not establish semantic acceptance of the opportunity or independent PR review.",
+        }
+    ]
+    if not phases[0]["passed"]:
+        return phases
+    # Explicit user authorization for the second phase, after the unprompted finding.
+    if actor:
+        claim = actor.session(work, "Apply the source-reading simplification you reported, preserve the report output, and run its checks.")
+    else:
+        work.write(
+            "pipeline.py",
+            b"from data import load_rows\nfrom report import format_row\n\ndef report():\n return [format_row(v) for v in load_rows()]\n",
+        )
+    work.consumer.exec(["python3", "verify_report.py"])
+    adapted = work.files()
+    result = json.loads(adapted["result.json"])
+    phases.append(
+        {
+            "name": "authorized-canonical-adaptation",
+            "passed": claim.get("status") == "complete"
+            and result["rows"] == observed["rows"]
+            and result["source_reads"] == 1
+            and adapted["data.py"] == before["data.py"]
+            and adapted["verify_report.py"] == check,
+            "source_reads": result["source_reads"],
+        }
+    )
+    if actor:
+        claim = actor.session(work, "Run the repository's report checks using its current files.")
+    work.consumer.exec(["python3", "verify_report.py"])
+    fresh = work.files()
+    phases.append(
+        {
+            "name": "fresh-owner-consequence-and-cosmetic-quietness",
+            "passed": claim.get("status") == "complete"
+            and json.loads(fresh["result.json"]) == result
+            and fresh["report.py"] == adapted["report.py"]
+            and fresh["pipeline.py"] == adapted["pipeline.py"]
+            and fresh["style_note.py"] == before["style_note.py"]
+            and not residue(fresh),
+            "report_evidence": claim,
+            "residue": residue(fresh),
+        }
+    )
+    return phases
+
+
+def execute_activation(consumer, family, *, actor=None):
+    """Ordinary prompts; trusted artifact/readiness observations supply outcomes.
+
+    The database is an independently owned Docker fixture. Actors receive no
+    Docker socket, host credentials, expected AW routes or owner packets.
+    """
+    work = Workspace(consumer)
+    started = time.monotonic()
+    service = None
+    service_record = None
+    phases = []
+    error = None
+    before = {}
+    try:
+        recipe(work, "first-contact")
+        # An explicitly installed standalone executable is repository-local.
+        # Configure its ordinary invocation, without injecting an AW route into
+        # the actor prompt or exposing a competing global installation.
+        work.write(".agentic-workspace/config.toml", ("[workspace]\ncli_invoke=" + json.dumps(" ".join(consumer.command)) + "\n").encode())
+        setup(work)
+        if family == "activation-finding":
+            phases.extend(execute_finding(work, actor))
+        elif family == "activation-no-retention":
+            before = work.files()
+            prompt = (
+                "For this one run only, write output.json with colour blue. The repository default in settings.json must remain unchanged."
+            )
+            if actor:
+                claim = actor.session(work, prompt)
+            else:
+                work.write("output.json", b'{"colour":"blue"}')
+                claim = {"status": "complete"}
+            after = work.files()
+            residue = [
+                name
+                for name in set(before) | set(after)
+                if before.get(name) != after.get(name) and any(part in name for part in ("/memory/", "/planning/", "/instructions/"))
+            ]
+            phases.append(
+                {
+                    "name": "task-only",
+                    "passed": json.loads(after["output.json"])["colour"] == "blue"
+                    and after["settings.json"] == before["settings.json"]
+                    and not residue
+                    and claim.get("status") == "complete",
+                    "residue": residue,
+                }
+            )
+        elif family in {"activation-assignment", "activation-local"}:
+            nonlocal_work = family == "activation-assignment"
+            work.write("worker.py", b"answer = 0\n")
+            policy = assignment_fixture_policy(nonlocal_work)
+            work.write(".agentic-workspace/config.local.toml", policy.encode())
+            before = work.files()
+            if "decision_packet" not in work.start():
+                raise ValueError("Assignment fixture must be admitted by the native repository contract before actor execution")
+            prompt = "Implement worker.py so its answer is 42."
+            observation_start = len(getattr(actor, "observations", []))
+            if actor:
+                claim = actor.session(work, prompt)
+            elif nonlocal_work:
+                current = work.start()
+                claim = (
+                    {"status": "blocked"}
+                    if any(b["owner"] == "assignment" for b in current["decision_packet"]["blockers"])
+                    else {"status": "incomplete"}
+                )
+            else:
+                ordinary_change(work)
+                work.write("worker.py", b"answer = 42\n")
+                claim = {"status": "complete"}
+            after = work.files()
+            if nonlocal_work:
+                current = work.client.call("start", "--task", prompt, "--projection", "full")
+                restrictions = [b for b in current.get("decision_packet", {}).get("blockers", []) if b["owner"] == "assignment"]
+                ingress = (
+                    assignment_ingress(actor.observations[observation_start:], restrictions)
+                    if actor
+                    else {"passed": bool(restrictions), "mode": "deterministic-fixture"}
+                )
+                passed = (
+                    ingress["passed"]
+                    and after["worker.py"] == before["worker.py"]
+                    and bool(restrictions)
+                    and after[".agentic-workspace/config.local.toml"] == before[".agentic-workspace/config.local.toml"]
+                    and after["AGENTS.md"] == before["AGENTS.md"]
+                    and claim.get("status") in {"blocked", "incomplete"}
+                )
+                phases.append(
+                    {"name": "binding-owner-blocker", "passed": passed, "current_restrictions": restrictions, "ingress_evidence": ingress}
+                )
+            else:
+                phases.append(
+                    {"name": "retained-local", "passed": after["worker.py"] == b"answer = 42\n" and claim.get("status") == "complete"}
+                )
+        else:
+            from types import SimpleNamespace
+
+            from consumer_environment import cleanup_record_removed, record_cleanup, run
+
+            if not hasattr(consumer, "sbx"):
+                raise ValueError("Docker ingress actor fixture currently requires the contained Sandbox host")
+            service = "aw-consumer-" + uuid.uuid4().hex
+            service_record = SimpleNamespace(name=service, cleanup_directory=consumer.scratch)
+            record_cleanup(service_record, "docker")
+            run(
+                [
+                    "docker",
+                    "run",
+                    "--detach",
+                    "--rm",
+                    "--name",
+                    service,
+                    "--env",
+                    "POSTGRES_HOST_AUTH_METHOD=trust",
+                    "--publish",
+                    "127.0.0.1::5432",
+                    "postgres:17",
+                ],
+                timeout=180,
+            )
+            port = int(run(["docker", "port", service, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1])
+            run([consumer.sbx, "policy", "allow", "network", "--sandbox", consumer.name, f"host.docker.internal:{port},localhost:{port}"])
+            run(
+                [
+                    consumer.sbx,
+                    "exec",
+                    "--user",
+                    "root",
+                    consumer.name,
+                    "sh",
+                    "-ec",
+                    "apt-get update && apt-get install -y postgresql-client",
+                ],
+                timeout=180,
+            )
+            expected = {"host": "host.docker.internal", "port": port, "database": "postgres", "user": "postgres"}
+            script = (
+                "import json,subprocess,sys\nfrom pathlib import Path\n"
+                "c=json.loads(Path('database.json').read_text())\n"
+                "args=['-h',c['host'],'-p',str(c['port']),'-U',c['user'],'-d',c['database']]\n"
+                "ready=subprocess.run(['pg_isready',*args],capture_output=True).returncode==0\n"
+                "Path('readiness.json').write_text(json.dumps({'ready':ready}))\n"
+                "if not ready: sys.exit(2)\n"
+                "if '--check' in sys.argv:\n"
+                " Path('check-started.json').write_text('{}')\n"
+                " result=subprocess.run(['psql',*args,'-Atc','SELECT 1'],capture_output=True,text=True,check=True)\n"
+                " assert result.stdout.strip()=='1'\n"
+                " Path('proof.json').write_text(json.dumps({'rows':1}))\n"
+            )
+            work.write("readiness.py", script.encode())
+            work.write("database.json", json.dumps({**expected, "host": "127.0.0.1", "port": 5432}).encode())
+            work.write(
+                "README.md",
+                b"Run python3 readiness.py before testing; python3 readiness.py --check runs the database check. database.json is the non-secret canonical connection configuration. Do not change the check to bypass the database.\n",
+            )
+            before = work.files()
+            prompt = (
+                f"Run the database check for this repository. The test database is available in Docker at host.docker.internal:{port}; "
+                "the database and user are postgres, with no password."
+            )
+            if actor:
+                claim = actor.session(work, prompt)
+            else:
+                work.write("database.json", json.dumps(expected).encode())
+                consumer.exec(["python3", "readiness.py", "--check"])
+                claim = {"status": "complete"}
+            after = work.files()
+            observed = consumer.exec(
+                ["psql", "-h", expected["host"], "-p", str(port), "-U", "postgres", "-d", "postgres", "-Atc", "SELECT 1"]
+            )
+            phases.append(
+                {
+                    "name": "information-to-effective-configuration",
+                    "passed": json.loads(after["database.json"]) == expected
+                    and after["readiness.py"] == before["readiness.py"]
+                    and json.loads(after["proof.json"]) == {"rows": 1}
+                    and observed.stdout.strip() == "1"
+                    and claim.get("status") == "complete",
+                }
+            )
+            # A fresh Codex process must regenerate proof without the earlier endpoint hint.
+            consumer.exec(["rm", "--", "check-started.json", "proof.json", "readiness.json"])
+            if actor:
+                claim = actor.session(
+                    work, "Run this repository's database check using its current files; there is no earlier conversation."
+                )
+            else:
+                consumer.exec(["python3", "readiness.py", "--check"])
+            fresh = work.files()
+            phases.append(
+                {
+                    "name": "fresh-agent-stable-consequence",
+                    "passed": claim.get("status") == "complete"
+                    and fresh["readiness.py"] == before["readiness.py"]
+                    and json.loads(fresh["database.json"]) == expected
+                    and json.loads(fresh["proof.json"]) == {"rows": 1}
+                    and json.loads(fresh["readiness.json"]) == {"ready": True},
+                }
+            )
+            run(["docker", "stop", service])
+            cleanup_record_removed(service_record)
+            service = None  # --rm removed the exact owned fixture.
+            consumer.exec(["rm", "--", "check-started.json", "proof.json", "readiness.json"])
+            if actor:
+                claim = actor.session(
+                    work,
+                    "Run this repository's database check.",
+                )
+            else:
+                try:
+                    consumer.exec(["python3", "readiness.py"])
+                except subprocess.CalledProcessError:
+                    pass
+                claim = {"status": "blocked"}
+            stopped = work.files()
+            phases.append(
+                {
+                    "name": "stopped-service-before-test",
+                    "passed": json.loads(stopped["readiness.json"]) == {"ready": False}
+                    and "check-started.json" not in stopped
+                    and "proof.json" not in stopped
+                    and stopped["readiness.py"] == before["readiness.py"]
+                    and claim.get("status") in {"blocked", "incomplete"},
+                }
+            )
+    except (Exception, KeyboardInterrupt) as failure:
+        error = str(failure)[:2000]
+    finally:
+        if service:
+            from consumer_environment import run
+
+            run(["docker", "rm", "--force", service])
+            from consumer_environment import cleanup_record_removed
+
+            cleanup_record_removed(service_record)
+    result = {
+        "family": family,
+        "status": "passed" if phases and all(p["passed"] for p in phases) and not error else "failed",
+        "executed": bool(actor.observations) if actor else True,
+        "driver": "agent" if actor else "deterministic",
+        "phases": phases,
+        "execution_error": error,
+        "environment": consumer.observation,
+        "recipe_sha256": RECIPE_SHA256,
+        "scorer_sha256": SCORER_SHA256,
+        "elapsed_seconds": round(time.monotonic() - started, 3),
+        "support_boundary": "One current installed standalone target; no release-wide or longitudinal acceptance.",
+    }
+    if actor:
+        result.update(actor=actor.observations, actor_sha256=actor.source_sha256)
     return result
 
 

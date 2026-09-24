@@ -1,11 +1,11 @@
 ---
 name: workspace-instruction-correction
-description: Carry trusted corrections, material source inconsistencies and acquired conclusions to their responsible owner for coherent repair or justified retention; preserve scope, authority and no-retention.
+description: Carry trusted corrections, material findings, improvement pressure, source inconsistencies and acquired conclusions to their responsible owner for coherent repair or justified retention; preserve scope, authority and no-retention.
 ---
 
 # Retain repository behavior
 
-Apply trusted corrections to current work. For material source inconsistencies or
+Apply trusted corrections to current work. For findings from source/test work, repeated friction, positive opportunities or
 conclusions with future value, apply the [evidence boundary](../workspace-startup/references/evidence.md)
 and choose the strongest responsible owner. No retention and already-current are valid.
 Evidence alone does not establish publication authority.

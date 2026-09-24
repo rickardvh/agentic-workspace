@@ -73,3 +73,19 @@ def test_stalled_export_is_bounded_before_archive_header(monkeypatch):
     with pytest.raises((ValueError, tarfile.ReadError)):
         Workspace(Consumer()).files()
     assert time.monotonic() - started < 5
+
+
+def test_export_failure_keeps_bounded_diagnostic_tail():
+    class Consumer:
+        name = "fixture"
+
+        def archive_command(self):
+            return [
+                sys.executable,
+                "-c",
+                "import sys; sys.stderr.write('x'*65536+'EXPORT_CAUSE'); sys.stdout.buffer.write(bytes(10240)); sys.exit(2)",
+            ]
+
+    with pytest.raises(ValueError, match="EXPORT_CAUSE") as failure:
+        Workspace(Consumer()).files()
+    assert len(str(failure.value)) < 4200

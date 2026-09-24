@@ -1246,6 +1246,65 @@ def test_internal_finding_has_current_dependencies_without_retention(tmp_path, s
         consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
 
 
+def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_core_binary, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
+    subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes", "--format", "json"], check=True, capture_output=True)
+    context = {"target": str(tmp_path), "task": "Validate current behaviour"}
+    material = [
+        {
+            "id": "environment",
+            "kind": "observation",
+            "summary": "The test database is available through the repository container service.",
+            "source": {"producer": "user", "reference": "current clarification", "coverage": "bounded"},
+        },
+        {
+            "id": "prerequisite",
+            "kind": "need",
+            "summary": "Establish current test readiness before execution.",
+            "source": {"producer": "external-domain", "reference": "current requirement", "coverage": "partial"},
+        },
+    ]
+    current = consume("native", shared_core_binary, native_cli, {**context, "material": material})
+    candidates = current["activation"]["candidates"]
+    assert {"workspace-instruction-correction", "workspace-proof-selection"} <= {c["entry"]["skill_id"] for c in candidates}
+    assert all(isinstance(c["entry"]["route"], str) for c in candidates)
+    native_blockers = current["decision_packet"]["blockers"]
+    request = current["activation"]["requests"][0]
+    for judgment in request["arguments"]["judgments"]:
+        judgment.update(status="no-retention", reason="Task-only information; no future value or owner waiver.")
+    quiet = consume("native", shared_core_binary, native_cli, {**context, "material": material, "request": request})
+    assert quiet["decision_packet"]["blockers"] == native_blockers
+    assert all(c["status"] == "binding-consequence" for c in quiet.get("activation", {}).get("candidates", []))
+
+
+@pytest.mark.parametrize("nonlocal_work", [False, True])
+def test_consumer_assignment_fixture_is_native_compatible(tmp_path, shared_core_binary, native_cli, nonlocal_work):
+    sys.path.insert(0, str(ROOT / "src/tooling/release"))
+    from consumer_journeys import assignment_fixture_policy
+
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(assignment_fixture_policy(nonlocal_work), encoding="utf-8")
+    current = consume(
+        "native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Implement worker.py so its answer is 42"}
+    )
+    assert any(b["owner"] == "assignment" for b in current["decision_packet"]["blockers"])
+
+
+def test_consumer_finding_latitude_is_repository_scoped(tmp_path, shared_core_binary, native_cli):
+    from types import SimpleNamespace
+
+    sys.path.insert(0, str(ROOT / "src/tooling/release"))
+    from consumer_journeys import Workspace, finding_fixture
+
+    work = Workspace(SimpleNamespace(repo=tmp_path))
+    work.write(".agentic-workspace/config.toml", b"[workspace]\n")
+    finding_fixture(work)
+    current = consume("native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Add a square field to the report"})
+    assert current["configuration"]["improvement_latitude"] == "reporting"
+    assert "decision_packet" in current
+
+
 def test_installed_native_activation_index_repairs_new_membership(tmp_path, shared_core_binary, native_cli):
     # Only the shipped executable pair is present in this separate installation.
     install = tmp_path / "install"
