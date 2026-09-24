@@ -11,9 +11,9 @@ from agentic_workspace import start
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def install_method(root: Path, name: str, route: str) -> list[str]:
+def install_method(root: Path, name: str, route: str, *, source: Path | None = None) -> list[str]:
     destination = root / "tools/skills/host-method"
-    shutil.copytree(ROOT / "tools/skills" / name, destination)
+    shutil.copytree(source or ROOT / "tools/skills" / name, destination)
     skill = destination / "SKILL.md"
     skill.write_text(skill.read_text(encoding="utf-8").replace(f"name: {name}", "name: host-method"), encoding="utf-8")
     (destination.parent / "REGISTRY.json").write_text(

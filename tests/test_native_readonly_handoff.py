@@ -8,6 +8,7 @@ import json
 import os
 import shlex
 import sys
+from pathlib import Path
 
 import pytest
 from tests import native_artifact_consumers
@@ -611,10 +612,15 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
 
         from agentic_workspace import start
 
-        input_refs += install_method(tmp_path, "delegation-handoff", "host/collaboration")
+        input_refs += install_method(
+            tmp_path,
+            "planning-assignment",
+            "host/collaboration",
+            source=Path(__file__).resolve().parents[1] / ".agentic-workspace/planning/skills/planning-assignment",
+        )
         selected, answer = question(context, "host/collaboration")
         assert "Carry the current frontier" not in json.dumps(selected)
-        for disposition, branches in [("unknown", []), ("answered", ["local"]), ("answered", ["delegate"]), ("answered", ["handoff"])]:
+        for disposition, branches in [("unknown", []), ("answered", ["local"]), ("answered", ["delegate"]), ("answered", ["binding"])]:
             answer["arguments"]["answer"] = {"disposition": disposition, "branches": branches}
             result = start({**context, "projection": "full", "request": answer})
             assert result["procedure"]["status"] == "current"

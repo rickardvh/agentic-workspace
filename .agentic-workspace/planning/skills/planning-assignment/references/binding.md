@@ -12,6 +12,13 @@ dispatch/transport action. Do not reopen binding target choice because of cost,
 availability or convenience. Only an admitted structured transition can change it.
 Manual-only and unavailable transport are honest states, not failed automatic work.
 
+For a handoff, supply a bounded frontier through the current handoff-input request:
+outcome and scope, still-current judgments with source revisions, required inputs,
+uncertainties, stop conditions and return/proof requirements. Reuse owner material
+before adding a summary; capture relied-upon procedure and evidence sources and
+judge completeness from what the owner actually captured. A summary is neither
+parent chat nor fresh authority. No separate handoff registry is needed.
+
 ```agentic-owner-reference
 {"kind":"action","owner":"delegation","id":"delegation.dispatch"}
 ```
