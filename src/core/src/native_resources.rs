@@ -194,7 +194,19 @@ fn scratch_snapshot(target: &Path, relative: &str) -> Result<Value, CoreError> {
     }
     let dir = Dir::open_ambient_dir(&path, ambient_authority()).map_err(err)?;
     unlinked(&path.join(MARKER))?;
-    let file = dir.open(MARKER).map_err(err)?;
+    let file = match dir.open(MARKER) {
+        Ok(file) => file,
+        Err(e)
+            if e.kind() == std::io::ErrorKind::NotFound
+                && dir.entries().map_err(err)?.next().is_none() =>
+        {
+            // A crash after mkdir may leave this exact empty directory. Only
+            // creation may finish publishing custody; emptiness never grants
+            // authority to remove an unauthenticated container.
+            return Ok(json!({"status":"empty-interrupted"}));
+        }
+        Err(e) => return Err(err(e)),
+    };
     let metadata = file.metadata().map_err(err)?;
     if !metadata.is_file() || metadata.len() > 16384 {
         return Err(err("invalid or oversized scratch marker preserved"));
@@ -460,6 +472,9 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 ));
             }
             snapshot = scratch_snapshot(&target, relative)?;
+            if request.operation == "scratch-remove" && snapshot["status"] == "empty-interrupted" {
+                blockers.push("missing scratch custody; preserve and recover exact task creation");
+            }
             if matches!(
                 request.operation.as_str(),
                 "scratch-retain" | "scratch-release"
