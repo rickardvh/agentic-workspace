@@ -263,10 +263,10 @@ console.log(JSON.stringify(result.effect_outcome));
     journey([npm, "exec", "--no", "--", "agentic-workspace"], consumer, environment)
     startup = consumer / ".agentic-workspace/skills/workspace-startup/SKILL.md"
     startup.write_text("stale installed procedure", encoding="utf-8")
-    with pytest.raises(ValueError, match="differs"):
+    with pytest.raises(ValueError, match="^Installed startup identity mismatch$"):
         validate_pointer(consumer)
     startup.unlink()
-    with pytest.raises(ValueError, match="missing or stale"):
+    with pytest.raises(KeyError, match=r"\.agentic-workspace/skills/workspace-startup/SKILL\.md"):
         validate_pointer(consumer)
     prefix = tmp_path / "global-install"
     subprocess.run(
