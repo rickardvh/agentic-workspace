@@ -200,9 +200,9 @@ def consume(
             command += ["--delivered", reference]
         for path in context.get("changed", []):
             command += ["--changed", path]
-        if context.get("request") or context.get("invocation"):
+        if context.get("request") or context.get("invocation") or "material" in context:
             command += ["--input", "-"]
-        stdin = json.dumps(context.get("invocation", context.get("request")))
+        stdin = json.dumps(context if "material" in context else context.get("invocation", context.get("request")))
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":
@@ -1136,3 +1136,55 @@ def test_resource_transport_matches_native_contract(tmp_path, shared_core_binary
     expected = resource("json", shared_core_binary, native_cli, context)
     assert resource(surface, shared_core_binary, native_cli, context) == expected
     assert not (tmp_path / ".agentic-workspace").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_current_material_is_disposable_and_does_not_reidentify_work(tmp_path, shared_core_binary, native_cli, surface):
+    context = {"target": str(tmp_path), "task": "Establish current readiness"}
+    quiet = consume(surface, shared_core_binary, native_cli, context)
+    material = [
+        {
+            "id": "readiness",
+            "kind": "need",
+            "summary": "Establish the service prerequisite before testing",
+            "source": {"producer": "independent-lab", "reference": "result:17", "coverage": "partial"},
+        }
+    ]
+    current = consume(surface, shared_core_binary, native_cli, {**context, "material": material})
+    assert current["current_work"] == quiet["current_work"]
+    assert current["decision_packet"] == quiet["decision_packet"]
+    assert current["material"]["items"][0]["trust"] == "caller-asserted"
+    carried = consume(surface, shared_core_binary, native_cli, {**context, "material": material, "projection": "carried"})
+    assert carried["carriage"]["context"]["material"] == material
+    assert "material" not in consume(surface, shared_core_binary, native_cli, context)
+    assert not list(tmp_path.iterdir())
+
+
+def test_internal_finding_has_current_dependencies_without_retention(tmp_path, shared_core_binary, native_cli):
+    import hashlib
+
+    source = tmp_path / "checks.py"
+    source.write_text("prepare()\ncheck_a()\nprepare()\ncheck_b()\n", encoding="utf-8")
+    original = source.read_bytes()
+    context = {"target": str(tmp_path), "task": "Add the requested check"}
+    quiet = consume("native", shared_core_binary, native_cli, context)
+    finding = {
+        "id": "repeated-preparation",
+        "kind": "observation",
+        "summary": "Source inspection found that both checks rebuild the same immutable input; sharing preparation may reduce repeated work.",
+        "source": {"producer": "acting-agent/source-inspection", "reference": "checks.py", "coverage": "bounded"},
+        "dependencies": [{"reference": "checks.py", "revision": "sha256:" + hashlib.sha256(original.replace(b"\r\n", b"\n")).hexdigest()}],
+    }
+    current = consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
+    assert current["current_work"] == quiet["current_work"]
+    assert current["decision_packet"] == quiet["decision_packet"]
+    assert current["material"]["items"][0]["currentness"] == "dependencies-current"
+    assert current["material"]["items"][0]["trust"] == "caller-asserted"
+    assert "material" not in consume("native", shared_core_binary, native_cli, context)
+    noise = {**finding, "summary": "A local variable name could be prettier."}
+    assert consume("native", shared_core_binary, native_cli, {**context, "material": [noise]})["current_work"] == quiet["current_work"]
+    assert list(tmp_path.iterdir()) == [source]
+    assert source.read_bytes() == original
+    source.write_text("prepare_once()\ncheck_a()\ncheck_b()\n", encoding="utf-8")
+    with pytest.raises(Exception, match="dependency changed"):
+        consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})

@@ -5,6 +5,29 @@ resolution before optional owner detail is built. Full remains the exhaustive
 diagnostic surface. There is no new public projection, query language, owner
 callback protocol, cache or durable reference registry.
 
+Ordinary `start` also accepts optional `material`: at most 16 observations or
+unmet needs, totalling 64 KiB. Each item has `id`, `kind` (`observation` or
+`need`), `summary`, and `source` with `producer`, `reference`, optional `revision`,
+and `coverage` (`bounded`, `partial`, or `unknown`). An optional `dependencies`
+list contains exact repository `reference`/`revision` pairs, reobserved with the
+normal universal-newline SHA-256 source reader. External revisions remain
+caller assertions. Neither a `user` producer label nor matching bytes confer
+truth, human authority, permission, or proof.
+
+An `observation` also carries findings produced by current repository work:
+source/test inspection, repeated friction, unnecessary cost or a positive
+simplification opportunity. Use truthful acting-agent/source-inspection
+provenance and exact source dependencies when known. No failure or human
+message is required. Materiality and the receiving owner's act/report/no-action
+disposition remain semantic judgments; a weak code smell can stay disposable.
+
+For CLI ingress, pass the context object (including `target`, `task` and
+`material`) through `start --input`; explicit flags must match the envelope.
+Python, TypeScript and JSON use the same context shape. Returned material binds
+`work` to current work; carrying that item into different work is rejected.
+Material does not change task identity or create retained state. A fresh start
+without it is quiet; retain useful consequences only through an existing owner.
+
 ## Construction and authority
 
 All resolutions retain configuration/source grammar and compatibility admission,

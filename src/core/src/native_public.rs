@@ -19,6 +19,8 @@ struct Input {
     task: String,
     #[serde(default)]
     changed: Vec<String>,
+    #[serde(default)]
+    material: Vec<Value>,
     request: Option<Value>,
     invocation: Option<Value>,
 }
@@ -83,6 +85,7 @@ fn resolve_selected(
     let work = json!({"kind":"current-work", "id":digest(&json!({
         "target":target, "task":input.task, "changed":input.changed
     }))?});
+    let material = crate::native_material::view(target, &work, &input.material)?;
     let mut requests = owner_requests(if executing {
         input
             .invocation
@@ -1288,6 +1291,7 @@ fn resolve_selected(
             target: input.target.clone(),
             task: input.task.clone(),
             changed: input.changed.clone(),
+            material: input.material.clone(),
             request: None,
             invocation: Some(original.clone()),
         };
@@ -1661,6 +1665,9 @@ fn resolve_selected(
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
     }
+    if !input.material.is_empty() {
+        public["material"] = material;
+    }
     public["_detail_bindings"] = json!({
         "memory": digest(&memory_identity)?,
         "configuration_write": digest(&json!({"contribution":public["configuration_write"]["contribution"],"recovery":public["configuration_write"]["recovery_requests"],"deferred":public["configuration_write"]["deferred_choices"]}))?,
@@ -1894,6 +1901,9 @@ fn finish_invocation(
     // This is precisely fresh public entry, without replaying the mutation's
     // request or treating its previous source snapshot as current.
     let mut context = json!({"target":target,"task":input.task,"changed":input.changed});
+    if !input.material.is_empty() {
+        context["material"] = json!(input.material);
+    }
     match post_effect_changed_paths(&input.changed, executed, &outcome) {
         Ok(changed) => {
             context["changed"] = json!(changed);

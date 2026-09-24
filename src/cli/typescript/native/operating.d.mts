@@ -7,6 +7,7 @@ export interface WorkContext {
   task?: string;
   changed?: string[];
   request?: Json;
+  material?: JsonObject[];
   projection?: Projection;
   delivered?: string[];
 }
