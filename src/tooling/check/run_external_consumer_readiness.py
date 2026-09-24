@@ -151,12 +151,8 @@ def _rejected(payload: Mapping[str, Any]) -> bool:
 
 def _reverse_dependency_violations() -> list[str]:
     violations: list[str] = []
-    allowed = {
-        "agentic-workspace",
-        "agentic-workspace-memory",
-        "agentic-workspace-planning",
-        "agentic-workspace-verification",
-    }
+    ownership = json.loads((REPO_ROOT / ".github/release-ownership.json").read_text(encoding="utf-8"))
+    allowed = {package["name"] for package in ownership["packages"]}
     for manifest in [REPO_ROOT / "pyproject.toml", *(REPO_ROOT / "packages").glob("*/pyproject.toml")]:
         project = tomllib.loads(manifest.read_text(encoding="utf-8"))["project"]
         for dependency in project.get("dependencies", []):
