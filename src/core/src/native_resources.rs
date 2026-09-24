@@ -8,9 +8,8 @@ use cap_std::{
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
-    collections::BTreeMap,
     fs,
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process::Command,
     time::Duration,
@@ -39,8 +38,6 @@ struct Request {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     route_request: Option<Value>,
     path: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    selection: Option<String>,
     need: Option<String>,
     base: Option<String>,
     reason: Option<String>,
@@ -187,31 +184,28 @@ fn audit(target: &Path) -> Result<Value, CoreError> {
         json!({"kind":"agentic-workspace/local-hygiene/v1","entries":rows,"authority":"classification-only; ignored is not disposable","source_revision":digest(&json!(text))?}),
     )
 }
-fn scratch_snapshot(
-    target: &Path,
-    relative: &str,
-    selection: Option<&str>,
-) -> Result<(Value, Vec<String>), CoreError> {
+// The custody marker authenticates the disposable container. Contents are not
+// an inventory, a revision dependency, or a source of deletion authority.
+fn scratch_snapshot(target: &Path, relative: &str) -> Result<Value, CoreError> {
     let path = target.join(relative);
     unlinked(&path)?;
     if !path.exists() {
-        return Ok((json!({"status":"absent"}), vec![]));
+        return Ok(json!({"status":"absent"}));
     }
     let dir = Dir::open_ambient_dir(&path, ambient_authority()).map_err(err)?;
     unlinked(&path.join(MARKER))?;
-    if path.join(MARKER).exists() && fs::metadata(path.join(MARKER)).map_err(err)?.len() > 16384 {
+    let file = dir.open(MARKER).map_err(err)?;
+    let metadata = file.metadata().map_err(err)?;
+    if !metadata.is_file() || metadata.len() > 16384 {
+        return Err(err("invalid or oversized scratch marker preserved"));
+    }
+    let mut marker_bytes = Vec::new();
+    file.take(16385)
+        .read_to_end(&mut marker_bytes)
+        .map_err(err)?;
+    if marker_bytes.len() > 16384 {
         return Err(err("oversized scratch marker preserved"));
     }
-    let marker_bytes = match dir.read(MARKER) {
-        Ok(bytes) => bytes,
-        Err(e)
-            if e.kind() == std::io::ErrorKind::NotFound
-                && dir.entries().map_err(err)?.next().is_none() =>
-        {
-            return Ok((json!({"status":"empty-interrupted"}), vec![]));
-        }
-        Err(e) => return Err(err(e)),
-    };
     let marker: Value = serde_json::from_slice(&marker_bytes).map_err(err)?;
     if marker["kind"] != "agentic-workspace/task-scratch/v1"
         || marker["path"] != relative
@@ -229,98 +223,22 @@ fn scratch_snapshot(
             "scratch custody differs; preserve contents and reconcile exact owner",
         ));
     }
-    fn walk(
-        dir: &Dir,
-        prefix: &str,
-        out: &mut BTreeMap<String, Value>,
-        files: &mut Vec<String>,
-        bytes: &mut usize,
-    ) -> Result<(), CoreError> {
-        for entry in dir.entries().map_err(err)? {
-            if out.len() >= 2048 {
-                return Err(err(
-                    "scratch exceeds bounded cleanup; preserve and split explicit material",
-                ));
-            }
-            let entry = entry.map_err(err)?;
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let path = if prefix.is_empty() {
-                name.clone()
-            } else {
-                format!("{prefix}/{name}")
-            };
-            let meta = entry.metadata().map_err(err)?;
-            if entry.file_type().map_err(err)?.is_symlink() {
-                return Err(err("linked scratch material must be preserved"));
-            }
-            #[cfg(windows)]
-            {
-                use cap_std::fs::MetadataExt;
-                if meta.file_attributes() & 0x400 != 0 {
-                    return Err(err("linked scratch material must be preserved"));
-                }
-            }
-            if meta.is_dir() {
-                out.insert(path.clone(), json!({"directory":true}));
-                walk(&dir.open_dir(&name).map_err(err)?, &path, out, files, bytes)?;
-            } else if meta.is_file() {
-                *bytes += meta.len() as usize;
-                if *bytes > 16_777_216 {
-                    return Err(err(
-                        "scratch exceeds bounded cleanup bytes; contents beyond the limit are unobserved",
-                    ));
-                }
-                out.insert(
-                    path.clone(),
-                    json!({"revision":digest(&json!(dir.read(&name).map_err(err)?))?}),
-                );
-                files.push(path);
-            } else {
-                return Err(err("nonregular scratch material must be preserved"));
-            }
-        }
-        Ok(())
+    // Marker currentness is bounded. Directory modification time is excluded:
+    // adding disposable contents must not invalidate container ownership.
+    let marker_metadata = fs::metadata(path.join(MARKER)).map_err(err)?;
+    let mut identity = json!({
+        "created":marker_metadata.created().ok(),
+        "modified":marker_metadata.modified().map_err(err)?,
+        "container_created":fs::metadata(&path).map_err(err)?.created().ok()
+    });
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        identity["device"] = json!(marker_metadata.dev());
+        identity["inode"] = json!(marker_metadata.ino());
     }
-    let mut entries = BTreeMap::new();
-    let mut files = Vec::new();
-    if let Some(selected) = selection {
-        crate::decision_source::relative(selected)?;
-        if selected == MARKER {
-            return Err(err("scratch marker is not a disposable selection"));
-        }
-        unlinked(&path.join(selected))?;
-        let metadata = dir.symlink_metadata(selected).map_err(err)?;
-        if !metadata.is_file() || metadata.len() > 16_777_216 {
-            return Err(err(
-                "selected scratch material must be one bounded regular file; preserve",
-            ));
-        }
-        entries.insert(
-            MARKER.to_owned(),
-            json!({"revision":digest(&json!(marker_bytes))?}),
-        );
-        entries.insert(
-            selected.to_owned(),
-            json!({"revision":digest(&json!(dir.read(selected).map_err(err)?))?}),
-        );
-        files.push(selected.to_owned());
-    } else if let Err(problem) = walk(&dir, "", &mut entries, &mut files, &mut 0) {
-        if problem
-            .to_string()
-            .contains("scratch exceeds bounded cleanup")
-        {
-            return Ok((
-                json!({"status":"over-capacity","marker":marker,"observation_limit":problem.to_string(),
-                "recovery":"Select one known regular file of at most 16 MiB with scratch-prune and selection; other material remains unobserved and preserved."}),
-                vec![],
-            ));
-        }
-        return Err(problem);
-    }
-    Ok((
-        json!({"status":"present","marker":marker,"entries":entries}),
-        files,
-    ))
+    identity["marker_revision"] = json!(digest(&json!(marker_bytes))?);
+    Ok(json!({"status":"present","marker":marker,"custody":identity}))
 }
 fn normalized_path(path: &Path) -> String {
     let text = path
@@ -519,15 +437,13 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     )?;
     let policy_revision = digest(&policy)?;
     let mut snapshot;
-    let mut files = vec![];
     let mut blockers = vec![];
     let path: PathBuf;
     let mut registration = Value::Null;
     let mut seed = String::new();
     let mut outputs = vec![];
     match request.operation.as_str() {
-        "scratch-create" | "scratch-remove" | "scratch-prune" | "scratch-retain"
-        | "scratch-release" => {
+        "scratch-create" | "scratch-remove" | "scratch-retain" | "scratch-release" => {
             crate::decision_source::relative(relative)?;
             if relative
                 .strip_prefix(&format!("{SCRATCH}/"))
@@ -543,15 +459,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     "new scratch path must be derived from the explicit current work",
                 ));
             }
-            if (request.operation == "scratch-prune") != request.selection.is_some() {
-                return Err(err(
-                    "scratch-prune requires one explicit selection; other operations accept none",
-                ));
-            }
-            (snapshot, files) = scratch_snapshot(&target, relative, request.selection.as_deref())?;
-            if snapshot["status"] == "over-capacity" {
-                blockers.push("scratch observation limit reached; preserve and use bounded scratch-prune recovery");
-            }
+            snapshot = scratch_snapshot(&target, relative)?;
             if matches!(
                 request.operation.as_str(),
                 "scratch-retain" | "scratch-release"
@@ -563,11 +471,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             {
                 blockers.push("retention disposition requires an existing task container and an explicit reason");
             }
-            if matches!(
-                request.operation.as_str(),
-                "scratch-remove" | "scratch-prune"
-            ) && snapshot["marker"]["retain"] == true
-            {
+            if request.operation == "scratch-remove" && snapshot["marker"]["retain"] == true {
                 blockers.push("retained recovery material requires current owner disposition");
             }
         }
@@ -743,10 +647,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             });
         }
     }
-    if (matches!(
-        request.operation.as_str(),
-        "scratch-remove" | "scratch-prune"
-    ) && snapshot["status"] == "present")
+    if (request.operation == "scratch-remove" && snapshot["status"] == "present")
         || (request.operation == "worktree-remove" && !registration.is_null())
     {
         let current = crate::native_public::start(
@@ -771,6 +672,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             "decision_sources",
             "instructions",
             "assignment",
+            "task_requirements",
             "independent_owners",
         ]
         .iter()
@@ -820,8 +722,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         json!({"decision":{"ready_actions":[invocation]},"invocation":invocation}),
     )?;
     unlinked(&path)?;
-    if request.operation.starts_with("scratch")
-        && scratch_snapshot(&target, relative, request.selection.as_deref())?.0 != snapshot
+    if request.operation.starts_with("scratch") && scratch_snapshot(&target, relative)? != snapshot
     {
         return Err(err(
             "scratch changed at effect barrier; preserve and reobserve",
@@ -851,52 +752,11 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 .map_err(err)?;
             file.sync_all().map_err(err)?;
         }
-        "scratch-remove" if snapshot["status"] == "empty-interrupted" => {
-            fs::remove_dir(&path).map_err(err)?;
-        }
-        "scratch-remove" | "scratch-prune" if snapshot["status"] == "present" => {
+        "scratch-remove" if snapshot["status"] == "present" => {
             let root = Dir::open_ambient_dir(&target, ambient_authority()).map_err(err)?;
-            let dir = root.open_dir(relative).map_err(err)?;
-            // Delete marker last; interrupted cleanup remains recognizable and re-observable.
-            for file in files.into_iter().filter(|p| p != MARKER) {
-                if digest(&json!(dir.read(MARKER).map_err(err)?))?
-                    != snapshot["entries"][MARKER]["revision"]
-                {
-                    return Err(err("scratch retention changed; preserve and reobserve"));
-                }
-                unlinked(&path.join(&file))?;
-                if digest(&json!(dir.read(&file).map_err(err)?))?
-                    != snapshot["entries"][&file]["revision"]
-                {
-                    return Err(err(
-                        "scratch changed at deletion barrier; preserve remaining material and reobserve",
-                    ));
-                }
-                dir.remove_file(file).map_err(err)?;
-            }
-            if request.operation == "scratch-remove" {
-                let mut dirs: Vec<_> = snapshot["entries"]
-                    .as_object()
-                    .unwrap()
-                    .iter()
-                    .filter(|(_, v)| v["directory"] == true)
-                    .map(|(k, _)| k.clone())
-                    .collect();
-                dirs.sort_by_key(|p| std::cmp::Reverse(p.len()));
-                for directory in dirs {
-                    dir.remove_dir(directory).map_err(err)?;
-                }
-                if digest(&json!(dir.read(MARKER).map_err(err)?))?
-                    != snapshot["entries"][MARKER]["revision"]
-                {
-                    return Err(err(
-                        "scratch retention changed during cleanup; preserve marker and reobserve",
-                    ));
-                }
-                dir.remove_file(MARKER).map_err(err)?;
-                drop(dir);
-                root.remove_dir(relative).map_err(err)?;
-            }
+            // Confined native recursive removal does not follow contained links.
+            // Only the authenticated, unretained, unreferenced container is removed.
+            root.remove_dir_all(relative).map_err(err)?;
         }
         "scratch-retain" | "scratch-release" => {
             let mut marker = snapshot["marker"].clone();
