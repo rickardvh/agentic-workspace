@@ -337,6 +337,114 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheel:
     _assert_installed_procedure_bundle(workspace_exe, tmp_path / "procedure-consumer")
 
 
+def test_installed_delegation_choice_and_repository_replacement(workspace_wheel: Path, tmp_path: Path) -> None:
+    """Prove the packaged choice boundary without repeating transport/return tests."""
+    exe = _install_workspace_stack_venv(wheelhouse=[workspace_wheel], tmpdir_path=tmp_path)
+    target = tmp_path / "choice-consumer"
+    target.mkdir()
+    subprocess.run(["git", "init", "-q", str(target)], check=True)
+    assert _run_workspace_console_json(exe, target, "setup", "--yes", "--format", "json")["effect_outcome"]["status"] == "committed"
+    task = "Decide whether a bounded independent explanation warrants delegation"
+
+    def call(request=None, invocation=None):
+        args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--projection", "full"]
+        if request is not None or invocation is not None:
+            packet = tmp_path / "choice-request.json"
+            packet.write_text(json.dumps(invocation if invocation is not None else request), encoding="utf-8")
+            args += ["--input", str(packet)]
+        return _run_workspace_console_json(exe, target, *args)
+
+    initial = call()
+    assert not (target / "tools").exists()
+    assert not any(row["entry"]["skill_id"] == "planning-assignment" for row in initial["activation"]["candidates"])
+    discover = initial["semantic_routes"]["requests"][0]
+    discover["arguments"] = {"parent": "planning/assignment/lifecycle"}
+    selected = call(discover)
+    sources = selected["semantic_routes"]["discovery"]["detail"]["sources"]
+    assert len(sources) == 1 and sources[0]["skill_id"] == "planning-assignment"
+    answer = call(selected["procedure"]["requests"][0])["procedure"]["requests"][0]
+    for disposition, branches in [("answered", ["local"]), ("unknown", []), ("defer", []), ("answered", ["delegate"])]:
+        answer["arguments"]["answer"] = {"disposition": disposition, "branches": branches, "material": {}}
+        result = call(answer)
+        assert result["procedure"]["status"] == "current"
+        assert result["task_requirements"] == initial["task_requirements"]
+        assert result["planning"]["current_owner"] == initial["planning"]["current_owner"]
+        assert result["planning"]["created_owner"] == initial["planning"]["created_owner"]
+        if branches:
+            read = json.loads(json.dumps(discover))
+            read["arguments"]["resource"] = result["procedure"]["next"][0]
+            fragment = call(read)["semantic_routes"]["discovery"]["detail"]["sources"][0]["procedure"]["resource"]
+            assert fragment["selected"]["text"]
+
+    # A delegate method answer does not admit implementation; the existing owner does.
+    policy = target / ".agentic-workspace/config.local.toml"
+    policy.write_text(
+        '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\n'
+        '[delegation_targets.local]\ntransports=[{kind="internal"}]\n',
+        encoding="utf-8",
+    )
+    current = call()
+    assert not current["task_requirements"]["implementation_admission"]["local_continuation_allowed"]
+    requirements = current["task_requirements"]["requests"][0]
+    requirements["arguments"]["required_result_classes"] = ["read-only"]
+    assessment = call(requirements)["task_requirements"]["assignment"]["requests"][0]
+    assessment[-1]["arguments"].update(alternative="local:internal", reason="Only the current target is configured and eligible.")
+    bound = call(assessment)
+    assert bound["task_requirements"]["implementation_admission"]["local_continuation_allowed"]
+    policy.unlink()
+
+    # A distinct repository method is selectable without editing the package body.
+    bundle = target / "tools/skills/repository-choice"
+    bundle.mkdir(parents=True)
+    (bundle / "SKILL.md").write_text(
+        "---\nname: repository-choice\ndescription: Apply repository delegation criteria.\n---\nKeep tightly coupled work local.\n"
+    )
+    (bundle / "procedure.md").write_text(
+        "```agentic-procedure\n"
+        + json.dumps(
+            {
+                "kind": "agentic-workspace/procedure/v1",
+                "id": "choice",
+                "question": "Is the outcome independent under repository criteria?",
+                "branches": [{"id": "local", "description": "Keep coupled work local", "next": "local.md"}],
+            }
+        )
+        + "\n```\n"
+    )
+    (bundle / "local.md").write_text("Repository-specific criteria; current Assignment retains authority.\n")
+    registry = bundle.parent / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "skills": [
+                    {
+                        "id": "repository-choice",
+                        "path": "repository-choice/SKILL.md",
+                        "semantic_routes": ["repository/delegation/choice"],
+                        "procedure_resource": "procedure.md",
+                    }
+                ]
+            }
+        )
+    )
+    retained = {p: p.read_bytes() for p in bundle.iterdir()} | {registry: registry.read_bytes()}
+    discover = call()["semantic_routes"]["requests"][0]
+    discover["arguments"] = {"parent": "repository/delegation/choice"}
+    assert call(discover)["semantic_routes"]["discovery"]["detail"]["sources"][0]["skill_id"] == "repository-choice"
+    # Refresh an actual missing package surface, then remove the installed package.
+    (target / ".agentic-workspace/local/.gitignore").unlink()
+    assert _run_workspace_console_json(exe, target, "setup", "--yes", "--format", "json")["effect_outcome"]["status"] == "committed"
+    owner = call(call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    remove = next(r for r in owner["adoption_requests"] if r["arguments"]["mode"] == "remove")
+    proposed = call(remove)
+    authorization = next(
+        d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+    )["response_request"]
+    authorization["arguments"]["answer"] = "authorize-write"
+    assert call(invocation=call(authorization)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
+    assert all(p.read_bytes() == data for p, data in retained.items())
+
+
 def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> None:
     """Installed delivery/exposure boundary, reusing core semantic/currentness proof."""
     import shutil

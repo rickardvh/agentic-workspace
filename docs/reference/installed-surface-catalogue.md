@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:2688e701f84cf824cdd6359fd393beb95933e206f1a1967c8b4fc9e1f368ab5b`
+- Contract digest: `sha256:f09d195741dd9500fe433bdb93e40bae5b48125b4d253e03c16d21bd59d537ee`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -54,6 +54,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-assignment/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-assignment/references/assessment.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-assignment/references/local.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-assignment/references/binding.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-assignment/references/manual.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-assignment/references/recovery.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
@@ -125,6 +126,7 @@ Portable source promotions:
 - `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md`
 - `.agentic-workspace/planning/skills/planning-assignment/procedure.md`
 - `.agentic-workspace/planning/skills/planning-assignment/references/assessment.md`
+- `.agentic-workspace/planning/skills/planning-assignment/references/local.md`
 - `.agentic-workspace/planning/skills/planning-assignment/references/binding.md`
 - `.agentic-workspace/planning/skills/planning-assignment/references/manual.md`
 - `.agentic-workspace/planning/skills/planning-assignment/references/recovery.md`

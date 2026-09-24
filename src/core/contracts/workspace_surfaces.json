@@ -48,6 +48,7 @@
     ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
     ".agentic-workspace/planning/skills/planning-assignment/procedure.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/assessment.md",
+    ".agentic-workspace/planning/skills/planning-assignment/references/local.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/binding.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/manual.md",
     ".agentic-workspace/planning/skills/planning-assignment/references/recovery.md",
@@ -675,6 +676,20 @@
       }
     },
     {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/references/local.md",
+      "owner": "planning",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Planning-owned reusable procedure, without domain-state or assignment authority",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/planning/skills/planning-assignment/references/local.md"
+      }
+    },
+    {
       "path": ".agentic-workspace/planning/skills/planning-assignment/references/binding.md",
       "owner": "planning",
       "ownership": "package-managed",
@@ -1085,6 +1100,7 @@
       ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
       ".agentic-workspace/planning/skills/planning-assignment/procedure.md",
       ".agentic-workspace/planning/skills/planning-assignment/references/assessment.md",
+      ".agentic-workspace/planning/skills/planning-assignment/references/local.md",
       ".agentic-workspace/planning/skills/planning-assignment/references/binding.md",
       ".agentic-workspace/planning/skills/planning-assignment/references/manual.md",
       ".agentic-workspace/planning/skills/planning-assignment/references/recovery.md",

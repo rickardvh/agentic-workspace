@@ -256,17 +256,6 @@
           "filing dogfooding friction"
         ]
       }
-    },
-    {
-      "id": "delegation-handoff",
-      "path": "delegation-handoff/SKILL.md",
-      "scope": "repo-owned",
-      "stability": "repo-managed",
-      "summary": "Judge useful delegation and carry a bounded semantic frontier through current Assignment and Planning owners.",
-      "semantic_routes": [
-        "workspace/delegation/method"
-      ],
-      "procedure_resource": "procedure.md"
     }
   ],
   "activation_index": [
@@ -283,25 +272,6 @@
         ],
         "applicability": "An externally initiated review needs an eligible independent reviewer and current proof.",
         "outcome": "Independent bounded findings and current review judgment; implementation custody cannot review itself."
-      }
-    },
-    {
-      "id": "delegation-handoff",
-      "path": "delegation-handoff/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "workspace/delegation/method"
-      ],
-      "activation": {
-        "occasions": [
-          "binding"
-        ],
-        "applicability": "Current binding non-local work needs its exact prepared dispatch, handoff or return admission.",
-        "outcome": "Exact current Assignment continuation or an explicit unresolved transport/owner gap.",
-        "binding_owners": [
-          "assignment",
-          "delegation"
-        ]
       }
     }
   ]

@@ -64,10 +64,16 @@ and dependencies are repository-relative, unlike branch links. Verify runtime
 availability before execution; discovery neither executes nor sandboxes it.
 
 For effects, use the current domain owner's exact supported request/action. See
-the existing [delegation method](../../tools/skills/delegation-handoff/SKILL.md)
+the installed [Assignment method](../../.agentic-workspace/planning/skills/planning-assignment/SKILL.md)
 and [review method](../../tools/skills/pr-review-recheck/SKILL.md) for bounded
 compositions. Their policy, independence and proof requirements survive skill
 replacement or removal. A method's answer cannot approve its own implementation.
+
+The installed Assignment method includes the generic pre-binding local/delegate/
+unknown choice. A repository may replace or supplement its criteria with a
+distinct repo-owned skill and source-owned preference; package refresh/removal
+does not own that repository procedure. Repository-specific delegation policy
+stays with its instruction/configuration owner, not the generic installed method.
 
 ## Repair the source and retry
 
