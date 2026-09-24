@@ -266,7 +266,7 @@ console.log(JSON.stringify(result.effect_outcome));
     with pytest.raises(ValueError, match="^Installed startup identity mismatch$"):
         validate_pointer(consumer)
     startup.unlink()
-    with pytest.raises(KeyError, match=r"\.agentic-workspace/skills/workspace-startup/SKILL\.md"):
+    with pytest.raises(ValueError, match="^Installed startup skill missing$"):
         validate_pointer(consumer)
     prefix = tmp_path / "global-install"
     subprocess.run(
