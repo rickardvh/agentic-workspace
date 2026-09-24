@@ -96,6 +96,13 @@ product change or when no verified release tag exists.
 
 ## Preview and first-stable recovery
 
+For registry-only recovery of an existing stable release, dispatch `release.yml`
+on master with the original `tag` and `source_commit`, adding
+`-f registries_only=true`. Python/npm verification uses current reviewed master
+tooling, while its release identity is resolved from the immutable tag and checked
+against `source_commit`. Ordinary publication remains tag-owned. Recovery fetches
+the already-admitted GitHub assets without rebuilding them or moving the tag.
+
 For exploratory external testing, run
 `uv run python src/tooling/release/preview_release.py --version <unused-version>`.
 Inspect its exact source and release-only artefact commit, then repeat with

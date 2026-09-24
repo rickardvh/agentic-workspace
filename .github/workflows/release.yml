@@ -625,9 +625,22 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          ref: ${{ inputs.registries_only && 'master' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name) }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Bind immutable release source independently of recovery tooling
+        id: release-source
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          EXPECTED_SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          release_source=$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")
+          if [ -n "$EXPECTED_SOURCE_COMMIT" ] && [ "$release_source" != "$EXPECTED_SOURCE_COMMIT" ]; then
+            echo "Release tag does not match the requested immutable source" >&2
+            exit 1
+          fi
+          echo "commit=$release_source" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
@@ -659,7 +672,8 @@ jobs:
         id: pending
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
+          RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
+        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
       - name: Publish missing exact PyPI artifacts with trusted identity
         if: steps.pending.outputs.python_pending == 'true'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
@@ -673,7 +687,8 @@ jobs:
       - name: Verify public bytes and clean native consumers
         env:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$(git rev-parse HEAD)" --artifact-dir dist --verify --receipt registry-publication.json
+          RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
+        run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist --verify --receipt registry-publication.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: language-registry-publication
