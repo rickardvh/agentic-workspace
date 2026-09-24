@@ -1,69 +1,69 @@
 {
   "kind": "agentic-workspace/support-bearing-install-projection/v1",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "status": "passed",
-  "published_at": "2026-09-23T08:12:35Z",
-  "release_url": "https://github.com/rickardvh/agentic-workspace/releases/tag/v1.3.2",
-  "source_commit": "07fc7f199beea9d2c745ac1a11f563fe931c2e93",
+  "published_at": "2026-09-24T11:08:12Z",
+  "release_url": "https://github.com/rickardvh/agentic-workspace/releases/tag/v1.4.0",
+  "source_commit": "7eedc96d2e58e07f7e9d692b354d51cb7b957c50",
   "artifact": {
-    "name": "agentic_workspace-1.3.2-py3-none-manylinux_2_39_x86_64.whl",
-    "sha256": "d76e9ac23b92682cb56c04e84bbb388d0634598c7cf4fd6822239273917812a2",
-    "url": "https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-manylinux_2_39_x86_64.whl"
+    "name": "agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl",
+    "sha256": "666e6b04cbc90341d40cf38f013197bcf4ffb9a59f7510f1a810ada40dbd0cfe",
+    "url": "https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl"
   },
-  "install_command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-manylinux_2_39_x86_64.whl#sha256=d76e9ac23b92682cb56c04e84bbb388d0634598c7cf4fd6822239273917812a2\"",
+  "install_command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl#sha256=666e6b04cbc90341d40cf38f013197bcf4ffb9a59f7510f1a810ada40dbd0cfe\"",
   "receipt": {
     "kind": "agentic-workspace/distribution-install-readiness/v1",
-    "sha256": "ec309b47596952c0600c375c9d580d244105e4aeb6e353eaae7176d7f5bd4d62",
-    "url": "https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/distribution-install-readiness.json"
+    "sha256": "98ca2b1449061132117e106b811a0035cccff357964681aaaec1d4019592f108",
+    "url": "https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/distribution-install-readiness.json"
   },
   "platforms": [
     {
       "target": "x86_64-unknown-linux-gnu",
       "artifact": {
-        "asset": "agentic_workspace-1.3.2-py3-none-manylinux_2_39_x86_64.whl",
-        "sha256": "d76e9ac23b92682cb56c04e84bbb388d0634598c7cf4fd6822239273917812a2"
+        "asset": "agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl",
+        "sha256": "666e6b04cbc90341d40cf38f013197bcf4ffb9a59f7510f1a810ada40dbd0cfe"
       },
-      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-manylinux_2_39_x86_64.whl#sha256=d76e9ac23b92682cb56c04e84bbb388d0634598c7cf4fd6822239273917812a2\""
+      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl#sha256=666e6b04cbc90341d40cf38f013197bcf4ffb9a59f7510f1a810ada40dbd0cfe\""
     },
     {
       "target": "aarch64-unknown-linux-gnu",
       "artifact": {
-        "asset": "agentic_workspace-1.3.2-py3-none-manylinux_2_39_aarch64.whl",
-        "sha256": "590427c834bae2f5957adcdfc83ceaafe5ed9f0ec0dad8c00cefbebc558ac800"
+        "asset": "agentic_workspace-1.4.0-py3-none-manylinux_2_39_aarch64.whl",
+        "sha256": "d358b50a19e0c834fdb9231ce2e9bbebe95c22c30529babde4e87ad5fa440247"
       },
-      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-manylinux_2_39_aarch64.whl#sha256=590427c834bae2f5957adcdfc83ceaafe5ed9f0ec0dad8c00cefbebc558ac800\""
+      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_aarch64.whl#sha256=d358b50a19e0c834fdb9231ce2e9bbebe95c22c30529babde4e87ad5fa440247\""
     },
     {
       "target": "x86_64-pc-windows-msvc",
       "artifact": {
-        "asset": "agentic_workspace-1.3.2-py3-none-win_amd64.whl",
-        "sha256": "6781ff32bfec4ca02e4baefb60f2ed1d264d566c46a588294dc900f18f91690f"
+        "asset": "agentic_workspace-1.4.0-py3-none-win_amd64.whl",
+        "sha256": "985a711eef4834baab64d829a22b93687014505558e5e406837054b93ce7284e"
       },
-      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-win_amd64.whl#sha256=6781ff32bfec4ca02e4baefb60f2ed1d264d566c46a588294dc900f18f91690f\""
+      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-win_amd64.whl#sha256=985a711eef4834baab64d829a22b93687014505558e5e406837054b93ce7284e\""
     },
     {
       "target": "aarch64-pc-windows-msvc",
       "artifact": {
-        "asset": "agentic_workspace-1.3.2-py3-none-win_arm64.whl",
-        "sha256": "f861636bff18b5f6fe2ec4c2e9ee325bd73fae105706f88705132a9c824e5b47"
+        "asset": "agentic_workspace-1.4.0-py3-none-win_arm64.whl",
+        "sha256": "1ecae48fee2b4920615f7ae1b562acecfb239da37d87fc27c6af79abb2bea4c3"
       },
-      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-win_arm64.whl#sha256=f861636bff18b5f6fe2ec4c2e9ee325bd73fae105706f88705132a9c824e5b47\""
+      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-win_arm64.whl#sha256=1ecae48fee2b4920615f7ae1b562acecfb239da37d87fc27c6af79abb2bea4c3\""
     },
     {
       "target": "x86_64-apple-darwin",
       "artifact": {
-        "asset": "agentic_workspace-1.3.2-py3-none-macosx_15_0_x86_64.whl",
-        "sha256": "7e02a91ab65e41a339576c3c33500c8b11cf07e37518fac0f99d0e81dc9c05cc"
+        "asset": "agentic_workspace-1.4.0-py3-none-macosx_15_0_x86_64.whl",
+        "sha256": "56b4b81e036c234fe2fe1643278936de41ac93db0f5ea656d82622dc708242be"
       },
-      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-macosx_15_0_x86_64.whl#sha256=7e02a91ab65e41a339576c3c33500c8b11cf07e37518fac0f99d0e81dc9c05cc\""
+      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-macosx_15_0_x86_64.whl#sha256=56b4b81e036c234fe2fe1643278936de41ac93db0f5ea656d82622dc708242be\""
     },
     {
       "target": "aarch64-apple-darwin",
       "artifact": {
-        "asset": "agentic_workspace-1.3.2-py3-none-macosx_14_0_arm64.whl",
-        "sha256": "b9dccbbe8f9e98747cabbde0ffcb4b75927ff3e2f143a393ba749891f13c86c8"
+        "asset": "agentic_workspace-1.4.0-py3-none-macosx_14_0_arm64.whl",
+        "sha256": "a3072e74192998f8071a063ebd63c29a159add22032053e8c93700b1f671df77"
       },
-      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.3.2/agentic_workspace-1.3.2-py3-none-macosx_14_0_arm64.whl#sha256=b9dccbbe8f9e98747cabbde0ffcb4b75927ff3e2f143a393ba749891f13c86c8\""
+      "command": "uv tool install \"agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-macosx_14_0_arm64.whl#sha256=a3072e74192998f8071a063ebd63c29a159add22032053e8c93700b1f671df77\""
     }
   ]
 }
