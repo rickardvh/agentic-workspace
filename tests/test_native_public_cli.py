@@ -200,9 +200,11 @@ def consume(
             command += ["--delivered", reference]
         for path in context.get("changed", []):
             command += ["--changed", path]
-        if context.get("request") or context.get("invocation") or "material" in context:
+        if context.get("request") or context.get("invocation") or "material" in context or "maintenance" in context:
             command += ["--input", "-"]
-        stdin = json.dumps(context if "material" in context else context.get("invocation", context.get("request")))
+        stdin = json.dumps(
+            context if "material" in context or "maintenance" in context else context.get("invocation", context.get("request"))
+        )
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":

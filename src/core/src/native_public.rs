@@ -21,8 +21,15 @@ struct Input {
     changed: Vec<String>,
     #[serde(default)]
     material: Vec<Value>,
+    maintenance: Option<Maintenance>,
     request: Option<Value>,
     invocation: Option<Value>,
+}
+
+#[derive(Clone, Copy, Deserialize, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum Maintenance {
+    Configuration,
 }
 
 fn input(value: Value) -> Result<(Input, PathBuf), CoreError> {
@@ -82,9 +89,13 @@ fn resolve_selected(
     if compatibility["status"] == "blocked" {
         return Ok(compatibility);
     }
-    let work = json!({"kind":"current-work", "id":digest(&json!({
+    let mut work_identity = json!({
         "target":target, "task":input.task, "changed":input.changed
-    }))?});
+    });
+    if let Some(maintenance) = input.maintenance {
+        work_identity["maintenance"] = json!(maintenance);
+    }
+    let work = json!({"kind":"current-work", "id":digest(&work_identity)?});
     let material = crate::native_material::view(target, &work, &input.material)?;
     let mut requests = owner_requests(if executing {
         input
@@ -95,6 +106,28 @@ fn resolve_selected(
         input.request.as_ref()
     })
     .map_err(|error| error.dispatch_mismatch(DispatchMismatch::Carriage))?;
+    // Repair still resolves governing owners and admits exact effects normally.
+    // It cannot execute unrelated work while package procedures are between versions.
+    if input.maintenance.is_some()
+        && (requests.iter().any(|request| {
+            request["owner"] != "configuration"
+                && !(request["owner"] == "startup-adapter"
+                    && request["request_kind"] == "startup-adapter/read-current-source/v1")
+        }) || input.invocation.as_ref().is_some_and(|invocation| {
+            !matches!(
+                invocation["operation_id"].as_str(),
+                Some(
+                    "configuration.repository-adoption"
+                        | "configuration.write"
+                        | "configuration.recover-write"
+                )
+            )
+        }))
+    {
+        return Err(CoreError::new(
+            "configuration maintenance accepts only Configuration requests and writes, with required startup-source reads",
+        ));
+    }
     // Resource policy uses the same current semantic route dependency as direct
     // entry. Promote only this typed owner's declared dependency, never search
     // arbitrary semantic material for envelopes.
@@ -286,6 +319,7 @@ fn resolve_selected(
         view["former_selection"] = candidate;
     }
     if let Some(view) = routes.as_mut()
+        && input.maintenance.is_none()
         && view["status"] == "current"
         && let Some(parent) = view["decision"]["semantic_task_routes"]["routes"]
             .as_array()
@@ -1293,6 +1327,7 @@ fn resolve_selected(
             task: input.task.clone(),
             changed: input.changed.clone(),
             material: input.material.clone(),
+            maintenance: input.maintenance,
             request: None,
             invocation: Some(original.clone()),
         };
@@ -1721,7 +1756,11 @@ fn resolve_selected(
             public["configuration_write"]["requested_behavior_scope"].clone();
     }
     crate::native_configuration_assessment::validate_consumers(target, &public)?;
-    let activation = crate::native_activation::view(target, &public, request_for("activation"))?;
+    let activation = if input.maintenance.is_some() {
+        json!({"status":"not-evaluated", "reason":"Explicit Configuration maintenance; re-enter ordinary start after repair."})
+    } else {
+        crate::native_activation::view(target, &public, request_for("activation"))?
+    };
     if !activation.is_null() {
         public["activation"] = activation;
     }
@@ -1799,9 +1838,13 @@ struct InvocationProgress {
 }
 
 fn reentry(value: &Value) -> Value {
-    json!({"operation":"start","context":{"target":value["target"],
+    let mut result = json!({"operation":"start","context":{"target":value["target"],
         "task":value.get("task").cloned().unwrap_or(json!("")),
-        "changed":value.get("changed").cloned().unwrap_or(json!([]))}})
+        "changed":value.get("changed").cloned().unwrap_or(json!([]))}});
+    if let Some(maintenance) = value.get("maintenance") {
+        result["context"]["maintenance"] = maintenance.clone();
+    }
+    result
 }
 
 pub(crate) fn rejected_invocation(value: &Value, message: &str) -> Value {
@@ -1906,6 +1949,9 @@ fn finish_invocation(
     // This is precisely fresh public entry, without replaying the mutation's
     // request or treating its previous source snapshot as current.
     let mut context = json!({"target":target,"task":input.task,"changed":input.changed});
+    if let Some(maintenance) = input.maintenance {
+        context["maintenance"] = json!(maintenance);
+    }
     if !input.material.is_empty() {
         context["material"] = json!(input.material);
     }
