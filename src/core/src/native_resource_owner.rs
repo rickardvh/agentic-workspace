@@ -9,6 +9,7 @@ const REQUEST: &str = "resources/propose/v1";
 const OPERATIONS: &[&str] = &[
     "scratch-create",
     "scratch-remove",
+    "scratch-prune",
     "scratch-retain",
     "scratch-release",
     "worktree-create",

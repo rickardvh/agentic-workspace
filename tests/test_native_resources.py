@@ -137,7 +137,7 @@ def test_resource_exact_actions_scratch_and_fresh_recovery(tmp_path, shared_core
         file.truncate(160 * 1024 * 1024)
     for index in range(2050):
         (nested / str(index)).touch()
-    with pytest.raises(AssertionError, match="unknown resource operation"):
+    with pytest.raises(AssertionError, match="requires one explicit selection"):
         call("scratch-prune", path=relative)
     removed = call("scratch-remove", path=relative)
     assert removed["effect_outcome"] == "committed" and not path.exists()
@@ -354,6 +354,39 @@ def test_scratch_create_recovers_only_its_exact_empty_interruption(tmp_path, sha
     assert created["effect_outcome"] == "committed" and created["path"] == proposal["path"]
     assert json.loads((path / ".aw-scratch.json").read_text())["task"] == context["task"]
     resource("native", shared_core_binary, native_cli, call("scratch-remove")["action"])
+    assert not path.exists()
+
+
+def test_deprecated_prune_preserves_1x_selected_file_contract(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Existing 1.x prune client"}
+
+    def call(operation, **extra):
+        return resource("native", shared_core_binary, native_cli, {**context, "request": {"operation": operation, **extra}})
+
+    def execute(proposal):
+        return resource("native", shared_core_binary, native_cli, proposal["action"])
+
+    created = execute(call("scratch-create"))
+    path = Path(created["path"])
+    selected = path / "selected.txt"
+    selected.write_text("disposable")
+    sibling = path / "large.bin"
+    with sibling.open("wb") as file:
+        file.truncate(20 * 1024 * 1024)
+    for selection in ("../outside", ".aw-scratch.json", "large.bin"):
+        with pytest.raises(AssertionError):
+            call("scratch-prune", selection=selection)
+    pending = call("scratch-prune", selection="selected.txt")
+    selected.write_text("changed selection")
+    with pytest.raises(AssertionError, match="changed"):
+        execute(pending)
+    assert selected.exists() and sibling.exists()
+    execute(call("scratch-retain", reason="Still needed"))
+    assert "action" not in call("scratch-prune", selection="selected.txt")
+    execute(call("scratch-release", reason="Disposition settled"))
+    assert execute(call("scratch-prune", selection="selected.txt"))["effect_outcome"] == "committed"
+    assert not selected.exists() and sibling.exists() and (path / ".aw-scratch.json").exists()
+    execute(call("scratch-remove"))
     assert not path.exists()
 
 
