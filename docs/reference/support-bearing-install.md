@@ -6,25 +6,25 @@ Human-copyable projection of the latest stable release-owned installation receip
 
 This receipt describes only its named release. It does not install newer branch or admitted-but-unpublished behaviour; consult the [installation guide](../agentic-workspace-install.md) for the current implementation boundary.
 
-- Release: [1.4.0](https://github.com/rickardvh/agentic-workspace/releases/tag/v1.4.0)
-- Published: `2026-09-24T11:08:12Z`
-- Dereferenced source commit: `7eedc96d2e58e07f7e9d692b354d51cb7b957c50`
-- Receipt: [agentic-workspace/distribution-install-readiness/v1](https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/distribution-install-readiness.json)
-- Receipt digest: `sha256:98ca2b1449061132117e106b811a0035cccff357964681aaaec1d4019592f108`
-- Root artefact: [agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl](https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl)
-- Artefact digest: `sha256:666e6b04cbc90341d40cf38f013197bcf4ffb9a59f7510f1a810ada40dbd0cfe`
+- Release: [1.4.1](https://github.com/rickardvh/agentic-workspace/releases/tag/v1.4.1)
+- Published: `2026-09-24T15:09:04Z`
+- Dereferenced source commit: `e5af7626a04f2013b557ab912f6b93d4072028bd`
+- Receipt: [agentic-workspace/distribution-install-readiness/v1](https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/distribution-install-readiness.json)
+- Receipt digest: `sha256:5bcf48d83af1d59998403dd139812a807eefbab2b2eddae54afaea6269e89fbe`
+- Root artefact: [agentic_workspace-1.4.1-py3-none-manylinux_2_39_x86_64.whl](https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-manylinux_2_39_x86_64.whl)
+- Artefact digest: `sha256:bc7324db53b49aee8c5d6581b5228a42dfa61f655a3eba80b1d686764d46964d`
 
 ```bash
-uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl#sha256=666e6b04cbc90341d40cf38f013197bcf4ffb9a59f7510f1a810ada40dbd0cfe"
+uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-manylinux_2_39_x86_64.whl#sha256=bc7324db53b49aee8c5d6581b5228a42dfa61f655a3eba80b1d686764d46964d"
 ```
 
 The command above is for the root receipt's named platform, not a universal wheel. Choose your platform:
 
-- `x86_64-unknown-linux-gnu`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_x86_64.whl#sha256=666e6b04cbc90341d40cf38f013197bcf4ffb9a59f7510f1a810ada40dbd0cfe"`
-- `aarch64-unknown-linux-gnu`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-manylinux_2_39_aarch64.whl#sha256=d358b50a19e0c834fdb9231ce2e9bbebe95c22c30529babde4e87ad5fa440247"`
-- `x86_64-pc-windows-msvc`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-win_amd64.whl#sha256=985a711eef4834baab64d829a22b93687014505558e5e406837054b93ce7284e"`
-- `aarch64-pc-windows-msvc`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-win_arm64.whl#sha256=1ecae48fee2b4920615f7ae1b562acecfb239da37d87fc27c6af79abb2bea4c3"`
-- `x86_64-apple-darwin`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-macosx_15_0_x86_64.whl#sha256=56b4b81e036c234fe2fe1643278936de41ac93db0f5ea656d82622dc708242be"`
-- `aarch64-apple-darwin`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.0/agentic_workspace-1.4.0-py3-none-macosx_14_0_arm64.whl#sha256=a3072e74192998f8071a063ebd63c29a159add22032053e8c93700b1f671df77"`
+- `x86_64-unknown-linux-gnu`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-manylinux_2_39_x86_64.whl#sha256=bc7324db53b49aee8c5d6581b5228a42dfa61f655a3eba80b1d686764d46964d"`
+- `aarch64-unknown-linux-gnu`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-manylinux_2_39_aarch64.whl#sha256=40161d65167383d564c1fff3561624fd6910e5319791109a21967673b112caa3"`
+- `x86_64-pc-windows-msvc`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-win_amd64.whl#sha256=97e8efe753357db27ffc28bf70950ff2bec28407841edba26b1173858ab1ab52"`
+- `aarch64-pc-windows-msvc`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-win_arm64.whl#sha256=8845405bf27da608229b664b073da3f0bbe9335c112f07dc8c9f1cb61683ef7d"`
+- `x86_64-apple-darwin`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-macosx_15_0_x86_64.whl#sha256=682d463fdae8a629048e7ffd1f05144ebb9925ef689ffb6bbe443c7109ab3b26"`
+- `aarch64-apple-darwin`: `uv tool install "agentic-workspace @ https://github.com/rickardvh/agentic-workspace/releases/download/v1.4.1/agentic_workspace-1.4.1-py3-none-macosx_14_0_arm64.whl#sha256=3309c6d8cbff30964392610ed2a9e279c4aecf9abfc4297e91a11ce39ce8ae15"`
 
 The release receipt remains authority. This checked-in page is a parity-checked projection for discovery; mutable branch, registry, editable, source-checkout, and debug installs are not substituted for this identity.
