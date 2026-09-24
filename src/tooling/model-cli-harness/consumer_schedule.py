@@ -54,7 +54,7 @@ ROTATION = (
 )
 
 
-def selection(day, *, skip_macos=True):
+def selection(day, *, skip_macos=True, deterministic_only=False):
     rows = platform_release.platforms()
     live = []
     for index, (target, profile, family, sessions) in enumerate(ROTATION[day % 7]):
@@ -76,7 +76,7 @@ def selection(day, *, skip_macos=True):
         deterministic.append({**native, "id": "native", "backend": "native", "profile": "standalone", "family": "first-contact"})
     return {
         "day": day % 7,
-        "live": live,
+        "live": [] if deterministic_only else live,
         "deterministic": deterministic,
         "session_limit": 3,
         "seconds_per_session": 900,
@@ -84,7 +84,7 @@ def selection(day, *, skip_macos=True):
     }
 
 
-def freeze(destination, *, version=None, previous=None, day=None, skip_macos=True):
+def freeze(destination, *, version=None, previous=None, day=None, skip_macos=True, deterministic_only=False):
     destination.mkdir(parents=True, exist_ok=False)
     if version is None:
         version = json.loads(fetch(f"https://api.github.com/repos/{REPOSITORY}/releases/latest"))["tag_name"].removeprefix("v")
@@ -103,7 +103,11 @@ def freeze(destination, *, version=None, previous=None, day=None, skip_macos=Tru
         previous = max(candidates, key=lambda v: tuple(map(int, v.split("."))))
     current = Subject.public(version, destination / "current")
     prior = Subject.public(previous, destination / "previous")
-    plan = selection(dt.datetime.now(dt.timezone.utc).weekday() if day is None else day, skip_macos=skip_macos)
+    plan = selection(
+        dt.datetime.now(dt.timezone.utc).weekday() if day is None else day,
+        skip_macos=skip_macos,
+        deterministic_only=deterministic_only,
+    )
     plan.update(
         kind="agentic-workspace/consumer-plan/v1",
         current=current.identity(),
@@ -243,6 +247,7 @@ def summary(plan, paths):
     return {
         "kind": "agentic-workspace/consumer-summary/v1",
         "subject": plan["current"],
+        "scope": "deterministic-and-live" if plan["live"] else "deterministic-only",
         "harness_commit": plan["harness_commit"],
         "evidence_age_seconds": max(0, age),
         "stale": age > 48 * 3600,
@@ -266,6 +271,7 @@ def main():
     parser.add_argument("--previous")
     parser.add_argument("--day", type=int, choices=range(7))
     parser.add_argument("--include-macos", action="store_true")
+    parser.add_argument("--deterministic-only", action="store_true", help="Freeze only deterministic assignments for hosted execution")
     parser.add_argument("--kind", choices=["deterministic", "live"])
     parser.add_argument("--case-id")
     parser.add_argument("--template")
@@ -281,7 +287,14 @@ def main():
         return 0
     if args.operation == "freeze":
         try:
-            plan = freeze(args.directory, version=args.version, previous=args.previous, day=args.day, skip_macos=not args.include_macos)
+            plan = freeze(
+                args.directory,
+                version=args.version,
+                previous=args.previous,
+                day=args.day,
+                skip_macos=not args.include_macos,
+                deterministic_only=args.deterministic_only,
+            )
         except Exception as error:
             args.directory.mkdir(parents=True, exist_ok=True)
             failure = {

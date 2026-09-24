@@ -103,14 +103,35 @@ def test_recurring_workflow_has_no_pr_provider_ingress_and_seven_day_retention()
     workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
     assert workflow["on"]["schedule"][0]["cron"] == "23 7 * * *"
     assert "pull_request_target" not in workflow["on"] and "pull_request" not in workflow["on"]
-    live = workflow["jobs"]["live"]
-    assert "github.ref == 'refs/heads/master'" in live["if"]
-    assert live["environment"] == "consumer-live"
-    assert "CONSUMER_LIVE_RUNNER_READY" in live["if"]
+    assert set(workflow["jobs"]) == {"freeze", "deterministic", "report"}
+    assert "live" not in workflow["on"]["workflow_dispatch"]["inputs"]
+    freeze = next(step for step in workflow["jobs"]["freeze"]["steps"] if step.get("id") == "freeze")
+    assert "freeze --directory frozen --deterministic-only" in freeze["run"]
+    assert workflow["jobs"]["report"]["needs"] == ["freeze", "deterministic"]
+    assert "--kind live" not in path.read_text()
     for job in workflow["jobs"].values():
         for step in job["steps"]:
             if step.get("uses", "").startswith("actions/upload-artifact@"):
                 assert step["with"]["retention-days"] == "7"
+
+
+def test_hosted_scope_passes_only_with_all_deterministic_results(tmp_path):
+    selected = {**plan(), **schedule.selection(0, deterministic_only=True)}
+    assert selected["live"] == []
+    assert schedule.selection(0)["live"]  # Local live selection remains available.
+    assert schedule.summary(selected, [])["status"] == "incomplete-or-failed"
+    paths = []
+    for case in selected["deterministic"]:
+        path = tmp_path / (case["id"] + ".json")
+        path.write_text(json.dumps({"status": "passed", "executed": True, "requested": selected["current"]}))
+        paths.append(path)
+    result = schedule.summary(selected, paths)
+    assert result["scope"] == "deterministic-only"
+    assert result["status"] == "passed"
+    assert result["assigned"] == result["passed"] == len(selected["deterministic"])
+    paths[0].write_text(json.dumps({"status": "failed", "executed": True, "failure_class": "execution"}))
+    assert schedule.summary(selected, paths)["status"] == "incomplete-or-failed"
+    assert schedule.summary(plan(), paths)["status"] == "incomplete-or-failed"
 
 
 def test_release_observation_waits_for_both_registry_attempts_even_on_failure():
