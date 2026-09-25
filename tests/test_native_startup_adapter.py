@@ -297,7 +297,9 @@ def test_small_required_source_arrives_without_read_ceremony(tmp_path, shared_co
     for projection in ("compact", "carried"):
         result = consume(surface, shared_core_binary, native_cli, context | {"projection": projection})
         visible = result["view"] if projection == "carried" else result
-        assert visible["decision_packet"]["material"]["startup-adapter"] == read
+        material = dict(visible["decision_packet"]["material"]["startup-adapter"])
+        assert material.pop("delivery")["status"] == "included"
+        assert material == read
         assert visible["decision_packet"]["claim_boundary"] == full["decision_packet"]["claim_boundary"]
     source.write_bytes(original + b"New required stop.\n")
     changed = consume(surface, shared_core_binary, native_cli, context)
