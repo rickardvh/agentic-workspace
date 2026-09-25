@@ -189,7 +189,7 @@
       "original work context"
     ],
     "admission": "References are opaque identity, not authority. Rust addresses selected owner detail before optional hydration, reobserves mandatory dependency contributions, and executes exact actions through current native admission. Compact/carried post-effect continuation uses the same frontier boundary.",
-    "bounded_answer": "Fill only the absent answer slot of the exact current selected decision; preserve every supplied owner argument.",
+    "bounded_answer": "For a decision, fill only its absent answer slot and preserve supplied owner arguments. For an exact owner request reference, supply an arguments object merged into its template; owner identity, revisions and task binding remain immutable and normal owner validation admits the proposal. Preserve prior peer requests in returned carriage. Neither form executes effects.",
     "context": "Carry unchanged target/task/changed/request; explicit differences require fresh start.",
     "source_delivery": "Optional delivered refs and available_sources assertions suppress only source prose after fresh owner resolution. Assertions name reference, raw-byte sha256 revision and extent (whole-source, or exact-fragment with selector and content_revision). They match only resolved source_material, never discover files. Unknown or incomplete extent stays deliverable. Both are caller-local, absent from carriage; clear them after context loss. delivery describes included, caller-held, already-delivered or needed material, never comprehension, policy satisfaction, proof or effects.",
     "recovery": "Unknown, changed or lost carriage requires fresh source-owner resolution; no durable registry.",
@@ -294,7 +294,7 @@
       {
         "flag": "--answer",
         "field": "answer",
-        "description": "JSON bounded answer for an exact carried decision reference; all owner material remains unchanged."
+        "description": "JSON answer for an exact decision reference, or an arguments object for an exact owner request reference. Preserves owner identity and prior carried answers; normal owner validation applies."
       },
       {
         "flag": "--delivered",

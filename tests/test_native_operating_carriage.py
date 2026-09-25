@@ -30,6 +30,69 @@ def size(value):
     return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode())
 
 
+def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_binary, native_cli):
+    """A request proposal must not discard the earlier owner-relation answer."""
+    from tests.test_native_planning_create import material
+
+    def call(value):
+        return consume("json", shared_core_binary, native_cli, value)
+
+    context = {"target": str(tmp_path), "task": "Prepare the gated service rollout"}
+    value = material()
+    create = call(context)["planning"]["creation_requests"][0]
+    create["arguments"]["material"] = value
+    ready = call({**context, "request": create})
+    created = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
+    selected_context = created["value"]["selection_context"]
+    selection = call({**selected_context, "request": created["value"]["selection_request"]})
+    call({**selected_context, "invocation": selection["decision_packet"]["primary_action"]})
+    path = tmp_path / created["value"]["owner_path"]
+    before = path.read_bytes()
+
+    fresh = call({**context, "task": "Finish the approved rollout", "projection": "carried"})
+    related = call(
+        {
+            "request": fresh["carriage"],
+            "reference": fresh["view"]["decision_packet"]["decision_request"]["reference"],
+            "answer": "continue-selected",
+            "projection": "carried",
+        }
+    )
+    request = call({"request": related["carriage"], "reference": "owner:request:planning:planning/update/v1"})
+    value["continuation"] = {"accepted_progress": "Approved rollout completed with the retained retry choice"}
+    value["blockers"] = []
+    value["next_action"] = "No remaining service work"
+    value["lifecycle"] = "closed"
+    value["phase"] = "complete"
+    with pytest.raises(AssertionError):
+        call({"request": related["carriage"], "reference": request["reference"], "answer": {"owner_revision": "forged"}})
+    assert path.read_bytes() == before
+    proposed = call(
+        {
+            "request": related["carriage"],
+            "reference": request["reference"],
+            "answer": {"material": value},
+            "projection": "carried",
+        }
+    )
+    assert path.read_bytes() == before
+    requests = proposed["carriage"]["context"]["request"]
+    assert {r["request_kind"] for r in requests} == {"planning/continuation/v1", "planning/update/v1"}
+    updated_request = next(r for r in requests if r["request_kind"] == "planning/update/v1")
+    assert {k: v for k, v in updated_request.items() if k != "arguments"} == {k: v for k, v in request["value"].items() if k != "arguments"}
+    assert updated_request["arguments"]["owner_ref"] == request["value"]["arguments"]["owner_ref"]
+    result = call(
+        {
+            "invocation": proposed["carriage"],
+            "reference": proposed["view"]["decision_packet"]["primary_action"]["reference"],
+        }
+    )
+    assert result["effect_outcome"]["status"] == "committed"
+    retained = json.loads(path.read_bytes())
+    assert retained["continuation"] == value["continuation"]
+    assert retained["lifecycle"] == "closed"
+
+
 def test_shell_carriage_keeps_transport_outside_model_output(tmp_path, shared_core_binary, native_cli):
     """Execute the maintained shell recipe at the actual stdout boundary."""
     shell = shutil.which("pwsh")

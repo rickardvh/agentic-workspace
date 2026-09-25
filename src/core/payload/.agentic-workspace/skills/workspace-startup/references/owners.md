@@ -18,8 +18,12 @@ For a multi-step exchange, keep the returned carriage and use its exact referenc
 with the bounded answer as shown below. Do not switch back to bare task flags
 after answering a question: that fresh resolution can ask the question again or
 withhold the next request. Keep the updated carriage after every answered step.
-The shell
-command carries ordinary arguments and the file path, not nested text, JSON
+Resolve a stable `owner:request:...` identity using the same carriage. Its returned
+`reference` accepts an `--answer` object containing the requested argument fields
+(for example `{"material": {...}}`); native validation still governs the proposal.
+Use that exact reference, not the stable identity itself, when submitting an
+answer. Request identity and revision fields are never part of the answer.
+The shell command carries ordinary arguments and the file path, not nested text, JSON
 serialization or quoting logic. Continue from the returned result/action; file
 input uses the same native owner validation and grants no additional authority.
 

@@ -518,10 +518,14 @@ fn resolve_owner_reference(
         );
     }
     let selected = matches.remove(0);
-    Ok(
-        json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],
-        "authority_effect":"none","continuation":"Use the exact reference through the existing owner answer/invoke path; a request template still requires its owner's requested input. Resolution never executes or retries."}),
-    )
+    let mut result = json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],
+        "authority_effect":"none","continuation":"Use the exact reference through the existing owner answer/invoke path; a request template still requires its owner's requested input. Resolution never executes or retries."});
+    if wanted.kind == "request" {
+        result["answer_input"] = json!(
+            "Object of requested argument fields, merged into the template under normal owner validation. Reuse the same work context or carriage; do not copy immutable request identity."
+        );
+    }
+    Ok(result)
 }
 
 fn use_selected(
@@ -562,23 +566,40 @@ fn use_selected(
             detail,
         ));
     }
-    if selector == "/decision_packet/decision_request" {
+    if selector == "/decision_packet/decision_request"
+        || (selector.starts_with("request:") && answer.is_some())
+    {
         let answer = answer.ok_or_else(|| error("bounded answer required"))?;
-        if selected_entry["envelope"]["response_request"]["arguments"]
-            .get("answer")
-            .is_some()
-        {
-            return Err(error(
-                "owner already supplied answer; immutable material cannot be replaced",
-            ));
-        }
-        let answered = crate::answer_decision_value(json!({
-            "decision":current["decision_packet"],
-            "question":selected_entry["envelope"]["consequence_id"],
-            "answer":answer,
-            "capability_contract":current["capability_contract"]
-        }))?["request"]
-            .clone();
+        let answered = if selector.starts_with("request:") {
+            let supplied = answer
+                .as_object()
+                .ok_or_else(|| error("owner request answer must be an arguments object"))?;
+            let mut request = selected_entry["envelope"].clone();
+            let arguments = request["arguments"]
+                .as_object_mut()
+                .ok_or_else(|| error("owner request arguments must be an object"))?;
+            // Only argument material is caller-authored. Exact request identity,
+            // revisions and task binding stay owner-issued; the normal owner
+            // schema and currentness path validates the resulting proposal.
+            arguments.extend(supplied.clone());
+            request
+        } else {
+            if selected_entry["envelope"]["response_request"]["arguments"]
+                .get("answer")
+                .is_some()
+            {
+                return Err(error(
+                    "owner already supplied answer; immutable material cannot be replaced",
+                ));
+            }
+            crate::answer_decision_value(json!({
+                "decision":current["decision_packet"],
+                "question":selected_entry["envelope"]["consequence_id"],
+                "answer":answer,
+                "capability_contract":current["capability_contract"]
+            }))?["request"]
+                .clone()
+        };
         let mut next = context;
         let mut requests = match next.get("request").filter(|v| !v.is_null()) {
             Some(Value::Array(items)) => items.clone(),
@@ -842,6 +863,41 @@ fn operate_current(
                 {
                     return Err(error("carriage work context changed"));
                 }
+            }
+            // Optional requests are lazy, not copied into every carrier. Resolve
+            // them against the carried work (including prior answers), exactly
+            // as explicit-context request references are freshly resolved.
+            if selected.is_object() || selected.as_str().is_some_and(|s| s.starts_with("request:"))
+            {
+                if invoking {
+                    return Err(error("owner request references do not invoke effects"));
+                }
+                let current = native_public::start_selected(
+                    carrier.context.clone(),
+                    &if selected.is_object() {
+                        Resolution::Full
+                    } else {
+                        Resolution::Frontier(selected_owner(&selected).map(str::to_owned))
+                    },
+                )?;
+                if selected.is_object() {
+                    if answer.is_some() {
+                        return Err(error(
+                            "stable owner identity must first resolve an exact reference",
+                        ));
+                    }
+                    return resolve_owner_reference(&current, &carrier.context, &selected);
+                }
+                let selected_entry = select_entry(&current, &carrier.context, &selected)?;
+                return use_selected(
+                    carrier.context,
+                    current,
+                    selected_entry,
+                    answer,
+                    false,
+                    &projection,
+                    detail,
+                );
             }
             let matches: Vec<_> = carrier
                 .envelopes

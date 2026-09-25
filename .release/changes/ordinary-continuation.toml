@@ -1,3 +1,3 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "patch"
-summary = "Connect ordinary progress and interruption boundaries to current Planning create, update and resume procedures without per-turn checkpoints."
+summary = "Connect ordinary progress to Planning continuation and preserve prior owner answers when applying exact request arguments."

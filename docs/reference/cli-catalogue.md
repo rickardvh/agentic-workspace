@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:e573fea391911b3d8f00c057deb47a1959bf7eb77435e1c9deb6bbf934804c1d`
+- Contract digest: `sha256:4a4d37acfa2bbce9b896a1c786f4b89296546913790e9d4effee08d7eed462a9`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -29,7 +29,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--format` | json | json, text | Output format: setup defaults to text; machine commands use json. |
 | `--projection` | — | compact, full, carried | Compact executable decision (default), full detail, or view plus disposable exact carriage for a thin host. |
 | `--reference` | — | — | Exact immutable reference from carried output; --input supplies the machine-carried object. |
-| `--answer` | — | — | JSON bounded answer for an exact carried decision reference; all owner material remains unchanged. |
+| `--answer` | — | — | JSON answer for an exact decision reference, or an arguments object for an exact owner request reference. Preserves owner identity and prior carried answers; normal owner validation applies. |
 | `--delivered` | — | — | Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations. |
 | `--input` | — | — | JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action. |
 | `--yes` | — | — | Authorise the exact setup proposal (setup only). |
