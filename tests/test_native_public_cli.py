@@ -670,7 +670,13 @@ def test_instruction_procedure_requires_current_route_not_task_words(
     for projection in ("compact", "carried"):
         projected = consume(surface, shared_core_binary, native_cli, {**context, "request": request, "projection": projection})
         visible = projected["view"] if projection == "carried" else projected
-        assert visible["decision_packet"]["material"]["scoped-instructions"] == [row]
+        projected_row = visible["decision_packet"]["material"]["scoped-instructions"][0]
+        delivery = projected_row.pop("delivery")
+        assert delivery["status"] == "included"
+        assert delivery["extent"] == "exact-fragment"
+        assert delivery["authority"] == "presentation-only; no semantic satisfaction"
+        assert delivery["reference"].startswith("sha256:")
+        assert projected_row == row
     assert "material" not in quiet["decision_packet"]
     continued = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert continued["instructions"]["sources"][0]["preferred_procedures"] == row["preferred_procedures"]
