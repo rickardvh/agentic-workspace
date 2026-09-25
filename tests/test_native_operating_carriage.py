@@ -6,6 +6,9 @@ import copy
 import hashlib
 import json
 import os
+import shutil
+import subprocess
+from pathlib import Path
 from time import perf_counter
 
 import pytest
@@ -25,6 +28,132 @@ def proposal(surface, binary, native, root):
 
 def size(value):
     return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode())
+
+
+def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_binary, native_cli):
+    """A request proposal must not discard the earlier owner-relation answer."""
+    from tests.test_native_planning_create import material
+
+    def call(value):
+        return consume("json", shared_core_binary, native_cli, value)
+
+    context = {"target": str(tmp_path), "task": "Prepare the gated service rollout"}
+    value = material()
+    create = call(context)["planning"]["creation_requests"][0]
+    create["arguments"]["material"] = value
+    ready = call({**context, "request": create})
+    created = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
+    selected_context = created["value"]["selection_context"]
+    selection = call({**selected_context, "request": created["value"]["selection_request"]})
+    call({**selected_context, "invocation": selection["decision_packet"]["primary_action"]})
+    path = tmp_path / created["value"]["owner_path"]
+    before = path.read_bytes()
+
+    fresh = call({**context, "task": "Finish the approved rollout", "projection": "carried"})
+    related = call(
+        {
+            "request": fresh["carriage"],
+            "reference": fresh["view"]["decision_packet"]["decision_request"]["reference"],
+            "answer": "continue-selected",
+            "projection": "carried",
+        }
+    )
+    request = call({"request": related["carriage"], "reference": "owner:request:planning:planning/update/v1"})
+    value["continuation"] = {"accepted_progress": "Approved rollout completed with the retained retry choice"}
+    value["blockers"] = []
+    value["next_action"] = "No remaining service work"
+    value["lifecycle"] = "closed"
+    value["phase"] = "complete"
+    with pytest.raises(AssertionError):
+        call({"request": related["carriage"], "reference": request["reference"], "answer": {"owner_revision": "forged"}})
+    assert path.read_bytes() == before
+    proposed = call(
+        {
+            "request": related["carriage"],
+            "reference": request["reference"],
+            "answer": {"material": value},
+            "projection": "carried",
+        }
+    )
+    assert path.read_bytes() == before
+    requests = proposed["carriage"]["context"]["request"]
+    assert {r["request_kind"] for r in requests} == {"planning/continuation/v1", "planning/update/v1"}
+    updated_request = next(r for r in requests if r["request_kind"] == "planning/update/v1")
+    assert {k: v for k, v in updated_request.items() if k != "arguments"} == {k: v for k, v in request["value"].items() if k != "arguments"}
+    assert updated_request["arguments"]["owner_ref"] == request["value"]["arguments"]["owner_ref"]
+    result = call(
+        {
+            "invocation": proposed["carriage"],
+            "reference": proposed["view"]["decision_packet"]["primary_action"]["reference"],
+        }
+    )
+    assert result["effect_outcome"]["status"] == "committed"
+    retained = json.loads(path.read_bytes())
+    assert retained["continuation"] == value["continuation"]
+    assert retained["lifecycle"] == "closed"
+
+
+def test_shell_carriage_keeps_transport_outside_model_output(tmp_path, shared_core_binary, native_cli):
+    """Execute the maintained shell recipe at the actual stdout boundary."""
+    shell = shutil.which("pwsh")
+    if shell is None:
+        pytest.skip("PowerShell shell-consumer transport requires pwsh")
+    context = proposal("native", shared_core_binary, native_cli, tmp_path)
+    request = tmp_path / "proposal.json"
+    request.write_text(json.dumps(context["request"]), encoding="utf-8")
+    guide = (Path(__file__).resolve().parents[1] / ".agentic-workspace/skills/workspace-startup/references/owners.md").read_text()
+    examples = [block.split("```", 1)[0] for block in guide.split("```powershell\n")[1:]]
+    # The ordinary entry example has no proposal. This caller already holds one;
+    # add only that existing request, retaining the exact documented transport.
+    script = tmp_path / "consumer.ps1"
+    script.write_text(
+        "param($aw, $task, $carrier, $request)\n$changed = @()\n"
+        + examples[0].replace("--projection carried", "--input $request --projection carried")
+        + "\n$reference = $r.view.decision_packet.decision_request.reference\n"
+        + "$answer = '\"authorize-write\"'\n"
+        + examples[1],
+        encoding="utf-8",
+    )
+    carrier = tmp_path / "carrier.json"
+    result = subprocess.run(
+        [shell, "-NoProfile", "-File", str(script), str(native_cli), context["task"], str(carrier), str(request)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    views = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    assert len(views) == 2
+    assert all("carriage" not in view and "envelopes" not in view for view in views)
+    saved = json.loads(carrier.read_text(encoding="utf-8-sig"))
+    assert saved["envelopes"]
+    assert views[-1]["decision_packet"]["primary_action"]["reference"]
+    assert not (tmp_path / ".agentic-workspace/config.toml").exists()
+    full = consume("native", shared_core_binary, native_cli, context)
+    compact = consume("native", shared_core_binary, native_cli, {**context, "projection": "compact"})
+    print(
+        json.dumps(
+            {
+                "full_bytes": size(full),
+                "compact_bytes": size(compact),
+                "shell_visible_bytes": len(result.stdout.encode()),
+                "carrier_bytes": carrier.stat().st_size,
+                "shell_public_calls": 2,
+                "detail_reads": 0,
+                "immutable_fields_transcribed": 0,
+            }
+        )
+    )
+    # A failed command must stop before consuming output or replacing good data.
+    before = carrier.read_bytes()
+    failed = subprocess.run(
+        [shell, "-NoProfile", "-File", str(script), str(native_cli), context["task"], str(carrier), str(tmp_path / "missing.json")],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert failed.returncode != 0 and not failed.stdout.strip()
+    assert carrier.read_bytes() == before
 
 
 def test_public_owner_identity_uses_existing_question_and_effect_boundary(tmp_path, shared_core_binary, native_cli):
@@ -346,6 +475,36 @@ def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, sha
         return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     first = call()
+    startup = first["decision_packet"]["material"]["startup-adapter"]
+    assert startup["source_material"]["extent"] == "whole-source"
+    instruction = first["decision_packet"]["material"]["scoped-instructions"][0]
+    assert instruction["source_material"]["extent"] == "exact-fragment"
+    # Ordinary reads identify exact raw bytes without an AW-generated token.
+    availability = [
+        {
+            "reference": str(p.relative_to(tmp_path)).replace("\\", "/"),
+            "revision": "sha256:" + hashlib.sha256(p.read_bytes()).hexdigest(),
+            "extent": "whole-source",
+        }
+        for p in (tmp_path / "AGENTS.md", source)
+    ]
+    direct = call(available_sources=availability, projection="carried")
+    assert "available_sources" not in direct["carriage"]["context"]
+    material = direct["view"]["decision_packet"]["material"]
+    assert material["startup-adapter"]["delivery"]["status"] == "caller-held"
+    assert "text" not in material["startup-adapter"]
+    assert "guidance" not in material["scoped-instructions"][0]
+    for key in ("blockers", "claim_boundary", "primary_action", "status"):
+        assert direct["view"]["decision_packet"][key] == first["decision_packet"][key]
+    # Distinct CLI input-envelope forwarding risk, not another semantic matrix.
+    input_file = tmp_path / "availability.json"
+    input_file.write_text(json.dumps({**context, "available_sources": availability}), encoding="utf-8")
+    shell = subprocess.run([str(native_cli), "start", "--input", str(input_file)], capture_output=True, text=True, check=True)
+    assert json.loads(shell.stdout)["decision_packet"]["material"]["startup-adapter"]["delivery"]["status"] == "caller-held"
+    input_file.unlink()
+    # A fresh consumer does not inherit availability just because carriage survived.
+    reset = call(**direct["carriage"]["context"])
+    assert "text" in reset["decision_packet"]["material"]["startup-adapter"]
     refs = first["delivery_refs"]
     same = call(delivered=refs)
     assert len(json.dumps(same)) < len(json.dumps(first))
@@ -358,6 +517,9 @@ def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, sha
     drift = call(delivered=refs)
     assert drift["decision_packet"]["material"]["scoped-instructions"][0]["guidance"].endswith("A new applicable instruction.")
     assert "text" not in drift["decision_packet"]["material"]["startup-adapter"]
+    drift = call(available_sources=availability)
+    assert "text" not in drift["decision_packet"]["material"]["startup-adapter"]
+    assert drift["decision_packet"]["material"]["scoped-instructions"][0]["guidance"].endswith("A new applicable instruction.")
     (directory / "new.md").write_text("---\nreconcile: [other.md]\n---\nNew source appeared while AW was absent.")
     opaque = call(delivered=refs)
     assert any("New source appeared" in r.get("guidance", "") for r in opaque["decision_packet"]["material"]["scoped-instructions"])

@@ -6,12 +6,30 @@ change. Use the configured invocation: local `workspace.cli_invoke`, then shared
 `start`; this is the agent's machine interface, not a command the human must run
 around each edit. Repository-local npm uses `npm exec --no -- agentic-workspace`.
 Source checkouts may declare another invocation in their bootstrap instructions.
+Read the `workspace.cli_invoke` value in `.agentic-workspace/config.local.toml`
+or `.agentic-workspace/config.toml` when not already available. The key names a
+configuration value, not an executable called `workspace.cli_invoke`. Append
+`start --target . --task "<actual task>"` to that invocation; task text is not a
+positional argument. A missing PATH command does not make a configured local
+executable unavailable.
+
+Plain shell/tool callers use the default compact output. It includes the selected
+exact request/action and required material; follow a returned `detail_refs`
+reference only for missing useful detail. Do not request full projection merely
+to find an owner key. Use [exact owner carriage](owners.md) when a caller can keep
+structured transport outside model output; otherwise compact needs no scratch.
+Consume a current invocation continuation directly. Changed work or unavailable
+continuation requires explicit fresh resolution or the owner's recovery path.
 
 Follow a surfaced setup assessment even when the task is unrelated. It supplies
 current installed guidance when repository copies are old or missing. Refresh
 changed package bytes through Configuration; assess capabilities only when due.
 Unchanged deferred choices need no repeated question. Revisit them only when their
 prerequisite changes, dependent work needs them, or the human asks.
+Read each consequence's affected action or claim. An unresolved integration
+assessment does not by itself block unrelated task work or its completion;
+preserve the integration gap separately. A setup dry run checks package bytes,
+not semantic assessment, and cannot discharge that assessment.
 
 After setup, do the task directly. Read extra evidence only when it could change
 the work or a required claim; see [evidence sufficiency](evidence.md). Use returned

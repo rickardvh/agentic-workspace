@@ -1,5 +1,6 @@
 """The existing installed smoke must finish ordinary work, not only launch AW."""
 
+import json
 import os
 import subprocess
 import sys
@@ -10,7 +11,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src/tooling/release"))
 import pytest
-from consumer_journeys import INDEPENDENT_NOTES, Workspace, check_removed, check_stale_rejection  # noqa: E402
+from consumer_journeys import INDEPENDENT_NOTES, Workspace, check_removed, check_stale_rejection, clean_context_snapshot  # noqa: E402
 from first_contact import journey  # noqa: E402
 
 
@@ -89,3 +90,70 @@ def test_export_failure_keeps_bounded_diagnostic_tail():
     with pytest.raises(ValueError, match="EXPORT_CAUSE") as failure:
         Workspace(Consumer()).files()
     assert len(str(failure.value)) < 4200
+
+
+def test_clean_context_preserves_selected_meaning_without_disposable_transport():
+    plan = ".agentic-workspace/planning/execplans/maintenance.plan.json"
+    selection = ".agentic-workspace/local/planning/owner-selection.json"
+    before = {"AGENTS.md": b"source", "settings.json": b"8080", ".agentic-workspace/local/.gitignore": b"*"}
+    receipt = ".agentic-workspace/local/effects/" + "a" * 64 + ".result.json"
+    retained = {
+        plan: json.dumps(
+            {"next_action": "Create delayed client with retry 7", "creation_provenance": {"custody": {"committed": {"path": receipt}}}}
+        ).encode()
+    }
+    disposable = {
+        ".agentic-workspace/local/scratch/task/carrier.json": b'{"kind":"agentic-workspace/operating-carriage/v1"}',
+        "arbitrary-name.json": b'{"carriage":{"kind":"agentic-workspace/operating-carriage/v1"}}',
+        "delivery.json": b'{"available_sources":["policy.md"]}',
+        "helper.py": b"prior transport script",
+        ".agentic-workspace/local/planning/request.json": b"prior request",
+        ".agentic-workspace/local/effects/" + "b" * 64 + ".result.json": b"unrelated receipt",
+    }
+    intact = {
+        **before,
+        **retained,
+        **disposable,
+        "settings.json": b"8081",
+        selection: json.dumps({"selected_owner": {"ref": plan}}).encode(),
+        receipt: b'{"status":"committed"}',
+    }
+    transferred = clean_context_snapshot(before, intact, retained)
+    assert transferred == {**before, "settings.json": b"8081", **retained, selection: intact[selection], receipt: intact[receipt]}
+    assert not set(disposable) & transferred.keys()
+
+
+def test_clean_context_keeps_native_selected_owner_resolvable(tmp_path, native_cli):
+    from tests.test_native_planning_create import material
+
+    context = {"target": str(tmp_path), "task": "Prepare the gated rollout", "material": [], "projection": "full"}
+
+    def call(extra=None, command="start"):
+        result = subprocess.run(
+            [str(native_cli), command, "--input", "-"],
+            input=json.dumps({**context, **(extra or {})}),
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        return json.loads(result.stdout)
+
+    request = call()["planning"]["creation_requests"][0]
+    request["arguments"]["material"] = material()
+    action = call({"request": request})["decision_packet"]["primary_action"]
+    created = call({"invocation": action}, "invoke")["value"]
+    context.update(created["selection_context"])
+    selection = call({"request": created["selection_request"]})["decision_packet"]["primary_action"]
+    call({"invocation": selection}, "invoke")
+    plan = created["owner_path"]
+    intact = {p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    clean = clean_context_snapshot({}, intact, {plan: intact[plan]})
+    assert any(name.startswith(".agentic-workspace/local/effects/") for name in clean)
+    for name in intact.keys() - clean.keys():
+        (tmp_path / name).unlink()
+    current = call({"task": "Finish the approved rollout"})
+    assert current["planning"]["incumbent_owner"]["ref"] == plan
+    relation = current["planning"]["requests"][0]
+    relation["arguments"]["answer"] = "continue-selected"
+    resumed = call({"task": "Finish the approved rollout", "request": relation})
+    assert resumed["planning"]["selected_owner"]["ref"] == plan

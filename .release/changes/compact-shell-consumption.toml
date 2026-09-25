@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make compact and exact carriage practical for ordinary shell consumers without exposing machine transport to the model."

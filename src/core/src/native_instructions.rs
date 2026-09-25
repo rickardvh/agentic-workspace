@@ -169,11 +169,12 @@ pub(crate) fn resolve_with_targets(
                     if unresolved {"Current semantic route applicability remains unresolved for this affected consequence."} else if binding["status"]=="current" {"Current repository protection/check obligations remain binding; no proof success is inferred."} else {"Current hard instruction intent requires source admission before affected behavior."},affects));
             }
         }
-        let guidance = if applicable && document["retained_governance"] != true {
-            instruction_source::current_document(target, reference, true)?["body"].clone()
+        let current = if applicable && document["retained_governance"] != true {
+            instruction_source::current_document(target, reference, true)?
         } else {
-            json!("")
+            Value::Null
         };
+        let guidance = current["body"].as_str().unwrap_or_default();
         let procedures = if applicable {
             strings(&metadata["use"])
                 .iter()
@@ -183,7 +184,7 @@ pub(crate) fn resolve_with_targets(
             vec![]
         };
         rows.push(json!({"source":document["source"],"metadata":metadata,"valid":valid,"applicable":applicable,"applicability":scope,
-            "guidance":guidance,"read":if applicable {json!(strings(&metadata["read"]).into_iter().chain(upstream.clone()).collect::<BTreeSet<_>>())} else {json!([])},
+            "guidance":guidance,"source_material":current["source_material"],"read":if applicable {json!(strings(&metadata["read"]).into_iter().chain(upstream.clone()).collect::<BTreeSet<_>>())} else {json!([])},
             "governed_by":if applicable {json!(upstream)} else {json!([])},
             "reconcile":if applicable {metadata["reconcile"].clone()} else {json!([])},
             "procedure_resolution":procedures,"preferred_procedures":if applicable {metadata["use"].clone()} else {json!([])},

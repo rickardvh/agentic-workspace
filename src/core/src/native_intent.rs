@@ -186,7 +186,7 @@ pub(crate) fn view(
         if hash(&detail) != request["arguments"]["revision"] {
             return Err(CoreError::new("governing source changed during read"));
         }
-        let text = String::from_utf8(detail)
+        let text = String::from_utf8(detail.clone())
             .map_err(|_| CoreError::new("governing source is not UTF-8"))?;
         let current_configuration = crate::native_config::view(target)?;
         if current_configuration["revision"] != configuration["revision"] {
@@ -200,6 +200,8 @@ pub(crate) fn view(
         }
         response = json!({"kind":"agentic-workspace/system-intent-source-read/v1","status":"read","request_identity":admitted["identity"],"source":request["arguments"],"text":text,
             "authority_boundary":"Existing governing source content for acting-agent judgment; reading grants no alignment, proof, human acceptance or mutation authority."});
+        response["source_material"] =
+            crate::operating::source_material(&json!(reference), &detail, &text, None);
     }
     let blockers:Vec<Value>=gaps.iter().map(|gap|json!({"code":gap,"message":"Preserve existing governing sources and interpretation; current semantic custody requires owner judgment, not a source rewrite or automatic waiver.","affects":["claim:complete"]})).collect();
     let mut result = json!({"kind":"agentic-workspace/native-system-intent-view/v1","status":if sources.is_empty(){"absent"}else{"source-owned"},"revision":revision,

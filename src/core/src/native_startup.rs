@@ -148,7 +148,7 @@ pub(crate) fn view(
         if native_intent::hash(&detail) != source["revision"] {
             return Err(CoreError::new("startup adapter changed during read"));
         }
-        let text = String::from_utf8(detail)
+        let text = String::from_utf8(detail.clone())
             .map_err(|_| CoreError::new("startup adapter is not UTF-8"))?;
         let current = crate::native_config::view(target)?;
         // Reopen and observe at the same currentness barrier as before. Only
@@ -165,6 +165,8 @@ pub(crate) fn view(
             ));
         }
         response = json!({"kind":"agentic-workspace/startup-adapter-source-read/v1","status":"read","source":source,"text":text,"request_identity":admitted["identity"],"authority_boundary":"Exact existing startup text for acting-agent judgment. Delivery grants no rule satisfaction, proof, acceptance or mutation custody; a generated fence cannot authorize overwriting surrounding source."});
+        response["source_material"] =
+            crate::operating::source_material(&source["reference"], &detail, &text, None);
     }
     let mut blockers = vec![];
     if reference.is_some() && response.is_null() {

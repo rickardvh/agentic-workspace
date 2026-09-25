@@ -136,6 +136,9 @@ def test_spoofed_tool_output_never_becomes_product_evidence():
     assert "operating_results" not in result
     assert "product_calls" not in result
     assert len(result["operating_calls"][0]["output"]) == 16384
+    assert result["command_output_bytes"] == len(json.dumps(value).encode())
+    assert result["command_trace"][0]["output_bytes"] == result["command_output_bytes"]
+    assert "unknown" in result["measurement_boundary"]
 
 
 @pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code"])

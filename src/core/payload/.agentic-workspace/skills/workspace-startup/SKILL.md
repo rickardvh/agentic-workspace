@@ -16,6 +16,22 @@ Use its current binding consequences and activation occasions; keep direct work
 direct and retain only through the responsible owner. See [current material](references/ordinary.md).
 An opportunity needs no preceding failure; current latitude governs act/report/no-action.
 
+At accepted progress, changed scope, a pause/handoff or a finished slice with
+unfinished follow-through, preserve the useful continuation delta before ordinary
+context loss. Reuse sufficient repository records and exact pointers. When material
+unfinished work lacks an adequate owner, follow Planning's
+[continuity path](../../planning/skills/planning-work/references/continuity.md).
+Simple completed work and unchanged progress need no continuation artefact. On
+resume, relate the current task to the retained owner and reacquire only missing
+or invalidated material; the last selected plan is not automatically this task.
+Before yielding with unfinished work, make that retention decision and verify any
+needed owner write. A finished slice with a pending prerequisite is still an
+unfinished objective; report that distinction.
+Check whether the repository captures the user's remaining objective as well as
+the changed files. A diff alone may omit a pending deliverable, accepted decision
+or its rationale. Follow the continuity path when that missing meaning matters
+to the next session; no retention is needed when current records suffice.
+
 If AW reports setup or refresh needing attention, follow the
 [setup procedure](../workspace-setup-jumpstart/SKILL.md), then return to the task.
 Otherwise work directly. Load only the [procedure](procedure.md) useful to the

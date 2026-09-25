@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -34,6 +35,8 @@ INITIAL = {
     "notes.txt": b"Repository-owned note: keep this file.\n",
 }
 ON_DEMAND_FAMILIES = {
+    "context-continuation": "Ordinary retained progress, intact continuation and fresh-context selective reacquisition",
+    "context-continuation-clean": "Fresh repository recovery from retained meaning without disposable transport or provider history",
     "activation-finding": "Source-discovered positive opportunity, report-only latitude, authorized adaptation and fresh quiet reuse",
     "activation-material": "Docker database information, stable configuration, fresh agent and stopped-service readiness",
     "activation-no-retention": "Task-only material leaves no durable knowledge residue",
@@ -383,6 +386,8 @@ def deterministic(work, family):
 
 
 def execute(consumer, family, *, actor=None):
+    if family in {"context-continuation", "context-continuation-clean"}:
+        return execute_context_continuation(consumer, actor, family=family)
     if family.startswith("activation-"):
         return execute_activation(consumer, family, actor=actor)
     started = time.monotonic()
@@ -938,6 +943,209 @@ def execute_activation(consumer, family, *, actor=None):
     if actor:
         result.update(actor=actor.observations, actor_sha256=actor.source_sha256)
     return result
+
+
+def clean_context_snapshot(before, intact, continuation):
+    """Transfer source/meaning, never the old machine or its scratch transport.
+
+    Start from fixture-owned source names and separately observed retained records.
+    Keep native selection and its exact referenced effect custody, not transport.
+    A replacement sandbox also excludes temporary files and the old provider home.
+    """
+    # Initial fixture state includes Configuration's legitimate installation
+    # custody and local ignore boundary, before any actor scratch exists.
+    names = set(before)
+    names.update(continuation)
+    selection_ref = ".agentic-workspace/local/planning/owner-selection.json"
+    if selection_ref in intact:
+        names.add(selection_ref)
+
+    def custody_paths(value):
+        if isinstance(value, dict):
+            path = value.get("path")
+            if isinstance(path, str) and path.startswith(".agentic-workspace/local/effects/"):
+                if not re.fullmatch(r"\.agentic-workspace/local/effects/[a-f0-9]{64}\.(attempt|result)\.json", path):
+                    raise ValueError("Invalid retained effect custody path")
+                yield path
+            for child in value.values():
+                yield from custody_paths(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from custody_paths(child)
+
+    pending, visited = list(continuation) + [selection_ref], set()
+    while pending:
+        name = pending.pop()
+        if name in visited or name not in intact:
+            continue
+        visited.add(name)
+        try:
+            value = json.loads(intact[name])
+        except (ValueError, UnicodeDecodeError):
+            continue
+        for path in custody_paths(value):
+            if path not in intact:
+                raise ValueError("Retained owner custody is missing from checkpoint")
+            names.add(path)
+            pending.append(path)
+    return {name: data for name, data in intact.items() if name in names}
+
+
+def execute_context_continuation(consumer, actor, *, family="context-continuation"):
+    """One on-demand journey; no checkpoint command or summary in actor prompts.
+
+    The evaluator retains phase observations. Only repository state and normal
+    task instructions reach the actor; the third session has no parent chat.
+    """
+    work = Workspace(consumer)
+    phases, error, before = [], None, {}
+    started = time.monotonic()
+    try:
+        if actor is None:
+            raise ValueError("Fresh-agent behaviour requires the agent driver")
+        recipe(work, "first-contact")
+        work.write(".agentic-workspace/config.toml", ("[workspace]\ncli_invoke=" + json.dumps(" ".join(consumer.command)) + "\n").encode())
+        setup(work)
+        original = work.files()["AGENTS.md"]
+        work.write("AGENTS.md", original + b"\nRead policy.md completely before changes. Read docs/service.md for service work.\n")
+        work.write(
+            "policy.md",
+            b"Keep host localhost. Preserve notes.txt. release.json is the canonical target port and documentation gate; pending review permits configuration preparation only.\n",
+        )
+        work.write(
+            "docs/service.md",
+            b"The local client requires localhost, not a wildcard bind. Read policy.md. Re-read release.json before each documentation change.\n",
+        )
+        work.write("release.json", b'{"head":"fixture-a","review":"pending","port":8081}\n')
+        work.write("unrelated.md", b"Independent inventory: one.\n")
+        before = work.files()
+        prompt = (
+            "Implement the service port change to 8081 in settings.json and update the README example when release.json permits it. "
+            "Work on the whole objective until finished or blocked; the documentation release review is still pending. "
+            "Preserve repository policy and notes. Explain the binding-address decision from the repository sources."
+            " After release approval, also add client-example.json with host localhost, the approved port, "
+            "and retry_delay_seconds 7. This delayed client example is part of the same objective: "
+            "the operator selected a seven-second delay to avoid synchronised reconnects during this rollout. "
+            "Do not publish that example before approval."
+        )
+        invocation = "\nThe installed package is available through: " + " ".join(consumer.command)
+        prompt += invocation
+        first_claim = actor.session(work, prompt)
+        retained = work.files()
+        # Exclude source/payload, volatile transport and transcripts from retention
+        # evidence. New ordinary repository records or Planning may own meaning.
+        continuation = {
+            name: data
+            for name, data in retained.items()
+            if data != before.get(name)
+            and name not in {"settings.json", "README.md", "AGENTS.md"}
+            and not name.startswith((".agentic-workspace/local/", ".agentic-workspace/skills/", ".agents/"))
+            and ("/execplans/" in name or (not name.startswith(".agentic-workspace/") and name.endswith((".md", ".txt"))))
+            and b"agentic-workspace/operating-carriage/" not in data
+        }
+        content = b"\n".join(continuation.values()).lower()
+        planning_refs = [name for name in continuation if "/execplans/" in name]
+        selection = json.loads(retained.get(".agentic-workspace/local/planning/owner-selection.json", b"{}"))
+        phases.append(
+            {
+                "name": "ordinary-progress-retained",
+                "passed": json.loads(retained["settings.json"]) == {"port": 8081, "host": "localhost"}
+                and retained["README.md"] == before["README.md"]
+                and "client-example.json" not in retained
+                and all(word in content for word in (b"8081", b"localhost", b"readme", b"pending", b"client-example", b"7"))
+                and first_claim.get("status") in {"incomplete", "blocked"},
+                "selected_owner_ref": selection.get("selected_owner", {}).get("ref"),
+                "continuation_refs": list(continuation),
+                "retained_bytes": sum(map(len, continuation.values())),
+            }
+        )
+        # No semantic progress; a context-intact continuation should reuse state.
+        actor.session(
+            work, "The documentation review is still pending. Check whether there is any other authorised work remaining.", resume=True
+        )
+        intact = work.files()
+        unchanged = all(intact.get(name) == data for name, data in continuation.items())
+        phases.append(
+            {
+                "name": "intact-no-semantic-rewrite",
+                "passed": unchanged,
+                "continuation_writes": sum(intact.get(name) != data for name, data in continuation.items()),
+            }
+        )
+        work.write("release.json", b'{"head":"fixture-b","review":"approved","port":8082}\n')
+        work.write("unrelated.md", b"Independent inventory: two.\n")
+        fresh_prompt = (
+            "Continue and finish the service maintenance task from current repository state. The release review has changed; there is no earlier conversation."
+            + invocation
+        )
+        if family == "context-continuation-clean":
+            # Transfer only source and legitimate retained meaning into a new
+            # sandbox. No old provider home, temporary files or delivery state.
+            checkpoint = work.files()
+            transferred = clean_context_snapshot(before, checkpoint, continuation)
+            resumed = actor.repository_session(work, transferred, fresh_prompt)
+            claim, after = resumed["claim"], resumed["exported"]
+            phases.append(
+                {
+                    "name": "fresh-without-disposable-transport",
+                    "passed": resumed["transfer_verified"]
+                    and all(transferred.get(name) == data for name, data in continuation.items())
+                    and transferred.get(".agentic-workspace/local/planning/owner-selection.json")
+                    == checkpoint.get(".agentic-workspace/local/planning/owner-selection.json"),
+                    "removed_paths": sorted(set(checkpoint) - set(transferred)),
+                    "preserved_local_paths": sorted(name for name in transferred if name.startswith(".agentic-workspace/local/")),
+                    "boundary": "New sandbox and provider session; fixture sources/installation state, retained records, native Planning selection and referenced owner custody only. No actor scratch, carriage or provider history transferred.",
+                }
+            )
+        else:
+            # Separate control: carriage survives, source availability must not.
+            claim = actor.session(work, fresh_prompt)
+            after = work.files()
+        phases.append(
+            {
+                "name": "retained-owner-reconciled",
+                "passed": bool(continuation)
+                and (not planning_refs or selection.get("selected_owner", {}).get("ref") in planning_refs)
+                and all(
+                    name not in after
+                    or (json.loads(after[name]).get("lifecycle") in {"closed", "archived"} and not json.loads(after[name]).get("blockers"))
+                    for name in planning_refs
+                ),
+                "boundary": "Checks owner selection and final lifecycle only; trace inspection still determines bounded discovery, authorized effects and meaningful reconciliation.",
+            }
+        )
+        phases.append(
+            {
+                "name": "fresh-current-resume",
+                "passed": json.loads(after["settings.json"]) == {"port": 8082, "host": "localhost"}
+                and b"8082" in after["README.md"]
+                and b"8080" not in after["README.md"]
+                and json.loads(after.get("client-example.json", b"{}")) == {"host": "localhost", "port": 8082, "retry_delay_seconds": 7}
+                and all(after.get(name) == before[name] for name in ("AGENTS.md", "policy.md", "docs/service.md", "notes.txt"))
+                and claim.get("status") == "complete",
+            }
+        )
+        residue = [name for name in after if "/scratch/" in name]
+        phases.append({"name": "disposable-residue", "passed": not residue, "paths": residue})
+    except (Exception, KeyboardInterrupt) as failure:
+        error = str(failure)[:2000]
+    return {
+        "family": family,
+        "status": "passed"
+        if len(phases) == (6 if family == "context-continuation-clean" else 5) and all(p["passed"] for p in phases) and not error
+        else "failed",
+        "executed": bool(actor and actor.observations),
+        "driver": "agent",
+        "phases": phases,
+        "execution_error": error,
+        "actor": actor.observations if actor else [],
+        "actor_sha256": actor.source_sha256 if actor else None,
+        "recipe_sha256": RECIPE_SHA256,
+        "scorer_sha256": SCORER_SHA256,
+        "environment": consumer.observation,
+        "elapsed_seconds": round(time.monotonic() - started, 3),
+        "support_boundary": "One synthetic ordinary-agent journey. Identity/currentness/effect controls remain native-owner evidence; unobserved acquisition or costs remain unknown.",
+    }
 
 
 def execute_pair(current_factory, previous_factory, family, destination, *, actor=None):

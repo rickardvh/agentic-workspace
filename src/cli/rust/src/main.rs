@@ -184,7 +184,10 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<()
     if command["accepts_input_envelope"] == true
         && (input.get(field).is_some()
             || (parsed.command == "start"
-                && (input.get("material").is_some() || input.get("maintenance").is_some())))
+                && (input.get("material").is_some()
+                    || input.get("maintenance").is_some()
+                    || input.get("available_sources").is_some()
+                    || input.get("delivered").is_some())))
     {
         // Preserve the exact owner envelope. Explicit argv is an assertion,
         // never an override; absent defaults must not replace bound context.

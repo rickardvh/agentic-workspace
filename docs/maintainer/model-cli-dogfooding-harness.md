@@ -25,6 +25,17 @@ named native owner tests for detailed semantics and add installed composition
 checks. A failed released product remains a failed observation, even when its fix
 has landed in source.
 
+The on-demand `context-continuation` family uses three bounded agent sessions:
+ordinary progress with unfinished follow-through, one exact provider-thread
+continuation, then a fresh session with only repository state. It changes a
+relevant release observation and an unrelated file between the latter sessions.
+The acting prompts name the maintenance task, never a checkpoint owner or a
+prewritten resume summary. Inert phase scoring reports retained progress, semantic
+rewrites, current completion and disposable residue separately. Command-output
+byte observations and bounded command traces are provider-reported; hidden host
+context, unreported truncation and monetary cost remain unknown. Native owner
+tests still supply identity/extent, stale-source and uncertain-effect controls.
+
 The scorer reads bounded inert exports after the actor stops. It checks task
 artifacts, allowed changes, preserved policy and claim honesty separately. It does
 not execute actor-modified tests or reward command mentions. Offline exports have
@@ -107,6 +118,17 @@ The always-run cleanup step deletes only recorded disposable resource names.
 Sanitized CI artifacts expire after seven days. Route actionable failures through
 the existing dogfooding owner, searching existing issues before filing another;
 the actor and reporting jobs have no issue-writing credentials.
+
+The separate on-demand `context-continuation-clean` control uses the same ordinary
+task and three-session limit, but starts the final session in a replacement
+sandbox. It transfers fixture sources and installation state, retained task
+records, native Planning selection and its referenced effect custody. These
+durable owner records are required for native closeout. Disposable carriage,
+actor scratch, provider history and unrelated machine files do not cross that
+boundary. The existing `context-continuation` control
+still keeps repository-local carriage to test source reacquisition independently.
+Report both controls by name; a pass with surviving carriage does not prove
+recovery without it. Neither control establishes broad economic improvement.
 
 The former command-mention suites, pinned AW fixtures, long-horizon executor and
 reference state machine are retired. Dated records in the

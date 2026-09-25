@@ -1,26 +1,87 @@
 {
-  "schema_version": "skill-registry.v1",
+  "activation_index": [
+    {
+      "activation": {
+        "applicability": "A Planning closeout claim has unresolved evidence, accepted progress or external review custody.",
+        "occasions": [
+          "need"
+        ],
+        "outcome": "Truthful current Planning status with proof and independent acceptance kept separate."
+      },
+      "id": "planning-closeout-trust",
+      "path": "planning-closeout-trust/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/work/closeout"
+      ]
+    },
+    {
+      "activation": {
+        "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
+        "binding_owners": [
+          "planning"
+        ],
+        "occasions": [
+          "need",
+          "observation",
+          "binding"
+        ],
+        "outcome": "Current bounded Planning custody, or justified direct work without retained planning."
+      },
+      "id": "planning-work",
+      "path": "planning-work/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/work/continuity"
+      ]
+    },
+    {
+      "activation": {
+        "applicability": "A concrete pre-binding local/delegate choice needs judgment, or current binding Assignment/dispatch/handoff needs exact continuation. Unrelated ordinary local work does not need this method.",
+        "binding_owners": [
+          "assignment",
+          "delegation"
+        ],
+        "occasions": [
+          "need",
+          "binding"
+        ],
+        "outcome": "A quiet local or unknown/defer choice, current Assignment assessment for a delegate proposal, or exact binding continuation with truthful owner gaps."
+      },
+      "id": "planning-assignment",
+      "path": "planning-assignment/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/assignment/lifecycle"
+      ]
+    },
+    {
+      "activation": {
+        "applicability": "Review findings or a worker return require current accepted continuation rather than assumed progress.",
+        "occasions": [
+          "need"
+        ],
+        "outcome": "Current receiving-owner admission and a bounded continuation; no self-approval."
+      },
+      "id": "planning-review-continuation",
+      "path": "planning-review-continuation/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "planning/review/continuation"
+      ]
+    }
+  ],
   "owner": "agentic-planning",
-  "source_kind": "bundled-package-skills",
   "resources": {
     "planning-review-template": {
-      "path": ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
-      "package_path": "../bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json"
+      "package_path": "../bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
+      "path": ".agentic-workspace/planning/reviews/TEMPLATE.review.json"
     }
   },
+  "schema_version": "skill-registry.v1",
   "skills": [
     {
-      "id": "bootstrap-upgrade",
-      "path": "bootstrap-upgrade/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "upgrade planning bootstrap files for an already bootstrapped repository safely",
       "activation_hints": {
-        "verbs": [
-          "upgrade",
-          "refresh",
-          "sync"
-        ],
         "nouns": [
           "planning bootstrap",
           "planning payload",
@@ -30,36 +91,35 @@
           "upgrade planning bootstrap",
           "refresh planning payload"
         ],
+        "verbs": [
+          "upgrade",
+          "refresh",
+          "sync"
+        ],
         "when": [
           "installed planning surfaces drift",
           "package payload refresh"
         ]
-      }
+      },
+      "id": "bootstrap-upgrade",
+      "path": "bootstrap-upgrade/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "upgrade planning bootstrap files for an already bootstrapped repository safely"
     },
     {
       "id": "planning-closeout-trust",
       "path": "planning-closeout-trust/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "Compare original/larger intent, proof and residue before native owner-admitted closeout.",
       "procedure_resource": "procedure.md",
+      "scope": "bundled",
       "semantic_routes": [
         "planning/work/closeout"
-      ]
+      ],
+      "stability": "package-managed",
+      "summary": "Compare original/larger intent, proof and residue before native owner-admitted closeout."
     },
     {
-      "id": "planning-reporting",
-      "path": "planning-reporting/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "project active planning state, proof expectations, and next-action guidance from canonical summary JSON",
       "activation_hints": {
-        "verbs": [
-          "report",
-          "summarize",
-          "inspect",
-          "check"
-        ],
         "nouns": [
           "planning state",
           "active work",
@@ -74,119 +134,60 @@
           "what should happen next",
           "proof expectations"
         ],
+        "verbs": [
+          "report",
+          "summarize",
+          "inspect",
+          "check"
+        ],
         "when": [
           "active state inspection",
           "handoff summary",
           "restart orientation"
         ]
-      }
+      },
+      "id": "planning-reporting",
+      "path": "planning-reporting/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "project active planning state, proof expectations, and next-action guidance from canonical summary JSON"
     },
     {
       "id": "planning-work",
       "path": "planning-work/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "Shape upstream work, bound structure and tighten native Planning continuity.",
       "semantic_routes": [
         "planning/work/continuity"
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "package-managed",
+      "summary": "Shape upstream work, bound structure and tighten native Planning continuity."
     },
     {
       "id": "planning-assignment",
       "path": "planning-assignment/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "Judge a concrete delegation choice, supply current Assignment assessment, and continue admitted work.",
       "semantic_routes": [
         "planning/assignment/lifecycle"
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "package-managed",
+      "summary": "Judge a concrete delegation choice, supply current Assignment assessment, and continue admitted work."
     },
     {
       "id": "planning-review-continuation",
+      "path": "planning-review-continuation/SKILL.md",
+      "procedure_resource": "procedure.md",
       "required_resources": [
         "planning-review-template"
       ],
-      "path": "planning-review-continuation/SKILL.md",
       "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "Receive current review findings and route justified Planning continuation without granting approval.",
       "semantic_routes": [
         "planning/review/continuation"
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "package-managed",
+      "summary": "Receive current review findings and route justified Planning continuation without granting approval."
     }
   ],
-  "activation_index": [
-    {
-      "id": "planning-closeout-trust",
-      "path": "planning-closeout-trust/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "planning/work/closeout"
-      ],
-      "activation": {
-        "occasions": [
-          "need"
-        ],
-        "applicability": "A Planning closeout claim has unresolved evidence, accepted progress or external review custody.",
-        "outcome": "Truthful current Planning status with proof and independent acceptance kept separate."
-      }
-    },
-    {
-      "id": "planning-work",
-      "path": "planning-work/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "planning/work/continuity"
-      ],
-      "activation": {
-        "occasions": [
-          "need",
-          "binding"
-        ],
-        "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
-        "outcome": "Current bounded Planning custody, or justified direct work without retained planning.",
-        "binding_owners": [
-          "planning"
-        ]
-      }
-    },
-    {
-      "id": "planning-assignment",
-      "path": "planning-assignment/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "planning/assignment/lifecycle"
-      ],
-      "activation": {
-        "occasions": [
-          "need",
-          "binding"
-        ],
-        "applicability": "A concrete pre-binding local/delegate choice needs judgment, or current binding Assignment/dispatch/handoff needs exact continuation. Unrelated ordinary local work does not need this method.",
-        "outcome": "A quiet local or unknown/defer choice, current Assignment assessment for a delegate proposal, or exact binding continuation with truthful owner gaps.",
-        "binding_owners": [
-          "assignment",
-          "delegation"
-        ]
-      }
-    },
-    {
-      "id": "planning-review-continuation",
-      "path": "planning-review-continuation/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "planning/review/continuation"
-      ],
-      "activation": {
-        "occasions": [
-          "need"
-        ],
-        "applicability": "Review findings or a worker return require current accepted continuation rather than assumed progress.",
-        "outcome": "Current receiving-owner admission and a bounded continuation; no self-approval."
-      }
-    }
-  ]
+  "source_kind": "bundled-package-skills"
 }
