@@ -6,6 +6,9 @@ import copy
 import hashlib
 import json
 import os
+import shutil
+import subprocess
+from pathlib import Path
 from time import perf_counter
 
 import pytest
@@ -25,6 +28,69 @@ def proposal(surface, binary, native, root):
 
 def size(value):
     return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode())
+
+
+def test_shell_carriage_keeps_transport_outside_model_output(tmp_path, shared_core_binary, native_cli):
+    """Execute the maintained shell recipe at the actual stdout boundary."""
+    shell = shutil.which("pwsh")
+    if shell is None:
+        pytest.skip("PowerShell shell-consumer transport requires pwsh")
+    context = proposal("native", shared_core_binary, native_cli, tmp_path)
+    request = tmp_path / "proposal.json"
+    request.write_text(json.dumps(context["request"]), encoding="utf-8")
+    guide = (Path(__file__).resolve().parents[1] / ".agentic-workspace/skills/workspace-startup/references/owners.md").read_text()
+    examples = [block.split("```", 1)[0] for block in guide.split("```powershell\n")[1:]]
+    # The ordinary entry example has no proposal. This caller already holds one;
+    # add only that existing request, retaining the exact documented transport.
+    script = tmp_path / "consumer.ps1"
+    script.write_text(
+        "param($aw, $task, $carrier, $request)\n$changed = @()\n"
+        + examples[0].replace("--projection carried", "--input $request --projection carried")
+        + "\n$reference = $r.view.decision_packet.decision_request.reference\n"
+        + "$answer = '\"authorize-write\"'\n"
+        + examples[1],
+        encoding="utf-8",
+    )
+    carrier = tmp_path / "carrier.json"
+    result = subprocess.run(
+        [shell, "-NoProfile", "-File", str(script), str(native_cli), context["task"], str(carrier), str(request)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    views = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    assert len(views) == 2
+    assert all("carriage" not in view and "envelopes" not in view for view in views)
+    saved = json.loads(carrier.read_text(encoding="utf-8-sig"))
+    assert saved["envelopes"]
+    assert views[-1]["decision_packet"]["primary_action"]["reference"]
+    assert not (tmp_path / ".agentic-workspace/config.toml").exists()
+    full = consume("native", shared_core_binary, native_cli, context)
+    compact = consume("native", shared_core_binary, native_cli, {**context, "projection": "compact"})
+    print(
+        json.dumps(
+            {
+                "full_bytes": size(full),
+                "compact_bytes": size(compact),
+                "shell_visible_bytes": len(result.stdout.encode()),
+                "carrier_bytes": carrier.stat().st_size,
+                "shell_public_calls": 2,
+                "detail_reads": 0,
+                "immutable_fields_transcribed": 0,
+            }
+        )
+    )
+    # A failed command must stop before consuming output or replacing good data.
+    before = carrier.read_bytes()
+    failed = subprocess.run(
+        [shell, "-NoProfile", "-File", str(script), str(native_cli), context["task"], str(carrier), str(tmp_path / "missing.json")],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert failed.returncode != 0 and not failed.stdout.strip()
+    assert carrier.read_bytes() == before
 
 
 def test_public_owner_identity_uses_existing_question_and_effect_boundary(tmp_path, shared_core_binary, native_cli):

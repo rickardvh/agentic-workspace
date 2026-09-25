@@ -7,6 +7,14 @@ change. Use the configured invocation: local `workspace.cli_invoke`, then shared
 around each edit. Repository-local npm uses `npm exec --no -- agentic-workspace`.
 Source checkouts may declare another invocation in their bootstrap instructions.
 
+Plain shell/tool callers use the default compact output. It includes the selected
+exact request/action and required material; follow a returned `detail_refs`
+reference only for missing useful detail. Do not request full projection merely
+to find an owner key. Use [exact owner carriage](owners.md) when a caller can keep
+structured transport outside model output; otherwise compact needs no scratch.
+Consume a current invocation continuation directly. Changed work or unavailable
+continuation requires explicit fresh resolution or the owner's recovery path.
+
 Follow a surfaced setup assessment even when the task is unrelated. It supplies
 current installed guidance when repository copies are old or missing. Refresh
 changed package bytes through Configuration; assess capabilities only when due.

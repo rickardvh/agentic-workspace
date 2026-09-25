@@ -27,27 +27,51 @@ After an invocation, distinguish the effect outcome from continuation. Never ret
 
 Detailed schemas and packet fields belong to generated contracts/reference surfaces. Load them only when a client or debugging task actually needs them.
 
-For an unrelated remembered Planning owner, answer the returned relation and
-posture questions separately. Independence alone leaves posture undecided. This
-PowerShell example assumes those are the current choices; check each process
-before consuming its output and preserve the same task and changed-path context:
+Use carried mode only when the caller can retain its machine data outside the
+model-visible tool result. Show the entire `view`, including peer consequences,
+source material and claim limits. Printing the carrier before filtering it saves
+no model context. Plain compact callers can submit a returned reference with the
+same explicit work context and only the new bounded answer; no file is required.
+
+This PowerShell example uses the configured executable, actual task and changed
+paths, and a `carrier.json` path inside an existing bounded task scratch container.
+The shell holds the transport; only the final expression reaches the model:
 
 ```powershell
-$task = 'Bounded independent work'
-$r = agentic-workspace start --target . --task $task --projection carried --format json | ConvertFrom-Json
+$scope = @('--target', '.', '--task', $task)
+foreach ($path in $changed) { $scope += @('--changed', $path) }
+$raw = & $aw start @scope --projection carried
 if ($LASTEXITCODE -ne 0) { throw 'Startup failed' }
-foreach ($choice in @('independent', 'direct')) {
-    $ref = $r.view.decision_packet.decision_request.reference
-    $answer = $choice | ConvertTo-Json -Compress
-    $r = ($r.carriage | ConvertTo-Json -Depth 100 -Compress) |
-        agentic-workspace start --target . --task $task --projection carried --input - --reference $ref --answer $answer --format json |
-        ConvertFrom-Json
-    if ($LASTEXITCODE -ne 0) { throw 'Planning answer failed' }
-}
+$r = $raw | ConvertFrom-Json -ErrorAction Stop
+$r.carriage | ConvertTo-Json -Depth 100 -Compress |
+    Set-Content -LiteralPath $carrier -Encoding utf8 -ErrorAction Stop
+$r.view | ConvertTo-Json -Depth 100 -Compress
 ```
 
-Return `carriage`, not the whole presentation. The owner validates both answers;
-conflicting or stale answers cannot override each other. Direct posture preserves
-the remembered owner and grants no proof, effect or completion authority. For
-fresh resolution without answering a reference, reuse `carriage.context` as the
-public start context (its request through CLI `--input` and its work flags).
+After judging a returned question, supply its exact `$reference` and the new
+bounded `$answer` (a JSON value), without copying immutable owner fields:
+
+```powershell
+$raw = & $aw start --input $carrier --reference $reference --answer $answer --projection carried
+if ($LASTEXITCODE -ne 0) { throw 'Answer failed; resolve current state' }
+$r = $raw | ConvertFrom-Json -ErrorAction Stop
+$r.carriage | ConvertTo-Json -Depth 100 -Compress |
+    Set-Content -LiteralPath $carrier -Encoding utf8 -ErrorAction Stop
+$r.view | ConvertTo-Json -Depth 100 -Compress
+```
+
+For an authorised effect, use `invoke --input $carrier --reference $reference`
+with the returned action reference. Preserve the effect result before handling
+its continuation. A parsing/storage failure after invocation is not permission
+to replay the effect. Reobserve or use exact owner recovery. Consume a current
+continuation; do not call start again solely for ceremony.
+
+Changed task/target/scope requires fresh resolution, never editing an issued
+envelope. Lost, stale or corrupt carriage also recovers through fresh current
+sources or exact effect recovery. Keep only useful current transport files and
+remove them through the resource lifecycle; carriage is not retained task meaning.
+
+Source `delivery_refs` are separate presentation state. Submit them only while
+their sufficient current text remains available to this consumer. After context
+loss omit affected suppression refs even if the carrier file survives; reacquire
+required text. A carrier grants neither availability nor proof or permission.
