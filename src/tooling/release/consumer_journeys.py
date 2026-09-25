@@ -995,6 +995,8 @@ def execute_context_continuation(consumer, actor):
             and ("/execplans/" in name or not name.startswith(".agentic-workspace/"))
         }
         content = b"\n".join(continuation.values()).lower()
+        planning_refs = [name for name in continuation if "/execplans/" in name]
+        selection = json.loads(retained.get(".agentic-workspace/local/planning/owner-selection.json", b"{}"))
         phases.append(
             {
                 "name": "ordinary-progress-retained",
@@ -1003,6 +1005,7 @@ def execute_context_continuation(consumer, actor):
                 and "client-example.json" not in retained
                 and all(word in content for word in (b"8081", b"localhost", b"readme", b"pending", b"client-example", b"7"))
                 and first_claim.get("status") in {"incomplete", "blocked"},
+                "selected_owner_ref": selection.get("selected_owner", {}).get("ref"),
                 "continuation_refs": list(continuation),
                 "retained_bytes": sum(map(len, continuation.values())),
             }
@@ -1032,6 +1035,19 @@ def execute_context_continuation(consumer, actor):
         after = work.files()
         phases.append(
             {
+                "name": "retained-owner-reconciled",
+                "passed": bool(continuation)
+                and (not planning_refs or selection.get("selected_owner", {}).get("ref") in planning_refs)
+                and all(
+                    name not in after
+                    or (json.loads(after[name]).get("lifecycle") in {"closed", "archived"} and not json.loads(after[name]).get("blockers"))
+                    for name in planning_refs
+                ),
+                "boundary": "Checks owner selection and final lifecycle only; trace inspection still determines bounded discovery, authorized effects and meaningful reconciliation.",
+            }
+        )
+        phases.append(
+            {
                 "name": "fresh-current-resume",
                 "passed": json.loads(after["settings.json"]) == {"port": 8082, "host": "localhost"}
                 and b"8082" in after["README.md"]
@@ -1047,7 +1063,7 @@ def execute_context_continuation(consumer, actor):
         error = str(failure)[:2000]
     return {
         "family": "context-continuation",
-        "status": "passed" if len(phases) == 4 and all(p["passed"] for p in phases) and not error else "failed",
+        "status": "passed" if len(phases) == 5 and all(p["passed"] for p in phases) and not error else "failed",
         "executed": bool(actor and actor.observations),
         "driver": "agent",
         "phases": phases,

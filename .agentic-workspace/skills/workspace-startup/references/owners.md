@@ -61,8 +61,10 @@ $r.view | ConvertTo-Json -Depth 100 -Compress
 ```
 
 For an authorised effect, use `invoke --input $carrier --reference $reference`
-with the returned action reference. Preserve the effect result before handling
-its continuation. A parsing/storage failure after invocation is not permission
+with the returned action reference. Preserve the complete effect result, including
+`value` and its owner-specific next requests, before handling its continuation.
+Filtering for guessed top-level fields can discard a required next operation.
+A parsing/storage failure after invocation is not permission
 to replay the effect. Reobserve or use exact owner recovery. Consume a current
 continuation; do not call start again solely for ceremony.
 

@@ -22,8 +22,18 @@ and `--reference owner:request:planning:planning/create/v1`. Fill only its reque
 existing owner, first establish the current task relation, then use its update
 request below. Preserve all unchanged fields and relationships. Submit the filled
 request through `start`, invoke only the returned admitted action, and inspect the
-effect outcome. Creation returns an exact `selection_request` and
-`selection_context`; use them to select this owner without rebuilding the context.
+effect outcome. Creation and selection are two distinct effects. Keep the full
+invocation result: its `value.selection_request`, `value.selection_context` and
+`value.owner_path` are needed next. Do not filter out `value` when displaying an
+effect result. Submit the exact `value.selection_context` with its `request` set
+to `value.selection_request`, invoke the resulting selection action, then verify
+that current Planning names this owner. A created file alone does not establish
+the selector needed for bounded discovery after context loss.
+
+If selection was interrupted, use the creation result's exact owner path and
+selection context to reobserve the current creation/selection recovery; never
+replay the creation effect or find an owner with an all-plan glob. Preserve a
+precise selection gap when the current owner cannot admit the next operation.
 
 Map useful meaning to the existing fields, without another resume schema:
 
@@ -69,7 +79,10 @@ If the owner is disabled or unavailable, state the exact retention gap. A readab
 record is useful evidence without executable AW but grants no mutation custody.
 Use an already authorised ordinary repository destination when sufficient; never
 hand-edit managed state or claim persistence from a chat promise. At completion,
-use current closeout and resource-retention paths; preserve referenced evidence
+update the same owner's continuation to the actual outcome through its current
+request, then use current closeout and resource-retention paths. Do not leave an
+old pending prerequisite as the current frontier after completing the work.
+Preserve referenced evidence
 and unfinished work while retiring disposable transport.
 
 Continue while the user's authorized objective has safe remaining work; a completed
