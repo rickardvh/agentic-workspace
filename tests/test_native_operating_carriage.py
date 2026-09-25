@@ -412,6 +412,36 @@ def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, sha
         return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     first = call()
+    startup = first["decision_packet"]["material"]["startup-adapter"]
+    assert startup["source_material"]["extent"] == "whole-source"
+    instruction = first["decision_packet"]["material"]["scoped-instructions"][0]
+    assert instruction["source_material"]["extent"] == "exact-fragment"
+    # Ordinary reads identify exact raw bytes without an AW-generated token.
+    availability = [
+        {
+            "reference": str(p.relative_to(tmp_path)).replace("\\", "/"),
+            "revision": "sha256:" + hashlib.sha256(p.read_bytes()).hexdigest(),
+            "extent": "whole-source",
+        }
+        for p in (tmp_path / "AGENTS.md", source)
+    ]
+    direct = call(available_sources=availability, projection="carried")
+    assert "available_sources" not in direct["carriage"]["context"]
+    material = direct["view"]["decision_packet"]["material"]
+    assert material["startup-adapter"]["delivery"]["status"] == "caller-held"
+    assert "text" not in material["startup-adapter"]
+    assert "guidance" not in material["scoped-instructions"][0]
+    for key in ("blockers", "claim_boundary", "primary_action", "status"):
+        assert direct["view"]["decision_packet"][key] == first["decision_packet"][key]
+    # Distinct CLI input-envelope forwarding risk, not another semantic matrix.
+    input_file = tmp_path / "availability.json"
+    input_file.write_text(json.dumps({**context, "available_sources": availability}), encoding="utf-8")
+    shell = subprocess.run([str(native_cli), "start", "--input", str(input_file)], capture_output=True, text=True, check=True)
+    assert json.loads(shell.stdout)["decision_packet"]["material"]["startup-adapter"]["delivery"]["status"] == "caller-held"
+    input_file.unlink()
+    # A fresh consumer does not inherit availability just because carriage survived.
+    reset = call(**direct["carriage"]["context"])
+    assert "text" in reset["decision_packet"]["material"]["startup-adapter"]
     refs = first["delivery_refs"]
     same = call(delivered=refs)
     assert len(json.dumps(same)) < len(json.dumps(first))
@@ -424,6 +454,9 @@ def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, sha
     drift = call(delivered=refs)
     assert drift["decision_packet"]["material"]["scoped-instructions"][0]["guidance"].endswith("A new applicable instruction.")
     assert "text" not in drift["decision_packet"]["material"]["startup-adapter"]
+    drift = call(available_sources=availability)
+    assert "text" not in drift["decision_packet"]["material"]["startup-adapter"]
+    assert drift["decision_packet"]["material"]["scoped-instructions"][0]["guidance"].endswith("A new applicable instruction.")
     (directory / "new.md").write_text("---\nreconcile: [other.md]\n---\nNew source appeared while AW was absent.")
     opaque = call(delivered=refs)
     assert any("New source appeared" in r.get("guidance", "") for r in opaque["decision_packet"]["material"]["scoped-instructions"])

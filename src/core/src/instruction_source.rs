@@ -198,6 +198,14 @@ pub(crate) fn current_document(
     let bytes = read(&root, reference)?;
     let mut result = parsed(&bytes, include_body);
     result["source"] = json!({"reference":reference,"revision":hash(&bytes),"scope":scope});
+    if include_body {
+        result["source_material"] = crate::operating::source_material(
+            &json!(reference),
+            &bytes,
+            result["body"].as_str().unwrap_or_default(),
+            Some("instruction-body"),
+        );
+    }
     Ok(result)
 }
 

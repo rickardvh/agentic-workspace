@@ -1,5 +1,38 @@
 ## Evidence for a decision
 
+Use one acquisition rule for AW delivery and ordinary reads: the material must
+cover the present obligation, still be available to this consumer, and remain
+current for its relevant source/scope dependencies. Exact complete current text
+can satisfy a method-neutral “read document” requirement through either reader.
+A filename, hash, summary or fragment cannot substitute for required whole text.
+Follow linked mandatory documents and global rules outside a selected fragment.
+Explicit reading methods and renewed per-action occasions still apply.
+
+AW's `source_material` describes the source reference, raw-byte SHA-256 revision,
+whole-source or exact-fragment extent, and delivered content revision. The
+instruction-body selector is the parsed body with normalised newlines and trimmed
+outer whitespace; it is not the whole instruction file or its linked documents.
+`delivery` says included, caller-held, already-delivered or needed. Reference-only
+or unknown extent supplies no content coverage. None certifies semantic completeness.
+
+A caller that already read an exact whole source can optionally submit
+`available_sources: [{reference, revision, extent: "whole-source"}]` in its start
+context; `revision` is `sha256:` plus the SHA-256 of the raw file bytes actually
+read. An exact fragment additionally needs its returned `selector` and
+`content_revision`, with extent `exact-fragment`. Do not derive an opaque delivery
+token, send source bodies back, or assert availability from a filename/HEAD alone.
+Use file input for a structured context. Native matching only considers sources
+already resolved by their owners; unsupported/mismatched assertions deliver normally.
+
+Keep these assertions and `delivery_refs` outside durable records and operation
+carriage. Clear affected assertions after compaction/reset, truncated output or
+uncertain availability, even if a transport file survives. Reacquire missing
+required text; genuinely retained and re-supplied text can establish availability
+again. Reobserve relevant source, membership and scope changes selectively. A new
+task can need an unread section of an unchanged file; unrelated changes need not
+invalidate independent content. Ordinary sources outside AW use this same rule
+directly, without importing a corpus or editing repository policy.
+
 Start with the affected question and reuse sufficient available context. A named
 issue, review, surprising behavior, changed dependency or source disagreement can
 justify acquisition. Prefer cheap exact references and bounded queries; when a

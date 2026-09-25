@@ -11,6 +11,7 @@ export interface WorkContext {
   maintenance?: "configuration";
   projection?: Projection;
   delivered?: string[];
+  available_sources?: { reference: string; revision: string; extent: string; selector?: string; content_revision?: string }[];
 }
 export interface StartInput extends WorkContext {
   reference?: string;

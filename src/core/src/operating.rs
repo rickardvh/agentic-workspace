@@ -29,6 +29,61 @@ struct Carriage {
     envelopes: Vec<Value>,
 }
 
+/// Caller-local presentation assertions, deliberately removed before owner work.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceAvailability {
+    reference: String,
+    revision: String,
+    extent: String,
+    content_revision: Option<String>,
+    selector: Option<String>,
+}
+
+pub(crate) fn source_material(
+    reference: &Value,
+    bytes: &[u8],
+    text: &str,
+    selector: Option<&str>,
+) -> Value {
+    json!({"reference":reference,"revision":crate::native_intent::hash(bytes),
+        "revision_scheme":"sha256-raw-bytes", "extent":if selector.is_some(){"exact-fragment"}else{"whole-source"},
+        "selector":selector,"content_revision":crate::native_intent::hash(text.as_bytes())})
+}
+
+impl SourceAvailability {
+    fn matches(&self, material: &Value) -> bool {
+        if material["reference"] != self.reference || material["revision"] != self.revision {
+            return false;
+        }
+        match self.extent.as_str() {
+            "whole-source" => {
+                self.selector.is_none()
+                    && self
+                        .content_revision
+                        .as_ref()
+                        .is_none_or(|r| r == &self.revision)
+                    && matches!(
+                        material["extent"].as_str(),
+                        Some("whole-source" | "exact-fragment")
+                    )
+            }
+            "exact-fragment" => {
+                material["extent"] == "exact-fragment"
+                    && self
+                        .selector
+                        .as_ref()
+                        .is_some_and(|s| material["selector"] == *s)
+                    && self
+                        .content_revision
+                        .as_ref()
+                        .is_some_and(|r| material["content_revision"] == *r)
+            }
+            _ => false,
+        }
+    }
+}
+
 fn reference(context: &Value, selector: &str, envelope: &Value) -> Result<String, CoreError> {
     let hash = digest(
         &json!({"kind":CARRIAGE,"context":context,"selector":selector,"envelope":envelope}),
@@ -606,18 +661,42 @@ fn operate_selected(
     if delivered.len() > 256 {
         return Err(error("source delivery refs exceed bounded carriage"));
     }
+    let available = value
+        .as_object_mut()
+        .and_then(|v| v.remove("available_sources"));
+    let available: Vec<SourceAvailability> = serde_json::from_value(available.unwrap_or(json!([])))
+        .map_err(|_| {
+            error("available_sources must contain exact source identity and extent assertions")
+        })?;
+    if available.len() > 256
+        || available.iter().any(|s| {
+            s.reference.len() > 4096
+                || s.revision.len() > 128
+                || s.extent.len() > 64
+                || s.selector.as_ref().is_some_and(|v| v.len() > 256)
+                || s.content_revision.as_ref().is_some_and(|v| v.len() > 128)
+        })
+    {
+        return Err(error(
+            "source availability exceeds bounded presentation input",
+        ));
+    }
     let mut result = operate_current(value, invoking, detail)?;
-    apply_delivery(&mut result, &delivered)?;
+    apply_delivery(&mut result, &delivered, &available)?;
     if let Some(continuation) = result
         .get_mut("continuation")
         .and_then(|c| c.get_mut("result"))
     {
-        apply_delivery(continuation, &delivered)?;
+        apply_delivery(continuation, &delivered, &available)?;
     }
     Ok(result)
 }
 
-fn apply_delivery(result: &mut Value, delivered: &[String]) -> Result<(), CoreError> {
+fn apply_delivery(
+    result: &mut Value,
+    delivered: &[String],
+    available: &[SourceAvailability],
+) -> Result<(), CoreError> {
     // Delivery is caller-local presentation state only. All owner resolution,
     // restriction, action admission and reference checks have already occurred.
     let view = if result.get("view").is_some() {
@@ -638,7 +717,7 @@ fn apply_delivery(result: &mut Value, delivered: &[String]) -> Result<(), CoreEr
                     .as_array_mut()
                     .map(|v| v.iter_mut().collect())
                     .unwrap_or_default()
-            } else if owner == "startup-adapter" {
+            } else if owner == "startup-adapter" || owner == "system-intent" {
                 vec![value]
             } else {
                 continue;
@@ -649,18 +728,31 @@ fn apply_delivery(result: &mut Value, delivered: &[String]) -> Result<(), CoreEr
                 } else {
                     "text"
                 };
-                // A delivery token is not worth retaining for tiny prose.
-                if !row[field].as_str().is_some_and(|s| s.len() > 256) {
+                if !row.is_object() {
+                    continue;
+                }
+                let has_text = row[field].as_str().is_some_and(|s| !s.is_empty());
+                if !has_text {
+                    row["delivery"] = json!({"status":"needed","extent":"reference-only",
+                        "authority":"presentation-only; no semantic satisfaction"});
                     continue;
                 }
                 let reference = digest(
                     &json!({"producer":delivery_producer(),"work":work,"owner":owner,"source":row}),
                 )?;
-                refs.push(reference.clone());
-                if delivered.contains(&reference) {
-                    row.as_object_mut().unwrap().remove(field);
-                    row["delivery"] = json!({"reference":reference,"status":"already-delivered","authority":"presentation-only; no semantic satisfaction"});
+                // Small required text still arrives without a selector hop.
+                if row[field].as_str().unwrap().len() > 256 {
+                    refs.push(reference.clone());
                 }
+                let held = available.iter().any(|s| s.matches(&row["source_material"]));
+                let repeated = delivered.contains(&reference);
+                if repeated || held {
+                    row.as_object_mut().unwrap().remove(field);
+                }
+                row["delivery"] = json!({"reference":reference,
+                    "status":if held {"caller-held"} else if repeated {"already-delivered"} else {"included"},
+                    "extent":row["source_material"].get("extent").cloned().unwrap_or(json!("unknown")),
+                    "authority":"presentation-only; no semantic satisfaction"});
             }
         }
     }
@@ -1249,6 +1341,51 @@ mod tests {
         );
     }
     #[test]
+    fn availability_matches_exact_extent_only_and_does_not_discover_sources() {
+        let whole = source_material(&json!("AGENTS.md"), b"whole source", "whole source", None);
+        let fragment = source_material(
+            &json!("AGENTS.md"),
+            b"whole source",
+            "source",
+            Some("instruction-body"),
+        );
+        let assertion =
+            json!({"reference":"AGENTS.md","revision":whole["revision"],"extent":"whole-source"});
+        let a: SourceAvailability = serde_json::from_value(assertion.clone()).unwrap();
+        assert!(a.matches(&whole));
+        assert!(a.matches(&fragment));
+        for (field, value) in [
+            ("reference", json!("other.md")),
+            ("revision", json!("sha256:wrong")),
+            ("extent", json!("summary")),
+            ("extent", json!("reference-only")),
+            ("extent", json!("unknown")),
+            ("extent", json!("exact-fragment")),
+            ("content_revision", json!("truncated")),
+        ] {
+            let mut wrong = assertion.clone();
+            wrong[field] = value;
+            let a: SourceAvailability = serde_json::from_value(wrong).unwrap();
+            assert!(!a.matches(&whole));
+            assert!(!a.matches(&fragment));
+        }
+        let mut exact = assertion;
+        exact["extent"] = json!("exact-fragment");
+        exact["selector"] = fragment["selector"].clone();
+        exact["content_revision"] = fragment["content_revision"].clone();
+        let a: SourceAvailability = serde_json::from_value(exact.clone()).unwrap();
+        assert!(a.matches(&fragment));
+        assert!(!a.matches(&whole));
+        assert!(!a.matches(&Value::Null));
+        exact["selector"] = json!("other-section");
+        assert!(
+            !serde_json::from_value::<SourceAvailability>(exact)
+                .unwrap()
+                .matches(&fragment)
+        );
+    }
+
+    #[test]
     fn delivery_tokens_bind_work_and_source_without_discharging_restrictions() {
         let original = json!({"decision_packet":{
             "semantic_task_routes":{"task_identity":{"id":"work-a"}},
@@ -1258,7 +1395,7 @@ mod tests {
             "material":{"startup-adapter":{"text":"policy".repeat(60)},
                 "scoped-instructions":[{"guidance":"instruction".repeat(40)}]}}});
         let mut first = original.clone();
-        apply_delivery(&mut first, &[]).unwrap();
+        apply_delivery(&mut first, &[], &[]).unwrap();
         let refs: Vec<String> = first["delivery_refs"]
             .as_array()
             .unwrap()
@@ -1266,7 +1403,7 @@ mod tests {
             .map(|r| r.as_str().unwrap().to_owned())
             .collect();
         let mut repeated = original.clone();
-        apply_delivery(&mut repeated, &refs).unwrap();
+        apply_delivery(&mut repeated, &refs, &[]).unwrap();
         for key in ["status", "primary_action", "blockers", "claim_boundary"] {
             assert_eq!(
                 repeated["decision_packet"][key],
@@ -1279,10 +1416,10 @@ mod tests {
                 .is_none()
         );
         let mut forged = original.clone();
-        apply_delivery(&mut forged, &["forged".into()]).unwrap();
+        apply_delivery(&mut forged, &["forged".into()], &[]).unwrap();
         assert_eq!(
             forged["decision_packet"]["material"],
-            original["decision_packet"]["material"]
+            first["decision_packet"]["material"]
         );
         for pointer in [
             "/decision_packet/semantic_task_routes/task_identity/id",
@@ -1290,7 +1427,7 @@ mod tests {
         ] {
             let mut changed = original.clone();
             *changed.pointer_mut(pointer).unwrap() = json!("new work or source".repeat(40));
-            apply_delivery(&mut changed, &refs).unwrap();
+            apply_delivery(&mut changed, &refs, &[]).unwrap();
             assert!(
                 changed["decision_packet"]["material"]["startup-adapter"]
                     .get("text")
