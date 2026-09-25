@@ -1,5 +1,6 @@
 """The existing installed smoke must finish ordinary work, not only launch AW."""
 
+import json
 import os
 import subprocess
 import sys
@@ -10,7 +11,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src/tooling/release"))
 import pytest
-from consumer_journeys import INDEPENDENT_NOTES, Workspace, check_removed, check_stale_rejection  # noqa: E402
+from consumer_journeys import INDEPENDENT_NOTES, Workspace, check_removed, check_stale_rejection, clean_context_snapshot  # noqa: E402
 from first_contact import journey  # noqa: E402
 
 
@@ -89,3 +90,27 @@ def test_export_failure_keeps_bounded_diagnostic_tail():
     with pytest.raises(ValueError, match="EXPORT_CAUSE") as failure:
         Workspace(Consumer()).files()
     assert len(str(failure.value)) < 4200
+
+
+def test_clean_context_preserves_selected_meaning_without_disposable_transport():
+    plan = ".agentic-workspace/planning/execplans/maintenance.plan.json"
+    selection = ".agentic-workspace/local/planning/owner-selection.json"
+    before = {"AGENTS.md": b"source", "settings.json": b"8080", ".agentic-workspace/local/.gitignore": b"*"}
+    retained = {plan: b'{"next_action":"Create delayed client with retry 7"}'}
+    disposable = {
+        ".agentic-workspace/local/scratch/task/carrier.json": b'{"kind":"agentic-workspace/operating-carriage/v1"}',
+        "arbitrary-name.json": b'{"carriage":{"kind":"agentic-workspace/operating-carriage/v1"}}',
+        "delivery.json": b'{"available_sources":["policy.md"]}',
+        "helper.py": b"prior transport script",
+        ".agentic-workspace/local/planning/request.json": b"prior request",
+    }
+    intact = {
+        **before,
+        **retained,
+        **disposable,
+        "settings.json": b"8081",
+        selection: json.dumps({"selected_owner": {"ref": plan}}).encode(),
+    }
+    transferred = clean_context_snapshot(before, intact, retained)
+    assert transferred == {"AGENTS.md": b"source", "settings.json": b"8081", **retained, selection: intact[selection]}
+    assert not set(disposable) & transferred.keys()

@@ -35,6 +35,7 @@ INITIAL = {
 }
 ON_DEMAND_FAMILIES = {
     "context-continuation": "Ordinary retained progress, intact continuation and fresh-context selective reacquisition",
+    "context-continuation-clean": "Fresh repository recovery from retained meaning without disposable transport or provider history",
     "activation-finding": "Source-discovered positive opportunity, report-only latitude, authorized adaptation and fresh quiet reuse",
     "activation-material": "Docker database information, stable configuration, fresh agent and stopped-service readiness",
     "activation-no-retention": "Task-only material leaves no durable knowledge residue",
@@ -384,8 +385,8 @@ def deterministic(work, family):
 
 
 def execute(consumer, family, *, actor=None):
-    if family == "context-continuation":
-        return execute_context_continuation(consumer, actor)
+    if family in {"context-continuation", "context-continuation-clean"}:
+        return execute_context_continuation(consumer, actor, family=family)
     if family.startswith("activation-"):
         return execute_activation(consumer, family, actor=actor)
     started = time.monotonic()
@@ -943,7 +944,22 @@ def execute_activation(consumer, family, *, actor=None):
     return result
 
 
-def execute_context_continuation(consumer, actor):
+def clean_context_snapshot(before, intact, continuation):
+    """Transfer source/meaning, never the old machine or its scratch transport.
+
+    Start from fixture-owned source names and separately observed retained records.
+    The one local exception is native Planning selection, not its request history.
+    A replacement sandbox also excludes temporary files and the old provider home.
+    """
+    names = {name for name in before if not name.startswith(".agentic-workspace/local/")}
+    names.update(continuation)
+    selection_ref = ".agentic-workspace/local/planning/owner-selection.json"
+    if selection_ref in intact:
+        names.add(selection_ref)
+    return {name: data for name, data in intact.items() if name in names}
+
+
+def execute_context_continuation(consumer, actor, *, family="context-continuation"):
     """One on-demand journey; no checkpoint command or summary in actor prompts.
 
     The evaluator retains phase observations. Only repository state and normal
@@ -992,7 +1008,8 @@ def execute_context_continuation(consumer, actor):
             if data != before.get(name)
             and name not in {"settings.json", "README.md", "AGENTS.md"}
             and not name.startswith((".agentic-workspace/local/", ".agentic-workspace/skills/", ".agents/"))
-            and ("/execplans/" in name or not name.startswith(".agentic-workspace/"))
+            and ("/execplans/" in name or (not name.startswith(".agentic-workspace/") and name.endswith((".md", ".txt"))))
+            and b"agentic-workspace/operating-carriage/" not in data
         }
         content = b"\n".join(continuation.values()).lower()
         planning_refs = [name for name in continuation if "/execplans/" in name]
@@ -1025,14 +1042,33 @@ def execute_context_continuation(consumer, actor):
         )
         work.write("release.json", b'{"head":"fixture-b","review":"approved","port":8082}\n')
         work.write("unrelated.md", b"Independent inventory: two.\n")
-        # A new provider session deliberately keeps repository-local carriage,
-        # but cannot inherit a continuing consumer's source-text availability.
-        claim = actor.session(
-            work,
+        fresh_prompt = (
             "Continue and finish the service maintenance task from current repository state. The release review has changed; there is no earlier conversation."
-            + invocation,
+            + invocation
         )
-        after = work.files()
+        if family == "context-continuation-clean":
+            # Transfer only source and legitimate retained meaning into a new
+            # sandbox. No old provider home, temporary files or delivery state.
+            checkpoint = work.files()
+            transferred = clean_context_snapshot(before, checkpoint, continuation)
+            resumed = actor.repository_session(work, transferred, fresh_prompt)
+            claim, after = resumed["claim"], resumed["exported"]
+            phases.append(
+                {
+                    "name": "fresh-without-disposable-transport",
+                    "passed": resumed["transfer_verified"]
+                    and all(transferred.get(name) == data for name, data in continuation.items())
+                    and transferred.get(".agentic-workspace/local/planning/owner-selection.json")
+                    == checkpoint.get(".agentic-workspace/local/planning/owner-selection.json"),
+                    "removed_paths": sorted(set(checkpoint) - set(transferred)),
+                    "preserved_local_paths": sorted(name for name in transferred if name.startswith(".agentic-workspace/local/")),
+                    "boundary": "New sandbox and provider session; only enumerated repository sources, retained records and native Planning selection transferred.",
+                }
+            )
+        else:
+            # Separate control: carriage survives, source availability must not.
+            claim = actor.session(work, fresh_prompt)
+            after = work.files()
         phases.append(
             {
                 "name": "retained-owner-reconciled",
@@ -1062,8 +1098,10 @@ def execute_context_continuation(consumer, actor):
     except (Exception, KeyboardInterrupt) as failure:
         error = str(failure)[:2000]
     return {
-        "family": "context-continuation",
-        "status": "passed" if len(phases) == 5 and all(p["passed"] for p in phases) and not error else "failed",
+        "family": family,
+        "status": "passed"
+        if len(phases) == (6 if family == "context-continuation-clean" else 5) and all(p["passed"] for p in phases) and not error
+        else "failed",
         "executed": bool(actor and actor.observations),
         "driver": "agent",
         "phases": phases,

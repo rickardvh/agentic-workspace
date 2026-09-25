@@ -541,6 +541,23 @@ class CodexActor:
             raise RuntimeError("Codex execution " + result["status"])
         return result["claim"]
 
+    def repository_session(self, work, retained, prompt):
+        """A fresh consumer gets exactly the controller-selected repository files."""
+        from consumer_journeys import Workspace
+
+        source = work.consumer
+        replacement = SandboxConsumer(source.subject, source.profile, source.target, source.template, source.scratch, source.sbx)
+        with replacement:
+            replacement.install()
+            fresh = Workspace(replacement)
+            fresh.restore(retained)
+            if fresh.files() != retained:
+                raise ValueError("Fresh continuation transfer differs from selected repository state")
+            claim = self.session(fresh, prompt)
+            exported = fresh.files()
+            source.observation["clean_continuation_environment"] = replacement.observation
+        return {"claim": claim, "exported": exported, "transfer_verified": True}
+
     def __call__(self, work, family, task):
         from consumer_journeys import (
             INDEPENDENT_NOTES,
