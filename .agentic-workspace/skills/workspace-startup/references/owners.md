@@ -11,7 +11,14 @@ embedding its semantic payload in shell text. Preserve the exact AW-returned
 request and fill only the fields/material the owner asks for. Write the completed
 request as UTF-8 JSON with a file-writing tool, then submit it with a short command:
 `agentic-workspace start --target . --task "<same task>" --input <request.json>`
-(using the configured invocation and the same changed-path context). The shell
+(using the configured invocation and the same changed-path context). This bare
+request form is sufficient only when no earlier work-bound answers are needed.
+Task and changed-path flags identify scope; they do not carry prior answers.
+For a multi-step exchange, keep the returned carriage and use its exact reference
+with the bounded answer as shown below. Do not switch back to bare task flags
+after answering a question: that fresh resolution can ask the question again or
+withhold the next request. Keep the updated carriage after every answered step.
+The shell
 command carries ordinary arguments and the file path, not nested text, JSON
 serialization or quoting logic. Continue from the returned result/action; file
 input uses the same native owner validation and grants no additional authority.

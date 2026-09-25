@@ -61,6 +61,11 @@ source, policy, Assignment and Verification restrictions and uncertain effects.
 {"kind":"request","owner":"planning","id":"planning/update/v1"}
 ```
 
+Updates use `arguments.material`, like creation. Supply the complete requested
+semantic postimage, preserving unchanged fields; a partial delta or an invented
+`document` field is not the update contract. Use the schema supplied by current
+Planning detail or its exact `planning/update/v1` capability declaration.
+
 On fresh entry, use the supplied issue/owner pointer or current selected-owner
 reference, establish its relation to today's task, and recover only that owner's
 intent, continuation, blockers, next action and proof references. Follow the exact
@@ -68,6 +73,11 @@ Planning detail route or read that named record; do not scan all plans/history.
 An incumbent identity alone does not establish assignment. The exact continuation
 request is `owner:request:planning:planning/continuation/v1`; answer the current
 relation/posture questions separately when work is independent.
+For the same work, answer `continue-selected` and keep that answer in the returned
+carriage when requesting and submitting the update. Repeating only task flags
+starts fresh resolution and can lose the relation answer. A missing update
+request is a reason to inspect the current relation and continuation, not to
+repeatedly fetch schemas or fabricate a request.
 
 Reobserve material volatile state such as remote head/review changes, relevant
 source/scope changes and required prerequisites. Unrelated changes do not require
