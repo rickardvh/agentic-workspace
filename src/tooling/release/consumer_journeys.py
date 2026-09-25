@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -948,14 +949,45 @@ def clean_context_snapshot(before, intact, continuation):
     """Transfer source/meaning, never the old machine or its scratch transport.
 
     Start from fixture-owned source names and separately observed retained records.
-    The one local exception is native Planning selection, not its request history.
+    Keep native selection and its exact referenced effect custody, not transport.
     A replacement sandbox also excludes temporary files and the old provider home.
     """
-    names = {name for name in before if not name.startswith(".agentic-workspace/local/")}
+    # Initial fixture state includes Configuration's legitimate installation
+    # custody and local ignore boundary, before any actor scratch exists.
+    names = set(before)
     names.update(continuation)
     selection_ref = ".agentic-workspace/local/planning/owner-selection.json"
     if selection_ref in intact:
         names.add(selection_ref)
+
+    def custody_paths(value):
+        if isinstance(value, dict):
+            path = value.get("path")
+            if isinstance(path, str) and path.startswith(".agentic-workspace/local/effects/"):
+                if not re.fullmatch(r"\.agentic-workspace/local/effects/[a-f0-9]{64}\.(attempt|result)\.json", path):
+                    raise ValueError("Invalid retained effect custody path")
+                yield path
+            for child in value.values():
+                yield from custody_paths(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from custody_paths(child)
+
+    pending, visited = list(continuation) + [selection_ref], set()
+    while pending:
+        name = pending.pop()
+        if name in visited or name not in intact:
+            continue
+        visited.add(name)
+        try:
+            value = json.loads(intact[name])
+        except (ValueError, UnicodeDecodeError):
+            continue
+        for path in custody_paths(value):
+            if path not in intact:
+                raise ValueError("Retained owner custody is missing from checkpoint")
+            names.add(path)
+            pending.append(path)
     return {name: data for name, data in intact.items() if name in names}
 
 
@@ -1062,7 +1094,7 @@ def execute_context_continuation(consumer, actor, *, family="context-continuatio
                     == checkpoint.get(".agentic-workspace/local/planning/owner-selection.json"),
                     "removed_paths": sorted(set(checkpoint) - set(transferred)),
                     "preserved_local_paths": sorted(name for name in transferred if name.startswith(".agentic-workspace/local/")),
-                    "boundary": "New sandbox and provider session; only enumerated repository sources, retained records and native Planning selection transferred.",
+                    "boundary": "New sandbox and provider session; fixture sources/installation state, retained records, native Planning selection and referenced owner custody only. No actor scratch, carriage or provider history transferred.",
                 }
             )
         else:

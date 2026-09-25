@@ -121,9 +121,11 @@ the actor and reporting jobs have no issue-writing credentials.
 
 The separate on-demand `context-continuation-clean` control uses the same ordinary
 task and three-session limit, but starts the final session in a replacement
-sandbox. It transfers fixture sources, retained task records and native Planning
-selection only. Disposable carriage, scratch, provider history and other machine
-files do not cross that boundary. The existing `context-continuation` control
+sandbox. It transfers fixture sources and installation state, retained task
+records, native Planning selection and its referenced effect custody. These
+durable owner records are required for native closeout. Disposable carriage,
+actor scratch, provider history and unrelated machine files do not cross that
+boundary. The existing `context-continuation` control
 still keeps repository-local carriage to test source reacquisition independently.
 Report both controls by name; a pass with surviving carriage does not prove
 recovery without it. Neither control establishes broad economic improvement.
