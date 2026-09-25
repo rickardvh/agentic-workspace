@@ -18,13 +18,14 @@
     },
     {
       "id": "continuity",
-      "description": "Create or tighten accepted custody",
+      "description": "Preserve accepted progress and resume unfinished work through its existing owner",
       "next": "references/continuity.md"
     }
   ],
   "activation": {
     "occasions": [
       "need",
+      "observation",
       "binding"
     ],
     "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",

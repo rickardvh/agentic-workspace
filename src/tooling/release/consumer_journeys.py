@@ -34,6 +34,7 @@ INITIAL = {
     "notes.txt": b"Repository-owned note: keep this file.\n",
 }
 ON_DEMAND_FAMILIES = {
+    "context-continuation": "Ordinary retained progress, intact continuation and fresh-context selective reacquisition",
     "activation-finding": "Source-discovered positive opportunity, report-only latitude, authorized adaptation and fresh quiet reuse",
     "activation-material": "Docker database information, stable configuration, fresh agent and stopped-service readiness",
     "activation-no-retention": "Task-only material leaves no durable knowledge residue",
@@ -383,6 +384,8 @@ def deterministic(work, family):
 
 
 def execute(consumer, family, *, actor=None):
+    if family == "context-continuation":
+        return execute_context_continuation(consumer, actor)
     if family.startswith("activation-"):
         return execute_activation(consumer, family, actor=actor)
     started = time.monotonic()
@@ -938,6 +941,116 @@ def execute_activation(consumer, family, *, actor=None):
     if actor:
         result.update(actor=actor.observations, actor_sha256=actor.source_sha256)
     return result
+
+
+def execute_context_continuation(consumer, actor):
+    """One on-demand journey; no checkpoint command or summary in actor prompts.
+
+    The evaluator retains phase observations. Only repository state and normal
+    task instructions reach the actor; the third session has no parent chat.
+    """
+    work = Workspace(consumer)
+    phases, error, before = [], None, {}
+    started = time.monotonic()
+    try:
+        if actor is None:
+            raise ValueError("Fresh-agent behaviour requires the agent driver")
+        recipe(work, "first-contact")
+        work.write(".agentic-workspace/config.toml", ("[workspace]\ncli_invoke=" + json.dumps(" ".join(consumer.command)) + "\n").encode())
+        setup(work)
+        original = work.files()["AGENTS.md"]
+        work.write("AGENTS.md", original + b"\nRead policy.md completely before changes. Read docs/service.md for service work.\n")
+        work.write(
+            "policy.md",
+            b"Keep host localhost. Preserve notes.txt. release.json is the canonical target port and documentation gate; pending review permits configuration preparation only.\n",
+        )
+        work.write(
+            "docs/service.md",
+            b"The local client requires localhost, not a wildcard bind. Read policy.md. Re-read release.json before each documentation change.\n",
+        )
+        work.write("release.json", b'{"head":"fixture-a","review":"pending","port":8081}\n')
+        work.write("unrelated.md", b"Independent inventory: one.\n")
+        before = work.files()
+        prompt = (
+            "Implement the service port change to 8081 in settings.json and update the README example when release.json permits it. "
+            "Complete the configuration slice now; the documentation release review is still pending. "
+            "Preserve repository policy and notes. Explain the binding-address decision from the repository sources."
+        )
+        first_claim = actor.session(work, prompt)
+        retained = work.files()
+        # Exclude source/payload, volatile transport and transcripts from retention
+        # evidence. New ordinary repository records or Planning may own meaning.
+        continuation = {
+            name: data
+            for name, data in retained.items()
+            if data != before.get(name)
+            and name not in {"settings.json", "README.md", "AGENTS.md"}
+            and not name.startswith((".agentic-workspace/local/", ".agentic-workspace/skills/", ".agents/"))
+            and ("/execplans/" in name or not name.startswith(".agentic-workspace/"))
+        }
+        content = b"\n".join(continuation.values()).lower()
+        phases.append(
+            {
+                "name": "ordinary-progress-retained",
+                "passed": json.loads(retained["settings.json"]) == {"port": 8081, "host": "localhost"}
+                and retained["README.md"] == before["README.md"]
+                and all(word in content for word in (b"8081", b"localhost", b"readme", b"pending"))
+                and first_claim.get("status") in {"incomplete", "blocked"},
+                "continuation_refs": list(continuation),
+                "retained_bytes": sum(map(len, continuation.values())),
+            }
+        )
+        # No semantic progress; a context-intact continuation should reuse state.
+        actor.session(
+            work, "The documentation review is still pending. Check whether there is any other authorised work remaining.", resume=True
+        )
+        intact = work.files()
+        unchanged = all(intact.get(name) == data for name, data in continuation.items())
+        phases.append(
+            {
+                "name": "intact-no-semantic-rewrite",
+                "passed": unchanged,
+                "continuation_writes": sum(intact.get(name) != data for name, data in continuation.items()),
+            }
+        )
+        work.write("release.json", b'{"head":"fixture-b","review":"approved","port":8082}\n')
+        work.write("unrelated.md", b"Independent inventory: two.\n")
+        # A new provider session deliberately keeps repository-local carriage,
+        # but cannot inherit a continuing consumer's source-text availability.
+        claim = actor.session(
+            work,
+            "Continue and finish the service maintenance task from current repository state. The release review has changed; there is no earlier conversation.",
+        )
+        after = work.files()
+        phases.append(
+            {
+                "name": "fresh-current-resume",
+                "passed": json.loads(after["settings.json"]) == {"port": 8082, "host": "localhost"}
+                and b"8082" in after["README.md"]
+                and b"8080" not in after["README.md"]
+                and all(after.get(name) == before[name] for name in ("AGENTS.md", "policy.md", "docs/service.md", "notes.txt"))
+                and claim.get("status") == "complete",
+            }
+        )
+        residue = [name for name in after if "/scratch/" in name]
+        phases.append({"name": "disposable-residue", "passed": not residue, "paths": residue})
+    except (Exception, KeyboardInterrupt) as failure:
+        error = str(failure)[:2000]
+    return {
+        "family": "context-continuation",
+        "status": "passed" if len(phases) == 4 and all(p["passed"] for p in phases) and not error else "failed",
+        "executed": bool(actor and actor.observations),
+        "driver": "agent",
+        "phases": phases,
+        "execution_error": error,
+        "actor": actor.observations if actor else [],
+        "actor_sha256": actor.source_sha256 if actor else None,
+        "recipe_sha256": RECIPE_SHA256,
+        "scorer_sha256": SCORER_SHA256,
+        "environment": consumer.observation,
+        "elapsed_seconds": round(time.monotonic() - started, 3),
+        "support_boundary": "One synthetic ordinary-agent journey. Identity/currentness/effect controls remain native-owner evidence; unobserved acquisition or costs remain unknown.",
+    }
 
 
 def execute_pair(current_factory, previous_factory, family, destination, *, actor=None):

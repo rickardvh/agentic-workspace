@@ -399,6 +399,9 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
     message = None
     diagnostics = []
     operating_calls = []
+    thread_id = None
+    command_trace = []
+    command_output_bytes = 0
     try:
         while time.monotonic() < deadline:
             try:
@@ -430,9 +433,15 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
                 if token_ceiling is not None and tokens is not None and tokens >= token_ceiling:
                     status = "observed-token-budget-exhausted"
                     break
+            if event.get("type") == "thread.started":
+                thread_id = event.get("thread_id")
             item = event.get("item", {})
             if event.get("type") == "item.completed" and item.get("type") == "command_execution":
                 command_text = item.get("command", "")
+                output_bytes = len(item.get("aggregated_output", "").encode())
+                command_output_bytes += output_bytes
+                if len(command_trace) < 128:
+                    command_trace.append({"command": command_text[:8192], "output_bytes": output_bytes, "exit_code": item.get("exit_code")})
                 if "agentic-workspace" in command_text and "start" in command_text and len(operating_calls) < 16:
                     operating_calls.append(
                         {
@@ -468,6 +477,10 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
         "calls": calls,
         "diagnostics": diagnostics,
         "operating_calls": operating_calls,
+        "thread_id": thread_id,
+        "command_trace": command_trace,
+        "command_output_bytes": command_output_bytes,
+        "measurement_boundary": "provider-reported command output; hidden host context and truncation loss unknown",
         "token_ceiling": token_ceiling,
         "budget_enforcement": "wall-time-output" + ("-and-observed-token-stop" if token_ceiling is not None else ""),
     }
@@ -485,7 +498,7 @@ class CodexActor:
         self.observations = []
         self.source_sha256 = SOURCE_SHA256
 
-    def session(self, work, prompt):
+    def session(self, work, prompt, *, resume=False):
         if self.sessions_started >= self.session_limit:
             raise ValueError("Session budget exhausted; no implicit retry")
         if self.billing != "subscription":
@@ -499,6 +512,14 @@ class CodexActor:
         command = _codex_exec_command(
             args=args, prompt=prompt, sandbox_repo="/home/consumer/repo", sandbox_share_path="/home/consumer/final.json"
         )
+        if resume:
+            thread_id = self.observations[-1].get("thread_id") if self.observations else None
+            if not thread_id or not re.fullmatch(r"[0-9a-f-]{36}", thread_id):
+                raise ValueError("Context-intact continuation requires the exact observed provider thread")
+            command[5:5] = ["resume"]
+            index = command.index("--cd")
+            del command[index : index + 2]
+            command.insert(len(command) - 1, thread_id)
         command = consumer.exec_command(command[3:])
         self.sessions_started += 1
         observation_start = len(consumer.product_receipts())

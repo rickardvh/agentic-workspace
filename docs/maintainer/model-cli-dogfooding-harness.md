@@ -25,6 +25,17 @@ named native owner tests for detailed semantics and add installed composition
 checks. A failed released product remains a failed observation, even when its fix
 has landed in source.
 
+The on-demand `context-continuation` family uses three bounded agent sessions:
+ordinary progress with unfinished follow-through, one exact provider-thread
+continuation, then a fresh session with only repository state. It changes a
+relevant release observation and an unrelated file between the latter sessions.
+The acting prompts name the maintenance task, never a checkpoint owner or a
+prewritten resume summary. Inert phase scoring reports retained progress, semantic
+rewrites, current completion and disposable residue separately. Command-output
+byte observations and bounded command traces are provider-reported; hidden host
+context, unreported truncation and monetary cost remain unknown. Native owner
+tests still supply identity/extent, stale-source and uncertain-effect controls.
+
 The scorer reads bounded inert exports after the actor stops. It checks task
 artifacts, allowed changes, preserved policy and claim honesty separately. It does
 not execute actor-modified tests or reward command mentions. Offline exports have
