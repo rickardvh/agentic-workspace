@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Reuse exact current source text obtained through ordinary reads with caller-local availability assertions and explicit material extent."
