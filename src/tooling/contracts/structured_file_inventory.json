@@ -1109,6 +1109,19 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Installed Planning discovery requires the generated registry alongside its shipped skills.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": true,
+      "notes": "Reconstructed from the canonical Planning skill registry by the agent interface generator.",
+      "reconstructable_from": [".agentic-workspace/planning/skills/REGISTRY.json", "src/tooling/generate/generate_agent_interface.py"],
+      "owner": "planning-skills",
+      "pattern": "src/core/payload/.agentic-workspace/planning/skills/REGISTRY.json",
+      "schema_or_validator": "uv run python src/tooling/generate/generate_agent_interface.py --check",
+      "status": "generated-derived",
+      "storage_class": "generated-required-adapter"
+    },
+    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": false,
       "format": "json",
@@ -1723,6 +1736,16 @@
     }
   ],
   "generated_mirrors": [
+    {
+      "pattern": "src/core/payload/.agentic-workspace/planning/skills/REGISTRY.json",
+      "max_bytes": 100000,
+      "source_command": "uv run python src/tooling/generate/generate_agent_interface.py",
+      "named_consumer": "installed Planning skill discovery",
+      "checked_in_justification": "Installed Planning procedures need the same discovery metadata as the canonical source.",
+      "freshness_check": "uv run python src/tooling/generate/generate_agent_interface.py --check",
+      "ordinary_agent_route": "canonical startup skill and Planning continuity procedure",
+      "removal_or_demotion_path": "remove when supported installation no longer consumes a bundled Planning registry"
+    },
     {
       "pattern": "src/core/payload/.agentic-workspace/fallback/no-cli-policy.json",
       "max_bytes": 10000,

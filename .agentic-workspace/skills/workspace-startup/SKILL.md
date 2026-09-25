@@ -27,6 +27,10 @@ or invalidated material; the last selected plan is not automatically this task.
 Before yielding with unfinished work, make that retention decision and verify any
 needed owner write. A finished slice with a pending prerequisite is still an
 unfinished objective; report that distinction.
+Check whether the repository captures the user's remaining objective as well as
+the changed files. A diff alone may omit a pending deliverable, accepted decision
+or its rationale. Follow the continuity path when that missing meaning matters
+to the next session; no retention is needed when current records suffice.
 
 If AW reports setup or refresh needing attention, follow the
 [setup procedure](../workspace-setup-jumpstart/SKILL.md), then return to the task.

@@ -26,6 +26,10 @@ current installed guidance when repository copies are old or missing. Refresh
 changed package bytes through Configuration; assess capabilities only when due.
 Unchanged deferred choices need no repeated question. Revisit them only when their
 prerequisite changes, dependent work needs them, or the human asks.
+Read each consequence's affected action or claim. An unresolved integration
+assessment does not by itself block unrelated task work or its completion;
+preserve the integration gap separately. A setup dry run checks package bytes,
+not semantic assessment, and cannot discharge that assessment.
 
 After setup, do the task directly. Read extra evidence only when it could change
 the work or a required claim; see [evidence sufficiency](evidence.md). Use returned
