@@ -6,6 +6,12 @@ change. Use the configured invocation: local `workspace.cli_invoke`, then shared
 `start`; this is the agent's machine interface, not a command the human must run
 around each edit. Repository-local npm uses `npm exec --no -- agentic-workspace`.
 Source checkouts may declare another invocation in their bootstrap instructions.
+Read the `workspace.cli_invoke` value in `.agentic-workspace/config.local.toml`
+or `.agentic-workspace/config.toml` when not already available. The key names a
+configuration value, not an executable called `workspace.cli_invoke`. Append
+`start --target . --task "<actual task>"` to that invocation; task text is not a
+positional argument. A missing PATH command does not make a configured local
+executable unavailable.
 
 Plain shell/tool callers use the default compact output. It includes the selected
 exact request/action and required material; follow a returned `detail_refs`

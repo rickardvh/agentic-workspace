@@ -24,6 +24,9 @@ unfinished work lacks an adequate owner, follow Planning's
 Simple completed work and unchanged progress need no continuation artefact. On
 resume, relate the current task to the retained owner and reacquire only missing
 or invalidated material; the last selected plan is not automatically this task.
+Before yielding with unfinished work, make that retention decision and verify any
+needed owner write. A finished slice with a pending prerequisite is still an
+unfinished objective; report that distinction.
 
 If AW reports setup or refresh needing attention, follow the
 [setup procedure](../workspace-setup-jumpstart/SKILL.md), then return to the task.

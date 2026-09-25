@@ -973,9 +973,11 @@ def execute_context_continuation(consumer, actor):
         before = work.files()
         prompt = (
             "Implement the service port change to 8081 in settings.json and update the README example when release.json permits it. "
-            "Complete the configuration slice now; the documentation release review is still pending. "
+            "Work on the whole objective until finished or blocked; the documentation release review is still pending. "
             "Preserve repository policy and notes. Explain the binding-address decision from the repository sources."
         )
+        invocation = "\nThe installed package is available through: " + " ".join(consumer.command)
+        prompt += invocation
         first_claim = actor.session(work, prompt)
         retained = work.files()
         # Exclude source/payload, volatile transport and transcripts from retention
@@ -1019,7 +1021,8 @@ def execute_context_continuation(consumer, actor):
         # but cannot inherit a continuing consumer's source-text availability.
         claim = actor.session(
             work,
-            "Continue and finish the service maintenance task from current repository state. The release review has changed; there is no earlier conversation.",
+            "Continue and finish the service maintenance task from current repository state. The release review has changed; there is no earlier conversation."
+            + invocation,
         )
         after = work.files()
         phases.append(
