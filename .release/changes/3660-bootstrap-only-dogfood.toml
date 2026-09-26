@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep the source repository bootstrap minimal, discover source preparation through startup, and publish route-scoped instructions through their native owner."
