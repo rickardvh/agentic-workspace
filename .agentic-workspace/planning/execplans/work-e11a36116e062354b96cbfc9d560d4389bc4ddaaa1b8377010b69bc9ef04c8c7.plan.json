@@ -5,8 +5,8 @@
   },
   "continuation": {
     "accepted_progress": "PR #3657's external re-review accepts the structural contraction and finds no need for another code-contraction pass. Final affected suite: 153 passed; Actionlint, native build, generated surfaces and hooks passed. Surface: 5 workflows, 28 jobs, 1329 YAML lines versus 9/40/2307. Label-only semver revalidation avoids replaying merge/security proof. The first 64-file documentation assessment is published. The remaining group containing docs/release-and-versioning.md is assessed: 63 unchanged postimages match prior guide-bound receipts, with the revised release guide read in full. The user authorized publication and Verification published the exact group receipt; both documentation groups requested by review are now recorded, without claiming whole-repository reconciliation. Issue #3655 now permits the bounded event adapter while retaining required admission and hosted evidence criteria.",
-    "external_posture": "Observed 2026-09-26: live ruleset 20615912 was activated and fetched again; required checks are Merge sufficiency, Semver admission and existing Review approval, with other protections preserved. Authenticated crates.io settings for agentic-workspace-cli and agentic-workspace-core both already register rickardvh/agentic-workspace, release.yml, cargo-registry; GitHub's cargo-registry environment has its existing required reviewer. These are configuration observations, not an OIDC exchange or release journey. CI and Semver admission passed at head 366dffc71.",
-    "frontier": "Both requested documentation assessments are published; the PR is ready for independent recheck. Issue completion and parent intent remain open pending independent acceptance, default-branch landing and the minimum hosted exhaustive/preparation/maintenance/release journeys; PyPI/npm configuration confirmation remains. No measured total hosted cost reduction is claimed. Delegation was attempted through the owner twice: first transport failed under Windows cp1252 decoding; a read-only UTF-8 reproduction passed. The second process succeeded but AW retained no usable return. Assignment then admitted local recovery. The original effect records remain available in owned scratch/local custody; no worker findings or independent review are claimed. User feedback: routine documentation receipt authorization adds disproportionate friction. Current Verification code requires a bounded human answer absent an exact policy delegation; assess proportionate delegation through the source owner separately, preserving independent review."
+    "external_posture": "Observed 2026-09-26 after independent re-review: removed retired Review approval status from active live ruleset 20615912. Fresh GET matches the exact update with all other writable fields preserved. Required checks are Merge sufficiency and Semver admission. Repository independent-review policy remains binding; no replacement check or self-review is introduced. GitHub reports head 793e32900 mergeable=true, mergeable_state=clean; both required checks succeeded. Both Cargo packages were observed registered to release.yml/cargo-registry; actual OIDC/publication proof remains pending. The reviewer confirms PyPI/npm already used top-level release.yml, so no new identity migration is introduced.",
+    "frontier": "PR #3657 is ready for externally initiated independent recheck after the stale live required check correction. Both requested documentation groups are published. Issues #3652/#3655/#3656/#3654 remain open pending default-branch exhaustive/source/candidate preparation, Maintenance, consolidated release/qualify and applicable trusted-publisher journeys. No measured total hosted cost reduction is claimed. Dogfood concerns now have separate owners #3658/#3659/#3660; do not absorb them into this PR or retain duplicate findings at final Planning closeout."
   },
   "creation_provenance": {
     "custody": {
@@ -59,7 +59,7 @@
       "issues": "#3655; #3652; #3656"
     }
   },
-  "revision": 6,
+  "revision": 7,
   "scope": {
     "excluded": "Product runtime redesign, self-review or weakened proof",
     "included": "CI, maintenance, release workflows and tooling, tests and boundary audit"
@@ -69,18 +69,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/280abea73f98b24687a77e26b392883283b8adf781780e18505de3947ee3287f.attempt.json",
-        "revision": "sha256:2613780d04ae3a6ea6519fb81ac88021529ca5841c8cc02fc117e44b3c593d92",
+        "path": ".agentic-workspace/local/effects/f6adbc36a189953fabc4dcdbd579217af9ed9b75f1a8aeceb1ffdc367b590d1e.attempt.json",
+        "revision": "sha256:9c02dd235649f44a5da870956812cceacf73e2729210213a4adbdd740453ca75",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/280abea73f98b24687a77e26b392883283b8adf781780e18505de3947ee3287f.result.json",
-        "revision": "sha256:e09cc9c563a37c94fff5fb27ea7a9409bf51cbe44933d3095bb29b5df699202d",
+        "path": ".agentic-workspace/local/effects/f6adbc36a189953fabc4dcdbd579217af9ed9b75f1a8aeceb1ffdc367b590d1e.result.json",
+        "revision": "sha256:7f4b8983f95bede38e6db0308490aa6227b3faee5e88a6842a6292eca7e04402",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:4185209e02f949b0ecc1d7de26b4228387105094fc233e3e3a80d490a196bd0c",
+    "invocation_revision": "sha256:341ad667c119b409b9d8146e1a08086afda9800e80dcbb0ee9c45279bac8a096",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -88,7 +88,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:cee54727ed6d84c4b1ded36142723d5e42b0ffe8f1061562a64c19bb562560d5",
+        "document_revision": "sha256:bf0c0ae281a680b634348716c98c1f52be6c04f19312e7a8b3ffa59f3ed04933",
         "owner_id": "work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7",
         "owner_path": ".agentic-workspace/planning/execplans/work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7.plan.json"
       }
