@@ -3,7 +3,12 @@
 Use the repository's configured invocation. Source checkouts build the native
 pair with `cargo build --locked --workspace --bins` before first use and after
 Rust or bundled contract/payload changes. Build both binaries together; do not
-substitute the former Python host when either is absent. Installed clients use the
+substitute the former Python host when either is absent. Reuse that built pair
+while its source revision remains current; a new conversation alone does not
+require rebuilding it. A read-only task still enters native startup with the
+current pair. If a necessary build is outside the authorized scope, state that
+specific runtime gap and use the fallback; do not infer it merely from context
+loss or skip an available current runtime. Installed clients use the
 artifact-verified distribution. An unavailable runtime supplies no configuration
 or Assignment permission. Follow the main skill's read-only fallback.
 

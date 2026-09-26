@@ -69,3 +69,10 @@ a follow-up, or close an issue merely to make a partial PR appear complete.
 Stacked PRs must each close an honestly bounded issue. Broader parent issues may
 remain open for their separately defined outcomes. Preserve the independent
 review boundary: implementation completion does not supply review or approval.
+
+Use short host command invocations and file-backed input for the established
+command-length failure reported as `CreateProcess ... blocked by policy`.
+Apply that retained lesson before speculating about a new approval requirement.
+Write substantial command bodies and semantic input with a file-writing tool;
+invoke the saved file with a short command. Preserve the same authorised scope
+and all current restrictions when changing transport.

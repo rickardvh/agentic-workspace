@@ -5,9 +5,12 @@ description: Use Agentic Workspace as a skills-first repository competence layer
 
 # Start ordinary work
 
-Read the task and applicable repository instructions. Obtain current AW context
-once at session entry, and again if its dependencies change; reuse a current
-answer. Follow [ordinary use](references/ordinary.md) for the configured command.
+Read the task and applicable repository instructions. Run the configured native
+`start` command to obtain current AW context before doing repository work in each
+new or resumed session, including read-only explanation and issue shaping.
+Reading this skill or retained instructions alone does not complete startup.
+Within the same session, reuse a current answer and refresh it if its dependencies
+change. Follow [ordinary use](references/ordinary.md) for the configured command.
 
 Follow the current resolved consequences before taking the actions they affect.
 Available editor, shell or Git tools do not discharge those consequences. Use
