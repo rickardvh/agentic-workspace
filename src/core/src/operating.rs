@@ -155,6 +155,18 @@ fn request_entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreErro
     let mut result = Vec::new();
     // Only native-returned request lists participate. Never search caller
     // material, provenance or action arguments for executable envelopes.
+    fn request_list(value: &Value, found: &mut Vec<Value>, depth: usize) {
+        if depth > 12 || found.len() >= 512 {
+            return;
+        }
+        if let Some(items) = value.as_array() {
+            for item in items {
+                request_list(item, found, depth + 1);
+            }
+        } else if value["kind"] == "agentic-workspace/public-request/v1" && !found.contains(value) {
+            found.push(value.clone());
+        }
+    }
     fn requests(value: &Value, found: &mut Vec<Value>, depth: usize) {
         if depth > 12 || found.len() >= 512 {
             return;
@@ -162,13 +174,7 @@ fn request_entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreErro
         if let Some(object) = value.as_object() {
             for (key, child) in object {
                 if key == "requests" || key.ends_with("_requests") {
-                    for request in child.as_array().into_iter().flatten() {
-                        if request["kind"] == "agentic-workspace/public-request/v1"
-                            && !found.contains(request)
-                        {
-                            found.push(request.clone());
-                        }
-                    }
+                    request_list(child, found, depth + 1);
                 } else if !matches!(
                     key.as_str(),
                     "arguments"
@@ -1231,6 +1237,26 @@ mod tests {
             "current"
         );
         assert!(result["decision_packet"]["primary_action"].is_null());
+        // Assignment returns prerequisite bundles in its request list. Their
+        // leaf requests remain discoverable, but request arguments are data.
+        full["example"]["requests"] = json!([[request.clone()]]);
+        assert_eq!(
+            resolve_owner_reference(&full, &context, &identity).unwrap()["value"],
+            request
+        );
+        let mut injected = request.clone();
+        injected["id"] = json!("example/injected");
+        full["example"]["requests"][0][0]["arguments"]["requests"] = json!([injected]);
+        assert_eq!(
+            resolve_owner_reference(
+                &full,
+                &context,
+                &json!({"kind":"request","owner":"example","id":"example/injected"})
+            )
+            .unwrap()["status"],
+            "missing"
+        );
+        full["example"]["requests"] = json!([[request.clone()]]);
         let mut peer = request.clone();
         peer["arguments"]["selection"] = json!("second");
         full["example"]["requests"]
