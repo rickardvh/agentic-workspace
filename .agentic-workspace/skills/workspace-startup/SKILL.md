@@ -9,6 +9,13 @@ Read the task and applicable repository instructions. Obtain current AW context
 once at session entry, and again if its dependencies change; reuse a current
 answer. Follow [ordinary use](references/ordinary.md) for the configured command.
 
+Follow the current resolved consequences before taking the actions they affect.
+Available editor, shell or Git tools do not discharge those consequences. Use
+their exact owner path to resolve them, or preserve the affected work as blocked;
+continue authorized work outside that scope. On fresh or compacted entry,
+reacquire current context through this procedure. Retained carriage is transport,
+not authority. See [current restrictions](references/constraints.md) when needed.
+
 During work, carry material findings from source/test work (including repeated
 cost or positive simplification opportunities), new information or an unmet prerequisite through
 ordinary `start` before its consequence can be lost or a dependent action fails.

@@ -328,7 +328,7 @@ def test_payload_inventory_reconciliation_preserves_content_and_custody(tmp_path
 
     assert call(invocation=action(propose("adopt")))["effect_outcome"]["status"] == "committed"
     record = tmp_path / ".agentic-workspace/local/effects/adoption.prepared.json"
-    previous = json.loads(record.read_text())["invocation"]["arguments"]["binding"]["state"]
+    previous = json.loads(record.read_text(encoding="utf-8"))["invocation"]["arguments"]["binding"]["state"]
     provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
     expected = provenance.read_bytes()
     old = json.loads(expected)
@@ -761,8 +761,8 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     assert instructions.read_text().startswith("# Repository policy\nPreserve this text.\n")
     assert instructions.read_bytes() == original_instructions + (
         b"<!-- agentic-workspace:workflow:start -->\n"
-        b"Use `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; "
-        b"if native skill discovery is unavailable, read it directly.\n"
+        b"For repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. "
+        b"If native skill discovery is unavailable, read that file directly.\n"
         b"<!-- agentic-workspace:workflow:end -->\n"
     )
     assert instructions.read_text().count("<!-- agentic-workspace:workflow:start -->") == 1
@@ -848,8 +848,8 @@ def test_managed_fence_boundary_refresh_and_removal(tmp_path, shared_core_binary
     prefix = "# Repository café\r\nKeep whitespace.  \n".encode()
     suffix = b"\r\n\r\nKeep this suffix without a final newline."
     canonical = (
-        start + b"\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; "
-        b"if native skill discovery is unavailable, read it directly.\n" + end
+        start + b"\nFor repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. "
+        b"If native skill discovery is unavailable, read that file directly.\n" + end
     )
 
     def call(**extra):
@@ -865,9 +865,13 @@ def test_managed_fence_boundary_refresh_and_removal(tmp_path, shared_core_binary
         answer["arguments"]["answer"] = "authorize-write"
         assert call(invocation=call(request=answer)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
 
-    # Marker custody works both before adoption and on later refreshes. Interior
-    # content is deliberately unrelated to any current or historical producer.
-    for interior in (b"", b"arbitrary package-owned text", "\r\n# Unknown procedure\r\n秘密\n".encode()):
+    # Marker custody replaces old entry wording and unknown interior text alike,
+    # both before adoption and on later refreshes; surrounding policy is untouched.
+    soft_bootstrap = (
+        b"\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; "
+        b"if native skill discovery is unavailable, read it directly.\n"
+    )
+    for interior in (soft_bootstrap, b"", b"arbitrary package-owned text", "\r\n# Unknown procedure\r\n秘密\n".encode()):
         instructions.write_bytes(prefix + start + interior + end + suffix)
         apply("adopt")
         assert instructions.read_bytes() == prefix + canonical + suffix

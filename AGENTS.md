@@ -26,7 +26,7 @@ Repository completion requirements:
   because HEAD changed or substitute direct edits to interpreted owner state.
 
 <!-- agentic-workspace:workflow:start -->
-Use `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.
+For repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. If native skill discovery is unavailable, read that file directly.
 <!-- agentic-workspace:workflow:end -->
 
 If you implemented or materially changed a PR, do not review or approve it yourself
