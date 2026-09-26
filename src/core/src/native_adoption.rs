@@ -33,7 +33,7 @@ fn revision(text: &Option<String>) -> Value {
 fn fence() -> String {
     let c = contract();
     format!(
-        "{}\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.\n{}",
+        "{}\nFor repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. If native skill discovery is unavailable, read that file directly.\n{}",
         c["instruction_fence"]["start"].as_str().unwrap(),
         c["instruction_fence"]["end"].as_str().unwrap()
     )

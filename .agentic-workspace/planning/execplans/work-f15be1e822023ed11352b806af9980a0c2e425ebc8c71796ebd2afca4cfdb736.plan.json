@@ -1,0 +1,59 @@
+{
+  "blockers": [],
+  "canonical_core": {},
+  "continuation": {
+    "frontier": "User reprioritized P0 before any P1 implementation. Existing native binaries build. Work starts from merged master on work/mandatory-aw-entry; second PR will stack repository migration. No implementation or acceptance claimed."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/0b34261c0bbfad97baed318af67c17ae5052fc1207c67c3d8d19b4c58c766fe6.attempt.json",
+        "revision": "sha256:fb913fa78ae6b1b573d4ab423b6e239599f5ee0719c99954e28efbc51db39b41",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/0b34261c0bbfad97baed318af67c17ae5052fc1207c67c3d8d19b4c58c766fe6.result.json",
+        "revision": "sha256:6bce7182bcac0b440a4b500ab782f442a28740ff58d36069fcbdc8cd2ba74ccb",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:cc1570586a1f351e574ce848ea8b628a1ae20db2f008e45d83c1df24e0f847c4",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:22becf226b0e446d478c8e051b3c0a187214412e82dc96c86e9a5072fece224e"
+  },
+  "id": "work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736",
+  "intent": {
+    "outcome": "Implement #3659 and #3660 in stacked PRs, preserving dynamic owner authority and proving representative fresh-agent behavior."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Resolve task Assignment, establish baseline consumer evidence and implement mandatory bootstrap in the first PR.",
+  "owner_level": "lane",
+  "parent": {},
+  "phase": "shaping",
+  "proof": {
+    "required": [
+      "Existing adoption replacement and skills-first contracts",
+      "Real-agent baseline/candidate binding, direct, optional and fresh-context cases",
+      "Bootstrap-only source preparation, scoped rules, review independence and issue shaping evidence"
+    ]
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3659",
+    "https://github.com/rickardvh/agentic-workspace/issues/3660"
+  ],
+  "relationships": {},
+  "revision": 1,
+  "scope": {
+    "excluded": "P1 implementation is deferred by the user. No owner semantic redesign, universal host enforcement, self-review or approval.",
+    "included": "Canonical bootstrap, startup procedure, generated/install surfaces, bounded consumer proof; then strongest-owner migration of root AGENTS.md policy."
+  },
+  "title": "Mandatory AW entry and bootstrap-only repository dogfooding"
+}

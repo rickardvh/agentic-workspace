@@ -20,7 +20,7 @@ from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ".agentic-workspace/skills/workspace-startup/SKILL.md"
-STARTUP_POINTER = "<!-- agentic-workspace:workflow:start -->\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.\n<!-- agentic-workspace:workflow:end -->"
+STARTUP_POINTER = "<!-- agentic-workspace:workflow:start -->\nFor repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. If native skill discovery is unavailable, read that file directly.\n<!-- agentic-workspace:workflow:end -->"
 spec = importlib.util.spec_from_file_location("agent_interface_generator", ROOT / "src/tooling/generate/generate_agent_interface.py")
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
