@@ -266,12 +266,14 @@ trusted publisher. The package owner performs that one-time bootstrap only from
 an independently admitted release: download its admitted assets, run the same
 staging/byte comparison, publish core before CLI using a short-lived manually
 authorised credential, and verify the public bytes. Record the receipt and revoke
-the bootstrap credential. Configure the calling workflow `release.yml`
+the bootstrap credential. Configure the workflow `release.yml`
 for `rickardvh/agentic-workspace`, environment `cargo-registry`,
 before ordinary OIDC publication. The registry workflow contains no persistent
 Cargo token secret; its token comes from the Rust team's authentication action.
-The callable `registry-release.yml` keeps its existing credential boundary.
-Preview/RC and stable subjects now share the calling workflow. Confirm the live
+Cargo credentials belong to an inline job in `release.yml`, with the
+`cargo-registry` environment and `id-token: write`. Any existing registration
+for `registry-release.yml` must be updated to `release.yml` by the package owner.
+Preview/RC and stable subjects share that workflow. Confirm the live
 trusted-publisher registration before the first consolidated RC publication;
 historical attestations remain bound to their original publisher.
 See the [Rust trusted-publishing announcement](https://blog.rust-lang.org/2025/07/11/crates-io-development-update-2025-07/)

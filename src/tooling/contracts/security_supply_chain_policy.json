@@ -34,11 +34,6 @@
       "contents",
       "id-token"
     ],
-    ".github/workflows/release-from-semver-label.yml": [
-      "actions",
-      "contents",
-      "pull-requests"
-    ],
     ".github/workflows/security.yml": [
       "security-events"
     ]

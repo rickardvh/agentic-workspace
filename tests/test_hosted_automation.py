@@ -15,32 +15,35 @@ def workflow(name):
     return yaml.load((ROOT / ".github/workflows" / name).read_text(), Loader=yaml.BaseLoader)
 
 
-def test_ci_admission_requires_semver_merge_and_blocking_security():
+def test_label_changes_only_revalidate_the_semver_claim():
+    workflows = [workflow(p.name) for p in (ROOT / ".github/workflows").glob("*.yml")]
+    handlers = [w for w in workflows if "labeled" in (w["on"].get("pull_request") or {}).get("types", [])]
+    assert handlers
+    for handler in handlers:
+        commands = [s.get("run", "") for j in handler["jobs"].values() for s in j.get("steps", [])]
+        assert any("pr_semver_admission.py" in command for command in commands)
+        assert all("cargo " not in command and "pytest " not in command for command in commands)
+        assert all("uses" not in job for job in handler["jobs"].values())
     ci = workflow("ci.yml")
-    assert {"labeled", "unlabeled"} <= set(ci["on"]["pull_request"]["types"])
+    assert not {"labeled", "unlabeled"} & set(ci["on"]["pull_request"]["types"])
     readiness = ci["jobs"]["readiness"]
     assert readiness["name"] == "Merge sufficiency"
-    assert set(readiness["needs"]) == {"merge-sufficiency", "security", "current-public-install"}
+    assert "security" in readiness["needs"]
     assert "always()" in readiness["if"]
-    assert ci["jobs"]["security"]["uses"] == "./.github/workflows/security.yml"
-    steps = ci["jobs"]["merge-sufficiency"]["steps"]
-    admission = next(step for step in steps if step.get("name") == "Validate semver label")
-    assert admission["run"] == "python src/tooling/release/pr_semver_admission.py"
-    assert admission["if"] == "github.event_name == 'pull_request'"
-    assert not (ROOT / ".github/workflows/pr-semver-label.yml").exists()
+    assert "current_install.py" not in str(ci)
 
 
 def test_security_and_consumers_keep_their_schedule_and_permission_boundaries():
-    security = workflow("security.yml")
-    assert set(security["on"]) == {"workflow_call"}
-    assert set(security["jobs"]) == {"baseline", "codeql"}
-    assert security["jobs"]["codeql"]["permissions"]["security-events"] == "write"
-    assert security["jobs"]["baseline"]["permissions"] == {"contents": "read", "pull-requests": "read"}
+    ci = workflow("ci.yml")
+    security = workflow(Path(ci["jobs"]["security"]["uses"]).name)
+    assert "continue-on-error" not in str(security)
+    assert "check_rust_dependencies.py" in str(security)
+    assert "codeql-action/analyze@" in str(security)
     maintenance = workflow("maintenance.yml")
-    assert {row["cron"] for row in maintenance["on"]["schedule"]} == {"23 7 * * *", "17 4 * * 1"}
-    assert "17 4 * * 1" in maintenance["jobs"]["security"]["if"]
-    assert "!= '17 4 * * 1'" in maintenance["jobs"]["freeze"]["if"]
-    assert not (ROOT / ".github/workflows/consumer-validation.yml").exists()
+    assert maintenance["on"]["schedule"]
+    projection = [s for j in maintenance["jobs"].values() for s in j.get("steps", []) if "current_install.py" in s.get("run", "")]
+    assert len(projection) == 1 and "--observe" in projection[0]["run"]
+    assert "continue-on-error" not in projection[0]
 
 
 @pytest.mark.parametrize("status", ["success", "failure", "skipped", "cancelled"])

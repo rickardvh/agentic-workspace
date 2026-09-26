@@ -30,6 +30,13 @@ def test_release_model_keeps_class_and_support_explicit(tag, release_class, supp
         lifecycle.release_model(tag, "preview" if release_class == "stable" else "stable")
 
 
+def test_publish_dispatch_still_requires_exact_source_after_preparation_inputs_became_optional(monkeypatch):
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/master")
+    with pytest.raises(ValueError, match="exact source"):
+        lifecycle.admit("v1.9.0", "", "stable", "owner/repo")
+
+
 @pytest.mark.parametrize("outcomes,passes", [(["matching"], True), (["absent", "matching"], True), (["absent"] * 8, False)])
 def test_registry_convergence_is_bounded_and_reobserves(outcomes, passes):
     now = [0]
@@ -74,54 +81,26 @@ def test_registry_conflict_is_never_retried_and_channel_wait_does_not_republish(
     assert result[0]["status"] == "matching" and sleeps == [2]
 
 
-@pytest.mark.parametrize("conclusion", ["success", "failure"])
-def test_source_qualification_stops_defects_before_candidate_generation(monkeypatch, conclusion):
-    source = "a" * 40
-    calls = []
-    monkeypatch.setattr(lifecycle, "run", lambda *args: calls.append(args))
-
-    def api(_repository, endpoint):
-        if endpoint.endswith("/jobs?per_page=100"):
-            return {"jobs": [{"name": name, "conclusion": "success"} for name in lifecycle.SOURCE_CLAIMS]}
-        reason = next(arg.removeprefix("reason=") for arg in calls[0] if arg.startswith("reason="))
-        return {
-            "workflow_runs": [
-                {
-                    "display_title": f"CI / {reason}",
-                    "head_sha": source,
-                    "path": ".github/workflows/ci.yml",
-                    "event": "workflow_dispatch",
-                    "head_repository": {"full_name": "owner/repo"},
-                    "status": "completed",
-                    "conclusion": conclusion,
-                    "id": 7,
-                    "html_url": "https://example.invalid/run/7",
-                }
-            ]
-        }
-
-    monkeypatch.setattr(lifecycle, "api", api)
-    if conclusion == "failure":
-        with pytest.raises(ValueError, match="before candidate generation"):
-            lifecycle.qualify_source("owner/repo", source)
-    else:
-        assert lifecycle.qualify_source("owner/repo", source)["run_id"] == 7
-    assert len(calls) == 1  # Dispatch is an observation prerequisite, never candidate creation.
-    workflow = (ROOT / ".github/workflows/release-from-semver-label.yml").read_text()
-    assert workflow.index("release_lifecycle.py qualify-source") < workflow.index("coordinated_release.py prepare")
-
-
-@pytest.mark.parametrize("defect", [None, "source-proof", "normalization"])
-def test_candidate_requires_source_evidence_and_exact_normalization(monkeypatch, defect):
+@pytest.mark.parametrize("producer", ["release", "ci"])
+@pytest.mark.parametrize("defect", [None, "source-proof", "normalization", "missing-claim", "wrong-subject"])
+def test_candidate_requires_source_evidence_and_exact_normalization(monkeypatch, defect, producer):
     source = "a" * 40
 
     def api(_repository, endpoint):
         if "/jobs?" in endpoint:
-            return {"jobs": [{"name": name, "conclusion": "success"} for name in lifecycle.SOURCE_CLAIMS]}
+            return {
+                "jobs": [
+                    {"name": ("source-qualification / " if producer == "release" else "") + name, "conclusion": "success"}
+                    for name in lifecycle.SOURCE_CLAIMS
+                    if defect != "missing-claim" or name != "workspace-checks"
+                ]
+            }
         return {
-            "head_sha": source,
-            "conclusion": "failure" if defect == "source-proof" else "success",
-            "path": ".github/workflows/ci.yml",
+            "head_sha": "c" * 40 if defect == "wrong-subject" else source,
+            "conclusion": "failure" if defect == "source-proof" else (None if producer == "release" else "success"),
+            "path": f".github/workflows/{producer}.yml",
+            "status": "in_progress" if producer == "release" else "completed",
+            "head_branch": "master",
             "event": "workflow_dispatch",
             "display_title": f"CI / release-source-{source}-nonce",
             "head_repository": {"full_name": "owner/repo"},

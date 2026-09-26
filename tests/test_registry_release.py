@@ -110,14 +110,12 @@ def test_registry_requires_exact_admitted_subject(tmp_path, tag):
 
 
 def test_registry_workflow_is_gated_projection_without_rebuild():
-    workflow = (ROOT / ".github/workflows/registry-release.yml").read_text()
-    assert "workflow_call:" in workflow and "workflow_dispatch:" not in workflow
-    assert "pypa/gh-action-pypi-publish@" not in workflow
     import yaml
 
     stable = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
     for name in ("platform-build", "release-runtime-matrix", "agentic-workspace-package"):
-        assert stable["jobs"][name]["if"] == "needs.promotion-admission.outputs.build_required == 'true'"
+        assert "needs.promotion-admission.outputs.build_required == 'true'" in stable["jobs"][name]["if"]
+        assert "needs.promotion-admission.result == 'success'" in stable["jobs"][name]["if"]
     for name in ("language-packages", "language-registries"):
         job = stable["jobs"][name]
         assert "promotion-admission" in job["needs"]
@@ -127,7 +125,8 @@ def test_registry_workflow_is_gated_projection_without_rebuild():
             "needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped'"
             in job["if"]
         )
-    cargo = yaml.safe_load(workflow)["jobs"]["cargo-publish"]
+    cargo = next(job for job in stable["jobs"].values() if job.get("environment") == "cargo-registry")
+    assert cargo["permissions"]["id-token"] == "write"
     for job in (stable["jobs"]["language-packages"], cargo):
         fetch = next(step["run"] for step in job["steps"] if step.get("name", "").startswith("Fetch "))
         assert "registry_release.py --fetch" in fetch
@@ -162,12 +161,9 @@ def test_registry_recovery_binds_old_tag_independently_of_tooling_head(tmp_path,
 
     workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
     steps = workflow["jobs"]["language-packages"]["steps"]
-    assert steps[0]["with"]["ref"] == (
-        "${{ inputs.registries_only && 'master' || "
-        "(github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name) }}"
-    )
+    assert steps[0]["with"]["ref"] == "${{ github.sha }}"
     binding = next(step for step in steps if step.get("id") == "release-source")
-    assert binding["env"]["EXPECTED_SOURCE_COMMIT"] == "${{ inputs.source_commit }}"
+    assert binding["env"]["EXPECTED_SOURCE_COMMIT"] == "${{ needs.promotion-admission.outputs.source_commit }}"
     for step in steps:
         if "registry_release.py" in step.get("run", ""):
             assert step["env"]["RELEASE_SOURCE"] == "${{ steps.release-source.outputs.commit }}"

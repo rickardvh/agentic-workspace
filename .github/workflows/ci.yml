@@ -3,9 +3,21 @@ run-name: CI / ${{ inputs.reason || github.event_name }}
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [master]
+  workflow_call:
+    inputs:
+      expected_head_sha:
+        required: true
+        type: string
+      reason:
+        required: true
+        type: string
+      qualified_source:
+        type: string
+      source_run_id:
+        type: string
   workflow_dispatch:
     inputs:
       expected_head_sha:
@@ -39,28 +51,15 @@ jobs:
 
   readiness:
     name: Merge sufficiency
-    needs: [merge-sufficiency, security, current-public-install]
+    needs: [merge-sufficiency, security]
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Require merge proof, semver admission and security
+      - name: Require merge proof and security
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: python src/tooling/check/check_ci_results.py
-
-  current-public-install:
-    name: Current accepted public install
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event_name == 'release' && 'master' || github.ref }}
-      - name: Compare the current projection with accepted public release bytes
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python src/tooling/release/current_install.py
 
   merge-sufficiency:
     name: Merge proof
@@ -76,26 +75,6 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - name: Validate semver label
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          EVENT_PATH: ${{ github.event_path }}
-          GH_TOKEN: ${{ github.token }}
-          SEMVER_ADMISSION_PATH: ${{ runner.temp }}/semver-admission.json
-        run: python src/tooling/release/pr_semver_admission.py
-
-      - name: Retain exact semver admission
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: semver-admission-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/semver-admission.json
-          if-no-files-found: error
-          retention-days: 90
-          overwrite: false
-
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - name: Set up Node.js

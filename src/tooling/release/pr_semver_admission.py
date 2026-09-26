@@ -140,10 +140,27 @@ def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
 
 
 def main():
+    event_path = os.environ["EVENT_PATH"]
+    base_ref, head_ref = os.environ["BASE_REF"], os.environ["HEAD_REF"]
+    if number := os.environ.get("DISPATCH_PR"):
+        if not number.isdigit():
+            raise ValueError("Dispatch requires a numeric PR identity")
+        repository = os.environ["GITHUB_REPOSITORY"]
+        pr = json.loads(subprocess.check_output(["gh", "api", f"repos/{repository}/pulls/{number}"]))
+        if (
+            pr["state"] != "open"
+            or pr["base"]["repo"]["full_name"] != repository
+            or pr["head"]["sha"] != os.environ.get("EXPECTED_HEAD_SHA")
+            or pr["head"]["sha"] != os.environ["GITHUB_SHA"]
+        ):
+            raise ValueError("Semver dispatch must bind the exact open PR head")
+        event_path = str(Path(os.environ["SEMVER_ADMISSION_PATH"]).with_name("semver-event.json"))
+        Path(event_path).write_text(json.dumps({"pull_request": pr}), encoding="utf-8")
+        base_ref, head_ref = pr["base"]["ref"], pr["head"]["ref"]
     admit(
-        event_path=os.environ["EVENT_PATH"],
-        base_ref=os.environ["BASE_REF"],
-        head_ref=os.environ["HEAD_REF"],
+        event_path=event_path,
+        base_ref=base_ref,
+        head_ref=head_ref,
         admission_path=os.environ["SEMVER_ADMISSION_PATH"],
         run_id=int(os.environ["GITHUB_RUN_ID"]),
         attempt=int(os.environ["GITHUB_RUN_ATTEMPT"]),

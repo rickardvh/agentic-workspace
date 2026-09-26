@@ -1,0 +1,52 @@
+name: Semver admission
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        required: true
+        type: string
+      expected_head_sha:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: semver-${{ github.event.pull_request.number || inputs.pull_request_number }}
+  cancel-in-progress: true
+
+jobs:
+  semver:
+    name: Semver admission
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate semver label
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          EVENT_PATH: ${{ github.event_path }}
+          GH_TOKEN: ${{ github.token }}
+          DISPATCH_PR: ${{ inputs.pull_request_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          SEMVER_ADMISSION_PATH: ${{ runner.temp }}/semver-admission.json
+        run: python src/tooling/release/pr_semver_admission.py
+
+      - name: Retain exact semver admission
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: semver-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/semver-admission.json
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false

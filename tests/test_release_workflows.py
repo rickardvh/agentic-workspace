@@ -161,7 +161,7 @@ def test_release_path_classification_covers_native_sources_and_bindings() -> Non
 
 
 def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
-    workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
+    workflow = (WORKFLOW_ROOT / "pr-semver-label.yml").read_text(encoding="utf-8")
 
     assert "pull_request:" in workflow
     assert "labeled" in workflow
@@ -170,7 +170,6 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     assert "HEAD_REF: ${{ github.event.pull_request.head.ref }}" in workflow
     assert "BASE_REF: ${{ github.base_ref }}" not in workflow
     assert "python src/tooling/release/pr_semver_admission.py" in workflow
-    assert not (WORKFLOW_ROOT / "pr-semver-label.yml").exists()
     workflow = (WORKFLOW_ROOT.parent.parent / "src/tooling/release/pr_semver_admission.py").read_text()
     assert ".github/release-ownership.json" in workflow
     assert "classify_changed_paths(changed, ownership)" in workflow
@@ -184,70 +183,25 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
 
 
 def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_release_commit() -> None:
-    workflow = (WORKFLOW_ROOT / "release-from-semver-label.yml").read_text(encoding="utf-8")
+    import yaml
 
-    rc_input = workflow.split("      accepted_rc:\n", 1)[1].split("        type: string", 1)[0]
-    assert "required: false" in rc_input
-    assert workflow.count('if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi') == 2
-    assert "branches:" in workflow
-    assert "master" in workflow
-    assert "pull_request:" not in workflow
-    assert "github.event.pull_request" not in workflow
-    assert "contents: write" in workflow
-    assert "pull-requests: write" in workflow
-    assert "actions: write" in workflow
-    assert "concurrency:" in workflow
-    assert "prepare-coordinated-release-${{ github.ref }}" in workflow
-    assert "cancel-in-progress: false" in workflow
-    assert "coordinated_release.py plan" in workflow
-    assert "coordinated_release.py prepare" in workflow
-    assert "coordinated_release.py verify" in workflow
-    assert workflow.index("coordinated_release.py prepare") < workflow.index("uv lock", workflow.index("coordinated_release.py prepare"))
-    assert workflow.index("uv lock", workflow.index("coordinated_release.py prepare")) < workflow.index("coordinated_release.py verify")
-    assert "generate_command_packages.py" not in workflow
-    assert "coordinated_release.py tag-plan" in workflow
-    assert "uv lock" in workflow
-    assert "peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1" in workflow
-    assert "automation/coordinated-release" in workflow
-    assert "id: release-pr" in workflow
-    assert "steps.release-pr.outputs.pull-request-operation == 'created'" in workflow
-    assert "steps.release-pr.outputs.pull-request-operation == 'updated'" in workflow
-    assert "gh workflow run ci.yml" in workflow
-    assert '--ref "${RELEASE_PR_BRANCH}"' in workflow
-    assert '-f expected_head_sha="${RELEASE_PR_HEAD_SHA}"' in workflow
-    assert '-f reason="coordinated release candidate exact-head admission"' in workflow
-    assert "Resolve pending release tag" in workflow
-    assert "git tag -a" in workflow
-    assert '"${{ steps.release-commit.outputs.release_commit }}"' in workflow
-    assert "git fetch origin master --tags" in workflow
-    assert 'git push origin "${{ steps.release-commit.outputs.tag }}"' in workflow
-    assert "Resolve publisher dispatch" in workflow
-    assert "steps.release-commit.outputs.publish_candidate == 'true'" in workflow
-    assert "gh release view" in workflow
-    assert "agentic-workspace-release-manifest.json" in workflow
-    assert "release-assets-missing-or-draft" in workflow
-    assert "steps.publisher.outputs.publish_needed == 'true'" in workflow
-    assert "steps.release-commit.outputs.tag_needed == 'true'" in workflow
-    assert workflow.count("gh workflow run release.yml") == 1
-    assert '-f tag="${{ steps.publisher.outputs.tag }}"' in workflow
-    assert '-f source_commit="${{ steps.publisher.outputs.release_commit }}"' in workflow
-    assert "softprops/action-gh-release" not in workflow
-    assert "promotion-admission:" in workflow
-    assert "needs: promotion-admission" in workflow
-    assert "support_bearing_promotion.py github-checks" in workflow
-    assert workflow.index("permissions:\n  contents: read") < workflow.index("release-state:")
-    assert workflow.index("promotion-admission:") < workflow.index("contents: write")
-    assert "uv lock --check" in workflow
-
-
-def test_release_publisher_dispatch_heredoc_terminates_at_shell_column_zero() -> None:
-    workflow = (WORKFLOW_ROOT / "release-from-semver-label.yml").read_text(encoding="utf-8")
-    run_block = _step_run_block(workflow, "Resolve publisher dispatch")
-
-    assert "python - <<'PY'\n" in run_block
-    assert "\nPY\n" in run_block
-    assert "\n  PY\n" not in run_block
-    assert "\n    PY\n" not in run_block
+    workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
+    jobs = workflow["jobs"]
+    prepare_id, prepare = next((key, job) for key, job in jobs.items() if "coordinated_release.py prepare" in str(job))
+    qualification = jobs[prepare["needs"]]
+    assert qualification["uses"].endswith("/ci.yml")
+    assert qualification["with"]["expected_head_sha"] == "$" + "{{ github.sha }}"
+    assert "always()" not in prepare["if"]
+    assert prepare["permissions"]["contents"] == "write"
+    commands = "\n".join(step.get("run", "") for step in prepare["steps"])
+    assert 'test "$GITHUB_REF" = refs/heads/master' in commands
+    assert commands.index("coordinated_release.py prepare") < commands.index("coordinated_release.py verify")
+    assert "coordinated_release.py tag-plan" in commands
+    assert "git merge-base --is-ancestor" in commands
+    assert "gh workflow run release.yml" not in commands
+    admission = next(job for job in jobs.values() if "release_lifecycle.py admit" in str(job))
+    assert prepare_id in admission["needs"]
+    assert "source_commit" in admission["env"]["EXPECTED_SOURCE_COMMIT"]
 
 
 def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> None:
@@ -285,7 +239,7 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
 
     assert "name: Merge proof" in merge
     assert "name: Merge sufficiency" in workflow
-    assert "needs: [merge-sufficiency, security, current-public-install]" in workflow
+    assert "needs: [merge-sufficiency, security]" in workflow
     assert "github.event_name == 'push'" in merge
     assert "github.event_name == 'pull_request'" in merge
     assert "cargo check --locked --workspace --all-targets" in merge
@@ -339,7 +293,7 @@ def test_master_ruleset_and_release_policy_require_merge_sufficiency_before_supp
     status_rule = next(rule for rule in ruleset["rules"] if rule["type"] == "required_status_checks")
     contexts = [item["context"] for item in status_rule["parameters"]["required_status_checks"]]
 
-    assert contexts == ["Merge sufficiency"]
+    assert set(contexts) == {"Merge sufficiency", "Semver admission"}
     assert support_policy["required_check"] == "Merge sufficiency"
     assert support_policy["protected_branch"] == "master"
     assert "release_lifecycle.py compose" in release
@@ -383,13 +337,13 @@ def test_release_notes_classify_compatibility_significant_changes() -> None:
 def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -> None:
     ownership = _ownership()
     release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
-    post_merge_workflow = (WORKFLOW_ROOT / "release-from-semver-label.yml").read_text(encoding="utf-8")
+    post_merge_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
 
     assert "release_lifecycle.py admit" in release_workflow
     assert 'manifest.get("source_commit")' in (ROOT / "src/tooling/release/stable_manifest.py").read_text()
     assert "coordinated_release.py prepare" in post_merge_workflow
     assert "coordinated_release.py tag-plan" in post_merge_workflow
-    assert "gh workflow run release.yml" in post_merge_workflow
+    assert "gh workflow run release.yml" not in post_merge_workflow
     assert sorted(ownership["release_commit_allowed_paths"]) == [
         ".agentic-workspace/payload-provenance.json",
         ".release/changes/",

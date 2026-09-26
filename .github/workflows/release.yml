@@ -6,13 +6,22 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
+      operation:
+        description: Prepare a coordinated candidate or publish an existing immutable subject.
+        type: choice
+        options: [publish, prepare]
+        default: publish
+      accepted_rc:
+        description: Accepted RC for first-stable preparation.
+        required: false
+        type: string
       tag:
         description: Existing immutable preview, RC or stable tag to qualify or publish.
-        required: true
+        required: false
         type: string
       source_commit:
         description: Commit the tag must resolve to.
-        required: true
+        required: false
         type: string
       release_class:
         description: Explicit claim carried by this immutable subject.
@@ -29,7 +38,7 @@ on:
         default: false
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref }}
+  group: release-${{ github.repository }}
   cancel-in-progress: false
 
 permissions:
@@ -37,7 +46,133 @@ permissions:
   checks: read
 
 jobs:
+  source-qualification:
+    if: inputs.operation == 'prepare'
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      security-events: write
+    with:
+      expected_head_sha: ${{ github.sha }}
+      reason: release source qualification
+
+  release-state:
+    name: Prepare release PR or tag verified release commit
+    if: inputs.operation == 'prepare'
+    needs: source-qualification
+    outputs:
+      tag: ${{ steps.release-commit.outputs.tag }}
+      source_commit: ${{ steps.release-commit.outputs.release_commit }}
+      publish: ${{ steps.release-commit.outputs.publish_candidate }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write # dispatch exact candidate validation after creating its branch
+    steps:
+      - name: Require protected preparation authority
+        run: test "$GITHUB_REF" = refs/heads/master
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+
+      - name: Verify committed dependency graph before release planning
+        run: uv lock --check
+
+      - name: Resolve pending release state
+        id: release-plan
+        env:
+          ACCEPTED_RC: ${{ inputs.accepted_rc }}
+        run: |
+          args=()
+          if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
+          python src/tooling/release/coordinated_release.py plan "${args[@]}" --github-output "$GITHUB_OUTPUT"
+
+      - name: Prepare coordinated release PR changes
+        if: steps.release-plan.outputs.release_required == 'true'
+        env:
+          ACCEPTED_RC: ${{ inputs.accepted_rc }}
+        run: |
+          args=()
+          if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
+          python src/tooling/release/coordinated_release.py prepare "${args[@]}"
+          uv lock
+          python src/tooling/release/coordinated_release.py verify
+
+      - name: Open or update coordinated release PR
+        id: release-pr
+        if: steps.release-plan.outputs.release_required == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: automation/coordinated-release
+          delete-branch: true
+          title: Release v${{ steps.release-plan.outputs.version }}
+          commit-message: Release v${{ steps.release-plan.outputs.version }}
+          body: |
+            Prepare coordinated workspace release v${{ steps.release-plan.outputs.version }}.
+
+            This PR was generated from source-controlled release changesets. It updates every coordinated package version mirror, refreshes `uv.lock`, commits `.release/releases/v${{ steps.release-plan.outputs.version }}.md`, and consumes the pending changesets. Merge this PR before tagging or publishing the release.
+
+      - name: Dispatch validation for the generated release head
+        if: >-
+          steps.release-pr.outputs.pull-request-operation == 'created' ||
+          steps.release-pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PR_BRANCH: ${{ steps.release-pr.outputs.pull-request-branch }}
+          RELEASE_PR_HEAD_SHA: ${{ steps.release-pr.outputs.pull-request-head-sha }}
+          SOURCE_RUN_ID: ${{ github.run_id }}
+          RELEASE_PR_NUMBER: ${{ steps.release-pr.outputs.pull-request-number }}
+        run: |
+          gh workflow run ci.yml \
+            --ref "${RELEASE_PR_BRANCH}" \
+            -f expected_head_sha="${RELEASE_PR_HEAD_SHA}" \
+            -f reason="coordinated release candidate exact-head admission" \
+            -f qualified_source="${GITHUB_SHA}" \
+            -f source_run_id="${SOURCE_RUN_ID}"
+          gh workflow run pr-semver-label.yml \
+            --ref "${RELEASE_PR_BRANCH}" \
+            -f pull_request_number="${RELEASE_PR_NUMBER}" \
+            -f expected_head_sha="${RELEASE_PR_HEAD_SHA}"
+
+      - name: Resolve pending release tag
+        id: release-commit
+        if: steps.release-plan.outputs.release_required != 'true'
+        run: |
+          git fetch origin master --tags
+          python src/tooling/release/coordinated_release.py tag-plan --github-output "$GITHUB_OUTPUT"
+
+      - name: Create annotated release tag
+        if: steps.release-commit.outputs.tag_needed == 'true'
+        run: |
+          git fetch origin master --tags
+          if ! git merge-base --is-ancestor "${{ steps.release-commit.outputs.release_commit }}" origin/master; then
+            echo "Release commit ${{ steps.release-commit.outputs.release_commit }} is no longer reachable from origin/master" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.release-commit.outputs.tag }}" "${{ steps.release-commit.outputs.release_commit }}" -m "Release ${{ steps.release-commit.outputs.tag }}"
+          git push origin "${{ steps.release-commit.outputs.tag }}"
+
+
   promotion-admission:
+    needs: [source-qualification, release-state]
+    if: ${{ !cancelled() && (inputs.operation != 'prepare' || (needs.release-state.result == 'success' && needs.release-state.outputs.publish == 'true')) }}
     name: Admit exact release subject
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -53,8 +188,8 @@ jobs:
     env:
       RELEASE_CLASS: ${{ inputs.release_class || 'stable' }}
       REGISTRIES_ONLY: ${{ inputs.registries_only }}
-      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-      EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
+      RELEASE_TAG: ${{ needs.release-state.outputs.tag || inputs.tag || github.ref_name }}
+      EXPECTED_SOURCE_COMMIT: ${{ needs.release-state.outputs.source_commit || inputs.source_commit || '' }}
     steps:
       - name: Checkout exact release subject
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -77,7 +212,7 @@ jobs:
 
   platform-build:
     needs: promotion-admission
-    if: needs.promotion-admission.outputs.build_required == 'true'
+    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && needs.promotion-admission.outputs.build_required == 'true' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.promotion-admission.outputs.platforms) }}
@@ -105,6 +240,7 @@ jobs:
           if-no-files-found: error
   platform-assemble:
     needs: [promotion-admission, platform-build]
+    if: ${{ !cancelled() && needs.platform-build.result == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -132,6 +268,7 @@ jobs:
           if-no-files-found: error
   platform-consumer:
     needs: [promotion-admission, platform-assemble]
+    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.promotion-admission.outputs.platforms) }}
@@ -164,7 +301,7 @@ jobs:
 
   release-runtime-matrix:
     needs: promotion-admission
-    if: needs.promotion-admission.outputs.build_required == 'true'
+    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && needs.promotion-admission.outputs.build_required == 'true' }}
     name: Release runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
@@ -216,7 +353,7 @@ jobs:
           if-no-files-found: error
 
   agentic-workspace-package:
-    if: needs.promotion-admission.outputs.build_required == 'true'
+    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && needs.release-runtime-matrix.result == 'success' && needs.platform-consumer.result == 'success' && needs.promotion-admission.outputs.build_required == 'true' }}
     needs: [promotion-admission, release-runtime-matrix, platform-consumer]
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -226,7 +363,7 @@ jobs:
       attestations: write
     env:
       RELEASE_CLASS: ${{ needs.promotion-admission.outputs.release_class }}
-      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+      RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
       EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
     steps:
       - name: Checkout
@@ -350,13 +487,49 @@ jobs:
   language-registries:
     needs: [promotion-admission, agentic-workspace-package]
     if: ${{ !cancelled() && !inputs.qualify_only && needs.promotion-admission.outputs.registries == 'true' && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    environment: cargo-registry
     permissions:
       contents: read
       id-token: write
       attestations: read
-    uses: ./.github/workflows/registry-release.yml
-    with:
-      tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Fetch admitted Cargo sources and verify their publisher
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+        run: python src/tooling/release/registry_release.py --fetch --tag "$RELEASE_TAG" --source "$(git rev-parse refs/tags/$RELEASE_TAG^{commit})" --artifact-dir dist
+
+      - name: Reconstruct packaging for byte comparison before credentials
+        run: |
+          git checkout --detach "${{ needs.promotion-admission.outputs.tag }}"
+          cargo fetch --locked
+          python src/tooling/release/cargo_release.py build --no-verify --artifact-dir reconstructed --staging "$RUNNER_TEMP/aw-cargo"
+      - name: Obtain short-lived crates.io identity after initial bootstrap
+        id: auth
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1
+      - name: Publish missing exact versions in paired order
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+        run: python src/tooling/release/cargo_release.py publish --tag "$RELEASE_TAG" --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+      - name: Verify public Cargo sources and isolated paired install
+        env:
+          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+        run: python src/tooling/release/cargo_release.py verify --tag "$RELEASE_TAG" --artifact-dir dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cargo-registry-publication
+          path: dist/cargo-registry-publication.json
+          if-no-files-found: error
 
   # PyPI trusts the top-level workflow; publishing from workflow_call is unsupported.
   language-packages:
@@ -371,14 +544,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.registries_only && 'master' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name) }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Bind immutable release source independently of recovery tooling
         id: release-source
         env:
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-          EXPECTED_SOURCE_COMMIT: ${{ inputs.source_commit }}
+          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+          EXPECTED_SOURCE_COMMIT: ${{ needs.promotion-admission.outputs.source_commit }}
         run: |
           set -euo pipefail
           release_source=$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")
@@ -401,12 +574,12 @@ jobs:
         env:
           RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
         run: python src/tooling/release/registry_release.py --fetch --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist
       - name: Reobserve immutable registry versions
         id: pending
         env:
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
           RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
         run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
       - name: Publish missing exact PyPI artifacts with trusted identity
@@ -421,7 +594,7 @@ jobs:
         run: npm publish registry-pending/npm/*.tgz --access public --tag "$NPM_TAG" --provenance --ignore-scripts
       - name: Verify public bytes and clean native consumers
         env:
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
           RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
         run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist --verify --receipt registry-publication.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

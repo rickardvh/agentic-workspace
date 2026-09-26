@@ -121,5 +121,5 @@ def test_complete_existing_preview_skips_local_artifact_operations():
 
     workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
     for name in ("platform-build", "release-runtime-matrix", "agentic-workspace-package"):
-        assert workflow["jobs"][name]["if"] == "needs.promotion-admission.outputs.build_required == 'true'"
+        assert "needs.promotion-admission.outputs.build_required == 'true'" in workflow["jobs"][name]["if"]
     assert "needs.promotion-admission.outputs.build_required == 'false'" in workflow["jobs"]["language-packages"]["if"]

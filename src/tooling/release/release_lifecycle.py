@@ -9,8 +9,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import time
-import uuid
 from pathlib import Path
 
 import coordinated_release
@@ -101,6 +99,8 @@ def inspect_publication(tag, source, release_class, repository, artifact_dir=Non
 def admit(tag, source, release_class, repository):
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and os.environ.get("GITHUB_REF") != "refs/heads/master":
         raise ValueError("Release dispatch requires trusted master workflow authority")
+    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and not source:
+        raise ValueError("Release dispatch requires an exact source commit")
     model = release_model(tag, release_class)
     if source and not re.fullmatch(r"[0-9a-f]{40}", source):
         raise ValueError("Release source must be a full commit SHA")
@@ -229,17 +229,28 @@ def candidate_admission(repository, source, run_id):
     if not re.fullmatch(r"[0-9a-f]{40}", source) or not str(run_id).isdigit():
         raise ValueError("Candidate admission requires exact source and qualification run")
     evidence = api(repository, f"actions/runs/{run_id}")
+    # GitHub's reusable-workflow dependency completed before preparation. The
+    # parent may still be finishing its candidate dispatch; do not poll it.
+    prepared = evidence.get("path") == ".github/workflows/release.yml"
+    qualified = (
+        evidence.get("head_branch") == "master"
+        and evidence.get("status") in {"in_progress", "completed"}
+        and evidence.get("conclusion") in {None, "success"}
+        if prepared
+        else evidence.get("path") == ".github/workflows/ci.yml"
+        and evidence.get("conclusion") == "success"
+        and evidence.get("display_title", "").startswith(f"CI / release-source-{source}-")
+    )
     if (
         evidence.get("head_sha") != source
-        or evidence.get("conclusion") != "success"
-        or evidence.get("path") != ".github/workflows/ci.yml"
+        or not qualified
         or evidence.get("event") != "workflow_dispatch"
-        or not evidence.get("display_title", "").startswith(f"CI / release-source-{source}-")
         or (evidence.get("head_repository") or {}).get("full_name") != repository
     ):
         raise ValueError("Candidate lacks successful exact-source qualification")
     jobs = api(repository, f"actions/runs/{run_id}/jobs?per_page=100")["jobs"]
-    if not SOURCE_CLAIMS <= {j["name"] for j in jobs if j.get("conclusion") == "success"}:
+    prefix = "source-qualification / " if prepared else ""
+    if not {prefix + name for name in SOURCE_CLAIMS} <= {j["name"] for j in jobs if j.get("conclusion") == "success"}:
         raise ValueError("Candidate source proof lacks required claims")
     git("merge-base", "--is-ancestor", source, "HEAD")
     ownership = coordinated_release.load_ownership()
@@ -258,57 +269,9 @@ def candidate_admission(repository, source, run_id):
     )
 
 
-def qualify_source(repository, source, *, timeout=3600, clock=time.monotonic, sleep=time.sleep):
-    """Require exact-source exhaustive CI before any candidate preparation effect."""
-    if not re.fullmatch(r"[0-9a-f]{40}", source):
-        raise ValueError("Source qualification requires a full commit SHA")
-    reason = f"release-source-{source}-{uuid.uuid4().hex}"
-    run(
-        "gh",
-        "workflow",
-        "run",
-        "ci.yml",
-        "--repo",
-        repository,
-        "--ref",
-        "master",
-        "-f",
-        f"expected_head_sha={source}",
-        "-f",
-        f"reason={reason}",
-    )
-    deadline = clock() + timeout
-    while clock() < deadline:
-        runs = api(repository, "actions/workflows/ci.yml/runs?event=workflow_dispatch&per_page=100")["workflow_runs"]
-        matches = [
-            r
-            for r in runs
-            if r.get("display_title") == f"CI / {reason}"
-            and r.get("path") == ".github/workflows/ci.yml"
-            and r.get("event") == "workflow_dispatch"
-            and (r.get("head_repository") or {}).get("full_name") == repository
-        ]
-        if len(matches) > 1:
-            raise ValueError("Ambiguous exact-source qualification run")
-        if matches and matches[0].get("head_sha") != source:
-            raise ValueError("Master moved before exact-source dispatch; no candidate generated")
-        if matches and matches[0]["status"] == "completed":
-            result = matches[0]
-            if result["conclusion"] != "success":
-                raise ValueError(f"Source qualification failed before candidate generation: {result['html_url']}")
-            jobs = api(repository, f"actions/runs/{result['id']}/jobs?per_page=100")["jobs"]
-            required = SOURCE_CLAIMS
-            passed = {job["name"] for job in jobs if job.get("conclusion") == "success"}
-            if not required <= passed:
-                raise ValueError("Source qualification lacks required aggregate evidence")
-            return {"source_commit": source, "run_id": result["id"], "url": result["html_url"], "status": "passed"}
-        sleep(min(15, max(0, deadline - clock())))
-    raise ValueError("Exact-source qualification timed out before candidate generation")
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("admit", "build", "compose", "check-published", "qualify-source", "candidate-admission"))
+    parser.add_argument("stage", choices=("admit", "build", "compose", "check-published", "candidate-admission"))
     parser.add_argument("--tag", default=os.environ.get("RELEASE_TAG"))
     parser.add_argument("--source", default=os.environ.get("EXPECTED_SOURCE_COMMIT", ""))
     parser.add_argument("--release-class", default=os.environ.get("RELEASE_CLASS", "stable"))
@@ -316,13 +279,7 @@ def main():
     parser.add_argument("--github-output", type=Path)
     parser.add_argument("--source-run-id", default=os.environ.get("SOURCE_RUN_ID"))
     args = parser.parse_args()
-    if args.stage == "qualify-source":
-        result = qualify_source(args.repository, args.source)
-        print(json.dumps(result))
-        if args.github_output:
-            with args.github_output.open("a", encoding="utf-8") as handle:
-                handle.write(f"source_run_id={result['run_id']}\n")
-    elif args.stage == "candidate-admission":
+    if args.stage == "candidate-admission":
         candidate_admission(args.repository, args.source, args.source_run_id)
     elif args.stage == "admit":
         result = admit(args.tag, args.source, args.release_class, args.repository)

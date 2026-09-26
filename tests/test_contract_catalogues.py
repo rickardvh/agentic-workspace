@@ -126,6 +126,10 @@ def test_support_install_projection_is_immutable_and_hash_bound() -> None:
     current = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(current)
     current.check_current(projection, projection)
+    assert "matches" in current.observe_current(projection, projection)
+    followup = current.observe_current({**projection, "version": "0.0.1"}, projection)
+    assert "refresh needed" in followup and "--refresh" in followup
+    assert "generate_contract_catalogues.py" in followup
     with pytest.raises(ValueError, match="stale"):
         current.check_current({**projection, "version": "0.0.1"}, projection)
     with pytest.raises(ValueError, match="mismatch"):

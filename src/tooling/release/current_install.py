@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -64,9 +65,24 @@ def check_current(actual: dict, expected: dict) -> None:
         )
 
 
+def observe_current(actual: dict, expected: dict) -> str:
+    """Expected publication drift is an actionable observation, not failed proof."""
+    if actual == expected:
+        return f"Current install projection matches accepted public {expected['version']}."
+    return (
+        f"Install projection refresh needed: checked-in {actual.get('version')}, "
+        f"accepted public {expected['version']}.\n\n"
+        "Run `python src/tooling/release/current_install.py --refresh` and "
+        "`uv run python src/tooling/generate/generate_contract_catalogues.py`, "
+        "then submit the projection and generated catalogue changes in a PR."
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--refresh", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--refresh", action="store_true")
+    mode.add_argument("--observe", action="store_true", help="Report valid projection drift as a successful follow-up")
     args = parser.parse_args()
     release = json.loads(subprocess.check_output(["gh", "api", f"repos/{REPOSITORY}/releases/latest"]))
     base = f"https://github.com/{REPOSITORY}/releases/download/{release['tag_name']}/"
@@ -76,6 +92,12 @@ def main() -> None:
     )
     if args.refresh:
         PROJECTION.write_text(json.dumps(expected, indent=2) + "\n", encoding="utf-8")
+    elif args.observe:
+        report = observe_current(json.loads(PROJECTION.read_text(encoding="utf-8")), expected)
+        print(report)
+        if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
+            with Path(summary).open("a", encoding="utf-8") as handle:
+                handle.write(report + "\n")
     else:
         check_current(json.loads(PROJECTION.read_text(encoding="utf-8")), expected)
     print(f"Accepted public install: {expected['version']} ({source})")

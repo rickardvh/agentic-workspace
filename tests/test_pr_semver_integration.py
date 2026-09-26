@@ -286,7 +286,7 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
 
     monkeypatch.setattr(checker, "github", observed)
     monkeypatch.setattr(checker, "github_bytes", provider["download"])
-    workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+    workflow = (ROOT / ".github/workflows/pr-semver-label.yml").read_text()
     code = (ROOT / "src/tooling/release/pr_semver_admission.py").read_text()
     assert "if-no-files-found: error" in workflow
     assert "retention-days: 90" in workflow

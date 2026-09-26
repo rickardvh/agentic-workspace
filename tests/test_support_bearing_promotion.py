@@ -82,6 +82,7 @@ def test_checked_in_master_ruleset_requires_review_and_merge_sufficiency() -> No
     assert rules["pull_request"]["parameters"]["required_review_thread_resolution"] is True
     assert rules["required_status_checks"]["parameters"]["required_status_checks"] == [
         {"context": "Merge sufficiency"},
+        {"context": "Semver admission"},
     ]
 
 
@@ -150,7 +151,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
                 "source_commit": commit,
                 "inventory_sha256": platform_release.digest(platform_manifest),
                 "rust_available": False,
-                "checks": ["uv-sync", "npm-install", "native-start"],
+                "checks": ["uv-sync", "npm-local-install", "installed-first-contact"],
             },
         )
     wheel_digest = hashlib.sha256(wheel.read_bytes()).hexdigest()

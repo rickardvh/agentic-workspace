@@ -17,9 +17,9 @@ from pathlib import Path
 from typing import Any, Callable
 
 BUMP_ORDER = {"patch": 0, "minor": 1, "major": 2}
-WORKFLOW = ".github/workflows/ci.yml"
+WORKFLOW = ".github/workflows/pr-semver-label.yml"
 # Immutable historical admissions remain valid under their original producer.
-ADMISSION_WORKFLOWS = (WORKFLOW, ".github/workflows/pr-semver-label.yml")
+ADMISSION_WORKFLOWS = (WORKFLOW, ".github/workflows/ci.yml")
 ADMISSION_KIND = "agentic-workspace/pr-semver-admission/v1"
 ADMISSION_FILE = "semver-admission.json"
 MAX_ARTIFACT_BYTES = 1024 * 1024
