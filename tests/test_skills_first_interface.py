@@ -57,7 +57,7 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert pointer in agents
     assert len(pointer.encode()) < 800
     assert "start --target" not in pointer and "invoke --" not in pointer
-    assert "cargo build" not in pointer and "cargo build" in agents
+    assert agents.strip() == pointer
     registry = json.loads((ROOT / ".agentic-workspace/skills/REGISTRY.json").read_text())
     assert [skill["id"] for skill in registry["skills"] if skill["visibility"] == "ordinary-default"] == ["workspace-startup"]
     assert "workspace-operating-loop" not in {skill["id"] for skill in registry["skills"]}

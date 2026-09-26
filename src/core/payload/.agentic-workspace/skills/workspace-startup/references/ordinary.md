@@ -5,7 +5,8 @@ change. Use the configured invocation: local `workspace.cli_invoke`, then shared
 `workspace.cli_invoke`, otherwise `agentic-workspace`. Pass the actual task to
 `start`; this is the agent's machine interface, not a command the human must run
 around each edit. Repository-local npm uses `npm exec --no -- agentic-workspace`.
-Source checkouts may declare another invocation in their bootstrap instructions.
+For a source checkout, follow the existing [source preparation boundary](../../workspace-setup-jumpstart/references/boundaries.md)
+before first native use and after changing bundled or Rust sources.
 Read the `workspace.cli_invoke` value in `.agentic-workspace/config.local.toml`
 or `.agentic-workspace/config.toml` when not already available. The key names a
 configuration value, not an executable called `workspace.cli_invoke`. Append

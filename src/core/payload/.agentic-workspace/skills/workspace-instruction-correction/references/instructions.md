@@ -17,7 +17,7 @@ Use these steps when the selected destination is an instruction source.
    entry. Supply a short descriptive Markdown filename under the intended source
    directory and the complete proposed `content`. Read existing content before
    editing it; preserve unrelated guidance. The shared parser accepts the
-   optional fields `paths`, `read`, `governed_by`, `reconcile`, `use`, `checks`, `protect`.
+   optional fields `paths`, `routes`, `read`, `governed_by`, `reconcile`, `use`, `checks`, `protect`.
    Prefer constraints and skill references over embedding procedural scripts.
    Local destinations must already be untracked and gitignored. A missing ignore
    rule is a repository policy concern, not permission to silently edit ignores.

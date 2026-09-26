@@ -182,10 +182,6 @@ fn postimage(args: &Value) -> Result<Vec<u8>, CoreError> {
     if bytes.is_empty()
         || bytes.len() > 65536
         || crate::instruction_source::parsed(bytes, false)["valid"] != true
-        || !crate::instruction_source::parsed(bytes, false)["metadata"]["routes"]
-            .as_array()
-            .unwrap()
-            .is_empty()
     {
         return Err(err(
             "instruction postimage must satisfy the bounded shared Markdown contract",
@@ -266,9 +262,16 @@ pub(crate) fn view(
             {
                 let old = crate::instruction_source::parsed(before, false);
                 let new = crate::instruction_source::parsed(&bytes, false);
-                if ["paths", "protect", "checks", "reconcile", "governed_by"]
-                    .iter()
-                    .any(|key| old["metadata"][key] != new["metadata"][key])
+                if [
+                    "paths",
+                    "routes",
+                    "protect",
+                    "checks",
+                    "reconcile",
+                    "governed_by",
+                ]
+                .iter()
+                .any(|key| old["metadata"][key] != new["metadata"][key])
                 {
                     return Err(err(
                         "nominated method change cannot alter instruction scope or binding floors; use explicit owner correction",

@@ -25,3 +25,23 @@ Ordinary guidance belongs in scoped Markdown, skills keep reusable procedure,
 configuration keeps Workspace and local execution choices, and specialised
 formats retain domain semantics. Consumers use the compiled operating decision;
 diagnostic projections grant no permission or claim authority.
+
+## Repository bootstrap migration
+
+The repository's `AGENTS.md` contains only the canonical mandatory startup fence.
+The former surrounding rules retain the following owners (#3660):
+
+| Former paragraph | Current owner and disposition |
+| --- | --- |
+| Adapter authority marker | Removed; `.agentic-workspace/OWNERSHIP.toml` identifies the bootstrap surface. No duplicate marker is needed. |
+| Native source preparation | Startup ordinary-use reference leads to `workspace-setup-jumpstart/references/boundaries.md` before native use; `docs/maintainer/native-repository-path.md` retains the repository build details. Both native binaries remain required. |
+| Generated surfaces and applicable validation | Scoped `workspace-operating.md` requires regeneration and applicable proof for structured contract changes; Verification owns proof. |
+| Bounded proof before commit and truthful milestone | Scoped `workspace-operating.md`; Planning owns milestone publication. |
+| Validation, issue completion, intent and operating cost | Scoped `workspace-operating.md` and existing `workspace-dogfooding.md` requirements; Verification owns claim judgment and the responsible source owns friction repair. |
+| Source reconciliation and unresolved admissions | Scoped `workspace-operating.md`; System Intent and source owners retain reconciliation. Existing unresolved protection remains unchanged. |
+| Independent PR review and continuing implementation | `github-pr-review.md` owns custody and review eligibility. Operating guidance points implementation actors there; the review route supplies it to review actors. No implementation actor may direct a reviewer. |
+| Optional advisory shaping critic | `tools/skills/github-issue-shaping/SKILL.md`; bounded advice remains distinct from independent review or acceptance. |
+
+Instruction changes use native instruction publication. Skills and referenced
+documents hold procedure; neither an instruction publication receipt nor a
+passing check establishes independent review or issue completion.

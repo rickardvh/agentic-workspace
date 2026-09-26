@@ -37,3 +37,21 @@ that strategy defines them. A fix or incident reproduction does not by itself
 justify another permanent regression; inspect existing stable owner evidence
 first. Closeout states why proof can stop or which named material risk requires
 bounded escalation. Run broader proof only for that stated current claim.
+
+For structured startup, routing or query contract changes, refresh generated
+adapter surfaces and run their applicable validation before completion. Prefer
+committing after the bounded proof lane passes; keep any current Planning
+milestone truthful through its owner.
+
+At closeout, distinguish validation, issue completion, intent satisfaction and
+total operating cost. Route actionable dogfood friction through its current
+owner and retain knowledge only when it prevents rediscovery. A successful
+current-state query cannot replace required reconciliation. For material system
+direction changes, prefer current source-owner reconciliation; preserve unresolved
+source admissions, do not advance trust revisions merely because HEAD changed,
+and do not directly edit interpreted owner state.
+
+When implementing or materially changing a PR, follow the custody boundary in
+`.agentic-workspace/instructions/github-pr-review.md` before requesting review
+or declaring the implementation ready. That rule leaves independent review to
+an externally initiated reviewer while authorised implementation continues.

@@ -1,8 +1,12 @@
 {
-  "blockers": [],
+  "blockers": [
+    "Independent review and approval must be externally initiated; implementation actors cannot provide them.",
+    "Issue #3659 completion remains unclaimed pending its intended dogfood outcome or explicit issue-contract refinement. The failed clean-context evidence remains owned by #3658."
+  ],
   "canonical_core": {},
   "continuation": {
-    "frontier": "User reprioritized P0 before any P1 implementation. Existing native binaries build. Work starts from merged master on work/mandatory-aw-entry; second PR will stack repository migration. No implementation or acceptance claimed."
+    "evidence": "Prior actor evidence and failed attempts remain in managed scratch 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d and both PR bodies. Baseline 3be5b68b5; initial candidate 93009d6f1; request-discovery candidate 00be5d143; final first-PR product 120e9c814; source probe 0fb4ae125. Preserve the two failed local controls, failed clean-context closeout, source explanation session lacking runtime entry, and absent measured economic superiority. The review-fix instruction-owner suite passed all 11 tests; paired native build passed. The earlier native compact-proof action lacked bounded shell write scope under the preserved source protection; no admitted native proof is claimed. Correction to the earlier continuation: aggregate documentation coverage is inherited, not a PR blocker or an instruction to reassess the whole corpus. Only current groups covering control-input-disposition.md and native-repository-path.md need publication for this patch. PR receipts are the completion evidence for that bounded follow-through.",
+    "frontier": "External review accepted #3661 as the lower implementation layer without a requested patch; it has merged. Its review expressly does not establish #3659 issue completion: baseline also passed overlapping controls, and clean-context Planning selection/closeout remains failed under #3658. Review of #3662 requires routes in the weaker-nomination scope guard and exact current reconciliation of its two changed documentation files. The guard now rejects route addition/removal/replacement from owner-friction and repo-opportunity while preserving trusted correction. Publish the bounded documentation groups after this final Planning postimage; record their exact receipts and final checks in PR #3662, then leave it ready for externally initiated independent review. No implementation actor reviews, approves or directs a reviewer; P1 implementation remains deferred."
   },
   "creation_provenance": {
     "custody": {
@@ -28,16 +32,16 @@
     "outcome": "Implement #3659 and #3660 in stacked PRs, preserving dynamic owner authority and proving representative fresh-agent behavior."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "planned",
+  "lifecycle": "live",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Resolve task Assignment, establish baseline consumer evidence and implement mandatory bootstrap in the first PR.",
+  "next_action": "Use PR #3662's final review-response evidence to verify bounded documentation receipts and validation; leave the patch ready for external independent review. Retain evidence while review needs it. Do not infer issue completion from tests, source publication, or merged #3661.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "shaping",
+  "phase": "closeout",
   "proof": {
     "required": [
       "Existing adoption replacement and skills-first contracts",
@@ -47,13 +51,44 @@
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3659",
-    "https://github.com/rickardvh/agentic-workspace/issues/3660"
+    "https://github.com/rickardvh/agentic-workspace/issues/3660",
+    "https://github.com/rickardvh/agentic-workspace/pull/3661",
+    "https://github.com/rickardvh/agentic-workspace/pull/3662"
   ],
   "relationships": {},
-  "revision": 1,
+  "revision": 4,
   "scope": {
     "excluded": "P1 implementation is deferred by the user. No owner semantic redesign, universal host enforcement, self-review or approval.",
     "included": "Canonical bootstrap, startup procedure, generated/install surfaces, bounded consumer proof; then strongest-owner migration of root AGENTS.md policy."
   },
-  "title": "Mandatory AW entry and bootstrap-only repository dogfooding"
+  "title": "Mandatory AW entry and bootstrap-only repository dogfooding",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/80cec66904c660853369046800d0008fdec6500e8cfa88bb3611ada95908fbe1.attempt.json",
+        "revision": "sha256:32c4fcb6321641e9ed72e03b798a0da490cacbe9ae814f38ac11e4605292c887",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/80cec66904c660853369046800d0008fdec6500e8cfa88bb3611ada95908fbe1.result.json",
+        "revision": "sha256:36ec807357b4af62daf7a46daf4fe1bb4ab4c793f7716054f443ff4376145c88",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:d8c41bec0d9d75d2aed7b346b0164fdb670c5808952c4bac08135fa1e4b07f94",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:752b1e8948e953ff6f5595fdf9c1f43a82a6dbccf58b73dd58382e7ae8461de5",
+        "owner_id": "work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736",
+        "owner_path": ".agentic-workspace/planning/execplans/work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736.plan.json"
+      }
+    }
+  }
 }
