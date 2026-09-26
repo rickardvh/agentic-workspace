@@ -16,7 +16,8 @@ Missing native artefacts fail closed. Older `init`, `summary`, `implement` and
 other former-host commands are not a compatibility fallback; use the current
 native request/action contract. Maintainer generators remain separate tooling.
 
-Start with the invocation in `AGENTS.md`, the current task and `--format json`.
+Start through the canonical startup skill with the configured invocation, the
+current task and `--format json`.
 Include each known path with a separate `--changed`. Read the decision packet:
 source-read requests deliver current instructions, bounded answer requests carry
 the owner's authority/currentness fields, and `primary_action` is the exact

@@ -9,6 +9,13 @@ Use this repo-owned skill when refining an existing issue, turning a finding int
 
 ## Procedure
 
+During shaping, a bounded advisory second opinion may challenge assumptions,
+omissions, alternatives or work boundaries when its expected value justifies
+the cost. This is optional. Such a critic supplies advice, not PR review,
+approval or independent acceptance, and cannot satisfy an acceptance gate or
+relabel review of the acting agent's implementation. The acting agent remains
+responsible for the resulting plan.
+
 Apply the startup skill's evidence/sufficiency boundary to current GitHub sources.
 Start with the issue body and material subsequent discussion, linked work and
 actual repository state. Use bounded provider queries and pagination sufficient

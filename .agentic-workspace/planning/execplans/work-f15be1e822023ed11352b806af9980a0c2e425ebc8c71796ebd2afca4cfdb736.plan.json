@@ -2,7 +2,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "frontier": "User reprioritized P0 before any P1 implementation. Existing native binaries build. Work starts from merged master on work/mandatory-aw-entry; second PR will stack repository migration. No implementation or acceptance claimed."
+    "evidence": "Bounded evidence is in the current managed scratch container 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d. Baseline artifact is master 3be5b68b5; original candidate 93009d6f1; fixed candidate 00be5d143. Instruction tests passed 11/11. The initial adoption suite had a Windows UTF-8 read failure, fixed in the first branch; a later uncertain-effect test rerun passed in isolation. Consumer cost observations include failed attempts and are not economic superiority evidence.",
+    "frontier": "P0 implementation is in two local stacked branches. Mandatory entry and nested native request discovery are on work/mandatory-aw-entry; bootstrap-only migration is on work/bootstrap-only-dogfood. The request discovery fix follows the failed candidate local-control journey: the documented Assignment reference omitted bundled requests, while the baseline actor manually reconstructed the bundle. Both binding arms passed. Baseline local passed; first candidate local failed. Preserve the failure and run the fixed candidate before claiming acceptance. Native instruction publication now accepts the shared parser's route metadata; repository PR and operating rules were published through that owner, preserving the unresolved source protection. Root bootstrap reduction and explicit paragraph dispositions are implemented. No independent review, PR completion or issue closure is claimed."
   },
   "creation_provenance": {
     "custody": {
@@ -28,16 +29,16 @@
     "outcome": "Implement #3659 and #3660 in stacked PRs, preserving dynamic owner authority and proving representative fresh-agent behavior."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "planned",
+  "lifecycle": "live",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Resolve task Assignment, establish baseline consumer evidence and implement mandatory bootstrap in the first PR.",
+  "next_action": "Finish current live local and optional controls, fresh-context and repository migration dogfood; reconcile current sources and bounded proof, commit the second branch, publish and attach both stacked PRs ready for independent review. Keep P1 deferred.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "shaping",
+  "phase": "validation",
   "proof": {
     "required": [
       "Existing adoption replacement and skills-first contracts",
@@ -50,10 +51,39 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3660"
   ],
   "relationships": {},
-  "revision": 1,
+  "revision": 2,
   "scope": {
     "excluded": "P1 implementation is deferred by the user. No owner semantic redesign, universal host enforcement, self-review or approval.",
     "included": "Canonical bootstrap, startup procedure, generated/install surfaces, bounded consumer proof; then strongest-owner migration of root AGENTS.md policy."
   },
-  "title": "Mandatory AW entry and bootstrap-only repository dogfooding"
+  "title": "Mandatory AW entry and bootstrap-only repository dogfooding",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/e11c3366279243b1c34becac31aa98eedc921e5bc0123b83c269f0e543886b3c.attempt.json",
+        "revision": "sha256:8e73fc50ed7aa66c3b901a5c191437e95e23c8b38412b554665b632cc8b92d69",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/e11c3366279243b1c34becac31aa98eedc921e5bc0123b83c269f0e543886b3c.result.json",
+        "revision": "sha256:414161d82470bf7eeb29cb323b1a178f38b61d858441e1d0e18edf45ce31e7d0",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:4341b79c0473798fb8f5ccb41da0dc9a69149b61d16e1d38596fd93a8b5f8979",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:3027e176a99e4ab21cfe9be15d6d45ccf12d1364c45afbfbf58190a2c3965db0",
+        "owner_id": "work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736",
+        "owner_path": ".agentic-workspace/planning/execplans/work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736.plan.json"
+      }
+    }
+  }
 }

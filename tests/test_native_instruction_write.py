@@ -389,11 +389,22 @@ def test_instruction_skill_reference_tracks_current_procedure(tmp_path, shared_c
         return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     _, _, action = instruction(
-        call, ".agentic-workspace/instructions/procedure.md", "---\npaths: [a.txt]\nuse: [review]\n---\nUse the review procedure.\n"
+        call,
+        ".agentic-workspace/instructions/procedure.md",
+        "---\npaths: [a.txt]\nroutes: [repo/quality/review]\nuse: [review]\n---\nUse the review procedure.\n",
     )
     call(invocation=action)
-    resolution = call()["instructions"]["sources"][0]["procedure_resolution"][0]
+    quiet = call()
+    assert not quiet["instructions"]["sources"][0]["applicable"]
+    selection = next(r for r in quiet["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    selection["arguments"] = {"posture": "selected", "routes": ["repo/quality/review"]}
+    selected = call(request=selection)
+    assert selected["instructions"]["sources"][0]["applicable"]
+    resolution = selected["instructions"]["sources"][0]["procedure_resolution"][0]
     assert resolution["status"] == "current"
     assert resolution["procedures"][0]["reference"] == ".agentic-workspace/skills/review/SKILL.md"
     procedure.unlink()
-    assert call()["instructions"]["sources"][0]["procedure_resolution"][0]["status"] == "unavailable"
+    current = call()
+    selection = next(r for r in current["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    selection["arguments"] = {"posture": "selected", "routes": ["repo/quality/review"]}
+    assert call(request=selection)["instructions"]["sources"][0]["procedure_resolution"][0]["status"] == "unavailable"
