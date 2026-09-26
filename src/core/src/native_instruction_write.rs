@@ -262,9 +262,16 @@ pub(crate) fn view(
             {
                 let old = crate::instruction_source::parsed(before, false);
                 let new = crate::instruction_source::parsed(&bytes, false);
-                if ["paths", "protect", "checks", "reconcile", "governed_by"]
-                    .iter()
-                    .any(|key| old["metadata"][key] != new["metadata"][key])
+                if [
+                    "paths",
+                    "routes",
+                    "protect",
+                    "checks",
+                    "reconcile",
+                    "governed_by",
+                ]
+                .iter()
+                .any(|key| old["metadata"][key] != new["metadata"][key])
                 {
                     return Err(err(
                         "nominated method change cannot alter instruction scope or binding floors; use explicit owner correction",

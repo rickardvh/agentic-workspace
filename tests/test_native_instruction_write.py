@@ -123,6 +123,30 @@ def test_current_nomination_uses_destination_authority_and_quiets_after_change(t
         unsafe["arguments"]["nomination"]["origin"] = "owner-friction"
         with pytest.raises(AssertionError, match="binding floors"):
             call(request=unsafe)
+        for origin in ("owner-friction", "repo-opportunity"):
+            unsafe = request()
+            unsafe["arguments"]["content"] = "---\npaths: [src/**]\nroutes: [repo/quality/review]\n---\nUse the current owner method.\n"
+            unsafe["arguments"]["nomination"]["origin"] = origin
+            with pytest.raises(AssertionError, match="binding floors"):
+                call(request=unsafe)
+        correction = copy.deepcopy(unsafe)
+        correction["arguments"]["nomination"]["origin"] = "trusted-correction"
+        admitted = call(request=correction)
+        assert view(admitted)["status"] == "write-ready"
+        call(invocation=admitted["decision_packet"]["primary_action"])
+        for origin in ("owner-friction", "repo-opportunity"):
+            method = request()
+            method["arguments"]["nomination"]["origin"] = origin
+            method["arguments"]["content"] = correction["arguments"]["content"] + f"Current method from {origin}.\n"
+            admitted = call(request=method)
+            assert view(admitted)["status"] == "write-ready"
+            call(invocation=admitted["decision_packet"]["primary_action"])
+            for routes in ("", "routes: [repo/quality/other]\n"):
+                unsafe = request()
+                unsafe["arguments"]["content"] = f"---\npaths: [src/**]\n{routes}---\nUse the current owner method.\n"
+                unsafe["arguments"]["nomination"]["origin"] = origin
+                with pytest.raises(AssertionError, match="binding floors"):
+                    call(request=unsafe)
     else:
         assert call()["configuration"]["cli_invoke"] == "not-yet-owned"
 
