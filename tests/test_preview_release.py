@@ -268,15 +268,17 @@ def test_recovery_dispatches_trusted_branch_with_exact_immutable_subject(monkeyp
         "gh",
         "workflow",
         "run",
-        "preview-release.yml",
+        "release.yml",
         "--repo",
         "owner/repo",
         "--ref",
         "master",
         "-f",
-        "preview_tag=preview-v0.52.0",
+        "tag=preview-v0.52.0",
         "-f",
-        f"artifact_commit={artifact}",
+        f"source_commit={artifact}",
+        "-f",
+        "release_class=preview",
     ]
     # A changed remote subject must not receive a substitute dispatch.
     remote_artifact = "c" * 40

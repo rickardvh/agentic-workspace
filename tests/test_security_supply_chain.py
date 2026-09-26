@@ -23,6 +23,8 @@ def _copy_security_surface(target: Path) -> None:
         "src/core/src/modules/verification/native_proof.rs",
         "src/tooling/contracts/security_supply_chain_policy.json",
         "src/tooling/check/check_security_supply_chain.py",
+        "src/tooling/release/release_lifecycle.py",
+        "src/tooling/release/stable_manifest.py",
         ".github/workflow-write-permissions.json",
         "Cargo.toml",
         "Cargo.lock",
@@ -166,7 +168,7 @@ def test_rust_policy_runner_enforces_version_lock_and_propagates_failure(monkeyp
 
 def test_rust_gate_missing_from_either_publisher_blocks_readiness(tmp_path: Path) -> None:
     _copy_security_surface(tmp_path)
-    for relative in (".github/workflows/security.yml", ".github/workflows/release.yml", ".github/workflows/preview-release.yml"):
+    for relative in (".github/workflows/security.yml", ".github/workflows/release.yml"):
         path = tmp_path / relative
         original = path.read_text(encoding="utf-8")
         path.write_text(original.replace("python src/tooling/check/check_rust_dependencies.py --install", "echo skipped"), encoding="utf-8")

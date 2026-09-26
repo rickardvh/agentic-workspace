@@ -1,0 +1,97 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "source": "GitHub #3654, #3655, #3656 and #3652"
+  },
+  "continuation": {
+    "accepted_progress": "PR #3657's external re-review accepts the structural contraction and finds no need for another code-contraction pass. Final affected suite: 153 passed; Actionlint, native build, generated surfaces and hooks passed. Surface: 5 workflows, 28 jobs, 1329 YAML lines versus 9/40/2307. Label-only semver revalidation avoids replaying merge/security proof. The first 64-file documentation assessment is published. The remaining group containing docs/release-and-versioning.md is assessed: 63 unchanged postimages match prior guide-bound receipts, with the revised release guide read in full. The user authorized publication and Verification published the exact group receipt; both documentation groups requested by review are now recorded, without claiming whole-repository reconciliation. Issue #3655 now permits the bounded event adapter while retaining required admission and hosted evidence criteria.",
+    "external_posture": "Observed 2026-09-26 after independent re-review: removed retired Review approval status from active live ruleset 20615912. Fresh GET matches the exact update with all other writable fields preserved. Required checks are Merge sufficiency and Semver admission. Repository independent-review policy remains binding; no replacement check or self-review is introduced. GitHub reports head 793e32900 mergeable=true, mergeable_state=clean; both required checks succeeded. Both Cargo packages were observed registered to release.yml/cargo-registry; actual OIDC/publication proof remains pending. The reviewer confirms PyPI/npm already used top-level release.yml, so no new identity migration is introduced.",
+    "frontier": "PR #3657 is ready for externally initiated independent recheck after the stale live required check correction. Both requested documentation groups are published. Issues #3652/#3655/#3656/#3654 remain open pending default-branch exhaustive/source/candidate preparation, Maintenance, consolidated release/qualify and applicable trusted-publisher journeys. No measured total hosted cost reduction is claimed. Dogfood concerns now have separate owners #3658/#3659/#3660; do not absorb them into this PR or retain duplicate findings at final Planning closeout."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/f9fd26bac6aae8ae2ba03db0732d573b5b6d42df7f4646bab67e0eb2ed271311.attempt.json",
+        "revision": "sha256:659c15794c1053c9b0d29bd2259678aaca0dde47fd6bdd382dd87f3bb003d67d",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/f9fd26bac6aae8ae2ba03db0732d573b5b6d42df7f4646bab67e0eb2ed271311.result.json",
+        "revision": "sha256:0e05bd6b001939b3ab9f18bce3aa1570f0cbe064ba1053e7a127f7b090ece397",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:0e3487167a5231c58aabce275192e856cf0663cd7c2c66ef9cf53039601b7ea3",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:436f3d54eec0586e9b7bde1daef174e1bf6439f3cecab0cc4221e55337fb6ccf"
+  },
+  "id": "work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7",
+  "intent": {
+    "outcome": "Implement #3655 and #3656 incorporating #3652 while preserving merge sufficiency and publication trust."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "live",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Leave PR #3657 ready for externally initiated independent recheck. After accepted default-branch landing, perform the minimum controlled hosted journeys and reconcile children, parent and this Planning owner at closeout.",
+  "owner_level": "lane",
+  "parent": {
+    "issue": "https://github.com/rickardvh/agentic-workspace/issues/3654"
+  },
+  "phase": "validation",
+  "proof": {
+    "required": "Bounded policy/workflow tests, provider and ruleset audit, controlled hosted journeys; independent acceptance remains external."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3654",
+    "https://github.com/rickardvh/agentic-workspace/issues/3655",
+    "https://github.com/rickardvh/agentic-workspace/issues/3656",
+    "https://github.com/rickardvh/agentic-workspace/issues/3652",
+    "https://github.com/rickardvh/agentic-workspace/pull/3657"
+  ],
+  "relationships": {
+    "dependencies": {
+      "issues": "#3655; #3652; #3656"
+    }
+  },
+  "revision": 7,
+  "scope": {
+    "excluded": "Product runtime redesign, self-review or weakened proof",
+    "included": "CI, maintenance, release workflows and tooling, tests and boundary audit"
+  },
+  "title": "Contract hosted automation (#3654)",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/f6adbc36a189953fabc4dcdbd579217af9ed9b75f1a8aeceb1ffdc367b590d1e.attempt.json",
+        "revision": "sha256:9c02dd235649f44a5da870956812cceacf73e2729210213a4adbdd740453ca75",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/f6adbc36a189953fabc4dcdbd579217af9ed9b75f1a8aeceb1ffdc367b590d1e.result.json",
+        "revision": "sha256:7f4b8983f95bede38e6db0308490aa6227b3faee5e88a6842a6292eca7e04402",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:341ad667c119b409b9d8146e1a08086afda9800e80dcbb0ee9c45279bac8a096",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:bf0c0ae281a680b634348716c98c1f52be6c04f19312e7a8b3ffa59f3ed04933",
+        "owner_id": "work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7",
+        "owner_path": ".agentic-workspace/planning/execplans/work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7.plan.json"
+      }
+    }
+  }
+}

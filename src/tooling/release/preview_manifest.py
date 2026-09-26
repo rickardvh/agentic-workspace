@@ -270,6 +270,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
         raise SystemExit("Preview SBOM must contain an SPDX package inventory")
 
     manifest = {
+        "publisher_workflow": "release.yml",
         "kind": "agentic-workspace/coordinated-preview-release-manifest/v1",
         "release_model": ownership["release_model"],
         **coordinated_release.release_identity(tag),

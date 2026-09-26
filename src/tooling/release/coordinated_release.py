@@ -295,7 +295,7 @@ def _proof_reconciliation(verified: dict[str, Any], preparation_source: str) -> 
 
 
 def verify_normalization_delta(
-    ownership: dict[str, Any], *, source: str, subject: str, version: str, metadata_paths: set[str]
+    ownership: dict[str, Any], *, source: str, subject: str, version: str, metadata_paths: set[str], consume_changesets: bool = False
 ) -> list[str]:
     """Check values as well as paths; lock changes cannot alter third-party resolution."""
     changed = _run(["git", "diff", "--name-only", "--no-renames", source, subject]).stdout.splitlines()
@@ -309,7 +309,12 @@ def verify_normalization_delta(
         # Git file modes are product semantics too, even when parsed content agrees.
         before_mode = _run(["git", "ls-tree", source, "--", path]).stdout.split(" ", 1)[0]
         after_mode = _run(["git", "ls-tree", subject, "--", path]).stdout.split(" ", 1)[0]
-        if version == "1.0.0" and path.startswith(".release/changes/") and path.endswith(".toml") and not after_mode:
+        if (
+            (version == "1.0.0" or consume_changesets)
+            and path.startswith(".release/changes/")
+            and path.endswith(".toml")
+            and not after_mode
+        ):
             old = tomllib.loads(_run(["git", "show", f"{source}:{path}"]).stdout)
             if before_mode != "100644" or old.get("schema_version") != CHANGESET_SCHEMA:
                 raise SystemExit(f"Invalid consumed release changeset: {path}")

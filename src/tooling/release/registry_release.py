@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse
@@ -42,6 +43,38 @@ def json_response(url):
 
 def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def fetch_admitted(dist, tag, repository):
+    """Recover immutable GitHub bytes and their original publisher before credentials."""
+    identity = coordinated_release.release_identity(tag)
+    dist.mkdir()
+    subprocess.run(["gh", "release", "download", tag, "--repo", repository, "--dir", str(dist)], check=True)
+    manifest_name = (
+        "agentic-workspace-release-manifest.json" if identity["support_bearing"] else "agentic-workspace-preview-release-manifest.json"
+    )
+    manifest = json.loads((dist / manifest_name).read_text())
+    legacy = "release.yml" if identity["support_bearing"] else "preview-release.yml"
+    publisher = manifest.get("publisher_workflow", legacy)
+    allowed = {"release.yml"} if identity["support_bearing"] else {"release.yml", "preview-release.yml"}
+    if publisher not in allowed:
+        raise ValueError("Unrecognized immutable release publisher")
+    # The manifest is itself attested by the same narrowly admitted producer.
+    subjects = [p for p in dist.iterdir() if p.suffix in {".whl", ".gz", ".tgz", ".crate"} or p.name.endswith("release-manifest.json")]
+    for artifact in subjects:
+        subprocess.run(
+            [
+                "gh",
+                "attestation",
+                "verify",
+                str(artifact),
+                "--repo",
+                repository,
+                "--signer-workflow",
+                f"{repository}/.github/workflows/{publisher}",
+            ],
+            check=True,
+        )
 
 
 def npm_dist_tag(identity):
@@ -246,6 +279,26 @@ def smoke(identity):
         journey([executable], global_repo, global_env)
 
 
+def converge(artifacts, dist, *, timeout=300, observe_artifact=observe, channel_ready=None, clock=time.monotonic, sleep=time.sleep):
+    """Wait only for absent immutable bytes; conflicts and transport errors fail immediately."""
+    if timeout < 0 or timeout > 900:
+        raise ValueError("Registry convergence timeout must be between zero and 900 seconds")
+    deadline = clock() + timeout
+    delay = 2
+    while True:
+        observations = [{**row, "status": observe_artifact(row, dist)} for row in artifacts]
+        absent = [row["asset"] for row in observations if row["status"] == "absent"]
+        channel_matches = channel_ready is None or channel_ready()
+        if not absent and channel_matches:
+            return observations
+        remaining = deadline - clock()
+        if remaining <= 0:
+            raise ValueError(f"Registry convergence timed out; absent artifacts: {absent}; channel matching: {channel_matches}")
+        print(f"Registry propagation pending: {absent}; channel matching: {channel_matches}", file=sys.stderr)
+        sleep(min(delay, remaining))
+        delay = min(delay * 2, 30)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tag", required=True)
@@ -254,19 +307,25 @@ def main():
     parser.add_argument("--pending", type=Path)
     parser.add_argument("--verify", action="store_true")
     parser.add_argument("--receipt", type=Path)
+    parser.add_argument("--convergence-seconds", type=int, default=300)
+    parser.add_argument("--fetch", action="store_true")
+    parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY"))
     args = parser.parse_args()
+    if args.fetch:
+        fetch_admitted(args.artifact_dir, args.tag, args.repository)
+        admitted_artifacts(args.artifact_dir, args.tag, args.source)
+        return
     identity, artifacts = admitted_artifacts(args.artifact_dir, args.tag, args.source)
     # Observe every package before staging any upload; a conflict cannot leave a
     # partially populated upload directory that a later step might consume.
-    observations = [{**row, "status": observe(row, args.artifact_dir)} for row in artifacts]
-    absent = [row for row in observations if row["status"] == "absent"]
     if args.verify:
-        if absent:
-            raise ValueError("Registry publication is incomplete; reobserve before retrying upload")
         npm_tag = npm_dist_tag(identity)
-        tags = json_response("https://registry.npmjs.org/-/package/%40agentic-workspace%2Fworkspace-cli/dist-tags")
-        if not tags or tags.get(npm_tag) != identity["package_versions"]["npm"]:
-            raise ValueError("npm channel differs from this release; inspect channel history before a separate tag repair")
+
+        def channel_ready():
+            tags = json_response("https://registry.npmjs.org/-/package/%40agentic-workspace%2Fworkspace-cli/dist-tags")
+            return bool(tags and tags.get(npm_tag) == identity["package_versions"]["npm"])
+
+        observations = converge(artifacts, args.artifact_dir, timeout=args.convergence_seconds, channel_ready=channel_ready)
         smoke(identity)
         receipt = {
             "kind": "agentic-workspace/registry-publication/v1",
@@ -278,6 +337,8 @@ def main():
         }
         args.receipt.write_text(json.dumps(receipt, indent=2) + "\n")
     else:
+        observations = [{**row, "status": observe(row, args.artifact_dir)} for row in artifacts]
+        absent = [row for row in observations if row["status"] == "absent"]
         args.pending.mkdir()  # Fresh per attempt; never reuse stale pending uploads.
         for ecosystem in ("python", "npm"):
             (args.pending / ecosystem).mkdir()

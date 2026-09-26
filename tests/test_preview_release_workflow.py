@@ -21,7 +21,7 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
     assert stable["workflow"] == ".github/workflows/release.yml"
     assert stable["trigger"] == "existing-tag-only"
     assert preview == {
-        "workflow": ".github/workflows/preview-release.yml",
+        "workflow": ".github/workflows/release.yml",
         "trigger": "workflow_dispatch on master with immutable preview tag and exact artifact SHA",
         "release_class": "preview",
         "support_bearing": False,
@@ -42,49 +42,21 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
 
 
 def test_preview_workflow_reuses_release_authorities_without_support_bearing_admission() -> None:
-    preview = (WORKFLOW_ROOT / "preview-release.yml").read_text(encoding="utf-8")
-    stable = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
+    import yaml
 
-    assert "workflow_dispatch:" in preview
-    assert "    tags:" not in preview
-    assert '"v[0-9]+.[0-9]+.[0-9]+"' in stable
-    assert "preview-v" not in stable
-    assert "verify-preview" in preview
-    assert "prerelease: true" in preview
-    assert "agentic-workspace-preview-release-manifest.json" in preview
-    assert "agentic-workspace-release-manifest.json" not in preview
-    assert "support_bearing_promotion.py" not in preview
-    assert "test ! -e dist/support-bearing-promotion.json" in preview
-    assert "overwrite_files: false" in preview
-    assert preview.count("ref: ${{ github.sha }}") == 1
-    assert preview.count("ref: ${{ needs.preview-admission.outputs.artifact_commit }}") == 3
-    assert "make_latest: false" in preview
-    permissions = json.loads((ROOT / ".github/workflow-write-permissions.json").read_text())
-    assert set(permissions["allowed_write_permissions"][".github/workflows/preview-release.yml"]) == {
-        "contents",
-        "id-token",
-        "attestations",
-    }
-    assert "preview-public-smoke.json" in preview
-    assert "--check-published" in preview
-    assert "support_bearing_promotion.py github-checks" in stable
-    assert "support_bearing_promotion.py compose" in stable
-
-    shared_authorities = (
-        "uses: ./.github/workflows/platform-release.yml",
-        "platform_release.py verify --artifact-dir dist",
-        "make packed-artifact-conformance",
-        "src/tooling/check/check_package_identity.py",
-        "src/tooling/check/check_security_supply_chain.py",
-        "anchore/sbom-action@",
-        "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
-        "softprops/action-gh-release@",
-    )
-    for authority in shared_authorities:
-        assert authority in preview
-        assert authority in stable
-
-    assert "refs/heads/master:refs/remotes/origin/master" in preview
+    release = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
+    jobs = release["jobs"]
+    assert not (WORKFLOW_ROOT / "preview-release.yml").exists()
+    assert jobs["promotion-admission"]["env"]["RELEASE_CLASS"] == "${{ inputs.release_class || 'stable' }}"
+    steps = jobs["agentic-workspace-package"]["steps"]
+    publish = next(step for step in steps if step.get("name") == "Publish GitHub release assets")
+    assert publish["with"]["prerelease"] == "${{ needs.promotion-admission.outputs.support_bearing != 'true' }}"
+    assert publish["with"]["make_latest"] == "${{ needs.promotion-admission.outputs.support_bearing == 'true' }}"
+    assert publish["with"]["overwrite_files"] == "false"
+    for name in ("Download exact-commit promotion receipts", "Download declared runtime receipts"):
+        assert (
+            next(step for step in steps if step.get("name") == name)["if"] == "needs.promotion-admission.outputs.support_bearing == 'true'"
+        )
 
 
 def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:
@@ -120,60 +92,34 @@ def test_preview_manifest_is_explicitly_non_support_bearing_and_ownership_driven
 def test_release_docs_describe_preview_as_testing_not_stable_admission() -> None:
     docs = (ROOT / "docs" / "release-and-versioning.md").read_text(encoding="utf-8")
 
-    assert "## Preview Releases" in docs
-    assert "**non-support-bearing**" in docs
-    assert "does not satisfy #2990 support-bearing admission" in docs
-    assert "preview_release.py --version <unused-version> --push" in docs
-    assert "only that tag is pushed" in docs
-    assert "A public preview therefore burns its numeric package version" in docs
-    assert "only support-bearing GitHub Release" in docs
+    assert "## Preview and first-stable recovery" in docs
+    assert "remain non-support-bearing" in docs
+    assert "preview_release.py --version <unused-version>" in docs
+    assert "Recovery reuses the immutable tag and exact assets" in docs
 
 
 def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> None:
     import yaml
 
-    workflow = yaml.safe_load((WORKFLOW_ROOT / "preview-release.yml").read_text())
-    # PyYAML treats the YAML 1.1 word "on" as True.
-    assert set(workflow[True]) == {"workflow_dispatch", "push"}
-    assert workflow[True]["push"] == {"branches": ["master"], "paths": [".github/workflows/preview-release.yml"]}
-    jobs = workflow["jobs"]
-    registration = jobs["preview-registration"]
-    assert registration["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/master'"
-    assert registration["steps"] == [{"run": 'echo "Preview publisher registered; publication requires explicit dispatch."'}]
-    assert "permissions" not in registration
-    admission = jobs["preview-admission"]
-    assert admission["if"] == "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'"
-    assert workflow["permissions"] == admission["permissions"] == {"contents": "read"}
+    workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
+    admission = workflow["jobs"]["promotion-admission"]
+    assert "trusted master workflow authority" in (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
     checkout = admission["steps"][0]
     assert checkout["with"]["ref"] == "${{ github.sha }}"
-    assert checkout["with"]["persist-credentials"] is False
-    gate = admission["steps"][-1]
-    assert (
-        gate["run"]
-        == 'python src/tooling/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"'
-    )
-    assert gate["env"] == {"PREVIEW_TAG": "${{ inputs.preview_tag }}", "ARTIFACT_COMMIT": "${{ inputs.artifact_commit }}"}
+    assert checkout["with"]["persist-credentials"] == "false"
+    gate = next(step for step in admission["steps"] if step.get("id") == "admit")
+    assert 'release_lifecycle.py admit --github-output "$GITHUB_OUTPUT"' in gate["run"]
     assert not any("${{ inputs." in step.get("run", "") for step in admission["steps"])
-    assert jobs["preview-runtime-matrix"]["needs"] == "preview-admission"
-    assert jobs["preview-package"]["needs"] == ["preview-admission", "preview-runtime-matrix", "platform-packages"]
-    for name in ("preview-runtime-matrix", "preview-package"):
-        checkout = jobs[name]["steps"][0]
-        assert checkout["with"]["ref"] == "${{ needs.preview-admission.outputs.artifact_commit }}"
-        assert checkout["with"]["persist-credentials"] is False
-    assert workflow["concurrency"] == {"group": "preview-${{ inputs.preview_tag || github.ref }}", "cancel-in-progress": False}
+    for name in ("release-runtime-matrix", "agentic-workspace-package", "platform-build", "platform-assemble", "platform-consumer"):
+        job = workflow["jobs"][name]
+        assert "promotion-admission" in job["needs"]
+        assert job["steps"][0]["with"]["ref"] == "${{ needs.promotion-admission.outputs.source_commit }}"
 
 
 def test_complete_existing_preview_skips_local_artifact_operations():
     import yaml
 
-    workflow = yaml.safe_load((WORKFLOW_ROOT / "preview-release.yml").read_text())
-    steps = workflow["jobs"]["preview-package"]["steps"]
-    start = next(i for i, step in enumerate(steps) if step.get("id") == "existing")
-    for step in steps[start + 1 :]:
-        if step.get("name") == "Smoke published preview from public bytes":
-            assert "if" not in step
-            assert "preview_public_smoke.py" in step["run"]
-        else:
-            # With complete=true, no downloads, manifest extension or publishing
-            # may run against an absent/rebuilt local release set.
-            assert step["if"] == "steps.existing.outputs.complete != 'true'", step
+    workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
+    for name in ("platform-build", "release-runtime-matrix", "agentic-workspace-package"):
+        assert "needs.promotion-admission.outputs.build_required == 'true'" in workflow["jobs"][name]["if"]
+    assert "needs.promotion-admission.outputs.build_required == 'false'" in workflow["jobs"]["language-packages"]["if"]

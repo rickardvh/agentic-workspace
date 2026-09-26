@@ -25,10 +25,17 @@ semver evidence; [the integration checker](../src/tooling/release/pr_semver_inte
 owns its identity, expiry and recovery rules. A matching label or branch name is
 not that evidence.
 
+`Semver admission` is a separate required check. Label changes revalidate only
+that claim; they do not replay merge or security proof. CI owns `Merge sufficiency`.
+Configure both checks in the live branch ruleset; the checked-in ruleset alone
+does not establish enforcement.
+
 ## Review the release PR
 
-After changes merge, `release-from-semver-label.yml` reads pending changesets and
-opens or updates `automation/coordinated-release`. It applies the highest bump,
+After changes merge, dispatch `release.yml` on master with `operation=prepare`.
+It qualifies the exact source through reusable exhaustive CI before opening or
+updating `automation/coordinated-release`. A source defect stops preparation.
+It applies the highest bump,
 normalises the shipped package versions and lockfile, and preserves every consumed
 summary in `.release/releases/vMAJOR.MINOR.PATCH.md`.
 
@@ -38,6 +45,11 @@ root `pyproject.toml` is the canonical version source;
 [release ownership](../.github/release-ownership.json) declares the shipped set,
 allowed paths and triggers. Do not maintain parallel lists in workflow prose.
 
+The generated candidate reuses the named source qualification only after checking
+its exact normalisation delta. Candidate artefact and runtime proof still run.
+An unrelated product change in that delta fails admission. Ordinary PR CI remains
+bounded merge proof; broad proof is an explicit release or high-risk dispatch.
+
 Every coordinated version must exceed the checked-in versions and reserved public
 stable/preview identities. A canonical numeric preview reserves its version even
 if its subject is invalid. Never move an existing public tag or reuse its version
@@ -46,9 +58,9 @@ the release model.
 
 ## Publish and verify
 
-Merging the release PR lets the master workflow verify the release state, create
-the annotated stable tag and explicitly dispatch `release.yml`. The master push
-does not itself publish assets. The publisher checks the tag's exact commit,
+After merging the release PR, dispatch `release.yml` with `operation=prepare`
+again. It verifies the release state, creates the annotated stable tag and passes
+that subject to publication jobs in the same run. The publisher checks the tag's exact commit,
 master ancestry, coordinated versions and release note before building.
 
 `Merge sufficiency` is a source prerequisite, not release readiness. Stable
@@ -67,16 +79,18 @@ No registry upload or successful source test extends those support claims.
 
 ## Public language registries
 
-PyPI, npm and crates.io receive the admitted release bytes through the existing
-registry workflows. Trusted publisher identities and the protected
-`package-registries` environment are external prerequisites. Do not put permanent
+PyPI, npm and crates.io receive the admitted release bytes through separate
+credential jobs. Trusted publisher identities and the protected
+`package-registries` and `cargo-registry` environments are external prerequisites. Do not put permanent
 publisher credentials in the repository. See the
 [registry publisher](../src/tooling/release/registry_release.py) and
 [Cargo publisher](../src/tooling/release/cargo_release.py) for exact identity checks.
 
 An absent version may be published; an existing version must match the admitted
 bytes. Network uncertainty is not absence. A mismatching npm channel requires
-deliberate inspection and repair, never automatic rollback. Registry receipts add
+bounded reobservation and then deliberate inspection and repair, never automatic
+rollback. Newly uploaded versions and their channel are observed for up to five
+minutes; immutable identity or digest conflicts stop immediately. Registry receipts add
 distribution evidence; they do not rewrite immutable release manifests or grant
 stable support.
 
@@ -109,6 +123,10 @@ Inspect its exact source and release-only artefact commit, then repeat with
 `--push` to publish that subject. The helper selects fetched master by default;
 an explicit older source must remain reachable from it. Preview tags and receipts
 remain non-support-bearing. Recovery reuses the immutable tag and exact assets.
+The helper dispatches the shared `release.yml` with an explicit `preview` or
+`release-candidate` class. Manual preview recovery supplies `release_class`, `tag`
+and `source_commit` to that same workflow. `qualify_only=true` exercises the
+candidate stages without publication effects.
 
 The special `v1.0.0-rc.N` promotion path is retained for first-stable recovery,
 not ordinary later releases. Its ecosystem version mapping and explicit
@@ -120,6 +138,11 @@ candidate; proof-only reconciliation requires its separately admitted exact tree
 
 ## Keep first contact current
 
+Maintenance observes successful release completion independently. Projection
+drift and recurring consumer observations have their own results; they do not
+change the publication verdict. Required public registry install checks remain
+part of publication.
+
 After stable publication, refresh the existing projection and regenerate it:
 
 ```sh
@@ -128,11 +151,21 @@ python src/tooling/generate/generate_contract_catalogues.py
 ```
 
 The checker binds the public release, dereferenced tag, accepted promotion and
-receipt digest. CI and the post-publication job report drift until the refresh is
-committed. This does not revoke published artefacts or block sibling registry
-jobs. Renderer parity alone cannot establish release currentness.
+receipt digest. Maintenance reports valid drift as a successful follow-up with
+the refresh commands in its run summary. Invalid public evidence still fails.
+Ordinary PR merge proof does not depend on live latest-release state.
+Renderer parity alone cannot establish release currentness.
 
 Existing platform, registry and Cargo consumers exercise setup, the installed
 startup pointer and a fresh ordinary task. npm-local must work without global AW.
 These probes establish delivery, not model obedience or independent acceptance.
 Remove a development-only setup notice only after the public journey passes.
+
+## Hosted boundaries
+
+Preparation uses GitHub job dependencies for source qualification; no runner polls
+another workflow. Candidate dispatch retains exact source/run identity and admits
+reuse only after checking every source claim and the normalisation delta. All
+publication classes share the release lifecycle and immutable recovery checks.
+PyPI/npm and Cargo credentials are confined to their respective environment jobs.
+Confirm live trusted-publisher configuration before first consolidated publication.

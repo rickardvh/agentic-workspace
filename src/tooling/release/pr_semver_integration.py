@@ -18,6 +18,8 @@ from typing import Any, Callable
 
 BUMP_ORDER = {"patch": 0, "minor": 1, "major": 2}
 WORKFLOW = ".github/workflows/pr-semver-label.yml"
+# Immutable historical admissions remain valid under their original producer.
+ADMISSION_WORKFLOWS = (WORKFLOW, ".github/workflows/ci.yml")
 ADMISSION_KIND = "agentic-workspace/pr-semver-admission/v1"
 ADMISSION_FILE = "semver-admission.json"
 MAX_ARTIFACT_BYTES = 1024 * 1024
@@ -92,7 +94,7 @@ def retained_admission(*, root: Path, repository: str, candidate: dict, run: dic
     if (
         record.get("kind") != ADMISSION_KIND
         or record.get("repository") != repository
-        or record.get("producer") != {"workflow": WORKFLOW, "run_id": run_id, "attempt": attempt}
+        or record.get("producer") != {"workflow": run["path"], "run_id": run_id, "attempt": attempt}
         or record.get("pull_request") != {"number": candidate["number"], "head_sha": head, "base_sha": base}
         or record.get("head_tree") != git(root, "rev-parse", f"{head}^{{tree}}")
         or record.get("merge_base") != git(root, "merge-base", base, head)
@@ -160,12 +162,12 @@ def admit_exact_tree_integration(
                 or ancestor(root, sha, base)
             ):
                 continue
-            runs = api(f"{prefix}/actions/workflows/pr-semver-label.yml/runs?head_sha={sha}&event=pull_request&per_page=100")
+            runs = api(f"{prefix}/actions/runs?head_sha={sha}&event=pull_request&per_page=100")
             for run in runs["workflow_runs"]:
                 if not (
                     run.get("conclusion") == "success"
                     and run.get("event") == "pull_request"
-                    and run.get("path") == WORKFLOW
+                    and run.get("path") in ADMISSION_WORKFLOWS
                     and run.get("head_sha") == sha
                     and (run.get("head_repository") or {}).get("full_name") == repository
                     and run.get("updated_at", "~") <= candidate["merged_at"]

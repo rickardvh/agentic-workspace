@@ -148,7 +148,7 @@ def evaluate_security_supply_chain(
     rust_command = f"python {rust_policy['runner']} --install"
     missing_rust_gates = [
         path
-        for path in (".github/workflows/security.yml", ".github/workflows/release.yml", ".github/workflows/preview-release.yml")
+        for path in (".github/workflows/security.yml", ".github/workflows/release.yml")
         if rust_command not in workflow_text.get(path, "")
     ]
     rust_ok = not missing_rust and not missing_rust_gates and re.fullmatch(r"\d+\.\d+\.\d+", rust_policy["version"]) is not None
@@ -175,8 +175,10 @@ def evaluate_security_supply_chain(
         tree = ast.parse(source.read_text(encoding="utf-8"))
         if any(
             isinstance(node, ast.Call)
-            and any(keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True
-                    for keyword in node.keywords)
+            and any(
+                keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True
+                for keyword in node.keywords
+            )
             for node in ast.walk(tree)
         ):
             shell_true_paths.append(source.relative_to(root).as_posix())
@@ -213,6 +215,12 @@ def evaluate_security_supply_chain(
         )
 
     release_text = workflow_text.get(".github/workflows/release.yml", "")
+    release_sources = [Path("src/tooling/release/release_lifecycle.py"), Path("src/tooling/release/stable_manifest.py")]
+    missing_release_sources = [str(path) for path in release_sources if not (root / path).is_file()]
+    # Hosted wiring must reach the policy whose source bytes are fingerprinted below.
+    if "release_lifecycle.py compose" not in release_text:
+        missing_release_sources.append("hosted release composition invocation")
+    release_text += "\n" + "\n".join((root / path).read_text(encoding="utf-8") for path in release_sources if (root / path).is_file())
     release_tokens = {
         "locked-dependency-resolution": "uv sync --locked",
         "security-readiness-receipt": "security-supply-chain-readiness.json",
@@ -221,7 +229,9 @@ def evaluate_security_supply_chain(
         "exact-source-manifest": "agentic-workspace-release-manifest.json",
         "artifact-attestation": "actions/attest-build-provenance@",
     }
-    missing_release = [requirement for requirement in policy["release_requirements"] if release_tokens[requirement] not in release_text]
+    missing_release = missing_release_sources + [
+        requirement for requirement in policy["release_requirements"] if release_tokens[requirement] not in release_text
+    ]
     controls.append({"id": "release-provenance", "status": "pass" if not missing_release else "fail", "missing": missing_release})
     if missing_release:
         failures.append({"control": "release-provenance", "detail": f"missing release controls: {', '.join(missing_release)}"})
@@ -262,7 +272,8 @@ def evaluate_security_supply_chain(
         Path("uv.lock"),
         Path("pyproject.toml"),
         *rust_paths,
-        Path(".github/workflows/preview-release.yml"),
+        *release_sources,
+        *[path.relative_to(root) for path in all_workflows],
         *[Path(path) for path in policy["required_workflows"]],
     ]
     artifacts: dict[str, str] = {}

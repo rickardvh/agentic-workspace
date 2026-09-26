@@ -1,8 +1,9 @@
-name: Installed consumer validation
+name: Maintenance
 
 on:
   schedule:
     - cron: '23 7 * * *'
+    - cron: '17 4 * * 1'
   workflow_dispatch:
     inputs:
       version:
@@ -11,21 +12,41 @@ on:
       previous:
         description: Exact previous public version (empty selects earlier published stable)
         type: string
-  workflow_call:
-    inputs:
-      version:
-        type: string
-        required: true
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
 
 permissions:
   contents: read
 
 concurrency:
-  group: consumer-validation-${{ github.ref }}
+  group: maintenance-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  current-install-projection:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '23 7 * * *' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          persist-credentials: false
+      - name: Surface accepted public projection follow-up
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python src/tooling/release/current_install.py --observe
+
+  security:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 4 * * 1'
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: read
+
   freeze:
+    if: github.event.schedule != '17 4 * * 1' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:

@@ -149,15 +149,17 @@ def _recover_publisher(*, remote: str, verified: dict[str, Any]) -> dict[str, An
             "gh",
             "workflow",
             "run",
-            "preview-release.yml",
+            "release.yml",
             "--repo",
             repo,
             "--ref",
             DEFAULT_RECONSTRUCTION_REF,
             "-f",
-            f"preview_tag={tag}",
+            f"tag={tag}",
             "-f",
-            f"artifact_commit={artifact}",
+            f"source_commit={artifact}",
+            "-f",
+            f"release_class={coordinated_release.release_identity(tag)['release_class']}",
         ]
     )
     return {"publication_status": "publisher-dispatch-requested", "publisher_head_sha": artifact}

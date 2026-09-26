@@ -9,7 +9,6 @@ import io
 import json
 import re
 import sys
-import textwrap
 import zipfile
 from pathlib import Path
 
@@ -141,8 +140,13 @@ def stack(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("associations", ["empty", "missing"])
-def test_exact_tree_mixed_changesets_reuse_admission_after_merge(stack, associations):
+@pytest.mark.parametrize("workflow", checker.ADMISSION_WORKFLOWS)
+def test_exact_tree_mixed_changesets_reuse_admission_after_merge(stack, associations, workflow):
     root, git, event, paths, _, provider = stack
+    for number, run in provider["runs"].items():
+        run["path"] = workflow
+        provider["records"][number]["producer"]["workflow"] = workflow
+        provider["package"](number)
     # Reproduce GitHub's observed lifetime: merged PRs no longer have run links.
     if associations == "missing":
         for run in provider["runs"].values():
@@ -283,13 +287,13 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
     monkeypatch.setattr(checker, "github", observed)
     monkeypatch.setattr(checker, "github_bytes", provider["download"])
     workflow = (ROOT / ".github/workflows/pr-semver-label.yml").read_text()
-    code = textwrap.dedent(workflow.split("python - <<'PY'\n", 1)[1].split("          PY", 1)[0])
+    code = (ROOT / "src/tooling/release/pr_semver_admission.py").read_text()
     assert "if-no-files-found: error" in workflow
     assert "retention-days: 90" in workflow
     assert "overwrite: false" in workflow
     assert "semver-admission-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
     if mode in {"ordinary", "integration", "base-advanced"}:
-        exec(compile(code, "pr-semver-label", "exec"), {})
+        exec(compile(code, "pr-semver-admission", "exec"), {"__name__": "__main__"})
         admission = json.loads((root / "semver-admission.json").read_text())
         assert admission["pull_request"] == {
             "number": 3,
@@ -301,7 +305,7 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
         assert admission["changesets"]
     elif mode == "non-package":
         with pytest.raises(SystemExit) as error:
-            exec(compile(code, "pr-semver-label", "exec"), {})
+            exec(compile(code, "pr-semver-admission", "exec"), {"__name__": "__main__"})
         assert error.value.code == 0
         admission = json.loads((root / "semver-admission.json").read_text())
         assert admission["mode"] == "not-required"
@@ -309,6 +313,6 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
         assert admission["pull_request"]["head_sha"] == event["pull_request"]["head"]["sha"]
     else:
         with pytest.raises(SystemExit) as error:
-            exec(compile(code, "pr-semver-label", "exec"), {})
+            exec(compile(code, "pr-semver-admission", "exec"), {"__name__": "__main__"})
         assert error.value.code == 1
         assert not (root / "semver-admission.json").exists()

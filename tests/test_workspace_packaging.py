@@ -216,27 +216,27 @@ def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None
 
 
 def test_pr_semver_label_workflow_skips_draft_prs() -> None:
-    workflow_text = (WORKSPACE_ROOT / ".github" / "workflows" / "pr-semver-label.yml").read_text(encoding="utf-8")
+    workflow_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "ready_for_review" in workflow_text
-    assert "if: ${{ github.event.pull_request.draft == false }}" in workflow_text
+    assert "github.event.pull_request.draft == false" in workflow_text
 
 
 def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     release_text = (WORKSPACE_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
     assert '"v[0-9]+.[0-9]+.[0-9]+"' in release_text
-    assert "Verify tag targets coordinated release commit" in release_text
-    assert 'coordinated_release.py verify --tag "${RELEASE_TAG}"' in release_text
-    assert "must point at a commit reachable from origin/master" in release_text
-    assert ".github/release-ownership.json" in release_text
-    assert "uses: ./.github/workflows/platform-release.yml" in release_text
-    platform = (WORKSPACE_ROOT / ".github/workflows/platform-release.yml").read_text(encoding="utf-8")
+    assert "release_lifecycle.py admit" in release_text
+    assert "release_lifecycle.py compose" in release_text
+    assert "merge-base" in (WORKSPACE_ROOT / "src/tooling/release/release_lifecycle.py").read_text()
+    assert "release_class:" in release_text
+    assert "platform-consumer:" in release_text
+    platform = (WORKSPACE_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "platform_release.py" in platform
-    assert "agentic-workspace-release-manifest.json" in release_text
+    assert "stable_manifest.py" in (WORKSPACE_ROOT / "src/tooling/release/release_lifecycle.py").read_text()
     assert "source_commit" in release_text
     assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in release_text
-    assert "SHA256SUMS" in release_text
+    assert "SHA256SUMS" in (WORKSPACE_ROOT / "src/tooling/release/release_lifecycle.py").read_text()
     assert "softprops/action-gh-release@" in release_text
 
 
