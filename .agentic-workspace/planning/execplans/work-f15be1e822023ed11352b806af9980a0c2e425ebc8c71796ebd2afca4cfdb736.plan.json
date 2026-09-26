@@ -1,12 +1,11 @@
 {
   "blockers": [
-    "Independent review and approval must be externally initiated; implementation actors cannot provide them.",
-    "Issue #3659 completion remains unclaimed pending its intended dogfood outcome or explicit issue-contract refinement. The failed clean-context evidence remains owned by #3658."
+    "Independent review and approval remain externally initiated; implementation custody cannot supply them. No P0 implementation acceptance gap is carried into this PR."
   ],
   "canonical_core": {},
   "continuation": {
-    "evidence": "Prior actor evidence and failed attempts remain in managed scratch 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d and both PR bodies. Baseline 3be5b68b5; initial candidate 93009d6f1; request-discovery candidate 00be5d143; final first-PR product 120e9c814; source probe 0fb4ae125. Preserve the two failed local controls, failed clean-context closeout, source explanation session lacking runtime entry, and absent measured economic superiority. The review-fix instruction-owner suite passed all 11 tests; paired native build passed. The earlier native compact-proof action lacked bounded shell write scope under the preserved source protection; no admitted native proof is claimed. Correction to the earlier continuation: aggregate documentation coverage is inherited, not a PR blocker or an instruction to reassess the whole corpus. Only current groups covering control-input-disposition.md and native-repository-path.md need publication for this patch. PR receipts are the completion evidence for that bounded follow-through.",
-    "frontier": "External review accepted #3661 as the lower implementation layer without a requested patch; it has merged. Its review expressly does not establish #3659 issue completion: baseline also passed overlapping controls, and clean-context Planning selection/closeout remains failed under #3658. Review of #3662 requires routes in the weaker-nomination scope guard and exact current reconciliation of its two changed documentation files. The guard now rejects route addition/removal/replacement from owner-friction and repo-opportunity while preserving trusted correction. Publish the bounded documentation groups after this final Planning postimage; record their exact receipts and final checks in PR #3662, then leave it ready for externally initiated independent review. No implementation actor reviews, approves or directs a reviewer; P1 implementation remains deferred."
+    "evidence": "Retained managed scratch 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d contains entry-baseline.json, entry-context-entry.json, source-probe.json, context-source-probe.json (failed timing-only reentry), native-source-probe.json and entry-native-entry.json (final). The prior optional activated-procedure baseline/candidate control remains applicable; owner semantics are unchanged. Preserve the two prior local failures and failed full Planning journey; #3658 owns its post-entry transport gap, and deferred-3658.patch is advisory unfinished work only. Deterministic evidence: 16 adoption/skills tests, 2 adoption/reentry cases, and 15 skills tests after final payload change passed; paired native build, generated drift check and commit hooks passed. Authentic installed binding output is current-binding-assignment-required with implementation/completion scope; worker remains unchanged and independent reading completes. Both soft baseline and candidate pass overlapping installed controls, so no universal reliability or general economic advantage is asserted. The exact source replay removes the observed fresh-entry omission. Full token/call/byte/time costs, failed attempts and limitations belong in the PR body. Native compact proof remains unavailable under proof-execution-scope-unresolved; protected source 73a213e66cd48a33 is unchanged and no admitted native proof is claimed. Generated skill payloads are current. No whole-corpus source reassessment or trust revision advance is warranted. Scratch retention is native-committed through review; all completed actor sandboxes are removed. An accidental separate build-cache directory remains after automatic cleanup rejection.",
+    "frontier": "P0 #3659 implementation is ready for independent review on work/complete-owner-entry. PRs #3661 and #3662 merged; #3660 is closed. Timing-only fence candidate e107003da still skipped native entry in fresh read-only source sessions, so it was not submitted as complete. Final product 6b887a636 makes native start explicit for read-only explanation/shaping and reuses current paired binaries across conversations. The exact three-session source replay now enters native startup in every session with no tracked edits; installed direct, binding, scoped unrelated reading and no-carriage fresh controls pass. Publish/maintain one coherent PR closing #3659. The user's issue-completion and short-command corrections were published through the native instruction owner and delivered by fresh startup. P1 #3658, #3653 and #3641 remain deferred; no preliminary P1 changes remain in the branch."
   },
   "creation_provenance": {
     "custody": {
@@ -38,7 +37,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Use PR #3662's final review-response evidence to verify bounded documentation receipts and validation; leave the patch ready for external independent review. Retain evidence while review needs it. Do not infer issue completion from tests, source publication, or merged #3661.",
+  "next_action": "Externally initiated independent review of the issue-closing P0 PR from work/complete-owner-entry, followed by user-directed merge. Its Closes #3659 reference closes the issue on merge; do not close it manually from implementation custody. Retain raw evidence until review disposition, then settle native scratch lifetime. Leave all P1 implementation for later.",
   "owner_level": "lane",
   "parent": {},
   "phase": "closeout",
@@ -56,28 +55,28 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3662"
   ],
   "relationships": {},
-  "revision": 4,
+  "revision": 5,
   "scope": {
-    "excluded": "P1 implementation is deferred by the user. No owner semantic redesign, universal host enforcement, self-review or approval.",
-    "included": "Canonical bootstrap, startup procedure, generated/install surfaces, bounded consumer proof; then strongest-owner migration of root AGENTS.md policy."
+    "excluded": "P1 implementation, post-entry Planning transport repair, owner semantic redesign, universal host enforcement, self-review or approval.",
+    "included": "Complete #3659 mandatory bootstrap/native entry and finite failure-specific behavioral proof, generated/install surfaces, and retained user corrections. #3660 repository migration is already merged and closed."
   },
   "title": "Mandatory AW entry and bootstrap-only repository dogfooding",
   "update_provenance": {
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/80cec66904c660853369046800d0008fdec6500e8cfa88bb3611ada95908fbe1.attempt.json",
-        "revision": "sha256:32c4fcb6321641e9ed72e03b798a0da490cacbe9ae814f38ac11e4605292c887",
+        "path": ".agentic-workspace/local/effects/b6dba52bcc81191a89da0cf98c4ef162fab6c51e1058081d82b803d16c38f44f.attempt.json",
+        "revision": "sha256:1616e52cd762966300b83878ac3176ebb383b09c05fe13a1aad10e3375347507",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/80cec66904c660853369046800d0008fdec6500e8cfa88bb3611ada95908fbe1.result.json",
-        "revision": "sha256:36ec807357b4af62daf7a46daf4fe1bb4ab4c793f7716054f443ff4376145c88",
+        "path": ".agentic-workspace/local/effects/b6dba52bcc81191a89da0cf98c4ef162fab6c51e1058081d82b803d16c38f44f.result.json",
+        "revision": "sha256:3af3a149cf71fbe5454d4ef7a7824c5497ff070accf217b8410ab072318997de",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:d8c41bec0d9d75d2aed7b346b0164fdb670c5808952c4bac08135fa1e4b07f94",
+    "invocation_revision": "sha256:56c72436839178a00252e02ecf4edb69034cc70e935bc5ad64f025a698560d1f",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -85,7 +84,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:752b1e8948e953ff6f5595fdf9c1f43a82a6dbccf58b73dd58382e7ae8461de5",
+        "document_revision": "sha256:25d8e6e2e00459af1b4dee53ac6a69b79c21c3075531d8492fb37d9630df1818",
         "owner_id": "work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736",
         "owner_path": ".agentic-workspace/planning/execplans/work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736.plan.json"
       }
