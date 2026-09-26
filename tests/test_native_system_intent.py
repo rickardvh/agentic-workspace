@@ -43,7 +43,13 @@ def test_real_governing_sources_are_lazy_exact_and_not_alignment(
     for projection in ("compact", "carried"):
         delivered = consume(surface, shared_core_binary, native_cli, {**context, "request": request, "projection": projection})
         visible = delivered["view"] if projection == "carried" else delivered
-        assert visible["decision_packet"]["material"]["system-intent"] == read
+        projected_read = visible["decision_packet"]["material"]["system-intent"]
+        delivery = projected_read.pop("delivery")
+        assert delivery["status"] == "included"
+        assert delivery["extent"] == "whole-source"
+        assert delivery["authority"] == "presentation-only; no semantic satisfaction"
+        assert delivery["reference"].startswith("sha256:")
+        assert projected_read == read
     with pytest.raises(AssertionError):
         consume(surface, shared_core_binary, native_cli, {**context, "task": "A different task", "request": request})
     forged = json.loads(json.dumps(request))
