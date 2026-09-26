@@ -182,10 +182,6 @@ fn postimage(args: &Value) -> Result<Vec<u8>, CoreError> {
     if bytes.is_empty()
         || bytes.len() > 65536
         || crate::instruction_source::parsed(bytes, false)["valid"] != true
-        || !crate::instruction_source::parsed(bytes, false)["metadata"]["routes"]
-            .as_array()
-            .unwrap()
-            .is_empty()
     {
         return Err(err(
             "instruction postimage must satisfy the bounded shared Markdown contract",

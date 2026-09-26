@@ -1,8 +1,12 @@
 {
-  "blockers": [],
+  "blockers": [
+    "Independent review and approval must be externally initiated; implementation actors cannot provide them.",
+    "Issue completion remains unclaimed: clean-context Planning follow-through failed; native proof execution lacks a bounded write scope preserving the unresolved protected source; inherited documentation-wide source reconciliation is partial."
+  ],
   "canonical_core": {},
   "continuation": {
-    "frontier": "User reprioritized P0 before any P1 implementation. Existing native binaries build. Work starts from merged master on work/mandatory-aw-entry; second PR will stack repository migration. No implementation or acceptance claimed."
+    "evidence": "Exact evidence and all failed attempts remain in managed scratch 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d; PR bodies contain the durable summary and cost limits. Baseline artifact 3be5b68b5; initial candidate 93009d6f1; request-discovery candidate 00be5d143; final first-PR product 120e9c814; migration source probe 0fb4ae125. Two earlier local controls failed before the final pass. Source probe built both missing binaries, invoked startup, found scoped review/shaping rules and preserved tracked files; its second explanation session omitted runtime entry and disclosed that limit. Eight operating Rust tests and 26 focused skills/instruction tests passed. Generated surfaces and commit hooks passed. Native instruction and Planning publication/reconciliation reported committed effects. The selected native compact-proof action remains blocked by the existing protected-source write-scope rule; documentation-wide reconciliation has 165 pending files. No native proof admission, universal compliance or economic superiority is asserted.",
+    "frontier": "P0 implementation is published in stacked PRs #3661 (mandatory entry, bundled owner references and local-assessment procedure) and #3662 (bootstrap-only repository and scoped instruction publication). Both are ready for independent review; no implementation actor reviewed, approved or directed a reviewer. The final first-PR artifact passed binding and local controls. Baseline and initial candidate optional-finding/fresh-reuse controls passed. The clean-context journey completed the user-facing approved deliverables but failed Planning selection and managed closeout; preserve that evidence for the existing #3658 transport owner, without silently expanding this P0 work into deferred P1 implementation. No issue closure or whole-lane acceptance is claimed."
   },
   "creation_provenance": {
     "custody": {
@@ -28,16 +32,16 @@
     "outcome": "Implement #3659 and #3660 in stacked PRs, preserving dynamic owner authority and proving representative fresh-agent behavior."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "planned",
+  "lifecycle": "live",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Resolve task Assignment, establish baseline consumer evidence and implement mandatory bootstrap in the first PR.",
+  "next_action": "Leave PRs #3661 then #3662 for externally initiated independent review. Reobserve their CI and remaining owner gaps before any issue-completion claim. Keep P1 implementation deferred; retain bounded evidence until review and disposition no longer need it.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "shaping",
+  "phase": "closeout",
   "proof": {
     "required": [
       "Existing adoption replacement and skills-first contracts",
@@ -47,13 +51,44 @@
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3659",
-    "https://github.com/rickardvh/agentic-workspace/issues/3660"
+    "https://github.com/rickardvh/agentic-workspace/issues/3660",
+    "https://github.com/rickardvh/agentic-workspace/pull/3661",
+    "https://github.com/rickardvh/agentic-workspace/pull/3662"
   ],
   "relationships": {},
-  "revision": 1,
+  "revision": 3,
   "scope": {
     "excluded": "P1 implementation is deferred by the user. No owner semantic redesign, universal host enforcement, self-review or approval.",
     "included": "Canonical bootstrap, startup procedure, generated/install surfaces, bounded consumer proof; then strongest-owner migration of root AGENTS.md policy."
   },
-  "title": "Mandatory AW entry and bootstrap-only repository dogfooding"
+  "title": "Mandatory AW entry and bootstrap-only repository dogfooding",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/fd4373db0c9261d056ff2eac7965637bb9f6bfc85981476036cd1fb909934e8a.attempt.json",
+        "revision": "sha256:06a77a6d62b23f976fb141832c1ac920977025b2c8c5b5595029cc38c2bd6d49",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/fd4373db0c9261d056ff2eac7965637bb9f6bfc85981476036cd1fb909934e8a.result.json",
+        "revision": "sha256:0f474d6b00579f8ed516e18c5fb2359a554306cf27ab2fb9e0dcc47d415cb305",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:19652c7a18c7c35c97bfff479f35cb25c04240b7e5d606d34d59f2d266531ddd",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:6141a9e4961e49bb3ad49f1b4fde775b0a5a273c6caf5b998c8314108a28f91d",
+        "owner_id": "work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736",
+        "owner_path": ".agentic-workspace/planning/execplans/work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736.plan.json"
+      }
+    }
+  }
 }
