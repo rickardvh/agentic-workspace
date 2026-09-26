@@ -4,9 +4,9 @@
     "source": "GitHub #3654, #3655, #3656 and #3652"
   },
   "continuation": {
-    "accepted_progress": "PR #3657's external re-review accepts the structural contraction and finds no need for another code-contraction pass. Final affected suite: 153 passed; Actionlint, native build, generated surfaces and hooks passed. Surface: 5 workflows, 28 jobs, 1329 YAML lines versus 9/40/2307. Label-only semver revalidation avoids replaying merge/security proof. The first 64-file documentation assessment is published. The remaining group containing docs/release-and-versioning.md is assessed: 63 unchanged postimages match prior guide-bound receipts, with the revised release guide read in full. Its exact-group publication authorization is pending. Issue #3655 now permits the bounded event adapter while retaining required admission and hosted evidence criteria.",
+    "accepted_progress": "PR #3657's external re-review accepts the structural contraction and finds no need for another code-contraction pass. Final affected suite: 153 passed; Actionlint, native build, generated surfaces and hooks passed. Surface: 5 workflows, 28 jobs, 1329 YAML lines versus 9/40/2307. Label-only semver revalidation avoids replaying merge/security proof. The first 64-file documentation assessment is published. The remaining group containing docs/release-and-versioning.md is assessed: 63 unchanged postimages match prior guide-bound receipts, with the revised release guide read in full. The user authorized publication and Verification published the exact group receipt; both documentation groups requested by review are now recorded, without claiming whole-repository reconciliation. Issue #3655 now permits the bounded event adapter while retaining required admission and hosted evidence criteria.",
     "external_posture": "Observed 2026-09-26: live ruleset 20615912 was activated and fetched again; required checks are Merge sufficiency, Semver admission and existing Review approval, with other protections preserved. Authenticated crates.io settings for agentic-workspace-cli and agentic-workspace-core both already register rickardvh/agentic-workspace, release.yml, cargo-registry; GitHub's cargo-registry environment has its existing required reviewer. These are configuration observations, not an OIDC exchange or release journey. CI and Semver admission passed at head 366dffc71.",
-    "frontier": "Await exact-group authorization to publish the remaining release-guide assessment through Verification, then leave the PR ready for independent recheck. Issue completion and parent intent remain open pending independent acceptance, default-branch landing and the minimum hosted exhaustive/preparation/maintenance/release journeys; PyPI/npm configuration confirmation remains. No measured total hosted cost reduction is claimed. Delegation was attempted through the owner twice: first transport failed under Windows cp1252 decoding; a read-only UTF-8 reproduction passed. The second process succeeded but AW retained no usable return. Assignment then admitted local recovery. The original effect records remain available in owned scratch/local custody; no worker findings or independent review are claimed."
+    "frontier": "Both requested documentation assessments are published; the PR is ready for independent recheck. Issue completion and parent intent remain open pending independent acceptance, default-branch landing and the minimum hosted exhaustive/preparation/maintenance/release journeys; PyPI/npm configuration confirmation remains. No measured total hosted cost reduction is claimed. Delegation was attempted through the owner twice: first transport failed under Windows cp1252 decoding; a read-only UTF-8 reproduction passed. The second process succeeded but AW retained no usable return. Assignment then admitted local recovery. The original effect records remain available in owned scratch/local custody; no worker findings or independent review are claimed. User feedback: routine documentation receipt authorization adds disproportionate friction. Current Verification code requires a bounded human answer absent an exact policy delegation; assess proportionate delegation through the source owner separately, preserving independent review."
   },
   "creation_provenance": {
     "custody": {
@@ -38,7 +38,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish the prepared release-guide group after its exact authorization, preserve live provider/ruleset evidence in PR #3657, and leave independent recheck to an externally initiated reviewer. After accepted default-branch landing, perform the minimum controlled hosted journeys and reconcile children, parent and this Planning owner at closeout.",
+  "next_action": "Leave PR #3657 ready for externally initiated independent recheck. After accepted default-branch landing, perform the minimum controlled hosted journeys and reconcile children, parent and this Planning owner at closeout.",
   "owner_level": "lane",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3654"
@@ -59,7 +59,7 @@
       "issues": "#3655; #3652; #3656"
     }
   },
-  "revision": 5,
+  "revision": 6,
   "scope": {
     "excluded": "Product runtime redesign, self-review or weakened proof",
     "included": "CI, maintenance, release workflows and tooling, tests and boundary audit"
@@ -69,18 +69,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/622dbe262574aa833e055ffa2711f21a2b419e24aec63c47cf046dc08af6ce15.attempt.json",
-        "revision": "sha256:70ec68f0070b4c5d5b09bb71f310ee55b81f4a58f49ca1c8f2686c6584b11fb0",
+        "path": ".agentic-workspace/local/effects/280abea73f98b24687a77e26b392883283b8adf781780e18505de3947ee3287f.attempt.json",
+        "revision": "sha256:2613780d04ae3a6ea6519fb81ac88021529ca5841c8cc02fc117e44b3c593d92",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/622dbe262574aa833e055ffa2711f21a2b419e24aec63c47cf046dc08af6ce15.result.json",
-        "revision": "sha256:77a6daf482ce2cfdab83e57f36518f9fe7e47e15f6f66ef1b994b258aebb6300",
+        "path": ".agentic-workspace/local/effects/280abea73f98b24687a77e26b392883283b8adf781780e18505de3947ee3287f.result.json",
+        "revision": "sha256:e09cc9c563a37c94fff5fb27ea7a9409bf51cbe44933d3095bb29b5df699202d",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:e629b540a7bc1a4e7ec201a307af2a93d0887f6b66a3c4ccfa675e697b691d53",
+    "invocation_revision": "sha256:4185209e02f949b0ecc1d7de26b4228387105094fc233e3e3a80d490a196bd0c",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -88,7 +88,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:42a90afc8a1a515bfe045a81fed3e1535c28e477023e1af06ea0e452a817ed1a",
+        "document_revision": "sha256:cee54727ed6d84c4b1ded36142723d5e42b0ffe8f1061562a64c19bb562560d5",
         "owner_id": "work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7",
         "owner_path": ".agentic-workspace/planning/execplans/work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7.plan.json"
       }
