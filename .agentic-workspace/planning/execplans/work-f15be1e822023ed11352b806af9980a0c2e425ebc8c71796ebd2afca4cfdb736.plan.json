@@ -1,9 +1,12 @@
 {
-  "blockers": [],
+  "blockers": [
+    "Independent review and approval must be externally initiated; implementation actors cannot provide them.",
+    "Issue completion remains unclaimed: clean-context Planning follow-through failed; native proof execution lacks a bounded write scope preserving the unresolved protected source; inherited documentation-wide source reconciliation is partial."
+  ],
   "canonical_core": {},
   "continuation": {
-    "evidence": "Bounded evidence is in the current managed scratch container 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d. Baseline artifact is master 3be5b68b5; original candidate 93009d6f1; fixed candidate 00be5d143. Instruction tests passed 11/11. The initial adoption suite had a Windows UTF-8 read failure, fixed in the first branch; a later uncertain-effect test rerun passed in isolation. Consumer cost observations include failed attempts and are not economic superiority evidence.",
-    "frontier": "P0 implementation is in two local stacked branches. Mandatory entry and nested native request discovery are on work/mandatory-aw-entry; bootstrap-only migration is on work/bootstrap-only-dogfood. The request discovery fix follows the failed candidate local-control journey: the documented Assignment reference omitted bundled requests, while the baseline actor manually reconstructed the bundle. Both binding arms passed. Baseline local passed; first candidate local failed. Preserve the failure and run the fixed candidate before claiming acceptance. Native instruction publication now accepts the shared parser's route metadata; repository PR and operating rules were published through that owner, preserving the unresolved source protection. Root bootstrap reduction and explicit paragraph dispositions are implemented. No independent review, PR completion or issue closure is claimed."
+    "evidence": "Exact evidence and all failed attempts remain in managed scratch 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d; PR bodies contain the durable summary and cost limits. Baseline artifact 3be5b68b5; initial candidate 93009d6f1; request-discovery candidate 00be5d143; final first-PR product 120e9c814; migration source probe 0fb4ae125. Two earlier local controls failed before the final pass. Source probe built both missing binaries, invoked startup, found scoped review/shaping rules and preserved tracked files; its second explanation session omitted runtime entry and disclosed that limit. Eight operating Rust tests and 26 focused skills/instruction tests passed. Generated surfaces and commit hooks passed. Native instruction and Planning publication/reconciliation reported committed effects. The selected native compact-proof action remains blocked by the existing protected-source write-scope rule; documentation-wide reconciliation has 165 pending files. No native proof admission, universal compliance or economic superiority is asserted.",
+    "frontier": "P0 implementation is published in stacked PRs #3661 (mandatory entry, bundled owner references and local-assessment procedure) and #3662 (bootstrap-only repository and scoped instruction publication). Both are ready for independent review; no implementation actor reviewed, approved or directed a reviewer. The final first-PR artifact passed binding and local controls. Baseline and initial candidate optional-finding/fresh-reuse controls passed. The clean-context journey completed the user-facing approved deliverables but failed Planning selection and managed closeout; preserve that evidence for the existing #3658 transport owner, without silently expanding this P0 work into deferred P1 implementation. No issue closure or whole-lane acceptance is claimed."
   },
   "creation_provenance": {
     "custody": {
@@ -35,10 +38,10 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Finish current live local and optional controls, fresh-context and repository migration dogfood; reconcile current sources and bounded proof, commit the second branch, publish and attach both stacked PRs ready for independent review. Keep P1 deferred.",
+  "next_action": "Leave PRs #3661 then #3662 for externally initiated independent review. Reobserve their CI and remaining owner gaps before any issue-completion claim. Keep P1 implementation deferred; retain bounded evidence until review and disposition no longer need it.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "validation",
+  "phase": "closeout",
   "proof": {
     "required": [
       "Existing adoption replacement and skills-first contracts",
@@ -48,10 +51,12 @@
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3659",
-    "https://github.com/rickardvh/agentic-workspace/issues/3660"
+    "https://github.com/rickardvh/agentic-workspace/issues/3660",
+    "https://github.com/rickardvh/agentic-workspace/pull/3661",
+    "https://github.com/rickardvh/agentic-workspace/pull/3662"
   ],
   "relationships": {},
-  "revision": 2,
+  "revision": 3,
   "scope": {
     "excluded": "P1 implementation is deferred by the user. No owner semantic redesign, universal host enforcement, self-review or approval.",
     "included": "Canonical bootstrap, startup procedure, generated/install surfaces, bounded consumer proof; then strongest-owner migration of root AGENTS.md policy."
@@ -61,18 +66,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e11c3366279243b1c34becac31aa98eedc921e5bc0123b83c269f0e543886b3c.attempt.json",
-        "revision": "sha256:8e73fc50ed7aa66c3b901a5c191437e95e23c8b38412b554665b632cc8b92d69",
+        "path": ".agentic-workspace/local/effects/fd4373db0c9261d056ff2eac7965637bb9f6bfc85981476036cd1fb909934e8a.attempt.json",
+        "revision": "sha256:06a77a6d62b23f976fb141832c1ac920977025b2c8c5b5595029cc38c2bd6d49",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e11c3366279243b1c34becac31aa98eedc921e5bc0123b83c269f0e543886b3c.result.json",
-        "revision": "sha256:414161d82470bf7eeb29cb323b1a178f38b61d858441e1d0e18edf45ce31e7d0",
+        "path": ".agentic-workspace/local/effects/fd4373db0c9261d056ff2eac7965637bb9f6bfc85981476036cd1fb909934e8a.result.json",
+        "revision": "sha256:0f474d6b00579f8ed516e18c5fb2359a554306cf27ab2fb9e0dcc47d415cb305",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:4341b79c0473798fb8f5ccb41da0dc9a69149b61d16e1d38596fd93a8b5f8979",
+    "invocation_revision": "sha256:19652c7a18c7c35c97bfff479f35cb25c04240b7e5d606d34d59f2d266531ddd",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -80,7 +85,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:3027e176a99e4ab21cfe9be15d6d45ccf12d1364c45afbfbf58190a2c3965db0",
+        "document_revision": "sha256:6141a9e4961e49bb3ad49f1b4fde775b0a5a273c6caf5b998c8314108a28f91d",
         "owner_id": "work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736",
         "owner_path": ".agentic-workspace/planning/execplans/work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736.plan.json"
       }
