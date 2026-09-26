@@ -4,8 +4,8 @@
     "source": "GitHub #3654, #3655, #3656 and #3652"
   },
   "continuation": {
-    "accepted_progress": "Final affected suite: 144 passed. Platform/Cargo/candidate suite: 67 passed with one stale workflow assertion subsequently corrected and passing in targeted validation. Actionlint 1.7.12, native build, generated surface checks and Ruff passed. Surface: 6 workflows, 29 jobs, approximately 1390 YAML lines versus 9/40/2307. Local proof uses controlled provider fakes; live ruleset 20615912 is disabled and publisher configuration remains unproven.",
-    "frontier": "Implementation ready for independent review after commit hooks. Issue completion and full parent intent remain open pending hosted ordinary PR/exhaustive/maintenance/release journeys, independent acceptance and provider configuration evidence. No measured hosted cost reduction is claimed."
+    "accepted_progress": "Independent review implementation findings addressed in PR #3657. Final affected suite: 153 passed. Actionlint 1.7.12, locked native build, generated surface checks and commit hooks passed. Surface: 5 workflows, 28 jobs, 1329 YAML lines versus 9/40/2307. Label-only changes run separate Semver admission. The user-authorized 64-file documentation assessment was published through Verification in commit 5fd81103a; wider documentation coverage remains unresolved. Local proof uses controlled provider fakes; live provider configuration remains unproven.",
+    "frontier": "Ready for independent review. Issue completion and full parent intent remain open pending remaining documentation reconciliation, independent acceptance, default-branch landing, hosted exhaustive/preparation/maintenance/release journeys and provider configuration evidence. No measured total hosted cost reduction is claimed."
   },
   "creation_provenance": {
     "custody": {
@@ -37,7 +37,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Submit implementation ready for independent review; observe ordinary PR checks. After independent review and default-branch landing, run controlled hosted journeys and reconcile child and parent acceptance with provider evidence.",
+  "next_action": "Reconcile remaining documentation scope through its owner and obtain independent review. After accepted default-branch landing, run controlled hosted journeys and reconcile child and parent acceptance with provider evidence. Reconcile this Planning owner at accepted closeout rather than retaining implementation history.",
   "owner_level": "lane",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3654"
@@ -50,14 +50,15 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3654",
     "https://github.com/rickardvh/agentic-workspace/issues/3655",
     "https://github.com/rickardvh/agentic-workspace/issues/3656",
-    "https://github.com/rickardvh/agentic-workspace/issues/3652"
+    "https://github.com/rickardvh/agentic-workspace/issues/3652",
+    "https://github.com/rickardvh/agentic-workspace/pull/3657"
   ],
   "relationships": {
     "dependencies": {
       "issues": "#3655; #3652; #3656"
     }
   },
-  "revision": 3,
+  "revision": 4,
   "scope": {
     "excluded": "Product runtime redesign, self-review or weakened proof",
     "included": "CI, maintenance, release workflows and tooling, tests and boundary audit"
@@ -67,18 +68,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/286c7e759618c271305f2e1ab963c1302cf306bcb75815b0ca2c8d7d4c811fa5.attempt.json",
-        "revision": "sha256:c861e1b8be7195672a6c617723a519c409dcf846f3bd7ff8b29f3d0afa0a65ed",
+        "path": ".agentic-workspace/local/effects/fc377c13bb6d1c4db7e8e748ca916aca459f8e6891760e4af997e6b0d03341d8.attempt.json",
+        "revision": "sha256:f38aad317fde37bb9e4c9546c8eeb55034904fd0842a4cf04a39976199118815",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/286c7e759618c271305f2e1ab963c1302cf306bcb75815b0ca2c8d7d4c811fa5.result.json",
-        "revision": "sha256:430b881f543ded421ce3576aee1d027bc0d020e21677a2b0db5a807a70421591",
+        "path": ".agentic-workspace/local/effects/fc377c13bb6d1c4db7e8e748ca916aca459f8e6891760e4af997e6b0d03341d8.result.json",
+        "revision": "sha256:59add75d40dbb6a4bba1b1d5f3ba1468d0e7310c8adf4fbf6950def4c089db12",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:a2d9386683f2f7c8c50312a9ee45cc38282c73c96fd2f83096d399b30991306c",
+    "invocation_revision": "sha256:9f2d425d4f2683daf5366d0d2f42c8af7380df51179853789fc0ecd4358e651b",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -86,7 +87,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:b5eb0436b10cff219c66f56bec90d76f4d7777c1ecd6e8d0d9b58d1167bd6c51",
+        "document_revision": "sha256:935a3baa0d938ef7ac15c24124dbeb8a71dc3f9e517a3c03a6a9f314fc9c7926",
         "owner_id": "work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7",
         "owner_path": ".agentic-workspace/planning/execplans/work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7.plan.json"
       }
