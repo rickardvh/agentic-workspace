@@ -1,5 +1,10 @@
 # Follow current role, target and transport
 
+If the owner reports missing task requirements or comparative assessment, no
+target is bound yet. Follow [assessment](assessment.md), retain its current
+carriage, and resolve the requested inputs before treating that state as a
+non-local assignment or a final inability to continue.
+
 Read current role, target relation, assignment identity/revision, permitted action,
 scope, proof requirements, stop conditions and return contract from the native
 owner. Task words do not establish these facts. Selected-current-target work uses

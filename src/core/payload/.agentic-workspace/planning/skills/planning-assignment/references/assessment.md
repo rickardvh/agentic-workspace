@@ -5,6 +5,13 @@ stays local. Separate why delegation helps from whether any target is currently
 eligible. Request current task requirements and Assignment assessment; do not
 nominate or authorize a target in the method itself.
 
+Supply the concrete result and proof classes the task needs, using the current
+owner's supported vocabulary. For example, code changes use `unapplied-patch`,
+not an invented `patch` class. Empty template defaults do not describe a code
+change. Preserve the returned carriage while supplying the comparative assessment;
+repeating only the task text loses the requirements just supplied. A local choice
+under binding policy needs this same assessment and current admission.
+
 ```agentic-owner-reference
 {"kind":"request","owner":"assignment","id":"assignment/task-requirements"}
 ```
