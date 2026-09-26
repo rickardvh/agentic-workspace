@@ -254,23 +254,14 @@ def test_tag_plan_targets_protected_merge_commit_not_release_side_parent(tmp_pat
     assert plan["release_commit"] != side_parent
 
 
-def test_preview_release_workflow_remains_separate_from_stable_support_bearing_publisher() -> None:
-    preview = (ROOT / ".github/workflows/preview-release.yml").read_text(encoding="utf-8")
-    stable = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
-
-    assert "workflow_dispatch:" in preview
-    assert "    tags:" not in preview
-    assert '"v[0-9]+.[0-9]+.[0-9]+"' in stable
-    assert "preview-v" not in stable
-    assert "verify-preview" in preview
-    assert "prerelease: true" in preview
-    assert "agentic-workspace-preview-release-manifest.json" in preview
-    assert "support_bearing_promotion.py" not in preview
-    assert "test ! -e dist/support-bearing-promotion.json" in preview
-    assert "support_bearing_promotion.py github-checks" in stable
-    assert "support_bearing_promotion.py compose" in stable
-    assert "anchore/sbom-action@" in preview
-    assert "anchore/sbom-action@" in stable
+def test_preview_and_stable_share_transport_but_not_support_admission() -> None:
+    workflow = (ROOT / ".github/workflows/release.yml").read_text()
+    lifecycle = (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
+    assert "release_class:" in workflow
+    assert "prerelease: ${{ needs.promotion-admission.outputs.support_bearing != 'true' }}" in workflow
+    assert "Preview cannot carry stable support admission" in lifecycle
+    assert "release_model(tag, release_class)" in lifecycle
+    assert not (ROOT / ".github/workflows/preview-release.yml").exists()
 
 
 def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref() -> None:

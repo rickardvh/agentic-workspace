@@ -99,11 +99,8 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
         assert package["release_policy"] == "coordinated-public-registry"
         assert package["registry_status"] == "trusted-publication-required"
 
-    # Execute the source preflight against canonical private source metadata.
-    # Publishability belongs to the packed-artifact guard tested below.
-    block = _step_run_block((WORKFLOW_ROOT / "release.yml").read_text(), "Verify tag targets coordinated release commit")
-    source = block.split("python - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
-    subprocess.run([sys.executable, "-c", source], cwd=ROOT, check=True, capture_output=True, text=True)
+    lifecycle = (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
+    assert 'package.get("release_policy") != "coordinated-public-registry"' in lifecycle
 
 
 @pytest.mark.parametrize(
@@ -116,8 +113,7 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     ],
 )
 def test_stable_manifest_admits_only_public_registry_contract(private, policy, accepted):
-    block = _step_run_block((WORKFLOW_ROOT / "release.yml").read_text(), "Generate checksums and release manifest")
-    source = block.split("python - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    source = (ROOT / "src/tooling/release/stable_manifest.py").read_text()
     guards = [
         node
         for node in ast.walk(ast.parse(source))
@@ -165,7 +161,7 @@ def test_release_path_classification_covers_native_sources_and_bindings() -> Non
 
 
 def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
-    workflow = (WORKFLOW_ROOT / "pr-semver-label.yml").read_text(encoding="utf-8")
+    workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
 
     assert "pull_request:" in workflow
     assert "labeled" in workflow
@@ -173,6 +169,9 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     assert "BASE_REF: ${{ github.event.pull_request.base.ref }}" in workflow
     assert "HEAD_REF: ${{ github.event.pull_request.head.ref }}" in workflow
     assert "BASE_REF: ${{ github.base_ref }}" not in workflow
+    assert "python src/tooling/release/pr_semver_admission.py" in workflow
+    assert not (WORKFLOW_ROOT / "pr-semver-label.yml").exists()
+    workflow = (WORKFLOW_ROOT.parent.parent / "src/tooling/release/pr_semver_admission.py").read_text()
     assert ".github/release-ownership.json" in workflow
     assert "classify_changed_paths(changed, ownership)" in workflow
     assert 'ownership["semver_labels"]' in workflow
@@ -252,98 +251,31 @@ def test_release_publisher_dispatch_heredoc_terminates_at_shell_column_zero() ->
 
 
 def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> None:
-    workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
+    import yaml
 
-    assert '"v[0-9]+.[0-9]+.[0-9]+"' in workflow
-    assert "workflow_dispatch:" in workflow
-    assert "source_commit:" in workflow
-    assert ".github/release-ownership.json" in workflow
-    assert "fetch-depth: 0" in workflow
-    assert "Verify tag targets coordinated release commit" in workflow
-    assert "git rev-list -n 1" in workflow
-    assert "EXPECTED_SOURCE_COMMIT" in workflow
-    assert "must point at a commit reachable from origin/master" in workflow
-    assert 'coordinated_release.py verify --tag "${RELEASE_TAG}"' in workflow
-    assert "platform_release.py verify --artifact-dir dist" in workflow
-    assert "uses: ./.github/workflows/platform-release.yml" in workflow
-    assert "uv build --wheel --sdist --out-dir dist packages/memory" not in workflow
-    assert "uv build --wheel --sdist --out-dir dist packages/planning" not in workflow
-    assert "uv build --wheel --sdist --out-dir dist packages/verification" not in workflow
-    assert "src/tooling/release/patch_workspace_release_wheel.py" not in workflow
-    assert "release-asset-base-url" not in workflow
-    assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in workflow
-    assert 'node-version: "24"' in workflow
-    assert "name: complete-platform-packages" in workflow
-    assert "typescript_packages" in workflow
-    assert "agentic-workspace-release-manifest.json" in workflow
-    assert "source_commit" in workflow
-    assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in workflow
-    assert "generate_release_notes: true" not in workflow
-    assert "SHA256SUMS" in workflow
-    assert "Missing checksums for release assets" in workflow
-    assert "softprops/action-gh-release@" in workflow
-    assert "uv sync --locked" in workflow
-    assert "security-supply-chain-readiness.json" in workflow
-    manifest_step = _step_run_block(workflow, "Generate checksums and release manifest")
-    assert '--source-identity "$(git rev-parse HEAD)"' in manifest_step
-    assert "github.sha" not in manifest_step
-    assert "distribution-install-readiness.json" in workflow
-    assert "redistributable-package-readiness.json" in workflow
-    assert "src/tooling/check/check_package_identity.py" in workflow
-    assert "--require-exact-urls" in workflow
-    assert "--write-receipts" in workflow
-    assert "agentic-workspace.spdx.json" in workflow
-    assert "anchore/sbom-action@" in workflow
-    assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
-    assert "fail_on_unmatched_files: true" in workflow
-    assert "support-bearing-promotion.json" in workflow
-    assert "support_bearing_promotion.py compose" in workflow
-    assert "needs: [promotion-admission, release-runtime-matrix, platform-packages]" in workflow
-    assert 'python: "3.14"' in workflow
-    assert 'python: "3.11"' in workflow
-    assert 'python: "3.13"' in workflow
-    assert "windows-latest" not in workflow
-    assert workflow.index("promotion-admission:") < workflow.index("contents: write")
+    workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
+    jobs = workflow["jobs"]
+    assert workflow["on"]["workflow_dispatch"]["inputs"]["release_class"]["options"] == ["stable", "preview", "release-candidate"]
+    assert jobs["release-runtime-matrix"]["strategy"]["matrix"] == "${{ fromJSON(needs.promotion-admission.outputs.runtimes) }}"
+    assert jobs["platform-build"]["strategy"]["matrix"] == "${{ fromJSON(needs.promotion-admission.outputs.platforms) }}"
+    assert jobs["agentic-workspace-package"]["needs"] == ["promotion-admission", "release-runtime-matrix", "platform-consumer"]
+    steps = jobs["agentic-workspace-package"]["steps"]
+    compose = next(step for step in steps if step.get("id") == "compose")
+    assert 'release_lifecycle.py compose --github-output "$GITHUB_OUTPUT"' in compose["run"]
+    publish = next(step for step in steps if step.get("name") == "Publish GitHub release assets")
+    assert publish["with"]["files"] == "${{ steps.compose.outputs.assets }}"
+    assert publish["with"]["overwrite_files"] == "false"
+    assert publish["if"] == "${{ !inputs.qualify_only }}"
+    assert not (WORKFLOW_ROOT / "platform-release.yml").exists()
 
 
 def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
-    workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
-
-    patterns = _release_asset_patterns(workflow)
-
-    assert _matching_release_assets(
-        patterns,
-        [
-            "dist/agentic_workspace-0.4.0-py3-none-any.whl",
-            "dist/agentic_workspace-0.4.0.tar.gz",
-            "dist/agentic_workspace_memory-0.4.0-py3-none-any.whl",
-            "dist/agentic_workspace_memory-0.4.0.tar.gz",
-            "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
-            "dist/agentic-workspace-release-manifest.json",
-            "dist/distribution-install-readiness.json",
-            "dist/redistributable-package-readiness.json",
-            "dist/security-supply-chain-readiness.json",
-            "dist/support-bearing-promotion.json",
-            "dist/agentic-workspace.spdx.json",
-            "dist/SHA256SUMS",
-            "dist/.gitignore",
-            "dist/default.gitignore",
-            "dist/agentic_workspace-0.4.0-py3-none-any.whl.sha256",
-        ],
-    ) == [
-        "dist/agentic_workspace-0.4.0-py3-none-any.whl",
-        "dist/agentic_workspace-0.4.0.tar.gz",
-        "dist/agentic_workspace_memory-0.4.0-py3-none-any.whl",
-        "dist/agentic_workspace_memory-0.4.0.tar.gz",
-        "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
-        "dist/agentic-workspace-release-manifest.json",
-        "dist/distribution-install-readiness.json",
-        "dist/redistributable-package-readiness.json",
-        "dist/security-supply-chain-readiness.json",
-        "dist/support-bearing-promotion.json",
-        "dist/agentic-workspace.spdx.json",
-        "dist/SHA256SUMS",
-    ]
+    # Publication consumes only the validated checksum inventory, not a directory glob.
+    workflow = (WORKFLOW_ROOT / "release.yml").read_text()
+    lifecycle = (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
+    assert "files: ${{ steps.compose.outputs.assets }}" in workflow
+    assert 'Path("dist/SHA256SUMS").read_text().splitlines()' in lifecycle
+    assert "if Path(name).name != name:" in lifecycle
 
 
 def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
@@ -351,7 +283,9 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     merge = workflow.partition("  merge-sufficiency:\n")[2].partition("\n  workspace-checks:\n")[0]
     exhaustive = workflow.partition("\n  workspace-checks:\n")[2]
 
-    assert "name: Merge sufficiency" in merge
+    assert "name: Merge proof" in merge
+    assert "name: Merge sufficiency" in workflow
+    assert "needs: [merge-sufficiency, security, current-public-install]" in workflow
     assert "github.event_name == 'push'" in merge
     assert "github.event_name == 'pull_request'" in merge
     assert "cargo check --locked --workspace --all-targets" in merge
@@ -384,11 +318,12 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     ):
         assert release_only not in merge
 
-    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 5
+    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 2
+    assert workflow.count("inputs.source_run_id == ''") == 3
     assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in exhaustive
     assert "name: Support-bearing promotion" in exhaustive
     assert (
-        "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, declared-runtime-matrix]"
+        "needs: [exhaustive-admission, workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, declared-runtime-matrix]"
         in exhaustive
     )
     assert "uv build --wheel --sdist --out-dir dist" in exhaustive
@@ -407,8 +342,8 @@ def test_master_ruleset_and_release_policy_require_merge_sufficiency_before_supp
     assert contexts == ["Merge sufficiency"]
     assert support_policy["required_check"] == "Merge sufficiency"
     assert support_policy["protected_branch"] == "master"
-    assert "support_bearing_promotion.py compose" in release
-    assert "support-bearing-promotion.json" in release
+    assert "release_lifecycle.py compose" in release
+    assert "support-bearing-promotion.json" in (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
     assert "release-runtime-matrix:" in release
     assert "workspace-package-artifacts" not in support_policy
 
@@ -430,7 +365,8 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
     assert "if: github.event_name == 'workflow_dispatch'" in admission
     assert "${{ inputs.reason }}" in admission
     assert "requires a non-empty reason" in admission
-    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 5
+    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 2
+    assert workflow.count("inputs.source_run_id == ''") == 3
     assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in workflow
 
 
@@ -449,8 +385,8 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
     release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
     post_merge_workflow = (WORKFLOW_ROOT / "release-from-semver-label.yml").read_text(encoding="utf-8")
 
-    assert "coordinated_release.py verify --tag" in release_workflow
-    assert 'manifest.get("source_commit")' in release_workflow
+    assert "release_lifecycle.py admit" in release_workflow
+    assert 'manifest.get("source_commit")' in (ROOT / "src/tooling/release/stable_manifest.py").read_text()
     assert "coordinated_release.py prepare" in post_merge_workflow
     assert "coordinated_release.py tag-plan" in post_merge_workflow
     assert "gh workflow run release.yml" in post_merge_workflow

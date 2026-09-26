@@ -1,0 +1,95 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "source": "GitHub #3654, #3655, #3656 and #3652"
+  },
+  "continuation": {
+    "accepted_progress": "Final affected suite: 144 passed. Platform/Cargo/candidate suite: 67 passed with one stale workflow assertion subsequently corrected and passing in targeted validation. Actionlint 1.7.12, native build, generated surface checks and Ruff passed. Surface: 6 workflows, 29 jobs, approximately 1390 YAML lines versus 9/40/2307. Local proof uses controlled provider fakes; live ruleset 20615912 is disabled and publisher configuration remains unproven.",
+    "frontier": "Implementation ready for independent review after commit hooks. Issue completion and full parent intent remain open pending hosted ordinary PR/exhaustive/maintenance/release journeys, independent acceptance and provider configuration evidence. No measured hosted cost reduction is claimed."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/f9fd26bac6aae8ae2ba03db0732d573b5b6d42df7f4646bab67e0eb2ed271311.attempt.json",
+        "revision": "sha256:659c15794c1053c9b0d29bd2259678aaca0dde47fd6bdd382dd87f3bb003d67d",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/f9fd26bac6aae8ae2ba03db0732d573b5b6d42df7f4646bab67e0eb2ed271311.result.json",
+        "revision": "sha256:0e05bd6b001939b3ab9f18bce3aa1570f0cbe064ba1053e7a127f7b090ece397",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:0e3487167a5231c58aabce275192e856cf0663cd7c2c66ef9cf53039601b7ea3",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:436f3d54eec0586e9b7bde1daef174e1bf6439f3cecab0cc4221e55337fb6ccf"
+  },
+  "id": "work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7",
+  "intent": {
+    "outcome": "Implement #3655 and #3656 incorporating #3652 while preserving merge sufficiency and publication trust."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "live",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Submit implementation ready for independent review; observe ordinary PR checks. After independent review and default-branch landing, run controlled hosted journeys and reconcile child and parent acceptance with provider evidence.",
+  "owner_level": "lane",
+  "parent": {
+    "issue": "https://github.com/rickardvh/agentic-workspace/issues/3654"
+  },
+  "phase": "validation",
+  "proof": {
+    "required": "Bounded policy/workflow tests, provider and ruleset audit, controlled hosted journeys; independent acceptance remains external."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3654",
+    "https://github.com/rickardvh/agentic-workspace/issues/3655",
+    "https://github.com/rickardvh/agentic-workspace/issues/3656",
+    "https://github.com/rickardvh/agentic-workspace/issues/3652"
+  ],
+  "relationships": {
+    "dependencies": {
+      "issues": "#3655; #3652; #3656"
+    }
+  },
+  "revision": 3,
+  "scope": {
+    "excluded": "Product runtime redesign, self-review or weakened proof",
+    "included": "CI, maintenance, release workflows and tooling, tests and boundary audit"
+  },
+  "title": "Contract hosted automation (#3654)",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/286c7e759618c271305f2e1ab963c1302cf306bcb75815b0ca2c8d7d4c811fa5.attempt.json",
+        "revision": "sha256:c861e1b8be7195672a6c617723a519c409dcf846f3bd7ff8b29f3d0afa0a65ed",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/286c7e759618c271305f2e1ab963c1302cf306bcb75815b0ca2c8d7d4c811fa5.result.json",
+        "revision": "sha256:430b881f543ded421ce3576aee1d027bc0d020e21677a2b0db5a807a70421591",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:a2d9386683f2f7c8c50312a9ee45cc38282c73c96fd2f83096d399b30991306c",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:b5eb0436b10cff219c66f56bec90d76f4d7777c1ecd6e8d0d9b58d1167bd6c51",
+        "owner_id": "work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7",
+        "owner_path": ".agentic-workspace/planning/execplans/work-e11a36116e062354b96cbfc9d560d4389bc4ddaaa1b8377010b69bc9ef04c8c7.plan.json"
+      }
+    }
+  }
+}

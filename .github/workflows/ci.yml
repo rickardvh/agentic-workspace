@@ -1,10 +1,9 @@
 name: CI
+run-name: CI / ${{ inputs.reason || github.event_name }}
 
 on:
-  release:
-    types: [published]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
     branches: [master]
   workflow_dispatch:
@@ -13,6 +12,12 @@ on:
         description: Exact generated release or explicitly escalated head that must receive exhaustive validation.
         required: true
         type: string
+      qualified_source:
+        description: Exact previously qualified source, only for a normalization-only candidate.
+        type: string
+      source_run_id:
+        description: Successful source qualification run; omission retains exhaustive source proof.
+        type: string
       reason:
         description: Why exhaustive proof is required for this exact head.
         required: true
@@ -20,8 +25,30 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  pull-requests: read
 
 jobs:
+  security:
+    if: github.event_name != 'release' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: read
+
+  readiness:
+    name: Merge sufficiency
+    needs: [merge-sufficiency, security, current-public-install]
+    if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Require merge proof, semver admission and security
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: python src/tooling/check/check_ci_results.py
+
   current-public-install:
     name: Current accepted public install
     runs-on: ubuntu-latest
@@ -36,7 +63,7 @@ jobs:
         run: python src/tooling/release/current_install.py
 
   merge-sufficiency:
-    name: Merge sufficiency
+    name: Merge proof
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.expected_head_sha == github.sha) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -49,6 +76,26 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+      - name: Validate semver label
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          EVENT_PATH: ${{ github.event_path }}
+          GH_TOKEN: ${{ github.token }}
+          SEMVER_ADMISSION_PATH: ${{ runner.temp }}/semver-admission.json
+        run: python src/tooling/release/pr_semver_admission.py
+
+      - name: Retain exact semver admission
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: semver-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/semver-admission.json
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: false
+
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - name: Set up Node.js
@@ -167,13 +214,26 @@ jobs:
           fi
           echo "Admitted exhaustive proof for ${GITHUB_SHA}: ${REASON}"
 
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: inputs.source_run_id != ''
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Admit exact candidate normalization against qualified source
+        if: inputs.source_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SOURCE_COMMIT: ${{ inputs.qualified_source }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: python src/tooling/release/release_lifecycle.py candidate-admission
+
   # Exhaustive candidate proof is explicit rather than ambient. The generated
   # release path dispatches this workflow against the exact release head, and a
   # high-risk PR may do the same when its own claim requires broader evidence.
   # Ordinary PRs and master merges do not pay release-sized proof automatically.
   workspace-checks:
     needs: [exhaustive-admission, workspace-package-artifacts]
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.source_run_id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -248,7 +308,7 @@ jobs:
 
   planning-handoff-checks:
     needs: [exhaustive-admission, workspace-package-artifacts]
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.source_run_id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -284,7 +344,7 @@ jobs:
 
   independent-owner-ingress:
     needs: exhaustive-admission
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.source_run_id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -423,23 +483,13 @@ jobs:
   support-bearing-promotion:
     name: Support-bearing promotion
     if: ${{ always() && github.event_name == 'workflow_dispatch' }}
-    needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, declared-runtime-matrix]
+    needs: [exhaustive-admission, workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, declared-runtime-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Require every support-bearing candidate check
         env:
-          WORKSPACE_CHECKS: ${{ needs.workspace-checks.result }}
-          PLANNING_HANDOFF: ${{ needs.planning-handoff-checks.result }}
-          INDEPENDENT_OWNER: ${{ needs.independent-owner-ingress.result }}
-          PACKAGE_ARTIFACTS: ${{ needs.workspace-package-artifacts.result }}
-          RUNTIME_MATRIX: ${{ needs.declared-runtime-matrix.result }}
-        run: |
-          python - <<'PY'
-          import os
-          results = {name: os.environ[name] for name in ("WORKSPACE_CHECKS", "PLANNING_HANDOFF", "INDEPENDENT_OWNER", "PACKAGE_ARTIFACTS", "RUNTIME_MATRIX")}
-          failed = {name: result for name, result in results.items() if result != "success"}
-          if failed:
-              raise SystemExit(f"support-bearing promotion checks failed: {failed}")
-          print("support-bearing promotion checks passed")
-          PY
+          RESULTS: ${{ toJSON(needs) }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: python src/tooling/check/check_ci_results.py

@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
+          ref: master
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -35,21 +35,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
-        run: |
-          mkdir dist
-          set -euo pipefail
-          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)
-          gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" --jq '.[].browser_download_url' |
-          while IFS= read -r url; do
-            curl --fail --location --retry 3 --output "dist/${url##*/}" "$url"
-          done
-          publisher=release.yml
-          if [[ "$RELEASE_TAG" == v1.0.0-rc.* ]]; then publisher=preview-release.yml; fi
-          for artifact in dist/*.crate dist/cargo-release-manifest.json dist/*release-manifest.json; do
-            gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/$publisher"
-          done
+        run: python src/tooling/release/registry_release.py --fetch --tag "$RELEASE_TAG" --source "$(git rev-parse refs/tags/$RELEASE_TAG^{commit})" --artifact-dir dist
+
       - name: Reconstruct packaging for byte comparison before credentials
         run: |
+          git checkout --detach "${{ inputs.tag }}"
           cargo fetch --locked
           python src/tooling/release/cargo_release.py build --no-verify --artifact-dir reconstructed --staging "$RUNNER_TEMP/aw-cargo"
       - name: Obtain short-lived crates.io identity after initial bootstrap

@@ -116,24 +116,24 @@ def test_registry_workflow_is_gated_projection_without_rebuild():
     import yaml
 
     stable = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
-    for name in ("platform-packages", "release-runtime-matrix", "agentic-workspace-package"):
-        assert stable["jobs"][name]["if"] == "${{ !inputs.registries_only }}"
-    for name in ("language-packages", "language-registries", "current-install-projection"):
+    for name in ("platform-build", "release-runtime-matrix", "agentic-workspace-package"):
+        assert stable["jobs"][name]["if"] == "needs.promotion-admission.outputs.build_required == 'true'"
+    for name in ("language-packages", "language-registries"):
         job = stable["jobs"][name]
         assert "promotion-admission" in job["needs"]
         assert "!cancelled()" in job["if"]
         assert "needs.promotion-admission.result == 'success'" in job["if"]
-        assert "inputs.registries_only && needs.agentic-workspace-package.result == 'skipped'" in job["if"]
+        assert (
+            "needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped'"
+            in job["if"]
+        )
     cargo = yaml.safe_load(workflow)["jobs"]["cargo-publish"]
     for job in (stable["jobs"]["language-packages"], cargo):
         fetch = next(step["run"] for step in job["steps"] if step.get("name", "").startswith("Fetch "))
-        assert "set -euo pipefail" in fetch
-        assert 'gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100"' in fetch
-        assert 'curl --fail --location --retry 3 --output "dist/${url##*/}" "$url"' in fetch
-        assert fetch.index("curl --fail") < fetch.index("gh attestation verify")
-        assert "--signer-workflow" in fetch
+        assert "registry_release.py --fetch" in fetch
+        assert "--source" in fetch
 
-    for filename, dependency in (("preview-release.yml", "preview-package"), ("release.yml", "agentic-workspace-package")):
+    for filename, dependency in (("release.yml", "agentic-workspace-package"),):
         publisher = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
         job = publisher["jobs"]["language-packages"]
         assert dependency in job["needs"]

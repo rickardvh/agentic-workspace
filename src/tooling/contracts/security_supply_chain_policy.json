@@ -10,10 +10,8 @@
     ".github/workflows/release.yml"
   ],
   "required_security_jobs": [
-    "rust-dependencies",
-    "dependency-review",
-    "codeql",
-    "secret-scan"
+    "baseline",
+    "codeql"
   ],
   "rust_dependencies": {
     "version": "0.20.2",

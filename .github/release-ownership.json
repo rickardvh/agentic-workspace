@@ -38,7 +38,7 @@
     "tag_rule": "vMAJOR.MINOR.PATCH must point at a commit whose coordinated package manifests declare the same version"
   },
   "preview_publisher": {
-    "workflow": ".github/workflows/preview-release.yml",
+    "workflow": ".github/workflows/release.yml",
     "trigger": "workflow_dispatch on master with immutable preview tag and exact artifact SHA",
     "release_class": "preview",
     "support_bearing": false,
@@ -148,7 +148,7 @@
     "npm_version": "1.0.0-rc.N",
     "cargo_version": "1.0.0-rc.N",
     "native_version": "Python package version",
-    "publisher": "preview-release.yml",
+    "publisher": "release.yml",
     "promotion_record": ".release/promotions/v1.0.0.json",
     "progression": "Contiguous rc.N for a new source; retries reuse the same immutable tag."
   },

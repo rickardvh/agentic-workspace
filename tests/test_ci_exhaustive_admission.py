@@ -37,5 +37,7 @@ def test_exhaustive_admission_is_single_gate_for_broad_runner_fanout() -> None:
             assert "AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/admission-dist" in block
         else:
             assert "needs: exhaustive-admission" in block
-        assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in block
+        assert "github.event_name == 'workflow_dispatch'" in block
+        if name in {"workspace-checks", "planning-handoff-checks", "independent-owner-ingress"}:
+            assert "inputs.source_run_id == ''" in block
         assert "Verify dispatched release head" not in block

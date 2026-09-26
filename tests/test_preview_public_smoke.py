@@ -6,7 +6,6 @@ import os
 import shutil
 import subprocess
 import sys
-import textwrap
 import tomllib
 from pathlib import Path
 
@@ -112,22 +111,29 @@ def test_public_smoke_installs_exact_published_requirement_and_runs_native_start
 
 
 def test_preview_workflow_smokes_public_bytes_after_publication() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "preview-release.yml").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
-    publish = workflow.index("name: Publish GitHub prerelease assets")
+    publish = workflow.index("name: Publish GitHub release assets")
     smoke = workflow.index("name: Smoke published preview from public bytes")
     assert publish < smoke
     assert "src/tooling/release/preview_public_smoke.py" in workflow[smoke:]
-    assert "preview-public-smoke.json" in workflow[smoke:]
+    assert "!inputs.qualify_only" in workflow[smoke:]
 
 
 def test_preview_workflow_propagates_public_smoke_failure(tmp_path) -> None:
     bash = str(Path(os.environ["ProgramFiles"]) / "Git/bin/bash.exe") if os.name == "nt" else shutil.which("bash")
     if not bash or not Path(bash).is_file():
         pytest.skip("Bash is required to exercise the hosted preview step")
-    workflow = (ROOT / ".github/workflows/preview-release.yml").read_text(encoding="utf-8")
-    step = workflow.split("- name: Smoke published preview from public bytes", 1)[1]
-    script = textwrap.dedent(step.split("run: |\n", 1)[1])
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    import yaml
+
+    document = yaml.load(workflow, Loader=yaml.BaseLoader)
+    step = next(
+        step
+        for step in document["jobs"]["agentic-workspace-package"]["steps"]
+        if step.get("name") == "Smoke published preview from public bytes"
+    )
+    script = step["run"]
     result = subprocess.run(
         [bash, "-e", "-c", "python() { return 17; }\n" + script],
         cwd=tmp_path,

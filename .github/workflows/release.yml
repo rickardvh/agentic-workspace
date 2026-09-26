@@ -7,35 +7,52 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing vMAJOR.MINOR.PATCH tag to publish.
+        description: Existing immutable preview, RC or stable tag to qualify or publish.
         required: true
         type: string
       source_commit:
         description: Commit the tag must resolve to.
         required: true
         type: string
+      release_class:
+        description: Explicit claim carried by this immutable subject.
+        type: choice
+        options: [stable, preview, release-candidate]
+        default: stable
+      qualify_only:
+        description: Exercise the exact candidate without publication effects.
+        type: boolean
+        default: false
       registries_only:
         description: Publish existing admitted GitHub assets to registries without rebuilding them.
         type: boolean
         default: false
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
   checks: read
 
 jobs:
-  public-consumers:
-    needs: [promotion-admission, agentic-workspace-package, language-packages, language-registries]
-    if: ${{ always() && !cancelled() && needs.promotion-admission.result == 'success' }}
-    uses: ./.github/workflows/consumer-validation.yml
-    with:
-      version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-
   promotion-admission:
-    name: Verify exact protected commit
+    name: Admit exact release subject
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      tag: ${{ steps.admit.outputs.tag }}
+      source_commit: ${{ steps.admit.outputs.source_commit }}
+      release_class: ${{ steps.admit.outputs.release_class }}
+      support_bearing: ${{ steps.admit.outputs.support_bearing }}
+      registries: ${{ steps.admit.outputs.registries }}
+      platforms: ${{ steps.admit.outputs.platforms }}
+      runtimes: ${{ steps.admit.outputs.runtimes }}
+      build_required: ${{ steps.admit.outputs.build_required }}
     env:
+      RELEASE_CLASS: ${{ inputs.release_class || 'stable' }}
+      REGISTRIES_ONLY: ${{ inputs.registries_only }}
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
     steps:
@@ -43,63 +60,123 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Resolve and verify exact source commit checks
+        id: admit
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          RELEASE_COMMIT="$(git rev-parse HEAD)"
-          if [ -n "${EXPECTED_SOURCE_COMMIT}" ] && [ "${RELEASE_COMMIT}" != "${EXPECTED_SOURCE_COMMIT}" ]; then
-            echo "Release subject ${RELEASE_COMMIT} does not match ${EXPECTED_SOURCE_COMMIT}" >&2
-            exit 1
-          fi
-          python src/tooling/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
-          if [ "${RELEASE_TAG}" = "v1.0.0" ]; then
-            python src/tooling/release/coordinated_release.py verify-rc-promotion --require-published --repo "${GITHUB_REPOSITORY}"
-          fi
-          python src/tooling/release/support_bearing_promotion.py github-checks \
-            --repository "${GITHUB_REPOSITORY}" \
-            --commit "${RELEASE_COMMIT}" \
-            --output server-promotion-receipt.json \
-            --wait-seconds 900
+        run: python src/tooling/release/release_lifecycle.py admit --github-output "$GITHUB_OUTPUT"
       - name: Upload server promotion receipt
+        if: steps.admit.outputs.support_bearing == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-server-promotion-receipt
           path: server-promotion-receipt.json
           if-no-files-found: error
 
-  platform-packages:
-    if: ${{ !inputs.registries_only }}
+  platform-build:
     needs: promotion-admission
-    uses: ./.github/workflows/platform-release.yml
-    with:
-      source_ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+    if: needs.promotion-admission.outputs.build_required == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.promotion-admission.outputs.platforms) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.promotion-admission.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Build native platform packages
+        run: python src/tooling/release/platform_release.py build --artifact-dir platform-dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-${{ matrix.target }}
+          path: platform-dist/*
+          if-no-files-found: error
+  platform-assemble:
+    needs: [promotion-admission, platform-build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.promotion-admission.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: platform-*
+          path: platform-inputs
+      - name: Assemble complete platform inventory and universal npm package
+        run: python src/tooling/release/platform_release.py assemble --inputs platform-inputs --artifact-dir dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: complete-platform-packages
+          path: dist/*
+          if-no-files-found: error
+  platform-consumer:
+    needs: [promotion-admission, platform-assemble]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.promotion-admission.outputs.platforms) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.promotion-admission.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-platform-packages
+          path: dist
+      - name: Install exact assembled packages without a compiler
+        run: python src/tooling/release/platform_release.py smoke --artifact-dir dist --receipt platform-consumer-${{ matrix.target }}.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-consumer-${{ matrix.target }}
+          path: platform-consumer-${{ matrix.target }}.json
+          if-no-files-found: error
 
   release-runtime-matrix:
-    if: ${{ !inputs.registries_only }}
+    needs: promotion-admission
+    if: needs.promotion-admission.outputs.build_required == 'true'
     name: Release runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            python: "3.11"
-            node: "20"
-          - os: ubuntu-latest
-            python: "3.13"
-            node: "24"
-          - os: ubuntu-latest
-            python: "3.14"
-            node: "24"
+      matrix: ${{ fromJSON(needs.promotion-admission.outputs.runtimes) }}
     steps:
       - name: Checkout exact release subject
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ needs.promotion-admission.outputs.source_commit }}
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -119,6 +196,7 @@ jobs:
           npm pack ./runtime-npm --pack-destination runtime-dist
           uv run python src/tooling/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
       - name: Write runtime support receipt
+        if: needs.promotion-admission.outputs.support_bearing == 'true'
         shell: bash
         run: |
           mkdir -p runtime-receipts
@@ -130,6 +208,7 @@ jobs:
             --proof "isolated native wheel, npm, paired archive and owner mutation on this runtime" \
             --output "runtime-receipts/${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}.json"
       - name: Upload runtime support receipt
+        if: needs.promotion-admission.outputs.support_bearing == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: runtime-${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}
@@ -137,8 +216,8 @@ jobs:
           if-no-files-found: error
 
   agentic-workspace-package:
-    if: ${{ !inputs.registries_only }}
-    needs: [promotion-admission, release-runtime-matrix, platform-packages]
+    if: needs.promotion-admission.outputs.build_required == 'true'
+    needs: [promotion-admission, release-runtime-matrix, platform-consumer]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -146,6 +225,7 @@ jobs:
       id-token: write
       attestations: write
     env:
+      RELEASE_CLASS: ${{ needs.promotion-admission.outputs.release_class }}
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
     steps:
@@ -153,7 +233,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ needs.promotion-admission.outputs.source_commit }}
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -169,12 +249,14 @@ jobs:
           node-version: "24"
 
       - name: Download exact-commit promotion receipts
+        if: needs.promotion-admission.outputs.support_bearing == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-server-promotion-receipt
           path: promotion-inputs/server
 
       - name: Download declared runtime receipts
+        if: needs.promotion-admission.outputs.support_bearing == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: runtime-*
@@ -183,36 +265,6 @@ jobs:
 
       - name: Sync workspace dependencies
         run: uv sync --locked --all-groups
-
-      - name: Verify tag targets coordinated release commit
-        run: |
-          git fetch origin "refs/heads/master:refs/remotes/origin/master" --tags
-          TAG_COMMIT="$(git rev-list -n 1 "${RELEASE_TAG}")"
-          HEAD_COMMIT="$(git rev-parse HEAD)"
-          if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
-            echo "Release tag ${RELEASE_TAG} resolves to ${TAG_COMMIT}, but checkout is ${HEAD_COMMIT}" >&2
-            exit 1
-          fi
-          if [ -n "${EXPECTED_SOURCE_COMMIT}" ] && [ "$TAG_COMMIT" != "${EXPECTED_SOURCE_COMMIT}" ]; then
-            echo "Release tag ${RELEASE_TAG} resolves to ${TAG_COMMIT}, expected ${EXPECTED_SOURCE_COMMIT}" >&2
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor "$HEAD_COMMIT" origin/master; then
-            echo "Release tag ${RELEASE_TAG} must point at a commit reachable from origin/master" >&2
-            exit 1
-          fi
-          python src/tooling/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          for package in ownership["typescript_packages"]:
-              # Source metadata is private; admit publishability from the packed
-              # package in the release manifest step, after native staging.
-              if package.get("release_policy") != "coordinated-public-registry":
-                  raise SystemExit(f"{package['package_json']} must declare coordinated public registry publication")
-          PY
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
@@ -225,17 +277,7 @@ jobs:
           merge-multiple: true
 
       - name: Build Agentic Workspace package artifacts
-        run: |
-          python src/tooling/release/platform_release.py verify --artifact-dir dist
-          python src/tooling/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
-          python src/tooling/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
-          uv run python src/tooling/check/check_package_identity.py \
-            --artifact-dir dist \
-            --require-exact-urls \
-            --write-receipts
-
-      - name: Bind platform install instructions before security and promotion
-        run: python src/tooling/release/platform_release.py receipts --artifact-dir dist --tag "${RELEASE_TAG}"
+        run: python src/tooling/release/release_lifecycle.py build
 
       - name: Run built package smoke tests
         env:
@@ -269,326 +311,45 @@ jobs:
       - name: Prove exact npm artifacts on Node 25
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node25.json PACKED_ARTIFACT_CONTEXT=hosted-ci
 
-      - name: Verify semantic-conformance promotion receipts
-        run: |
-          for runtime_major in 20 24 25; do
-            receipt="dist/generated-command-conformance-node${runtime_major}.json"
-            uv run python src/tooling/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
-          done
-
       - name: Check locked Rust advisories, licenses and sources
         run: python src/tooling/check/check_rust_dependencies.py --install
 
-      - name: Generate checksums and release manifest
-        run: |
-          uv run python src/tooling/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
-          python src/tooling/release/support_bearing_promotion.py compose \
-            --commit "$(git rev-parse HEAD)" \
-            --artifact-dir dist \
-            --server-receipt promotion-inputs/server/server-promotion-receipt.json \
-            --runtime-receipt-dir promotion-inputs/runtime \
-            --semantic-receipt dist/generated-command-conformance-node20.json \
-            --semantic-receipt dist/generated-command-conformance-node24.json \
-            --semantic-receipt dist/generated-command-conformance-node25.json \
-            --output dist/support-bearing-promotion.json
-          python - <<'PY'
-          import hashlib
-          import json
-          import os
-          import re
-          import subprocess
-          import tarfile
-          import tomllib
-          from pathlib import Path
+      - name: Compose exact release evidence and manifest
+        id: compose
+        run: python src/tooling/release/release_lifecycle.py compose --github-output "$GITHUB_OUTPUT"
 
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          version = os.environ["RELEASE_TAG"].removeprefix("v")
-          root_pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-          def sha256(path: Path) -> str:
-              return hashlib.sha256(path.read_bytes()).hexdigest()
-
-          dist = Path("dist")
-          checksum_lines = []
-          package_entries = []
-          for package in ownership["packages"]:
-              declared = tomllib.loads(Path(package["pyproject"]).read_text(encoding="utf-8"))["project"]["version"]
-              if declared != version:
-                  raise SystemExit(f"{package['pyproject']} has version {declared}, expected {version}")
-              wheel = next(dist.glob(f"{package['wheel_prefix']}-{version}-*-manylinux_2_39_x86_64.whl"), None)
-              sdist = next(dist.glob(f"{package['sdist_prefix']}-{version}.tar.gz"), None)
-              if wheel is None or sdist is None:
-                  raise SystemExit(f"Missing wheel or sdist for {package['name']} {version}")
-              for artifact in (wheel, sdist):
-                  checksum_lines.append(f"{sha256(artifact)}  {artifact.name}")
-              package_entries.append(
-                  {
-                      "name": package["name"],
-                      "ecosystem": "python",
-                      "version": version,
-                      "pyproject": package["pyproject"],
-                      "wheel": {"asset": wheel.name, "sha256": sha256(wheel)},
-                      "sdist": {"asset": sdist.name, "sha256": sha256(sdist)},
-                      "payload_schema": package["payload_schema"],
-                      "payload_provenance": package["payload_provenance"],
-                      "license_spdx": ownership["project_identity"]["license_spdx"],
-                  }
-              )
-          for package in ownership["typescript_packages"]:
-              tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
-              if tarball is None:
-                  raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
-              with tarfile.open(tarball, "r:gz") as archive:
-                  package_json = json.load(archive.extractfile("package/package.json"))
-              declared = package_json["version"]
-              if declared != version:
-                  raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
-              if package_json.get("private") is not False or package.get("release_policy") != "coordinated-public-registry":
-                  raise SystemExit(f"{package['package_json']} must declare coordinated public registry publication")
-              tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
-              if tarball is None:
-                  raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
-              checksum_lines.append(f"{sha256(tarball)}  {tarball.name}")
-              package_entries.append(
-                  {
-                      "name": package["name"],
-                      "ecosystem": "npm",
-                      "version": version,
-                      "package_json": package["package_json"],
-                      "package_root": package["package_root"],
-                      "tarball": {"asset": tarball.name, "sha256": sha256(tarball)},
-                      "entrypoints": package["entrypoints"],
-                      "python_package": package["python_package"],
-                      "runtime": package["runtime"],
-                      "runtime_requirement": package["runtime_requirement"],
-                      "release_policy": package["release_policy"],
-                      "registry_status": package["registry_status"],
-                      "license_spdx": ownership["project_identity"]["license_spdx"],
-                  }
-              )
-
-          native_paths = list(dist.glob(f"agentic-workspace-native-{version}-x86_64-unknown-linux-gnu.zip"))
-          if len(native_paths) != 1:
-              raise SystemExit("Expected exactly one paired native archive")
-          native_archive = {"asset": native_paths[0].name, "sha256": sha256(native_paths[0])}
-          checksum_lines.append(f"{sha256(native_paths[0])}  {native_paths[0].name}")
-          conformance_receipts = []
-          expected_runtime_majors = ownership["semantic_conformance"]["runtime_majors"]
-          for runtime_major in expected_runtime_majors:
-              receipt_path = dist / f"generated-command-conformance-node{runtime_major}.json"
-              if not receipt_path.is_file():
-                  raise SystemExit(f"Missing semantic-conformance receipt for Node {runtime_major}")
-              receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-              if receipt.get("kind") != ownership["semantic_conformance"]["receipt_kind"] or receipt.get("status") != "passed":
-                  raise SystemExit(f"Failed or unsupported semantic-conformance receipt: {receipt_path}")
-              node_version = str(receipt.get("subject", {}).get("node_version", ""))
-              runtime_match = re.fullmatch(r"v(?P<major>[1-9][0-9]*)\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", node_version)
-              if runtime_match is None or int(runtime_match.group("major")) != runtime_major:
-                  raise SystemExit(
-                      f"Semantic-conformance receipt runtime mismatch: {receipt_path} proves {node_version!r}, expected Node {runtime_major}"
-                  )
-              receipt_assets = {item["asset"] for item in receipt["subject"]["artifacts"]}
-              expected_assets = {entry["tarball"]["asset"] for entry in package_entries if entry["ecosystem"] == "npm"}
-              if receipt_assets != expected_assets:
-                  raise SystemExit(f"Semantic-conformance receipt artifact set mismatch: {receipt_path}")
-              checksum_lines.append(f"{sha256(receipt_path)}  {receipt_path.name}")
-              conformance_receipts.append(
-                  {
-                      "asset": receipt_path.name,
-                      "receipt_id": receipt["receipt_id"],
-                      "registry_fingerprint": receipt["subject"]["registry_fingerprint"],
-                      "node_version": receipt["subject"]["node_version"],
-                      "artifacts": receipt["subject"]["artifacts"],
-                  }
-              )
-
-          manifest = {
-              "kind": "agentic-workspace/coordinated-release-manifest/v1",
-              "release_model": ownership["release_model"],
-              "version": version,
-              "tag": os.environ["RELEASE_TAG"],
-              "source_commit": subprocess.run(
-                  ["git", "rev-parse", "HEAD"],
-                  check=True,
-                  capture_output=True,
-                  text=True,
-              ).stdout.strip(),
-              "all_or_nothing": True,
-              "project_identity": ownership["project_identity"],
-              "distribution_identity": ownership["distribution_identity"],
-              "packages": package_entries,
-              "native_archive": native_archive,
-              "release_ownership": {
-                  "path": ".github/release-ownership.json",
-                  "schema_version": ownership["schema_version"],
-              },
-              "distribution_install_readiness": ownership["distribution_identity"]["canonical_install_receipt"],
-              "redistributable_package_readiness": ownership["distribution_identity"]["redistributable_receipt"],
-              "semantic_conformance": {
-                  "required": True,
-                  "receipt_kind": ownership["semantic_conformance"]["receipt_kind"],
-                  "receipts": conformance_receipts,
-              },
-              "security_supply_chain": {
-                  "required": True,
-                  "readiness_receipt": "security-supply-chain-readiness.json",
-                  "sbom": "agentic-workspace.spdx.json",
-                  "provenance": "GitHub artifact attestation over dist/*",
-              },
-              "support_bearing_promotion": {
-                  "required": True,
-                  "receipt": "support-bearing-promotion.json",
-                  "source_commit": subprocess.run(
-                      ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-                  ).stdout.strip(),
-              },
-          }
-          if os.environ["RELEASE_TAG"] == "v1.0.0":
-              manifest["release_candidate_promotion"] = json.loads(subprocess.check_output(
-                  ["python", "src/tooling/release/coordinated_release.py", "verify-rc-promotion"], text=True
-              ))
-          import sys
-          sys.path.insert(0, "src/tooling/release")
-          import cargo_release
-          manifest["cargo"] = cargo_release.admitted_manifest(dist, ownership, manifest["source_commit"], manifest["version"])
-          for item in [manifest["cargo"]["manifest"], *manifest["cargo"]["packages"]]:
-              checksum_lines.append(f"{item['sha256']}  {item['asset']}")
-          manifest_path = dist / "agentic-workspace-release-manifest.json"
-          manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          for required_security_asset in ("security-supply-chain-readiness.json", "agentic-workspace.spdx.json"):
-              security_path = dist / required_security_asset
-              if not security_path.is_file():
-                  raise SystemExit(f"Missing required security supply-chain asset: {required_security_asset}")
-              checksum_lines.append(f"{sha256(security_path)}  {security_path.name}")
-          for readiness_asset in (
-              ownership["distribution_identity"]["canonical_install_receipt"],
-              ownership["distribution_identity"]["redistributable_receipt"],
-          ):
-              readiness_path = dist / readiness_asset
-              if not readiness_path.is_file():
-                  raise SystemExit(f"Missing package readiness asset: {readiness_asset}")
-              checksum_lines.append(f"{sha256(readiness_path)}  {readiness_path.name}")
-          promotion_path = dist / "support-bearing-promotion.json"
-          promotion = json.loads(promotion_path.read_text(encoding="utf-8")) if promotion_path.is_file() else {}
-          if promotion.get("status") != "passed" or promotion.get("source_commit") != manifest["source_commit"]:
-              raise SystemExit("Missing or invalid exact-subject support-bearing promotion result")
-          checksum_lines.append(f"{sha256(promotion_path)}  {promotion_path.name}")
-          checksum_lines.append(f"{sha256(manifest_path)}  {manifest_path.name}")
-          (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
-          PY
-
-      - name: Bind all platform artifacts and compiler-free consumers
-        run: python src/tooling/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
-
-      - name: Verify release artifacts
-        run: |
-          python - <<'PY'
-          import hashlib
-          import json
-          import os
-          import subprocess
-          from pathlib import Path
-
-          dist = Path("dist")
-          manifest = json.loads((dist / "agentic-workspace-release-manifest.json").read_text(encoding="utf-8"))
-          if manifest["tag"] != os.environ["RELEASE_TAG"]:
-              raise SystemExit("Release manifest tag mismatch")
-          source_commit = subprocess.run(
-              ["git", "rev-parse", "HEAD"],
-              check=True,
-              capture_output=True,
-              text=True,
-          ).stdout.strip()
-          if manifest.get("source_commit") != source_commit:
-              raise SystemExit("Release manifest source_commit mismatch")
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          expected_package_count = len(ownership["packages"]) + len(ownership["typescript_packages"])
-          if len(manifest["packages"]) != expected_package_count:
-              raise SystemExit("Release manifest must list every shipped package")
-          checksums = {}
-          for line in (dist / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
-              digest, asset = line.split("  ", 1)
-              checksums[asset] = digest
-          required_assets = {
-              "agentic-workspace-release-manifest.json",
-              "security-supply-chain-readiness.json",
-              "agentic-workspace.spdx.json",
-              ownership["distribution_identity"]["canonical_install_receipt"],
-              ownership["distribution_identity"]["redistributable_receipt"],
-              "support-bearing-promotion.json",
-          }
-          security = manifest.get("security_supply_chain", {})
-          if security.get("required") is not True:
-              raise SystemExit("Release manifest is missing required security supply-chain readiness")
-          for readiness_key in ("distribution_install_readiness", "redistributable_package_readiness"):
-              readiness_asset = manifest.get(readiness_key, "")
-              readiness_path = dist / readiness_asset
-              readiness = json.loads(readiness_path.read_text(encoding="utf-8")) if readiness_path.is_file() else {}
-              if readiness.get("status") != "passed" or readiness.get("version") != manifest["version"]:
-                  raise SystemExit(f"Release manifest has invalid {readiness_key}: {readiness_asset}")
-          semantic = manifest.get("semantic_conformance", {})
-          if semantic.get("required") is not True or len(semantic.get("receipts", [])) != len(ownership["semantic_conformance"]["runtime_majors"]):
-              raise SystemExit("Release manifest is missing required semantic-conformance receipts")
-          required_assets.update(receipt["asset"] for receipt in semantic["receipts"])
-          native = manifest["native_archive"]
-          required_assets.add(native["asset"])
-          if checksums.get(native["asset"]) != native["sha256"]:
-              raise SystemExit("Native archive manifest/checksum mismatch")
-          for item in [manifest["cargo"]["manifest"], *manifest["cargo"]["packages"]]:
-              required_assets.add(item["asset"])
-              if checksums.get(item["asset"]) != item["sha256"]:
-                  raise SystemExit("Cargo manifest/checksum mismatch")
-          for package in manifest["packages"]:
-              if package.get("ecosystem") == "npm":
-                  required_assets.add(package["tarball"]["asset"])
-              else:
-                  required_assets.add(package["wheel"]["asset"])
-                  required_assets.add(package["sdist"]["asset"])
-          required_assets.add(manifest["platform_release"]["asset"])
-          required_assets.update(item["asset"] for item in manifest["platform_consumers"])
-          required_assets.update(item["asset"] for item in manifest["native_archives"])
-          for package in manifest["packages"]:
-              required_assets.update(item["asset"] for item in package.get("wheels", []))
-          missing = sorted(required_assets - set(checksums))
-          if missing:
-              raise SystemExit(f"Missing checksums for release assets: {missing}")
-          for asset in required_assets:
-              digest = hashlib.sha256((dist / asset).read_bytes()).hexdigest()
-              if checksums[asset] != digest:
-                  raise SystemExit(f"Checksum mismatch for {asset}")
-          PY
+      - name: Reject replacement of existing immutable bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python src/tooling/release/release_lifecycle.py check-published
 
       - name: Attest exact release subjects
+        if: ${{ !inputs.qualify_only }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
 
       - name: Publish GitHub release assets
+        if: ${{ !inputs.qualify_only }}
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          prerelease: ${{ needs.promotion-admission.outputs.support_bearing != 'true' }}
+          make_latest: ${{ needs.promotion-admission.outputs.support_bearing == 'true' }}
+          overwrite_files: false
           body_path: .release/releases/${{ env.RELEASE_TAG }}.md
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
-            dist/*.tgz
-            dist/*.crate
-            dist/cargo-release-manifest.json
-            dist/agentic-workspace-native-*.zip
-            dist/generated-command-conformance-node*.json
-            dist/platform-release-manifest.json
-            dist/platform-consumer-*.json
-            dist/SHA256SUMS
-            dist/agentic-workspace-release-manifest.json
-            dist/distribution-install-readiness.json
-            dist/redistributable-package-readiness.json
-            dist/security-supply-chain-readiness.json
-            dist/support-bearing-promotion.json
-            dist/agentic-workspace.spdx.json
+          files: ${{ steps.compose.outputs.assets }}
           fail_on_unmatched_files: true
+
+      - name: Smoke published preview from public bytes
+        if: ${{ !inputs.qualify_only && needs.promotion-admission.outputs.support_bearing != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python src/tooling/release/preview_public_smoke.py --tag "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
 
   language-registries:
     needs: [promotion-admission, agentic-workspace-package]
-    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (inputs.registries_only && needs.agentic-workspace-package.result == 'skipped')) }}
+    if: ${{ !cancelled() && !inputs.qualify_only && needs.promotion-admission.outputs.registries == 'true' && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped')) }}
     permissions:
       contents: read
       id-token: write
@@ -597,25 +358,10 @@ jobs:
     with:
       tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
 
-  current-install-projection:
-    needs: [promotion-admission, agentic-workspace-package]
-    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (inputs.registries_only && needs.agentic-workspace-package.result == 'skipped')) }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: master
-      - name: Detect post-publication documentation drift
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python src/tooling/release/current_install.py
-
   # PyPI trusts the top-level workflow; publishing from workflow_call is unsupported.
   language-packages:
     needs: [promotion-admission, agentic-workspace-package]
-    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (inputs.registries_only && needs.agentic-workspace-package.result == 'skipped')) }}
+    if: ${{ !cancelled() && !inputs.qualify_only && needs.promotion-admission.outputs.registries == 'true' && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped')) }}
     runs-on: ubuntu-latest
     environment: package-registries
     permissions:
@@ -653,21 +399,10 @@ jobs:
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - name: Fetch and verify admitted GitHub bytes
         env:
+          RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-        run: |
-          mkdir dist
-          set -euo pipefail
-          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)
-          gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" --jq '.[].browser_download_url' |
-          while IFS= read -r url; do
-            curl --fail --location --retry 3 --output "dist/${url##*/}" "$url"
-          done
-          publisher=release.yml
-          if [[ "$RELEASE_TAG" == v1.0.0-rc.* ]]; then publisher=preview-release.yml; fi
-          for artifact in dist/*.whl dist/*.tar.gz dist/*.tgz dist/*release-manifest.json; do
-            gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/$publisher"
-          done
+        run: python src/tooling/release/registry_release.py --fetch --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist
       - name: Reobserve immutable registry versions
         id: pending
         env:

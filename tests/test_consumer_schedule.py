@@ -99,18 +99,18 @@ def test_first_failure_cannot_be_replaced(tmp_path, monkeypatch):
 
 
 def test_recurring_workflow_has_no_pr_provider_ingress_and_seven_day_retention():
-    path = ROOT / ".github/workflows/consumer-validation.yml"
+    path = ROOT / ".github/workflows/maintenance.yml"
     workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
     assert workflow["on"]["schedule"][0]["cron"] == "23 7 * * *"
     assert "pull_request_target" not in workflow["on"] and "pull_request" not in workflow["on"]
-    assert set(workflow["jobs"]) == {"freeze", "deterministic", "report"}
+    assert set(workflow["jobs"]) == {"freeze", "deterministic", "report", "security", "current-install-projection"}
     assert "live" not in workflow["on"]["workflow_dispatch"]["inputs"]
     freeze = next(step for step in workflow["jobs"]["freeze"]["steps"] if step.get("id") == "freeze")
     assert "freeze --directory frozen --deterministic-only" in freeze["run"]
     assert workflow["jobs"]["report"]["needs"] == ["freeze", "deterministic"]
     assert "--kind live" not in path.read_text()
     for job in workflow["jobs"].values():
-        for step in job["steps"]:
+        for step in job.get("steps", []):
             if step.get("uses", "").startswith("actions/upload-artifact@"):
                 assert step["with"]["retention-days"] == "7"
 
@@ -134,11 +134,14 @@ def test_hosted_scope_passes_only_with_all_deterministic_results(tmp_path):
     assert schedule.summary(plan(), paths)["status"] == "incomplete-or-failed"
 
 
-def test_release_observation_waits_for_both_registry_attempts_even_on_failure():
-    workflow = yaml.load((ROOT / ".github/workflows/release.yml").read_text(), Loader=yaml.BaseLoader)
-    job = workflow["jobs"]["public-consumers"]
-    assert {"language-packages", "language-registries"} <= set(job["needs"])
-    assert "always() && !cancelled() && needs.promotion-admission.result == 'success'" in job["if"]
+def test_release_observation_runs_in_separate_maintenance_verdict():
+    release = yaml.load((ROOT / ".github/workflows/release.yml").read_text(), Loader=yaml.BaseLoader)
+    maintenance = yaml.load((ROOT / ".github/workflows/maintenance.yml").read_text(), Loader=yaml.BaseLoader)
+    assert "public-consumers" not in release["jobs"]
+    assert "current-install-projection" not in release["jobs"]
+    assert maintenance["on"]["workflow_run"] == {"workflows": ["Release"], "types": ["completed"]}
+    assert "github.event.workflow_run.conclusion == 'success'" in maintenance["jobs"]["freeze"]["if"]
+    assert "current_install.py" in str(maintenance["jobs"]["current-install-projection"])
 
 
 def test_cancel_cleanup_targets_only_exact_owned_resource(tmp_path, monkeypatch):

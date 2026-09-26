@@ -28,7 +28,9 @@ not that evidence.
 ## Review the release PR
 
 After changes merge, `release-from-semver-label.yml` reads pending changesets and
-opens or updates `automation/coordinated-release`. It applies the highest bump,
+qualifies the exact source through explicit exhaustive CI before opening or
+updating `automation/coordinated-release`. A source defect stops preparation.
+It applies the highest bump,
 normalises the shipped package versions and lockfile, and preserves every consumed
 summary in `.release/releases/vMAJOR.MINOR.PATCH.md`.
 
@@ -37,6 +39,11 @@ notes, not new product behaviour. Newly merged changes update the same PR. The
 root `pyproject.toml` is the canonical version source;
 [release ownership](../.github/release-ownership.json) declares the shipped set,
 allowed paths and triggers. Do not maintain parallel lists in workflow prose.
+
+The generated candidate reuses the named source qualification only after checking
+its exact normalisation delta. Candidate artifact and runtime proof still run.
+An unrelated product change in that delta fails admission. Ordinary PR CI remains
+bounded merge proof; broad proof is an explicit release or high-risk dispatch.
 
 Every coordinated version must exceed the checked-in versions and reserved public
 stable/preview identities. A canonical numeric preview reserves its version even
@@ -76,7 +83,9 @@ publisher credentials in the repository. See the
 
 An absent version may be published; an existing version must match the admitted
 bytes. Network uncertainty is not absence. A mismatching npm channel requires
-deliberate inspection and repair, never automatic rollback. Registry receipts add
+bounded reobservation and then deliberate inspection and repair, never automatic
+rollback. Newly uploaded versions and their channel are observed for up to five
+minutes; immutable identity or digest conflicts stop immediately. Registry receipts add
 distribution evidence; they do not rewrite immutable release manifests or grant
 stable support.
 
@@ -109,6 +118,10 @@ Inspect its exact source and release-only artefact commit, then repeat with
 `--push` to publish that subject. The helper selects fetched master by default;
 an explicit older source must remain reachable from it. Preview tags and receipts
 remain non-support-bearing. Recovery reuses the immutable tag and exact assets.
+The helper dispatches the shared `release.yml` with an explicit `preview` or
+`release-candidate` class. Manual preview recovery supplies `release_class`, `tag`
+and `source_commit` to that same workflow. `qualify_only=true` exercises the
+candidate stages without publication effects.
 
 The special `v1.0.0-rc.N` promotion path is retained for first-stable recovery,
 not ordinary later releases. Its ecosystem version mapping and explicit
@@ -119,6 +132,12 @@ does not replace fresh stable-subject proof. A product change requires a new
 candidate; proof-only reconciliation requires its separately admitted exact tree.
 
 ## Keep first contact current
+
+Maintenance observes successful release completion independently. Projection
+drift and recurring consumer observations have their own results; they do not
+change the publication verdict. Required public registry install checks remain
+part of publication. See [hosted automation](maintainer/hosted-automation.md) for
+entrypoints, provider boundaries and the contraction audit.
 
 After stable publication, refresh the existing projection and regenerate it:
 

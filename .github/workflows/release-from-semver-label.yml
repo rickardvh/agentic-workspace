@@ -50,7 +50,7 @@ jobs:
     name: Prepare release PR or tag verified release commit
     needs: promotion-admission
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 80
     permissions:
       contents: write
       pull-requests: write
@@ -82,6 +82,14 @@ jobs:
           args=()
           if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
           python src/tooling/release/coordinated_release.py plan "${args[@]}" --github-output "$GITHUB_OUTPUT"
+
+      - name: Qualify exact source before candidate generation
+        id: source-proof
+        if: steps.release-plan.outputs.release_required == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
+        run: python src/tooling/release/release_lifecycle.py qualify-source --github-output "$GITHUB_OUTPUT"
 
       - name: Prepare coordinated release PR changes
         if: steps.release-plan.outputs.release_required == 'true'
@@ -116,11 +124,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_PR_BRANCH: ${{ steps.release-pr.outputs.pull-request-branch }}
           RELEASE_PR_HEAD_SHA: ${{ steps.release-pr.outputs.pull-request-head-sha }}
+          SOURCE_RUN_ID: ${{ steps.source-proof.outputs.source_run_id }}
         run: |
           gh workflow run ci.yml \
             --ref "${RELEASE_PR_BRANCH}" \
             -f expected_head_sha="${RELEASE_PR_HEAD_SHA}" \
-            -f reason="coordinated release candidate exact-head admission"
+            -f reason="coordinated release candidate exact-head admission" \
+            -f qualified_source="${GITHUB_SHA}" \
+            -f source_run_id="${SOURCE_RUN_ID}"
 
       - name: Resolve pending release tag
         id: release-commit
