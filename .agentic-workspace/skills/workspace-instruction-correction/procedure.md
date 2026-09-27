@@ -4,26 +4,26 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which owner destination needs correction or retention procedure?",
+  "question": "What should change because of this correction or finding?",
   "branches": [
     {
       "id": "destination",
-      "description": "Choose and verify the responsible change",
+      "description": "Choose the source that controls the affected behaviour",
       "next": "references/destination.md"
     },
     {
       "id": "instructions",
-      "description": "Publish scoped instructions",
+      "description": "Publish a rule for this repository or this machine",
       "next": "references/instructions.md"
     },
     {
       "id": "other",
-      "description": "Advisory knowledge, decisions or method repair",
+      "description": "Save advisory knowledge or a decision, or repair a reusable method",
       "next": "references/other.md"
     },
     {
       "id": "opportunity",
-      "description": "Judge a selected repository opportunity",
+      "description": "Check whether policy permits acting on a useful improvement",
       "next": "references/opportunity.md"
     }
   ],
@@ -33,7 +33,7 @@
       "binding"
     ],
     "applicability": "A material finding from source/test work, repeated friction, positive optimisation opportunity, correction, acquired conclusion, environment fact or source inconsistency can change current or future work.",
-    "outcome": "The strongest useful source absorbs the consequence, or scoped advisory retention/no-retention is justified.",
+    "outcome": "The controlling source is corrected and checked, or the finding is saved as advice or deliberately not retained.",
     "binding_owners": [
       "instructions",
       "system-intent"

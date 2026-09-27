@@ -1,4 +1,8 @@
-# Preserve effects through unavailable continuation
+# Recover after a check loses its continuation
+
+Use this path when a check may have run but its reply or next request is missing.
+Keep its exact execution identity and any confirmed result. Inspect the current
+Verification result to establish what happened before deciding what remains.
 
 A knowledgeable agent uses the same direct `start`/`invoke` and resource owner
 operations without activating a skill. Optional-skill absence or drift cannot

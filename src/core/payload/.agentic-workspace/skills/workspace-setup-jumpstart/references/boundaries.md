@@ -10,7 +10,7 @@ resolution under the canonical startup procedure. If a necessary build is outsid
 specific runtime gap and use the fallback; do not infer it merely from context
 loss or skip an available current runtime. Installed clients use the
 artifact-verified distribution. An unavailable runtime supplies no configuration
-or Assignment permission. Follow the main skill's read-only fallback.
+or Assignment permission. Follow the [read-only startup fallback](../../workspace-startup/references/unavailable.md).
 
 Repository policy remains stronger than local preferences. Preserve unrelated
 keys, comments, files and owner state. Keep task judgments with Assignment,

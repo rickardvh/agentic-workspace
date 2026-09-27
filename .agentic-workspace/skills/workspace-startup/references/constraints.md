@@ -1,8 +1,9 @@
 # Interpret current restrictions
 
-Read the current restriction's trigger, exact identity/revision, owning authority,
-allowed and forbidden effects, proof/claim requirement, expected consequence and
-bounded recovery. These are current source-owned facts, not permanent phases.
+Use this reference when a result blocks an action or completion claim. Read its
+`affects`, `message`, `owner` and revision, then the supplied request or recovery
+path. Identify what is forbidden, what remains allowed, and what fact or decision
+would remove this particular block.
 
 Use the named owner/request to obtain the missing fact or resolve the decision.
 Keep allowed direct work moving. Capability absence supplies no permission;
@@ -16,9 +17,10 @@ when evidence matters. A local successful check, intended outcome and parent
 completion are separate claims. Do not add proof ceremony merely because a proof
 capability exists.
 
-After an action, reconcile expected versus observed status, changed owner state,
-claim permission, useful residue and continuation. Stop when the intended claim
-is supported and no authorized action remains. Compatibility field names do not
-create a mandatory closeout phase. Specialized results remain with their current
-owner; do not substitute Memory for instruction correction, or transport success
-for accepted evidence. See [exact effects](owners.md) and [reconciliation](reconcile.md).
+After taking the permitted action, inspect its result. Did the intended change
+happen, and does the new result permit the dependent action or claim? Preserve a
+confirmed write even if the next step fails. Report any remaining gap; do not
+repeat a write merely to obtain its reply. Stop when the requested outcome and
+required evidence are established. See [exact effects](owners.md) for transport
+and [findings worth retaining](reconcile.md) for useful follow-through. A successful
+transport is not accepted evidence, and a Memory note cannot publish a policy correction.

@@ -1,5 +1,9 @@
 # Admit the exact receipt
 
+Use this step after a check publishes an execution receipt. The receipt records
+what ran; Verification must still decide whether it is current evidence for this
+task. Do not invent a receipt when only terminal output is available.
+
 Use the current continuation and its exact Verification evidence request. Supply
 the published receipt reference in `evidence_refs`, retaining any still-current
 scope/strategy request set. Let Verification authenticate evidence and determine

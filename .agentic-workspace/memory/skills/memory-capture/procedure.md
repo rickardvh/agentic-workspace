@@ -4,21 +4,21 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which current Memory need is supported by the selected evidence?",
+  "question": "Would this finding prevent future rediscovery, and which source should hold it?",
   "branches": [
     {
       "id": "destination",
-      "description": "Choose the smallest responsible home",
+      "description": "Choose between correcting a controlling source, saving advice, and saving nothing",
       "next": "references/destination.md"
     },
     {
       "id": "publication",
-      "description": "Authored decision and publication",
+      "description": "An authored decision needs its current publication request",
       "next": "references/publication.md"
     },
     {
       "id": "candidate",
-      "description": "Explicit candidate consequences",
+      "description": "The current result asks what to do with a proposed lesson",
       "next": "references/candidate.md"
     }
   ],
@@ -26,8 +26,8 @@
     "occasions": [
       "binding"
     ],
-    "applicability": "Current future-value material has an unresolved receiving-owner or retention disposition.",
-    "outcome": "Current strongest-owner consequence evidence, authorised advisory Memory, or justified no-retention.",
+    "applicability": "A returned lesson still needs a decision about correcting its controlling source, saving advice or retaining nothing.",
+    "outcome": "The controlling source is corrected, advice is saved with authorisation, or no retention is justified.",
     "binding_owners": [
       "memory"
     ]

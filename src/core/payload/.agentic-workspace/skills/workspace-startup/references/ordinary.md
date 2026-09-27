@@ -1,5 +1,10 @@
 ## Ordinary use
 
+Use this reference when the next action needs current AW facts. If the task can
+be completed from sufficient current sources already available, continue directly.
+For example, explaining supplied text needs no startup command; resolving whether
+a protected write may proceed needs the current result for that write.
+
 Use native resolution when current owner state can affect the work or a dependent
 action or claim. If current static sources suffice without a dynamic dependency,
 work directly. Context entry requires that judgment, not an unconditional call.
@@ -50,7 +55,9 @@ does the work. A skill or route never grants mutation, proof or completion right
 
 ## Current material and needs
 
-Supply relevant new material in the same start context, separately from `task`.
+Supply a new finding or missing prerequisite in the same `start` context,
+separately from `task`. The `material` field tells AW what changed and where the
+observation came from; it does not make the finding a policy or prove a claim.
 For the CLI, write a context object to a UTF-8 JSON file and pass `start --input`:
 
 ```json
@@ -72,12 +79,14 @@ exact source revisions and repository dependency reference/revision pairs when
 known. Labels remain assertions, never human authority or proof. Carry returned
 work-bound material explicitly on reentry; there is no event store.
 
-Read the current `activation` occasions alongside binding owner consequences.
-Judge only unresolved applicability, filling the exact returned request with
+Read `activation` for procedures that may help handle this finding. Read the
+restrictions in the same result before taking an affected action. When a returned
+request asks whether a procedure applies, answer only that unresolved question with
 `applicable`, `unknown`, `defer`, `no-match` or justified `no-retention` and a reason.
-Keep peer judgments when selecting one method. Use the qualified entry to reach
-the existing procedure or use the exact owner directly. Reading a skill does not
-settle its outcome. Verify the receiving owner/repository consequence, distinguish
+Keep earlier answers when selecting another method. Use the returned entry to
+read the selected procedure, or follow the exact component request directly.
+Reading a skill does not complete its task. Verify the changed source and its
+effect on the affected action, distinguish
 stable knowledge from transient availability, and preserve an explicit gap when
 the current owner or required host capability is unavailable.
 

@@ -1,43 +1,22 @@
-# Checked-in Skills
+# Memory procedures
 
-This directory contains checked-in core memory skills installed by the bootstrap payload.
+Choose a known relevant skill directly, or use `REGISTRY.json` for discovery.
+Read selected advice already delivered in `advisory_context`; ordinary work needs
+no directory scan or consultation record.
 
-`REGISTRY.json` is the explicit installed core-skill registry for these package-managed memory skills and their task-matching hints.
+- `memory-router`: obtain relevant declared notes when they are needed.
+- `memory-refresh`: reassess advice selected after relevant source changes.
+- `memory-capture`: decide whether a lesson or decision should be saved.
+- `memory-consultation-and-residue`: use selected advice and decide what is worth keeping.
+- `memory-hygiene`: use supported retain, retire or promotion requests, or inspect declarations.
+- `memory-upgrade`: follow shared setup to refresh managed guidance while preserving notes.
 
-When a repository has checked-in memory skills, treat this directory as the default operational interface for memory work:
+Memory advice is not policy, proof or execution state. A disposition request changes
+metadata; it does not rewrite or delete note prose. Each procedure names the
+supported operation and explains what remains unknown if it is unavailable.
 
-- scan this file and the sibling skill directories for a name or description that matches the task
-- use the matching checked-in skill before broad memory rereads or ad hoc memory procedures
-- fall back to normal routed note reading when no skill fits
-
-The shipped core skills are:
-
-- `memory-hygiene`
-- `memory-capture`
-- `memory-consultation-and-residue`
-- `memory-upgrade`
-- `memory-refresh`
-- `memory-router`
-
-Quick trigger guide:
-
-- `memory-router`: choose the smallest relevant memory note set for the current work
-- `memory-refresh`: refresh or tighten existing memory notes after changes
-- `memory-capture`: record new durable memory when a task exposed something worth keeping
-- `memory-consultation-and-residue`: classify consultation status, durable residue, and improvement-signal routing
-- `memory-hygiene`: prune, merge, de-duplicate, or sharpen existing memory
-- `memory-upgrade`: run the packaged memory upgrade flow for the repository
-
-Use these as shared building blocks for repo-local memory work.
-
-These shipped shared skills are installed under `.agentic-workspace/memory/skills/`. When a repository needs a local memory workflow beyond these, add a repo-owned sibling skill under `.agentic-workspace/memory/repo/skills/` instead of editing the shared core skills unless the reusable shared procedure itself changed.
-
-Keep repo-specific skills procedural and concise. Put durable repo facts in `/memory`, then have the skill operate on those files.
-Only put memory-facing skills here. General non-memory skills belong elsewhere.
-When both a checked-in repo skill and a runtime-local mirrored copy exist, treat the checked-in copy as authoritative.
-
-Ownership boundary:
-
-- the shipped core skill directories in this folder are product-managed and may be replaced on upgrade
-- repo-specific memory skills should be added as new sibling directories here
-- if a local workflow must survive upgrades, do not customise the shipped core skill directories in place
+Product-managed skill bodies may be replaced on upgrade. Put repository-specific
+methods in distinct repository-owned bundles, register them deliberately, and keep
+durable facts in the existing Memory sources. Do not customise a shipped bundle
+to obtain a persistent local override. Source-checkout maintainers edit canonical
+sources and regenerate declared copies.

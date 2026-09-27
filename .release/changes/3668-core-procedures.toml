@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Clarify core agent procedures with observable branch choices and explicit action boundaries."

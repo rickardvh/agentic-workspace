@@ -1,11 +1,14 @@
 ---
 name: memory-consultation-and-residue
-description: Distinguish current Memory selection, useful durable residue and stronger-owner work without making Memory a required closeout step.
+description: Use selected Memory advice and decide whether a useful conclusion needs a saved record or source correction.
 ---
 
-# Memory Consultation And Residue
+# Use advice and decide what is worth keeping
 
-Use the configured AW `start --target . --task "<task>" --format json` and known changed paths. Follow the decision packet. Use the directly delivered selected `advisory_context`; no-match needs no further Memory work.
+Use when selected advice or a useful conclusion needs attention. Read already
+delivered `advisory_context`; obtain current selection through the configured AW
+`start --target . --task "<task>"` with known changed paths only when needed.
+A no-match result needs no further Memory work or saved record.
 
 Keep the useful conclusion with its smallest existing owner. Planning owns execution continuity, Verification owns proof, and repository decisions retain their deciding authority. A passing test does not establish a durable lesson or authorize a Memory write.
 

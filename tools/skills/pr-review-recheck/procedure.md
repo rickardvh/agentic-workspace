@@ -9,29 +9,29 @@ Unresolved scope, risk or authority admits unknown/defer, not guessed approval.
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "review-need",
-  "question": "Which current uncertainty or obligation needs review procedure?",
+  "question": "Which fact is missing before the reviewer can decide?",
   "context": [
     "references/eligibility.md"
   ],
   "branches": [
     {
       "id": "scope",
-      "description": "Establish intended outcome and complete changed scope",
+      "description": "Identify the requested outcome and every changed file",
       "next": "references/scope.md"
     },
     {
       "id": "compatibility",
-      "description": "Judge compatibility or a material risk boundary",
+      "description": "Check changed public inputs, outputs and material risks",
       "next": "references/compatibility.md"
     },
     {
       "id": "proof",
-      "description": "Resolve evidence sufficiency and source-owner currentness",
+      "description": "Check whether the evidence proves this patch and its sources are still current",
       "next": "references/proof.md"
     },
     {
       "id": "recheck",
-      "description": "Reobserve a changed subject and still-current prior findings",
+      "description": "Compare the new patch with prior findings and recheck affected evidence",
       "next": "references/recheck.md"
     },
     {
@@ -41,7 +41,7 @@ Unresolved scope, risk or authority admits unknown/defer, not guessed approval.
     },
     {
       "id": "decision",
-      "description": "Report the supported outcome after required proof and eligibility",
+      "description": "Report a decision supported by the evidence and independent eligibility",
       "next": "references/decision.md"
     }
   ],

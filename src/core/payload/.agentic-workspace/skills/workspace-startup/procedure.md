@@ -4,36 +4,36 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which procedure is needed for the current work? Select only applicable needs; after obtaining current entry context, clear work may continue directly.",
+  "question": "What is preventing the next authorised step? Choose only the help needed; clear work may continue directly.",
   "branches": [
     {
       "id": "ordinary",
-      "description": "Clear work or responsibility boundaries",
+      "description": "The next action needs current AW information or a configured command",
       "next": "references/ordinary.md"
     },
     {
       "id": "evidence",
-      "description": "Missing or conflicting evidence",
+      "description": "Required evidence is missing, unavailable or conflicts with another source",
       "next": "references/evidence.md"
     },
     {
       "id": "owners",
-      "description": "Current owner facts, requests or effects",
+      "description": "AW returned a request to answer or an operation to invoke",
       "next": "references/owners.md"
     },
     {
       "id": "reconcile",
-      "description": "Correction, post-action reconciliation or residue",
+      "description": "A finding or correction may need a source change or saved lesson",
       "next": "references/reconcile.md"
     },
     {
       "id": "unavailable",
-      "description": "Configured runtime is unavailable",
+      "description": "The configured AW runtime cannot be used",
       "next": "references/unavailable.md"
     },
     {
       "id": "constraints",
-      "description": "A current restriction needs interpretation",
+      "description": "A result blocks an action or claim; determine what remains allowed",
       "next": "references/constraints.md"
     }
   ]

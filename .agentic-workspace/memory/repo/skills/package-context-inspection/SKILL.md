@@ -1,25 +1,24 @@
 ---
 name: package-context-inspection
-description: Re-check a package context note without turning it into a workflow dump. Use when memory doctor reports package-context overlap or procedural drift for the planning or memory package notes.
+description: Check a repository package-context note against current module sources when maintaining Planning or Memory boundaries.
 ---
 
-# Package Context Inspection
+# Check a package-context note
 
-Use this skill when working in `packages/memory/` or `packages/planning/` and you need the compact package-context checklist.
+Use this procedure when a note about Planning or Memory conflicts with the module
+being edited. Start with the note's current manifest disposition. A retired note
+is historical evidence; do not restore its former package paths or revive it merely
+because current code differs.
 
-## Checklist
-
-1. Confirm which package is actually being edited.
-2. Read only that package's `AGENTS.md`, README, source, bootstrap payload, and tests.
-3. Re-check the matching package-context note for durable boundaries only.
-4. Move repeatable checklist content out of the note and keep it here or in the companion runbook.
-5. If root operational symptoms reveal a product issue, route that signal into planning, docs, or memory instead of widening the package-context note.
-
-## Typical surfaces
-
-- `packages/memory/AGENTS.md`
-- `packages/planning/AGENTS.md`
-- `packages/memory/src/`
-- `packages/planning/src/`
-- `packages/memory/tests/`
-- `packages/planning/tests/`
+1. Identify the affected module in `src/core/src/modules/planning/` or
+   `src/core/src/modules/memory/` and read its relevant source, declared payload and
+   focused tests. Use [repository layout](../../../../../docs/maintainer/repository-layout.md)
+   for the current locations.
+2. Compare the note's durable ownership claims with those sources and the
+   repository ownership ledger. Keep repeatable steps in a skill, rather than
+   copying a workflow into the note.
+3. If active advice is wrong, use the [correction procedure](../../../../skills/workspace-instruction-correction/SKILL.md)
+   to choose its authorized destination. This checklist does not grant note-write
+   or disposition authority.
+4. Stop when the conflict is explained or the receiving component has verified
+   the correction. Report an unsupported repair path instead of claiming retention.

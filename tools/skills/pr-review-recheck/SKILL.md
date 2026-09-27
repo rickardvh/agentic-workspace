@@ -21,7 +21,7 @@ Select [the current question](procedure.md), or read only the needed reference:
 
 - [Scope and intended outcome](references/scope.md).
 - [Compatibility and risk](references/compatibility.md).
-- [Proof and source-owner currentness](references/proof.md).
+- [Evidence sufficiency and current sources](references/proof.md).
 - [Delta/recheck and trusted preparation](references/recheck.md).
 - [Closure shape and remaining evidence](references/closure.md).
 - [Decision, blockers and reporting](references/decision.md).

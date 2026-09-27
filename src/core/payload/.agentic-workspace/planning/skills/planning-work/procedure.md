@@ -4,21 +4,21 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which part of this method is needed for current work?",
+  "question": "Does this task continue a saved plan, need smaller steps, or need progress saved for later?",
   "branches": [
     {
       "id": "intake",
-      "description": "Relate the current request to existing work",
+      "description": "Decide whether the current task belongs to the selected plan",
       "next": "references/intake.md"
     },
     {
       "id": "structure",
-      "description": "Bound the outcome and its dependencies",
+      "description": "Divide the outcome into complete steps with explicit dependencies",
       "next": "references/structure.md"
     },
     {
       "id": "continuity",
-      "description": "Preserve accepted progress and resume unfinished work through its existing owner",
+      "description": "Save agreed progress and remaining work, or resume a saved record",
       "next": "references/continuity.md"
     }
   ],
@@ -29,7 +29,7 @@
       "binding"
     ],
     "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
-    "outcome": "Current bounded Planning custody, or justified direct work without retained planning.",
+    "outcome": "The needed task record is saved and verified, or no plan is needed.",
     "binding_owners": [
       "planning"
     ]

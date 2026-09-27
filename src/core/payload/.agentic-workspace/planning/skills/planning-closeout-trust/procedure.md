@@ -4,16 +4,16 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which part of this method is needed for current work?",
+  "question": "Does the delivered work satisfy the requested outcome, and what still needs evidence or a saved next step?",
   "branches": [
     {
       "id": "intent",
-      "description": "Compare the requested outcome",
+      "description": "Compare delivered work with the original and parent outcomes",
       "next": "references/intent.md"
     },
     {
       "id": "finish",
-      "description": "Reconcile proof, residue and continuation",
+      "description": "Check evidence, preserve useful results and record what remains open",
       "next": "references/finish.md"
     }
   ],

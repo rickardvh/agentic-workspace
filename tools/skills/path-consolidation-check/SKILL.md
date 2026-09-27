@@ -25,7 +25,7 @@ contract. It is not an ambient check for ordinary package work.
 ## Typical surfaces
 
 - `.agentic-workspace/OWNERSHIP.toml`
-- `packages/memory/`
-- `packages/planning/`
-- generated/bootstrap payload surfaces
+- `src/core/src/modules/memory/`
+- `src/core/src/modules/planning/`
+- `src/core/payload/`
 - install and upgrade tests

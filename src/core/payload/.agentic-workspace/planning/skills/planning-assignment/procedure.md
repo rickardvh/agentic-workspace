@@ -4,41 +4,41 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Before binding, does this bounded outcome justify local work, delegation assessment, or an unknown/defer answer? Once binding, which current owner continuation is needed?",
+  "question": "Has a worker already been selected? Follow that assignment; otherwise decide whether local work or delegation is useful.",
   "branches": [
     {
       "id": "local",
-      "description": "Local capability is sufficient; no justified independent delegation benefit",
+      "description": "Current capability is sufficient and delegation adds no justified benefit",
       "next": "references/local.md"
     },
     {
       "id": "delegate",
-      "description": "A bounded independent outcome justifies current Assignment assessment, without granting eligibility",
+      "description": "A separate bounded outcome may benefit from delegation; request assessment",
       "next": "references/assessment.md"
     },
     {
       "id": "assessment",
-      "description": "Supply unresolved assessment",
+      "description": "The result asks for missing task requirements or worker comparison",
       "next": "references/assessment.md"
     },
     {
       "id": "binding",
-      "description": "Follow current role, target and transport",
+      "description": "A worker is selected; follow the assigned role, scope and permitted transport",
       "next": "references/binding.md"
     },
     {
       "id": "manual",
-      "description": "Carry a sealed manual packet",
+      "description": "The owner permits manual delivery of its exported assignment packet",
       "next": "references/manual.md"
     },
     {
       "id": "return",
-      "description": "Admit and integrate returned material",
+      "description": "A worker returned a result; check it before integrating",
       "next": "references/return.md"
     },
     {
       "id": "recovery",
-      "description": "Preserve uncertain transport and continuity",
+      "description": "Dispatch, return delivery or integration has an uncertain result",
       "next": "references/recovery.md"
     }
   ],

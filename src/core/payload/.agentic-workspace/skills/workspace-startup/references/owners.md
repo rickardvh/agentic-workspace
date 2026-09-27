@@ -1,4 +1,13 @@
-## Exact tools without protocol copying
+## Use a returned request or action
+
+Use this reference when AW asks for a decision, returns an operation to invoke,
+or identifies managed state that must change through its responsible component.
+The returned **request** asks for input; the returned **action** describes an
+operation that can have effects. Keep their exact identity fields. Supply only
+the requested judgment or material, then inspect the result before proceeding.
+
+AW's **carriage** is the disposable JSON that keeps those exact objects and prior
+answers between calls. It is useful transport, not a saved plan or permission.
 
 Use the public Rust-backed contract as a tool, not as prose to memorize.
 

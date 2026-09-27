@@ -5,6 +5,13 @@ branch delivery only when it saves reading. Skills do not grant permission,
 admit proof or replace required review. Binding rules belong in
 [scoped instructions](scoped-instructions.md).
 
+When authoring agent-facing text in this repository, apply the canonical
+[agent-facing writing guide](../../.agentic-workspace/instructions/agent-facing-style.md).
+It is delivered for the usual skill and instruction paths; use the same source
+for prose embedded elsewhere. Check that the reader can identify the situation,
+inspect the relevant signal, take the action and recognise when it is done.
+The guide supplies writing principles; exact metadata remains in the specification.
+
 ## Write and try the method
 
 Create `tools/skills/change-note/SKILL.md`:

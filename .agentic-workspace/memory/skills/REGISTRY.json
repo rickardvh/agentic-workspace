@@ -1,32 +1,55 @@
 {
-  "schema_version": "skill-registry.v1",
-  "owner": "agentic-memory",
-  "source_kind": "installed-core-skills",
-  "skills": [
+  "activation_index": [
     {
+      "activation": {
+        "applicability": "A returned lesson still needs a decision about correcting its controlling source, saving advice or retaining nothing.",
+        "binding_owners": [
+          "memory"
+        ],
+        "occasions": [
+          "binding"
+        ],
+        "outcome": "The controlling source is corrected, advice is saved with authorisation, or no retention is justified."
+      },
       "id": "memory-capture",
       "path": "memory-capture/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "capture durable repo knowledge into checked-in memory",
       "procedure_resource": "procedure.md",
       "semantic_routes": [
         "memory/capture"
       ]
     },
     {
-      "id": "memory-consultation-and-residue",
-      "path": "memory-consultation-and-residue/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "classify memory consultation, durable residue, and improvement-signal routing",
-      "activation_hints": {
-        "verbs": [
-          "consult",
-          "classify",
-          "route",
-          "decide"
+      "activation": {
+        "applicability": "Selected Memory advice is stale, duplicated or no longer useful.",
+        "occasions": [
+          "need"
         ],
+        "outcome": "Useful advice is preserved and an authorised disposition stops misleading selection."
+      },
+      "id": "memory-hygiene",
+      "path": "memory-hygiene/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "memory/hygiene"
+      ]
+    }
+  ],
+  "owner": "agentic-memory",
+  "schema_version": "skill-registry.v1",
+  "skills": [
+    {
+      "id": "memory-capture",
+      "path": "memory-capture/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "scope": "bundled",
+      "semantic_routes": [
+        "memory/capture"
+      ],
+      "stability": "package-managed",
+      "summary": "Decide whether a useful lesson or decision should be saved and use its supported publication request."
+    },
+    {
+      "activation_hints": {
         "nouns": [
           "memory consultation",
           "durable residue",
@@ -39,41 +62,42 @@
           "improvement signal status",
           "closeout durable residue"
         ],
+        "verbs": [
+          "consult",
+          "classify",
+          "route",
+          "decide"
+        ],
         "when": [
           "closeout residue routing",
           "explicit no-memory-write decision",
           "repeated correction or workflow friction"
         ]
-      }
+      },
+      "id": "memory-consultation-and-residue",
+      "path": "memory-consultation-and-residue/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "Use selected Memory advice and decide whether a useful conclusion needs a saved record or source correction."
     },
     {
       "id": "memory-hygiene",
       "path": "memory-hygiene/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "keep checked-in memory compact, current, and well-routed",
       "semantic_routes": [
         {
+          "description": "Inspect bounded Memory declaration hygiene and separately authorized disposition.",
           "id": "memory/hygiene",
           "match": "exact",
-          "priority": 10,
-          "description": "Inspect bounded Memory declaration hygiene and separately authorized disposition."
+          "priority": 10
         }
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "package-managed",
+      "summary": "Assess a selected stale or duplicated note and use supported retain, retire or promotion requests."
     },
     {
-      "id": "memory-refresh",
-      "path": "memory-refresh/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "refresh stale or weakly routed memory notes after relevant repo changes",
       "activation_hints": {
-        "verbs": [
-          "refresh",
-          "update",
-          "recheck"
-        ],
         "nouns": [
           "stale memory",
           "memory notes",
@@ -83,25 +107,24 @@
           "refresh stale memory",
           "update memory after changes"
         ],
+        "verbs": [
+          "refresh",
+          "update",
+          "recheck"
+        ],
         "when": [
           "relevant repo changes",
           "weakly routed notes"
         ]
-      }
-    },
-    {
-      "id": "memory-router",
-      "path": "memory-router/SKILL.md",
+      },
+      "id": "memory-refresh",
+      "path": "memory-refresh/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "route to the narrowest relevant checked-in memory notes for the current task",
+      "summary": "Reassess only Memory selected by the current changed paths and preserve useful lessons while currentness is unresolved."
+    },
+    {
       "activation_hints": {
-        "verbs": [
-          "route",
-          "select",
-          "find",
-          "load"
-        ],
         "nouns": [
           "memory notes",
           "note set",
@@ -112,24 +135,25 @@
           "find the smallest memory note set",
           "route to relevant memory"
         ],
+        "verbs": [
+          "route",
+          "select",
+          "find",
+          "load"
+        ],
         "when": [
           "smallest relevant note set",
           "memory for current task"
         ]
-      }
-    },
-    {
-      "id": "memory-upgrade",
-      "path": "memory-upgrade/SKILL.md",
+      },
+      "id": "memory-router",
+      "path": "memory-router/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "run the normal checked-in memory upgrade flow from the installed repo surface",
+      "summary": "Select relevant declared Memory through the current native route without bulk-reading the corpus."
+    },
+    {
       "activation_hints": {
-        "verbs": [
-          "upgrade",
-          "refresh",
-          "sync"
-        ],
         "nouns": [
           "memory bootstrap",
           "installed memory",
@@ -139,46 +163,22 @@
           "upgrade memory bootstrap",
           "refresh installed memory surfaces"
         ],
+        "verbs": [
+          "upgrade",
+          "refresh",
+          "sync"
+        ],
         "when": [
           "managed memory upgrade",
           "installed surface refresh"
         ]
-      }
+      },
+      "id": "memory-upgrade",
+      "path": "memory-upgrade/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "Refresh managed guidance while preserving custom Memory content."
     }
   ],
-  "activation_index": [
-    {
-      "id": "memory-capture",
-      "path": "memory-capture/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "memory/capture"
-      ],
-      "activation": {
-        "occasions": [
-          "binding"
-        ],
-        "applicability": "Current future-value material has an unresolved receiving-owner or retention disposition.",
-        "outcome": "Current strongest-owner consequence evidence, authorised advisory Memory, or justified no-retention.",
-        "binding_owners": [
-          "memory"
-        ]
-      }
-    },
-    {
-      "id": "memory-hygiene",
-      "path": "memory-hygiene/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "memory/hygiene"
-      ],
-      "activation": {
-        "occasions": [
-          "need"
-        ],
-        "applicability": "Known Memory residue is stale, duplicated or no longer useful for current work.",
-        "outcome": "Current owner disposition preserves unique value and removes misleading applicability."
-      }
-    }
-  ]
+  "source_kind": "installed-core-skills"
 }

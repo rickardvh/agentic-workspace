@@ -1,18 +1,23 @@
 ---
 name: memory-hygiene
-description: Select bounded Memory disposition, source repair or declaration hygiene while native owners retain evidence and authority.
+description: Assess a selected stale or duplicated note and use supported retain, retire or promotion requests.
 ---
 
 # Memory hygiene
 
-Use selected current Memory detail and the shared startup owner carriage. Read
-only the relevant sources. Select [the current question](procedure.md), or read
+Use when a selected note may be stale, duplicated, misleading or no longer useful,
+or when the user requests a bounded declaration audit. Inspect its current source,
+dependencies and returned Memory request. Retain means keep advisory value; retire
+means stop selecting obsolete advice; promote means a stronger source has already
+accepted the complete lesson. These operations change disposition metadata, not
+the note's prose. Select [the current question](procedure.md), or read
 the same references manually:
 
 - [Retain, retire or promote selected material](references/disposition.md).
-- [Repair and receiving evidence](references/repair.md).
-- [Inspect bounded declaration hygiene](references/declarations.md).
+- [Repair the controlling source and verify that it accepted the lesson](references/repair.md).
+- [Inspect selected note declarations for errors](references/declarations.md).
 
-No signal requires no capture retrospective. Optional method selection cannot
+Finish with a confirmed authorised disposition or the exact remaining gap.
+No matching material means no corpus sweep. Optional method selection cannot
 waive explicit candidate obligations, human authorization or receiving evidence.
 Missing native runtime leaves current custody unknown; preserve managed sources.

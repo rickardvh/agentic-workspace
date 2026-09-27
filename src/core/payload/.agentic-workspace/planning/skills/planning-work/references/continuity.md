@@ -20,7 +20,8 @@ Resolve an owner reference with ordinary `start --target . --task "<actual task>
 and `--reference owner:request:planning:planning/create/v1`. Fill only its requested
 `arguments.material` using the returned schema/current Planning detail. For an
 existing owner, first establish the current task relation, then use its update
-request below. Preserve all unchanged fields and relationships. Submit the filled
+request below. Supply the complete proposed record and preserve all unchanged fields and
+relationships. Submit the filled
 request through `start`, invoke only the returned admitted action, and inspect the
 effect outcome. Creation and selection are two distinct effects. Keep the full
 invocation result: its `value.selection_request`, `value.selection_context` and
@@ -39,7 +40,7 @@ Map useful meaning to the existing fields, without another resume schema:
 
 - `intent` and `scope`: intended outcome, constraints and negative requirements.
 - `continuation`: accepted progress and conclusions with concise rationale/source
-  pointers, unresolved uncertainty and the current remaining frontier.
+  pointers, unresolved uncertainty and the remaining work.
 - `blockers` and `next_action`: remaining impediments, next useful action and its
   prerequisite. Record authorisation as a source to revalidate, never permission
   that transfers to a fresh agent.
@@ -62,7 +63,7 @@ source, policy, Assignment and Verification restrictions and uncertain effects.
 ```
 
 Updates use `arguments.material`, like creation. Supply the complete requested
-semantic postimage, preserving unchanged fields; a partial delta or an invented
+record (the semantic postimage), preserving unchanged fields; a partial delta or an invented
 `document` field is not the update contract. Use the schema supplied by current
 Planning detail or its exact `planning/update/v1` capability declaration.
 
@@ -74,7 +75,7 @@ An incumbent identity alone does not establish assignment. The exact continuatio
 request is `owner:request:planning:planning/continuation/v1`; answer the current
 relation/posture questions separately when work is independent.
 For the same work, answer `continue-selected` and keep that answer in the returned
-carriage when requesting and submitting the update. Repeating only task flags
+JSON transport (carriage) when requesting and submitting the update. Repeating only task flags
 starts fresh resolution and can lose the relation answer. A missing update
 request is a reason to inspect the current relation and continuation, not to
 repeatedly fetch schemas or fabricate a request.
@@ -91,7 +92,7 @@ Use an already authorised ordinary repository destination when sufficient; never
 hand-edit managed state or claim persistence from a chat promise. At completion,
 update the same owner's continuation to the actual outcome through its current
 request, then use current closeout and resource-retention paths. Do not leave an
-old pending prerequisite as the current frontier after completing the work.
+old pending prerequisite as the current next step after completing the work.
 Preserve referenced evidence
 and unfinished work while retiring disposable transport.
 

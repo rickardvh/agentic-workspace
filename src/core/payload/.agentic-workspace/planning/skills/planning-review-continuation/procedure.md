@@ -4,16 +4,16 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which current need calls for this method?",
+  "question": "Does the finding still apply, and does it justify a source change or saved next step?",
   "branches": [
     {
       "id": "triage",
-      "description": "Receive and classify current findings",
+      "description": "Check the review scope, evidence and source revision",
       "next": "references/triage.md"
     },
     {
       "id": "continuation",
-      "description": "Route a justified finding to its owner",
+      "description": "Choose the source to repair or the plan that should retain unfinished work",
       "next": "references/continuation.md"
     }
   ],
@@ -22,7 +22,7 @@
       "need"
     ],
     "applicability": "Review findings or a worker return require current accepted continuation rather than assumed progress.",
-    "outcome": "Current receiving-owner admission and a bounded continuation; no self-approval."
+    "outcome": "Supported findings have an authorised next step; approval remains separate."
   }
 }
 ```
