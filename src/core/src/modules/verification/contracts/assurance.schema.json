@@ -541,6 +541,40 @@
             "description": "Human-readable boundary for claims supported by this subsystem profile.",
             "type": "string",
             "minLength": 1
+          },
+          "freshness": {
+            "description": "Maintain this current-evidence requirement independently of task changes. Verification observes age and exact repository dependencies; no scheduler or execution is implied.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "max_age_seconds",
+              "dependencies",
+              "disposition"
+            ],
+            "properties": {
+              "max_age_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 315576000
+              },
+              "dependencies": {
+                "type": "array",
+                "maxItems": 24,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              },
+              "disposition": {
+                "enum": [
+                  "report",
+                  "route",
+                  "work"
+                ]
+              }
+            }
           }
         },
         "allOf": [
@@ -643,6 +677,33 @@
                     "current-evidence",
                     "guideline"
                   ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "freshness"
+              ]
+            },
+            "then": {
+              "required": [
+                "requirement_class",
+                "notes",
+                "detail_route"
+              ],
+              "properties": {
+                "requirement_class": {
+                  "const": "current-evidence"
+                },
+                "notes": {
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "detail_route": {
+                  "minLength": 1,
+                  "maxLength": 4096
                 }
               }
             }

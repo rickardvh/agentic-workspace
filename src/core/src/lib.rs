@@ -6,6 +6,8 @@ pub mod assurance_applicability;
 pub mod attempt;
 pub mod attempt_store;
 pub mod continuity;
+#[path = "modules/verification/current_evidence.rs"]
+mod current_evidence;
 mod current_projection;
 pub mod decision_source;
 mod dependency_binding;

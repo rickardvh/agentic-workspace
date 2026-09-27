@@ -860,6 +860,11 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
     contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
     crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
+    crate::current_evidence::extend_contract(&mut contract["owners"][0])?;
+    contract["restriction_authorities"][0]["affects"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("effect:proof-execution"));
     contract["owners"][0]["requests"]
         .as_array_mut()
         .unwrap()
@@ -961,8 +966,9 @@ pub(crate) fn view_with_applicability(
         }
     };
     if !manifest.is_null()
-        && (manifest["protocols"].as_object().is_none()
-            || manifest["proof_routes"].as_object().is_none())
+        && ["protocols", "proof_routes"]
+            .iter()
+            .any(|field| manifest.get(*field).is_some_and(|value| !value.is_object()))
     {
         gaps.push("verification-manifest-owner-sections-invalid".into());
     }

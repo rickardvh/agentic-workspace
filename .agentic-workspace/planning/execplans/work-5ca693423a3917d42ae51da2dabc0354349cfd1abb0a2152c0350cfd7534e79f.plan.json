@@ -8,8 +8,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted": "External review accepts the direction of source reuse, proof selection, owner transport and source identity, but no PR is ready. The former standing-obligation registry violates issue 3680; replace it with an extension of assurance.requirements/current-evidence before composing entry. Historical branch snapshots preserve the superseded work.",
-    "frontier": "This head is layer 3679. The source reuse fix is now the foundation and has no implementation dependency on later layers. Native proof admission remains unresolved under 3686. The previous 25-test command was externally instructed local validation on the former combined stack only; it is not current native evidence for these rebased heads. No permission exchange is retained as future authority."
+    "accepted": "The source-reuse foundation and three dependent changes are restacked locally. This lifecycle layer now declares freshness only within assurance.requirements/current-evidence, preserving existing intent, evidence owner, required evidence and detail route fields. The peer standing_obligations registry is removed. The source audit explains the missing reusable semantic assessment and use of existing Verification dependency, authority, projection and custody primitives. Current satisfaction is composed into the assurance row and evidence gap without granting measurement, independent review or task completion.",
+    "frontier": "This head is layer 3682. The source reuse fix is now the foundation and has no implementation dependency on later layers. Native proof admission remains unresolved under 3686. The previous 25-test command was externally instructed local validation on the former combined stack only; it is not current native evidence for these rebased heads. No permission exchange is retained as future authority."
   },
   "creation_provenance": {
     "custody": {
@@ -41,12 +41,12 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Finish current source reconciliation and bounded validation for this layer; repair and restack each descendant in order. Redesign the current-evidence lifecycle before entry integration. Mark only individually complete PRs ready, run hosted checks, and leave independent recheck external.",
+  "next_action": "Complete lifecycle validation/admission, then rework 3684 entry against assurance current-evidence. Publish the corrected six-branch order through the supported GitHub stack API. Keep drafts until individually complete; do not implement 3686 or 3687.",
   "owner_level": "lane",
   "parent": {},
   "phase": "implementation",
   "proof": {
-    "observed": "Original implementation evidence is documented in the PR-specific audit and review. Rebase validation is recorded separately per branch; do not borrow descendant evidence.",
+    "observed": "Three Rust lifecycle tests pass with source-intent, producer, relevant authority, unrelated policy, evidence, age and label-only controls. Thirteen native lifecycle/applicability cases pass, including direct requirement satisfaction, recovery and protected retirement. Generated contract/interface checks report no drift. Lower-layer rebase checks: nine source reconciliation cases, one Rust basis test, eight operating tests, six CLI tests and six source identity cases passed.",
     "remaining": "Current source reconciliation, native completion admission and hosted checks remain pending at this independently mergeable head. Parent acceptance and independent review remain external."
   },
   "references": [
@@ -61,7 +61,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3687"
   ],
   "relationships": {},
-  "revision": 11,
+  "revision": 12,
   "scope": {
     "constraints": "Repair the existing six PRs against external review. Do not implement 3686 or 3687 until this stack is repaired and checked. Independent review is external. Every independently mergeable head must have truthful continuation and its own current evidence.",
     "order": "Source assessment reuse 3685 first; then 3676 proof selection, 3678 owner procedures, 3679 source identity, redesigned 3682 assurance current-evidence lifecycle, and corrected 3684 entry composition."
@@ -71,18 +71,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/bff9a4b0e730a82fbbee6e4b168f5f2cbbc8fb06aa8d4a7b0bec31bc49c08353.attempt.json",
-        "revision": "sha256:154fa3aeedba57d64e2b2be0ddbeb485bda0e0304411755469f3a61f93364e3d",
+        "path": ".agentic-workspace/local/effects/6b65c3286c4521e68168a6ebd78a5d61df679e8b0fb665308bfc6a4c8c5c1f26.attempt.json",
+        "revision": "sha256:73c870e560a1696c76b591ff0e010cc285aeac34756d612e7cec2d420ba17f91",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/bff9a4b0e730a82fbbee6e4b168f5f2cbbc8fb06aa8d4a7b0bec31bc49c08353.result.json",
-        "revision": "sha256:8cc354412c343df55790fa4bdd5301a71b32d48a40db300285497159a8089e2b",
+        "path": ".agentic-workspace/local/effects/6b65c3286c4521e68168a6ebd78a5d61df679e8b0fb665308bfc6a4c8c5c1f26.result.json",
+        "revision": "sha256:5de35c918a36d047063882fe39251b9c86a15862c3639ed425bb2ac217d1f540",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:7246bd12d60c1a3aa0e38320c9c882e4c9c181153cbdedc9b40c2ba1f58d8a57",
+    "invocation_revision": "sha256:f40239372ae26c918674402da60b34ba3db9e00c344ccd3b27c33751e13d6cf0",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:2fcbceabf12d29900436fca1e98f517b51a6a317ca94f23540d2125de7dd57a5",
+        "document_revision": "sha256:235263104f2cce471a377053a186a078f96eb970b910a1e2812b64c3d551e4a3",
         "owner_id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
         "owner_path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json"
       }
