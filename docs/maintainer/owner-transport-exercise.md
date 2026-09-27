@@ -46,7 +46,7 @@ not successful proof observations.
 An earlier exercise read both source versions during a parent rebuild. It made
 approximately 27 native calls and verified the same 15-field postimage, but its
 mixed timing excludes it from a before/after comparison. Separate stable before
-and final-candidate runs are required to assess that comparison.
+and final-candidate runs below supply the bounded comparison.
 
 The stable before run read revision `7f4565d53` and used a copied baseline binary.
 It completed creation, selection, update and selector reconciliation, verifying
@@ -59,6 +59,32 @@ action and omitted update fields. Committed creation was not replayed. No extern
 reminder was needed. The correction was supplied to AW but future method repair
 remained an explicit package-source gap. The fixture had no installed procedure
 registry, so this run does not establish activation-registry behaviour.
+
+The final candidate used a freshly copied, source-current binary after both
+repairs. Creation, selection and substantial update each committed once; saved
+revision 2 matched all 15 proposed semantic fields. Semantic paragraphs were
+written with a file-writing tool, and short calls submitted those files while
+preserving the earlier relation answer. The simple choice succeeded through its
+exact reference without a separate material file. The correction was supplied
+through current material and compared with the responsible procedure. Existing
+guidance was applied; no additional saved instruction was needed.
+
+The final run used approximately 20 native calls and 35 tool interactions. Four
+failed attempts covered setup before Git initialisation, an unavailable Python
+alias, a wrongly constructed carriage wrapper and an unencoded JSON choice.
+They were corrected before the dependent effect. There were no user reminders
+to choose file input, disposition the correction or verify the saved result.
+The source-current build confirmation supplied a prerequisite, not a command choice.
+
+The logged final calls produced 257,031 characters including carriage withheld
+from model output; that is not a token count. Two large action displays were
+truncated, although complete outputs were saved. The before and final runs show
+30 versus 20 approximate native calls, but tool interactions did not decrease
+and the agents did different exploratory reading. This is evidence that the
+bounded journey works without the observed reconstruction/reminder loop, not a
+controlled claim of lower token cost. Further shell-wrapper mistakes remain an
+observed limitation. Activation applicability was not recorded as settled; the
+agent followed the current correction procedure directly.
 
 No actual host-policy rejection or interrupted commit was induced. The supplied
 `CreateProcess blocked by policy` observation supports only a pre-execution
@@ -73,6 +99,6 @@ carriage cases pass for prior-answer preservation and the owner effect boundary.
 All six CLI unit/transport cases pass after the context repair. Generated payloads
 match their canonical sources. No wording assertion was added.
 
-Final fresh-agent observations, current source reconciliation and required hosted
-checks remain pending. Broader adapter repetition is unwarranted: the changed
+The final fresh-agent journey and required local hooks pass. Current source
+reconciliation and required hosted checks remain pending. Broader adapter repetition is unwarranted: the changed
 transport is the native CLI, and the shared owner semantics are unchanged.
