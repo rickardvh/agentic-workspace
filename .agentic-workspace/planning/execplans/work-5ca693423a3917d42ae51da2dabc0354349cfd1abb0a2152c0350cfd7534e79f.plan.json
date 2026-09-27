@@ -9,7 +9,7 @@
   "canonical_core": {},
   "continuation": {
     "accepted": "The detail-route review correction is already implemented: freshness.procedure owns repository procedure content and detail_route retains owner-route/command semantics. Current task is to fix the failing hosted checks on the two remaining PRs, preserving external rebases and merged lower work.",
-    "frontier": "Hosted Merge proof failed the explicit capability-contract size budget in all four adapters; Merge sufficiency failed consequentially. The correction separately bounds the five current-evidence API descriptors and their restriction effect, preserving earlier contract ceilings. The next assertion exposed an empty current-evidence view on repositories without declarations; that view is now omitted while retirement/recovery remain exposed. Two named operation revisions receive an explicit bound like existing retention operations. Compact and current-state budget ceilings remain unchanged. This record belongs to layer 3682."
+    "frontier": "Hosted Merge proof failed the explicit capability-contract size budget in all four adapters; Merge sufficiency failed consequentially. The correction separately bounds the five current-evidence API descriptors and their restriction effect, preserving earlier contract ceilings. The next assertion exposed an empty current-evidence view on repositories without declarations; that view is now omitted while retirement/recovery remain exposed. Two named operation revisions receive an explicit bound like existing retention operations. Compact and current-state budget ceilings remain unchanged. This record belongs to layer 3684."
   },
   "creation_provenance": {
     "custody": {
@@ -61,7 +61,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3687"
   ],
   "relationships": {},
-  "revision": 14,
+  "revision": 15,
   "scope": {
     "constraints": "Repair the existing six PRs against external review. Do not implement 3686 or 3687 until this stack is repaired and checked. Independent review is external. Every independently mergeable head must have truthful continuation and its own current evidence.",
     "order": "The lower four PRs were merged externally. Remaining stack: 3682 lifecycle on master, then 3684 entry. Both are externally marked ready; preserve that state while fixing hosted failures."
@@ -71,18 +71,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/128fcad379e38fff83bf156f1fa835dad8cd127b550e4077e1860c864535358d.attempt.json",
-        "revision": "sha256:c624268f4dc268047b11249098ba7f4e83b709a306c271460a75a9df32beea53",
+        "path": ".agentic-workspace/local/effects/da5a3fa2799b99c607ee271d1db051f039d94bd0886ab39e3e6f13e54608c37a.attempt.json",
+        "revision": "sha256:9f9bfdddc074e4574131b5434da5c97cff4ee045505ceb83f7920644a4492a75",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/128fcad379e38fff83bf156f1fa835dad8cd127b550e4077e1860c864535358d.result.json",
-        "revision": "sha256:1cc07db2b709d15f64302b59afd71e067542eb5d5ea1e44b674bb07d29f836d8",
+        "path": ".agentic-workspace/local/effects/da5a3fa2799b99c607ee271d1db051f039d94bd0886ab39e3e6f13e54608c37a.result.json",
+        "revision": "sha256:0044047c2470e4d937cd3ecf3433942a65921e14da0c6b7b48fd71981d280a83",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:dc6a97ecba2d9e0733a79f030e942f261ebc4c93b1a50c68159af68bc62c2b44",
+    "invocation_revision": "sha256:49e8a617ed15d334790580d0b38d712ff8cc648ad1f5443ec34539c01d449fbc",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:2baf5b59271ad2c39775843bb2b3d26d152bd917a13b634c1a23c0e245738aab",
+        "document_revision": "sha256:61c92cb7474c4c3428f75fe0de29f736ad5f4c8b298a009052035c47dd26740a",
         "owner_id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
         "owner_path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json"
       }
