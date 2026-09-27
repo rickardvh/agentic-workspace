@@ -8,8 +8,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted": "External recheck accepts the prior stack, Planning and assurance-owner repairs. The new detail_route contract finding is fixed in this layer: freshness.procedure owns the bounded repository file, while the original detail_route permits owner routes and commands unchanged. Currentness observes procedure contents and retains the whole requirement declaration. No peer registry is introduced.",
-    "frontier": "The six draft PRs remain in stack 3688. This lifecycle correction must be pushed and its entry descendant rebased/adapted before the two findings can be reported addressed. Source reconciliation and native proof admission remain unresolved; no readiness or future permission is inferred."
+    "accepted": "The detail-route review correction is already implemented: freshness.procedure owns repository procedure content and detail_route retains owner-route/command semantics. Current task is to fix the failing hosted checks on the two remaining PRs, preserving external rebases and merged lower work.",
+    "frontier": "Hosted Merge proof failed the explicit capability-contract size budget in all four adapters; Merge sufficiency failed consequentially. The correction separately bounds the five current-evidence API descriptors and their restriction effect, preserving earlier contract ceilings. The next assertion exposed an empty current-evidence view on repositories without declarations; that view is now omitted while retirement/recovery remain exposed. Two named operation revisions receive an explicit bound like existing retention operations. Compact and current-state budget ceilings remain unchanged. This record belongs to layer 3682."
   },
   "creation_provenance": {
     "custody": {
@@ -41,13 +41,13 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Commit the lifecycle contract correction, rebase 3684, route entry through freshness.procedure, and verify owner-route/command controls at that head. Push both branches and update the PR descriptions. Preserve draft status and the existing admission blockers; 3686/3687 implementation remains deferred.",
+  "next_action": "Push the CI correction on 3682 and rebase 3684 to inherit it; verify both remote heads and wait for their hosted checks. Repair any further failure from those current runs. Do not merge or implement 3686/3687 as part of this CI repair.",
   "owner_level": "lane",
   "parent": {},
   "phase": "implementation",
   "proof": {
-    "observed": "Three Rust lifecycle tests pass, including unsafe/missing procedure rejection and procedure-content drift. Native lifecycle coverage now exercises both measurement:latency and a pytest command as detail_route; their semantic publication and recovery must remain supported. Contract/schema and generated-surface validation is recorded with this repair.",
-    "remaining": "Current source reconciliation, native completion admission and hosted checks remain pending at this independently mergeable head. Parent acceptance and independent review remain external."
+    "observed": "Focused former-route and lifecycle tests pass across the existing four adapters and both non-path detail-route cases. Ordinary state and compact response ceilings are retained. Hosted CI on the pushed heads remains the final check of this correction.",
+    "remaining": "Observe the current-head hosted Merge proof, Merge sufficiency, security and Semver results. Native proof/source admission and independent acceptance retain their separate boundaries; a hosted pass does not manufacture those results."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/pull/3685",
@@ -61,28 +61,28 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3687"
   ],
   "relationships": {},
-  "revision": 13,
+  "revision": 14,
   "scope": {
     "constraints": "Repair the existing six PRs against external review. Do not implement 3686 or 3687 until this stack is repaired and checked. Independent review is external. Every independently mergeable head must have truthful continuation and its own current evidence.",
-    "order": "Source assessment reuse 3685 first; then 3676 proof selection, 3678 owner procedures, 3679 source identity, redesigned 3682 assurance current-evidence lifecycle, and corrected 3684 entry composition."
+    "order": "The lower four PRs were merged externally. Remaining stack: 3682 lifecycle on master, then 3684 entry. Both are externally marked ready; preserve that state while fixing hosted failures."
   },
   "title": "Implement all P1 issues in leverage-ordered stacked PRs",
   "update_provenance": {
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/6f2a024fd423b20f135208a6eae97f6469d6f8e52a9766dd847417928afbee4f.attempt.json",
-        "revision": "sha256:e58c6ab3b62f1746f5f3266759a80c94f98a700545b196d865d0362d8b8abf03",
+        "path": ".agentic-workspace/local/effects/128fcad379e38fff83bf156f1fa835dad8cd127b550e4077e1860c864535358d.attempt.json",
+        "revision": "sha256:c624268f4dc268047b11249098ba7f4e83b709a306c271460a75a9df32beea53",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/6f2a024fd423b20f135208a6eae97f6469d6f8e52a9766dd847417928afbee4f.result.json",
-        "revision": "sha256:0b072d440eced81ea65aa14922172178f05f27a476daf5f23dc61732e1246834",
+        "path": ".agentic-workspace/local/effects/128fcad379e38fff83bf156f1fa835dad8cd127b550e4077e1860c864535358d.result.json",
+        "revision": "sha256:1cc07db2b709d15f64302b59afd71e067542eb5d5ea1e44b674bb07d29f836d8",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:30416ee13d42425ee0905784c0fa85c6da967b22fd05f774c031cb2a23b2f19d",
+    "invocation_revision": "sha256:dc6a97ecba2d9e0733a79f030e942f261ebc4c93b1a50c68159af68bc62c2b44",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:7c0ddb523127341f3a3eb2caee1ee36dc962dd943c695fb38762c3c8ec1fa37d",
+        "document_revision": "sha256:2baf5b59271ad2c39775843bb2b3d26d152bd917a13b634c1a23c0e245738aab",
         "owner_id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
         "owner_path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json"
       }

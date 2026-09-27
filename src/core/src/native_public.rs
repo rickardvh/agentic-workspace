@@ -1281,7 +1281,15 @@ fn resolve_selected(
                 .extend(standing["decisions"].as_array().unwrap().clone());
         }
         crate::current_evidence::compose(&mut verification, &standing);
-        verification["current_evidence"] = standing;
+        if standing_request.is_some()
+            || ["entries", "requests"].iter().any(|field| {
+                standing[*field]
+                    .as_array()
+                    .is_some_and(|rows| !rows.is_empty())
+            })
+        {
+            verification["current_evidence"] = standing;
+        }
     }
     contributions.push(verification["contribution"].clone());
     let mut requirements = native_requirements::view(

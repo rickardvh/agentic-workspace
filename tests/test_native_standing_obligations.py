@@ -100,5 +100,6 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
     protection.unlink()
     assert call({"invocation": action})["status"] == "applied"
     assert json.loads(state.read_text())["assessments"] == {}
+    assert "current_evidence" not in call()["verification"]
     assert (tmp_path / "evidence.md").read_text() == "A new comparison is needed."
     assert not (tmp_path / ".agentic-workspace/planning").exists()

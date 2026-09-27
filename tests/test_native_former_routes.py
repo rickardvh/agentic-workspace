@@ -150,15 +150,55 @@ def test_former_selection_requires_exact_current_agent_request(
         size = sum(len(json.dumps(row)) for row in retention)
         assert len(retention) == 4 and size < 2_200, (owner_name, size)
         retention_bytes += size
-    assert len(json.dumps(non_resource_contract)) - retention_bytes - activation_bytes - consequence_bytes < 81_000
-    assert len(json.dumps(contract)) - retention_bytes - activation_bytes - consequence_bytes < 86_000
+    # Current-evidence adds three request schemas, two operations and one
+    # Verification restriction effect (2,929 serialized bytes). Account for this
+    # named introspection delta; keep all earlier and ordinary-response budgets.
+    evidence_requests = {
+        "verification/assess-current-evidence/v1",
+        "verification/retire-current-evidence/v1",
+        "verification/recover-current-evidence/v1",
+    }
+    evidence_operations = {"verification.record-current-evidence", "verification.recover-current-evidence"}
+    verification = next(owner for owner in contract["owners"] if owner["owner"] == "verification")
+    assert sum(row["kind"] in evidence_requests for row in verification["requests"]) == 3
+    assert sum(row["id"] in evidence_operations for row in verification["operations"]) == 2
+    without_current_evidence = {
+        **non_resource_contract,
+        "owners": [
+            {
+                **owner,
+                "requests": [row for row in owner["requests"] if row["kind"] not in evidence_requests],
+                "operations": [row for row in owner["operations"] if row["id"] not in evidence_operations],
+            }
+            if owner["owner"] == "verification"
+            else owner
+            for owner in non_resource_contract["owners"]
+        ],
+        "restriction_authorities": [
+            {**owner, "affects": [effect for effect in owner["affects"] if effect != "effect:proof-execution"]}
+            if owner["owner"] == "verification"
+            else owner
+            for owner in non_resource_contract["restriction_authorities"]
+        ],
+    }
+    evidence_bytes = len(json.dumps(non_resource_contract)) - len(json.dumps(without_current_evidence))
+    assert 0 < evidence_bytes < 3_000, evidence_bytes
+    schema_extensions = retention_bytes + activation_bytes + consequence_bytes + evidence_bytes
+    assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
+    assert len(json.dumps(contract)) - schema_extensions < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
     assert len(json.dumps(first["planning"]["terminal_retention"])) < 500
+    assert "current_evidence" not in first["verification"]
+    evidence_revisions = {
+        key: value for key, value in first["decision_packet"]["operation_revisions"].items() if key in evidence_operations
+    }
+    assert set(evidence_revisions) == evidence_operations
+    assert len(json.dumps(evidence_revisions)) < 250
     state = {key: value for key, value in first.items() if key != "capability_contract"}
     for owner_name, field in (("planning", "terminal_retention"), ("memory", "terminal_retention"), ("verification", "retention")):
         assert len(json.dumps(first[owner_name].get(field, {}))) < 1_600
         state[owner_name] = {key: value for key, value in first[owner_name].items() if key != field}
-    # Each bounded retention owner contributes two effect revisions.
+    # Retention and current-evidence each contribute two bounded effect revisions.
     state["decision_packet"] = {
         **first["decision_packet"],
         "operation_revisions": {
@@ -172,6 +212,7 @@ def test_former_selection_requires_exact_current_agent_request(
                 "memory.recover-terminal",
                 "verification.retire-receipts",
                 "verification.recover-retirement",
+                *evidence_operations,
             }
         },
     }
