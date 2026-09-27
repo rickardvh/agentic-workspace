@@ -7,7 +7,7 @@ three complete source families:
 | --- | --- | --- |
 | #3668 core | [Core dispositions and reader evidence](agent-facing-core-audit.md) | #3671 |
 | #3669 modules | [Planning and Memory dispositions](agent-facing-module-audit.md) | #3672 |
-| #3670 maintainers | [Maintainer dispositions and reader evidence](agent-facing-maintainer-audit.md) | Maintainer branch in this stack |
+| #3670 maintainers | [Maintainer dispositions and reader evidence](agent-facing-maintainer-audit.md) | #3674 |
 
 These audits disposition every tracked file in the canonical core, instruction,
 Planning, Memory, repository Memory-skill, maintainer and fallback directories,
@@ -112,7 +112,7 @@ entries are generated from the procedure fences in their own source families.
 The baseline and revised startup readers both handled direct work, a scoped edit
 restriction and an uncertain write without wrong actions. The quiet control used
 no AW command; the entry became shorter (500 to 457 words). Revised readers also
-exercised correction, proof, module and maintainer decisions; family audits record
+exercised correction, proof, setup, resource, module and maintainer decisions; family audits record
 confusion and repairs. These are bounded author-side usability observations, not
 independent acceptance or evidence of lower provider cost. No token/cost savings
 claim is made. Structural and executable checks are recorded with each child.
