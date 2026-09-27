@@ -30,11 +30,12 @@ fn now() -> Result<u64, CoreError> {
         .as_secs())
 }
 
-// Freshness is the only new declaration shape. Identity, policy, procedure,
-// evidence owner and evidence expectations remain on assurance.requirements.
+// Freshness adds a repository procedure reference without narrowing the existing
+// assurance detail route, which may name an owner route or command.
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Freshness {
+    procedure: String,
     max_age_seconds: u64,
     dependencies: Vec<String>,
     disposition: String,
@@ -95,7 +96,7 @@ fn declarations(root: &Dir) -> Result<BTreeMap<String, Value>, CoreError> {
             return Err(err("invalid current evidence freshness"));
         }
         let mut paths = freshness.dependencies;
-        paths.push(row["detail_route"].as_str().unwrap().to_owned());
+        paths.push(freshness.procedure);
         for path in paths {
             crate::decision_source::relative(&path)?;
             if !bounded_text(&path)
@@ -103,7 +104,7 @@ fn declarations(root: &Dir) -> Result<BTreeMap<String, Value>, CoreError> {
                 || path.starts_with(".agentic-workspace/local/")
             {
                 return Err(err(
-                    "current evidence dependencies and detail route must be repository-owned",
+                    "current evidence dependencies and procedure must be repository-owned",
                 ));
             }
         }
@@ -131,7 +132,7 @@ fn present(values: &Value) -> bool {
 fn source_basis(root: &Dir, row: &Value) -> Result<Value, CoreError> {
     let declaration: Freshness = serde_json::from_value(row["freshness"].clone()).map_err(err)?;
     let mut dependencies = declaration.dependencies;
-    dependencies.push(row["detail_route"].as_str().unwrap().to_owned());
+    dependencies.push(declaration.procedure);
     let source = row["source_intent_ref"].as_str().unwrap();
     if !source.contains("://") {
         dependencies.push(source.to_owned());
@@ -763,7 +764,7 @@ mod tests {
             ));
             std::fs::create_dir_all(path.join(".agentic-workspace/verification")).unwrap();
             let fixture = Self(path);
-            fixture.write(MANIFEST, "schema_version = 'agentic-workspace/verification-manifest/v1'\n[assurance.requirements.docs]\nlevel = 'medium'\nforce = 'required-before-closeout'\nrequirement_class = 'current-evidence'\nsource_intent_ref = 'interface.json'\nsource_intent_revision = 'v1'\nevidence_owner = 'verification:docs'\nrequired_evidence = ['A recorded comparison of the example and interface']\nblocking_claims = ['claim-work-complete']\nnotes = 'The usage example follows the supported interface'\ndetail_route = 'procedure.md'\n[assurance.requirements.docs.freshness]\nmax_age_seconds = 3600\ndependencies = ['interface.json']\ndisposition = 'route'\n");
+            fixture.write(MANIFEST, "schema_version = 'agentic-workspace/verification-manifest/v1'\n[assurance.requirements.docs]\nlevel = 'medium'\nforce = 'required-before-closeout'\nrequirement_class = 'current-evidence'\nsource_intent_ref = 'interface.json'\nsource_intent_revision = 'v1'\nevidence_owner = 'verification:docs'\nrequired_evidence = ['A recorded comparison of the example and interface']\nblocking_claims = ['claim-work-complete']\nnotes = 'The usage example follows the supported interface'\ndetail_route = 'measurement:latency'\n[assurance.requirements.docs.freshness]\nprocedure = 'procedure.md'\nmax_age_seconds = 3600\ndependencies = ['interface.json']\ndisposition = 'route'\n");
             fixture.write(
                 "procedure.md",
                 "Compare the usage example against the interface.",
@@ -902,6 +903,9 @@ mod tests {
             original.replace("3600", "315576001"),
             original.replace("procedure.md", "../escape.md"),
             original.replace("procedure.md", ".agentic-workspace/local/private.md"),
+            original.replace("procedure.md", STATE),
+            original.replace("procedure.md", "measurement:latency"),
+            original.replace("procedure = 'procedure.md'\n", ""),
             original.replace("['interface.json']", "['interface.json', 'interface.json']"),
             original.replace("assurance.requirements.docs", "assurance.requirements.Docs"),
             format!("{original}unexpected = true\n"),

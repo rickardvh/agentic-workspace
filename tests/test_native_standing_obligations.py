@@ -10,7 +10,8 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def test_standing_assessment_publication_recovery_and_retirement(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("detail_route", ["measurement:latency", "uv run pytest tests/test_latency.py -q"])
+def test_standing_assessment_publication_recovery_and_retirement(tmp_path, shared_core_binary, native_cli, detail_route):
     manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
     manifest.parent.mkdir(parents=True)
     header = 'schema_version = "agentic-workspace/verification-manifest/v1"\n'
@@ -20,7 +21,8 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
         'source_intent_ref = "interface.json"\nsource_intent_revision = "v1"\n'
         'evidence_owner = "verification:example"\nrequired_evidence = ["Recorded comparison"]\n'
         'blocking_claims = ["claim-work-complete"]\nnotes = "Example follows the interface"\n'
-        'detail_route = "procedure.md"\n[assurance.requirements.example.freshness]\n'
+        f'detail_route = "{detail_route}"\n[assurance.requirements.example.freshness]\n'
+        'procedure = "procedure.md"\n'
         'max_age_seconds = 3600\ndependencies = ["interface.json"]\ndisposition = "route"\n'
     )
     for path, content in {
@@ -36,6 +38,7 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
 
     initial = call()["verification"]["current_evidence"]
     assert initial["entries"][0]["status"] == "due"
+    assert initial["entries"][0]["declaration"]["detail_route"] == detail_route
     request = initial["requests"][0]
     request["arguments"].update(
         observed_at=int(time.time()), outcome="satisfied", reason="Compared the current sources.", evidence_refs=["evidence.md"]

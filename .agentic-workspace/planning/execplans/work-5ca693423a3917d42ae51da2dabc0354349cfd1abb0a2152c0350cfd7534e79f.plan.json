@@ -8,8 +8,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted": "The source-reuse foundation and three dependent changes are restacked locally. This lifecycle layer now declares freshness only within assurance.requirements/current-evidence, preserving existing intent, evidence owner, required evidence and detail route fields. The peer standing_obligations registry is removed. The source audit explains the missing reusable semantic assessment and use of existing Verification dependency, authority, projection and custody primitives. Current satisfaction is composed into the assurance row and evidence gap without granting measurement, independent review or task completion.",
-    "frontier": "This head is layer 3682. The source reuse fix is now the foundation and has no implementation dependency on later layers. Native proof admission remains unresolved under 3686. The previous 25-test command was externally instructed local validation on the former combined stack only; it is not current native evidence for these rebased heads. No permission exchange is retained as future authority."
+    "accepted": "External recheck accepts the prior stack, Planning and assurance-owner repairs. The new detail_route contract finding is fixed in this layer: freshness.procedure owns the bounded repository file, while the original detail_route permits owner routes and commands unchanged. Currentness observes procedure contents and retains the whole requirement declaration. No peer registry is introduced.",
+    "frontier": "The six draft PRs remain in stack 3688. This lifecycle correction must be pushed and its entry descendant rebased/adapted before the two findings can be reported addressed. Source reconciliation and native proof admission remain unresolved; no readiness or future permission is inferred."
   },
   "creation_provenance": {
     "custody": {
@@ -41,12 +41,12 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Complete lifecycle validation/admission, then rework 3684 entry against assurance current-evidence. Publish the corrected six-branch order through the supported GitHub stack API. Keep drafts until individually complete; do not implement 3686 or 3687.",
+  "next_action": "Commit the lifecycle contract correction, rebase 3684, route entry through freshness.procedure, and verify owner-route/command controls at that head. Push both branches and update the PR descriptions. Preserve draft status and the existing admission blockers; 3686/3687 implementation remains deferred.",
   "owner_level": "lane",
   "parent": {},
   "phase": "implementation",
   "proof": {
-    "observed": "Three Rust lifecycle tests pass with source-intent, producer, relevant authority, unrelated policy, evidence, age and label-only controls. Thirteen native lifecycle/applicability cases pass, including direct requirement satisfaction, recovery and protected retirement. Generated contract/interface checks report no drift. Lower-layer rebase checks: nine source reconciliation cases, one Rust basis test, eight operating tests, six CLI tests and six source identity cases passed.",
+    "observed": "Three Rust lifecycle tests pass, including unsafe/missing procedure rejection and procedure-content drift. Native lifecycle coverage now exercises both measurement:latency and a pytest command as detail_route; their semantic publication and recovery must remain supported. Contract/schema and generated-surface validation is recorded with this repair.",
     "remaining": "Current source reconciliation, native completion admission and hosted checks remain pending at this independently mergeable head. Parent acceptance and independent review remain external."
   },
   "references": [
@@ -61,7 +61,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3687"
   ],
   "relationships": {},
-  "revision": 12,
+  "revision": 13,
   "scope": {
     "constraints": "Repair the existing six PRs against external review. Do not implement 3686 or 3687 until this stack is repaired and checked. Independent review is external. Every independently mergeable head must have truthful continuation and its own current evidence.",
     "order": "Source assessment reuse 3685 first; then 3676 proof selection, 3678 owner procedures, 3679 source identity, redesigned 3682 assurance current-evidence lifecycle, and corrected 3684 entry composition."
@@ -71,18 +71,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/6b65c3286c4521e68168a6ebd78a5d61df679e8b0fb665308bfc6a4c8c5c1f26.attempt.json",
-        "revision": "sha256:73c870e560a1696c76b591ff0e010cc285aeac34756d612e7cec2d420ba17f91",
+        "path": ".agentic-workspace/local/effects/6f2a024fd423b20f135208a6eae97f6469d6f8e52a9766dd847417928afbee4f.attempt.json",
+        "revision": "sha256:e58c6ab3b62f1746f5f3266759a80c94f98a700545b196d865d0362d8b8abf03",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/6b65c3286c4521e68168a6ebd78a5d61df679e8b0fb665308bfc6a4c8c5c1f26.result.json",
-        "revision": "sha256:5de35c918a36d047063882fe39251b9c86a15862c3639ed425bb2ac217d1f540",
+        "path": ".agentic-workspace/local/effects/6f2a024fd423b20f135208a6eae97f6469d6f8e52a9766dd847417928afbee4f.result.json",
+        "revision": "sha256:0b072d440eced81ea65aa14922172178f05f27a476daf5f23dc61732e1246834",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:f40239372ae26c918674402da60b34ba3db9e00c344ccd3b27c33751e13d6cf0",
+    "invocation_revision": "sha256:30416ee13d42425ee0905784c0fa85c6da967b22fd05f774c031cb2a23b2f19d",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:235263104f2cce471a377053a186a078f96eb970b910a1e2812b64c3d551e4a3",
+        "document_revision": "sha256:7c0ddb523127341f3a3eb2caee1ee36dc962dd943c695fb38762c3c8ec1fa37d",
         "owner_id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
         "owner_path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json"
       }

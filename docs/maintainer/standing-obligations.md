@@ -17,12 +17,13 @@ force = "required-before-closeout"
 source_intent_ref = "contracts/interface.json"
 source_intent_revision = "interface-v1"
 notes = "The usage example follows the supported interface"
-detail_route = "docs/maintainer/check-usage-example.md"
+detail_route = "verification:usage-example"
 evidence_owner = "verification:usage-example"
 required_evidence = ["A recorded comparison of the example and interface"]
 blocking_claims = ["claim-work-complete"]
 
 [assurance.requirements.usage_example.freshness]
+procedure = "docs/maintainer/check-usage-example.md"
 max_age_seconds = 604800
 dependencies = ["docs/usage-example.md", "contracts/interface.json"]
 disposition = "route"
@@ -34,6 +35,12 @@ repository dependencies, a positive freshness interval and the evidence needed
 to judge the condition. The interval is measured from the recorded observation,
 not from the next read. Paths must remain inside the repository and outside local
 runtime storage and the assessment source itself.
+
+`freshness.procedure` is the repository file to read when assessing the condition.
+Its contents participate in assessment currentness. The existing `detail_route`
+keeps its evidence-detail or recovery meaning, including owner routes such as
+`measurement:latency` and commands such as `uv run pytest tests/test_latency.py`.
+Freshness does not open that route as a file or execute it.
 
 `freshness.disposition` records the intended response: `report`, `route` or `work`. It grants
 no execution permission. Ordinary-entry routing is a separate consumer of this
@@ -90,7 +97,7 @@ runtime lifetime; it is separate from the bounded repository assessment map.
 The assurance requirement already owns identity, source intent and its revision,
 evidence owner and expectation, detail route, force and affected claims. Those
 fields remain authoritative. The only new declaration is `freshness`, which adds
-age, exact dependencies and intended disposition. A peer obligation registry is
+age, a repository procedure reference, exact dependencies and intended disposition. A peer obligation registry is
 unnecessary and is not accepted by the manifest.
 
 The existing measurement admission consumes authenticated native command output

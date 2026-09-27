@@ -547,11 +547,19 @@
             "type": "object",
             "additionalProperties": false,
             "required": [
+              "procedure",
               "max_age_seconds",
               "dependencies",
               "disposition"
             ],
             "properties": {
+              "procedure": {
+                "description": "Exact repository-relative procedure file for assessing this requirement. Separate from detail_route, which retains its owner-route or command semantics. Excludes local runtime storage and the current assessment source.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "pattern": "^(?!\\s*$)(?!\\.agentic-workspace/local/)(?!\\.agentic-workspace/proof/current/current-evidence\\.json$)(?!.*(?:^|/)(?:\\.|\\.\\.|\\.git)(?:/|$))[^/\\\\:\\u0000\\n]+(?:/[^/\\\\:\\u0000\\n]+)*$"
+              },
               "max_age_seconds": {
                 "type": "integer",
                 "minimum": 1,
@@ -698,10 +706,6 @@
                   "const": "current-evidence"
                 },
                 "notes": {
-                  "minLength": 1,
-                  "maxLength": 4096
-                },
-                "detail_route": {
                   "minLength": 1,
                   "maxLength": 4096
                 }
