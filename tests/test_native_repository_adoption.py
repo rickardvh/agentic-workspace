@@ -761,7 +761,7 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     assert instructions.read_text().startswith("# Repository policy\nPreserve this text.\n")
     assert instructions.read_bytes() == original_instructions + (
         b"<!-- agentic-workspace:workflow:start -->\n"
-        b"For repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. "
+        b"Before repository work in each new or resumed context, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. "
         b"If native skill discovery is unavailable, read that file directly.\n"
         b"<!-- agentic-workspace:workflow:end -->\n"
     )
@@ -848,7 +848,8 @@ def test_managed_fence_boundary_refresh_and_removal(tmp_path, shared_core_binary
     prefix = "# Repository café\r\nKeep whitespace.  \n".encode()
     suffix = b"\r\n\r\nKeep this suffix without a final newline."
     canonical = (
-        start + b"\nFor repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. "
+        start
+        + b"\nBefore repository work in each new or resumed context, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. "
         b"If native skill discovery is unavailable, read that file directly.\n" + end
     )
 
@@ -871,7 +872,11 @@ def test_managed_fence_boundary_refresh_and_removal(tmp_path, shared_core_binary
         b"\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; "
         b"if native skill discovery is unavailable, read it directly.\n"
     )
-    for interior in (soft_bootstrap, b"", b"arbitrary package-owned text", "\r\n# Unknown procedure\r\n秘密\n".encode()):
+    prior_mandatory = (
+        b"\nFor repository work, you must follow `.agentic-workspace/skills/workspace-startup/SKILL.md`. "
+        b"If native skill discovery is unavailable, read that file directly.\n"
+    )
+    for interior in (soft_bootstrap, prior_mandatory, b"", b"arbitrary package-owned text", "\r\n# Unknown procedure\r\n秘密\n".encode()):
         instructions.write_bytes(prefix + start + interior + end + suffix)
         apply("adopt")
         assert instructions.read_bytes() == prefix + canonical + suffix

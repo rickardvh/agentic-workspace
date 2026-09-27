@@ -1,7 +1,10 @@
 ## Ordinary use
 
-Obtain one current AW observation at session entry or after a relevant dependency
-change. Use the configured invocation: local `workspace.cli_invoke`, then shared
+Use native resolution when current owner state can affect the work or a dependent
+action or claim. If current static sources suffice without a dynamic dependency,
+work directly. Context entry requires that judgment, not an unconditional call.
+Reuse a current observation; resolve again when relevant dependencies change or
+required current facts are unavailable. Use the configured invocation: local `workspace.cli_invoke`, then shared
 `workspace.cli_invoke`, otherwise `agentic-workspace`. Pass the actual task to
 `start`; this is the agent's machine interface, not a command the human must run
 around each edit. Repository-local npm uses `npm exec --no -- agentic-workspace`.

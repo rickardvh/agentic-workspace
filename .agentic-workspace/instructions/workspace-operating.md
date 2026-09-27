@@ -14,8 +14,8 @@ protect:
 # Workspace operating guidance
 
 Start from the compact Agentic Workspace route before opening raw planning,
-memory, verification, or configuration state. Use exact selectors and routed
-owners before broad reads. Keep package boundaries explicit and do not treat a
+memory, verification, or configuration state. Use the [exact owner procedure](../skills/workspace-startup/references/owners.md)
+for scoped requests and command transport before broad reads. Keep package boundaries explicit and do not treat a
 successful focused action as proof of a broader completion claim.
 
 Preserve the unresolved Planning decision-point source named above. Its bytes do
