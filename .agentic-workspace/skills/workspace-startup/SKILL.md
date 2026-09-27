@@ -5,19 +5,24 @@ description: Use Agentic Workspace as a skills-first repository competence layer
 
 # Start ordinary work
 
-Read the task and applicable repository instructions. Run the configured native
-`start` command to obtain current AW context before doing repository work in each
-new or resumed session, including read-only explanation and issue shaping.
-Reading this skill or retained instructions alone does not complete startup.
-Within the same session, reuse a current answer and refresh it if its dependencies
-change. Follow [ordinary use](references/ordinary.md) for the configured command.
+Enter this procedure in each new or resumed context. Read the task and applicable
+repository instructions, then decide whether current dynamic information is
+needed. Before an action or claim that may depend on current owner constraints,
+admission, setup, proof or recovery, obtain current context with native `start`.
+Static instructions or retained carriage do not establish current admission.
+When current static sources suffice and no dynamic dependency affects the work,
+stay direct. A fresh conversation alone does not require native execution.
+Reuse a current observation while its relevant dependencies remain unchanged;
+resolve again when needed facts are missing or stale. Follow
+[ordinary use](references/ordinary.md) for the configured command.
 
 Follow the current resolved consequences before taking the actions they affect.
 Available editor, shell or Git tools do not discharge those consequences. Use
 their exact owner path to resolve them, or preserve the affected work as blocked;
-continue authorized work outside that scope. On fresh or compacted entry,
-reacquire current context through this procedure. Retained carriage is transport,
-not authority. See [current restrictions](references/constraints.md) when needed.
+continue authorized work outside that scope. On fresh or compacted entry, repeat
+the relevance and currentness judgment before relying on retained context.
+Retained carriage is transport, not authority. See
+[current restrictions](references/constraints.md) when needed.
 
 During work, carry material findings from source/test work (including repeated
 cost or positive simplification opportunities), new information or an unmet prerequisite through
