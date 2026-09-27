@@ -1,4 +1,9 @@
-## Choose and verify the responsible change
+## Decide which source should change
+
+Use the finding's actual dependency to choose the destination. For example, fix
+a broken implementation in code; publish a repository rule as an instruction;
+clarify a repeatable method in its skill. Saving advice elsewhere does not fix
+the source that controls the behaviour.
 
 Compare the actual sources, scope and accepted intent. Correct implementation
 that violates a sound requirement; correct stale guidance when accepted behavior

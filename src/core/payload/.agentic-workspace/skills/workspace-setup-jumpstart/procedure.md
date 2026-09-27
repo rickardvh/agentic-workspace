@@ -4,26 +4,26 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which configuration concern needs procedure now?",
+  "question": "Which requested behaviour or reported setup gap needs attention?",
   "branches": [
     {
       "id": "selection",
-      "description": "Select the affected behavior",
+      "description": "Identify the setting responsible for the requested behaviour",
       "next": "references/selection.md"
     },
     {
       "id": "consequences",
-      "description": "Authorize and verify a change",
+      "description": "Check authorisation, apply the setting and verify its consumer",
       "next": "references/consequences.md"
     },
     {
       "id": "package",
-      "description": "Package lifecycle and host exposure",
+      "description": "Refresh package files, expose skills to the host, or assess updated setup",
       "next": "references/package.md"
     },
     {
       "id": "boundaries",
-      "description": "Source and unavailable-runtime boundaries",
+      "description": "Build the source runtime or handle unavailable setup tooling",
       "next": "references/boundaries.md"
     }
   ],
@@ -33,7 +33,7 @@
       "binding"
     ],
     "applicability": "Installation, invocation, environment or configuration information requires a current durable choice or repair.",
-    "outcome": "Usable current configuration with unresolved owner readiness stated.",
+    "outcome": "The requested configuration works, or its remaining prerequisite is identified.",
     "binding_owners": [
       "configuration"
     ]

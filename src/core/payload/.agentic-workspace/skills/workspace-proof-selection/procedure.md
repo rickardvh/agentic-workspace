@@ -4,36 +4,36 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which part of this method does the current work need? Select only the relevant branch; no work needs no call.",
+  "question": "What is missing before the selected result can support this task or completion claim?",
   "branches": [
     {
       "id": "select",
-      "description": "Establish unmet test/environment readiness before execution, then select current evidence and strategy",
+      "description": "Choose relevant evidence and verify that the test prerequisites are ready",
       "next": "references/select.md"
     },
     {
       "id": "execute",
-      "description": "Execute the selected native check",
+      "description": "Run the exact check selected by Verification",
       "next": "references/execute.md"
     },
     {
       "id": "receipt",
-      "description": "Admit the exact receipt",
+      "description": "Submit the receipt from a completed check for evidence admission",
       "next": "references/receipt.md"
     },
     {
       "id": "claim",
-      "description": "Judge the bounded claim",
+      "description": "Decide which outcome the current evidence supports",
       "next": "references/claim.md"
     },
     {
       "id": "recovery",
-      "description": "Preserve effects through unavailable continuation",
+      "description": "A check may have run but its reply or next request is missing",
       "next": "references/recovery.md"
     },
     {
       "id": "learning",
-      "description": "Disposition of observed learning",
+      "description": "A returned lesson may prevent future rediscovery",
       "next": "references/learning.md"
     }
   ],

@@ -1,34 +1,113 @@
 {
-  "schema_version": "skill-registry.v1",
-  "owner": "agentic-workspace",
-  "source_kind": "installed-workspace-skills",
-  "registry_sources": [
+  "activation_index": [
     {
-      "path": ".agentic-workspace/memory/skills/REGISTRY.json",
-      "optional": true
+      "activation": {
+        "applicability": "New information changes the intended outcome or leaves a material scope or instruction conflict unresolved.",
+        "occasions": [
+          "observation"
+        ],
+        "outcome": "The intended outcome is clear enough to proceed, or the exact unresolved source decision is named."
+      },
+      "id": "workspace-intent-discovery",
+      "path": "workspace-intent-discovery/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "workspace/intent/discovery"
+      ]
     },
     {
-      "path": ".agentic-workspace/planning/skills/REGISTRY.json",
-      "optional": true
+      "activation": {
+        "applicability": "A test, claim, review finding or missing prerequisite needs current evidence or readiness before proceeding.",
+        "binding_owners": [
+          "verification"
+        ],
+        "occasions": [
+          "need",
+          "binding"
+        ],
+        "outcome": "Current prerequisite readiness, admitted evidence and an accurately bounded claim."
+      },
+      "id": "workspace-proof-selection",
+      "path": "workspace-proof-selection/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "workspace/proof/selection"
+      ]
+    },
+    {
+      "activation": {
+        "applicability": "Installation, invocation, environment or configuration information requires a current durable choice or repair.",
+        "binding_owners": [
+          "configuration"
+        ],
+        "occasions": [
+          "observation",
+          "binding"
+        ],
+        "outcome": "The requested configuration works, or its remaining prerequisite is identified."
+      },
+      "id": "workspace-setup-jumpstart",
+      "path": "workspace-setup-jumpstart/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "workspace/setup/jumpstart"
+      ]
+    },
+    {
+      "activation": {
+        "applicability": "Current work actually needs scratch, isolation, resource recovery or terminal cleanup.",
+        "binding_owners": [
+          "workspace-resources"
+        ],
+        "occasions": [
+          "need",
+          "binding"
+        ],
+        "outcome": "The smallest authorised resource is acquired or cleaned up through its current owner."
+      },
+      "id": "workspace-resources",
+      "path": "workspace-resources/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "workspace/resources/lifecycle"
+      ]
+    },
+    {
+      "activation": {
+        "applicability": "A material finding from source/test work, repeated friction, positive optimisation opportunity, correction, acquired conclusion, environment fact or source inconsistency can change current or future work.",
+        "binding_owners": [
+          "instructions",
+          "system-intent"
+        ],
+        "occasions": [
+          "observation",
+          "binding"
+        ],
+        "outcome": "The controlling source is corrected and checked, or the finding is saved as advice or deliberately not retained."
+      },
+      "id": "workspace-instruction-correction",
+      "path": "workspace-instruction-correction/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "workspace/instructions/correction"
+      ]
     }
   ],
+  "owner": "agentic-workspace",
+  "registry_sources": [
+    {
+      "optional": true,
+      "path": ".agentic-workspace/memory/skills/REGISTRY.json"
+    },
+    {
+      "optional": true,
+      "path": ".agentic-workspace/planning/skills/REGISTRY.json"
+    }
+  ],
+  "schema_version": "skill-registry.v1",
   "skills": [
     {
-      "id": "workspace-startup",
-      "path": "workspace-startup/SKILL.md",
-      "scope": "main-operating-skill",
-      "stability": "contract-backed-projection",
-      "visibility": "ordinary-default",
-      "summary": "canonical skills-first Agentic Workspace procedure: consume current policy and owner state from their sources, use exact Rust-backed information and bounded effects when needed, discover specialized procedures selectively, and degrade honestly without an executable runtime",
       "activation_hints": {
-        "verbs": [
-          "start",
-          "orient",
-          "use",
-          "resume",
-          "implement",
-          "reconcile"
-        ],
         "nouns": [
           "workspace",
           "agentic workspace",
@@ -43,6 +122,14 @@
           "resume work with aw",
           "how should I use aw"
         ],
+        "verbs": [
+          "start",
+          "orient",
+          "use",
+          "resume",
+          "implement",
+          "reconcile"
+        ],
         "when": [
           "first contact with an installed workspace",
           "ordinary AW work starts or resumes",
@@ -50,189 +137,102 @@
           "a consumer needs the supported no-runtime read-only path"
         ]
       },
+      "id": "workspace-startup",
+      "path": "workspace-startup/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "scope": "main-operating-skill",
       "semantic_routes": [
         "workspace/startup"
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "contract-backed-projection",
+      "summary": "Start or resume work; decide whether available sources suffice or the next action needs current AW facts.",
+      "visibility": "ordinary-default"
     },
     {
       "id": "workspace-intent-discovery",
       "path": "workspace-intent-discovery/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "specialized-subskill",
-      "stability": "package-managed",
-      "visibility": "routed-on-demand",
-      "summary": "clarify ambiguous human intent and classify direct, bounded, lane, or epic work when that reusable procedure is materially useful",
       "semantic_routes": [
         {
+          "description": "Clarify ambiguous human intent or work shape before committing to a solution.",
           "id": "workspace/intent/discovery",
           "match": "exact",
-          "priority": 10,
-          "description": "Clarify ambiguous human intent or work shape before committing to a solution."
+          "priority": 10
         }
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "package-managed",
+      "summary": "Clarify an ambiguity that changes the outcome, or decide whether unfinished work needs a saved plan.",
+      "visibility": "routed-on-demand"
     },
     {
       "id": "workspace-proof-selection",
       "path": "workspace-proof-selection/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "specialized-subskill",
-      "stability": "contract-backed-projection",
-      "visibility": "routed-on-demand",
-      "summary": "select and interpret proof for task, slice, lane, or epic completion claims when proof procedure is relevant",
       "semantic_routes": [
         {
+          "description": "Select and interpret evidence for the claim actually being made.",
           "id": "workspace/proof/selection",
           "match": "exact",
-          "priority": 10,
-          "description": "Select and interpret evidence for the claim actually being made."
+          "priority": 10
         }
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "contract-backed-projection",
+      "summary": "Choose evidence for the actual claim, run an admitted check, and interpret its result.",
+      "visibility": "routed-on-demand"
     },
     {
       "id": "workspace-setup-jumpstart",
       "path": "workspace-setup-jumpstart/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "specialized-subskill",
-      "stability": "contract-backed-projection",
-      "visibility": "routed-on-demand",
-      "summary": "route newly installed or adopted Agentic Workspace in a lived-in repo through bounded setup and jumpstart discovery before seeding durable surfaces",
       "semantic_routes": [
         {
+          "description": "Apply bounded setup and jumpstart procedure after AW is installed or adopted in a lived-in repository.",
           "id": "workspace/setup/jumpstart",
           "match": "exact",
-          "priority": 10,
-          "description": "Apply bounded setup and jumpstart procedure after AW is installed or adopted in a lived-in repository."
+          "priority": 10
         }
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "contract-backed-projection",
+      "summary": "Resolve a reported setup gap or requested setting, then verify the affected behaviour.",
+      "visibility": "routed-on-demand"
     },
     {
       "id": "workspace-resources",
       "path": "workspace-resources/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "specialized-subskill",
-      "stability": "package-managed",
-      "visibility": "routed-on-demand",
-      "summary": "Choose the smallest task resource and apply current instruction policy, bounded scratch or necessary isolation, safe terminal teardown and exact interrupted recovery.",
       "semantic_routes": [
         {
+          "description": "Manage temporary task material or necessary checkout isolation and safely reconcile its lifetime.",
           "id": "workspace/resources/lifecycle",
           "match": "exact",
-          "priority": 10,
-          "description": "Manage temporary task material or necessary checkout isolation and safely reconcile its lifetime."
+          "priority": 10
         }
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "package-managed",
+      "summary": "Create needed temporary storage or isolation, preserve useful work, and clean up safely.",
+      "visibility": "routed-on-demand"
     },
     {
       "id": "workspace-instruction-correction",
       "path": "workspace-instruction-correction/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "specialized-subskill",
-      "stability": "contract-backed-projection",
-      "visibility": "routed-on-demand",
-      "summary": "Route trusted corrections, material source inconsistencies and acquired conclusions to coherent owner-directed repair or justified retention.",
       "semantic_routes": [
         {
+          "description": "Reconcile trusted corrections and material source inconsistencies through the responsible owner; publish scoped instructions only when that is the appropriate destination.",
           "id": "workspace/instructions/correction",
           "match": "exact",
-          "priority": 10,
-          "description": "Reconcile trusted corrections and material source inconsistencies through the responsible owner; publish scoped instructions only when that is the appropriate destination."
+          "priority": 10
         }
       ],
-      "procedure_resource": "procedure.md"
+      "stability": "contract-backed-projection",
+      "summary": "Apply a correction or useful finding to its controlling source and verify any saved change.",
+      "visibility": "routed-on-demand"
     }
   ],
-  "activation_index": [
-    {
-      "id": "workspace-intent-discovery",
-      "path": "workspace-intent-discovery/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "workspace/intent/discovery"
-      ],
-      "activation": {
-        "occasions": [
-          "observation"
-        ],
-        "applicability": "New information changes the intended outcome or leaves a material scope or instruction conflict unresolved.",
-        "outcome": "A scoped intent judgment or exact source-owner reconciliation."
-      }
-    },
-    {
-      "id": "workspace-proof-selection",
-      "path": "workspace-proof-selection/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "workspace/proof/selection"
-      ],
-      "activation": {
-        "occasions": [
-          "need",
-          "binding"
-        ],
-        "applicability": "A test, claim, review finding or missing prerequisite needs current evidence or readiness before proceeding.",
-        "outcome": "Current prerequisite readiness, admitted evidence and an accurately bounded claim.",
-        "binding_owners": [
-          "verification"
-        ]
-      }
-    },
-    {
-      "id": "workspace-setup-jumpstart",
-      "path": "workspace-setup-jumpstart/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "workspace/setup/jumpstart"
-      ],
-      "activation": {
-        "occasions": [
-          "observation",
-          "binding"
-        ],
-        "applicability": "Installation, invocation, environment or configuration information requires a current durable choice or repair.",
-        "outcome": "Usable current configuration with unresolved owner readiness stated.",
-        "binding_owners": [
-          "configuration"
-        ]
-      }
-    },
-    {
-      "id": "workspace-resources",
-      "path": "workspace-resources/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "workspace/resources/lifecycle"
-      ],
-      "activation": {
-        "occasions": [
-          "need",
-          "binding"
-        ],
-        "applicability": "Current work actually needs scratch, isolation, resource recovery or terminal cleanup.",
-        "outcome": "The smallest authorised resource is acquired or cleaned up through its current owner.",
-        "binding_owners": [
-          "workspace-resources"
-        ]
-      }
-    },
-    {
-      "id": "workspace-instruction-correction",
-      "path": "workspace-instruction-correction/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "workspace/instructions/correction"
-      ],
-      "activation": {
-        "occasions": [
-          "observation",
-          "binding"
-        ],
-        "applicability": "A material finding from source/test work, repeated friction, positive optimisation opportunity, correction, acquired conclusion, environment fact or source inconsistency can change current or future work.",
-        "outcome": "The strongest useful source absorbs the consequence, or scoped advisory retention/no-retention is justified.",
-        "binding_owners": [
-          "instructions",
-          "system-intent"
-        ]
-      }
-    }
-  ]
+  "source_kind": "installed-workspace-skills"
 }

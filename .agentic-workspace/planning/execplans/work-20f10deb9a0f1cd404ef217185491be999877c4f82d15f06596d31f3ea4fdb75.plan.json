@@ -1,0 +1,62 @@
+{
+  "blockers": [],
+  "canonical_core": {},
+  "continuation": {
+    "accepted": "#3666/#3667 style-guide child is merged. Children #3668, #3669 and #3670 shaped before implementation.",
+    "frontier": "Implement core child; other children remain required."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4fa5fd71e536891898898bd74b90fb2e7f35152d8c2e51e44b15f5be7e3fbde5.attempt.json",
+        "revision": "sha256:481a655ae4357097fbcbeff1374ef94ca43f5c0d2db37bf9e6a80a094adf96c1",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4fa5fd71e536891898898bd74b90fb2e7f35152d8c2e51e44b15f5be7e3fbde5.result.json",
+        "revision": "sha256:20f9aca0efa9067a03f492834c22fb752869ef58717bb208731f5c7f089d8e04",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:3ea0fb82a16a69bf77571ae412468f712c6780c60b4c54b2f958e0a313c6c783",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:324bba9fee079f74b5896fee564548ee84a96c0bffd95bc1efbb29c4de2a14c6"
+  },
+  "id": "work-20f10deb9a0f1cd404ef217185491be999877c4f82d15f06596d31f3ea4fdb75",
+  "intent": {
+    "outcome": "Complete the current agent-facing corpus retrofit against the canonical guide, through bounded children and fresh-reader evidence."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Audit and rewrite core sources for #3668, regenerate mirrors, validate and submit its coherent PR; then complete #3669 and #3670.",
+  "owner_level": "lane",
+  "parent": {
+    "issue": "https://github.com/rickardvh/agentic-workspace/issues/3665"
+  },
+  "phase": "shaping",
+  "proof": {
+    "required": "Per-file disposition; relevant existing checks; source/payload parity; fresh-reader exercises across six families and quiet/direct control; external independent child and aggregate review."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3665",
+    "https://github.com/rickardvh/agentic-workspace/issues/3668",
+    "https://github.com/rickardvh/agentic-workspace/issues/3669",
+    "https://github.com/rickardvh/agentic-workspace/issues/3670"
+  ],
+  "relationships": {},
+  "revision": 1,
+  "scope": {
+    "constraints": "Preserve runtime semantics and authority. Separate coherent PR per child. External independent review remains required.",
+    "core": "#3668 core installed skills, instructions, bootstrap, authoring and fallback",
+    "maintainers": "#3670 repository maintainer skills and registry",
+    "modules": "#3669 Planning/Memory skills and registries"
+  },
+  "title": "Implement agent-facing intelligibility lane #3665"
+}

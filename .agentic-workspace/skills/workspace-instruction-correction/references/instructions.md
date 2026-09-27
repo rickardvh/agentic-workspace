@@ -14,9 +14,11 @@ Use these steps when the selected destination is an instruction source.
    `.agentic-workspace/instructions/*.md`. If portability is materially ambiguous,
    ask one scope question. Never ask the user to choose AW filenames or mechanisms.
 3. Use current `start` context and the matching `instructions.authoring.requests`
-   entry. Supply a short descriptive Markdown filename under the intended source
-   directory and the complete proposed `content`. Read existing content before
-   editing it; preserve unrelated guidance. The shared parser accepts the
+   entry. For a correction, reuse the existing source filename. For a new rule,
+   supply a short descriptive Markdown filename under the intended source
+   directory. Supply the complete proposed `content`; read existing content before
+   editing it and preserve unrelated guidance. Apply the repository's writing
+   guide when one is supplied for this authoring scope. The shared parser accepts the
    optional fields `paths`, `routes`, `read`, `governed_by`, `reconcile`, `use`, `checks`, `protect`.
    Prefer constraints and skill references over embedding procedural scripts.
    Local destinations must already be untracked and gitignored. A missing ignore
