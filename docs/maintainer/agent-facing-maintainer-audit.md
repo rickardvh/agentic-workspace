@@ -24,7 +24,7 @@ was added to the issue before their edits. All use the canonical
 | `tools/skills/pr-review-recheck/references/recheck.md` | rewrite | Names the concrete task, current source or missing evidence; preserves authority and exact request identifiers. |
 | `tools/skills/pr-review-recheck/references/scope.md` | keep | Focused deeper protocol supplies exact evidence, decision limits and recovery after the entry has established the task. |
 | `tools/skills/pr-review-recheck/SKILL.md` | rewrite | Names the concrete task, current source or missing evidence; preserves authority and exact request identifiers. |
-| `tools/skills/README.md` | rewrite | Names the concrete task, current source or missing evidence; preserves authority and exact request identifiers. |
+| `tools/skills/README.md` | keep | Existing directory guidance already defines maintainer scope; the canonical writing guide is supplied by the scoped instruction. |
 | `tools/skills/REGISTRY.json` | rewrite | Names the concrete task, current source or missing evidence; preserves authority and exact request identifiers. |
 | `tools/skills/self-improvement-dogfooding/SKILL.md` | keep | Concrete activation conditions, repair classes, human direction boundary and no-finding stop already guide the next action. |
 | `.agentic-workspace/memory/repo/skills/memory-reporting/SKILL.md` | rewrite | Names the concrete task, current source or missing evidence; preserves authority and exact request identifiers. |
@@ -58,10 +58,10 @@ their historical bytes and disposition are preserved.
 ## Test disposition
 
 At the user's explicit direction, issue #3673 owns removal of all prose-wording
-assertion tests and the testing-strategy update. This patch removes the five
-prose-only cases encountered in the edited families: four in
-`tests/test_github_workflow_skills.py` and the correction-retention wording test in
-`tests/test_skills_first_interface.py`. They assert wording, not executable behavior.
+assertion tests and the testing-strategy update. This maintainer patch removes four prose-only cases in
+`tests/test_github_workflow_skills.py`. The correction-retention wording test in
+`tests/test_skills_first_interface.py` is deleted by the core PR #3671, so each
+layer owns its own repair. These tests assert wording, not executable behaviour.
 No synonym assertions or snapshots replace them. Existing native consumer,
 preparation, payload parity and structural checks remain. #3673 stays open for its
 repository-wide audit and strategy update.
@@ -72,3 +72,11 @@ mechanisms, not comprehension. Reader evidence addresses the latter. Broader
 runtime testing is unnecessary unless a source/protocol defect is found.
 
 Markdown, local links, registry/generator parity and whitespace checks passed.
+
+## Blocking-review repair
+
+Rebased onto the corrected core and module layers. The core test deletion is
+absent from this PR's diff; four maintainer wording-test deletions remain here.
+The optional README guide link was dropped because scoped instructions already
+supply the canonical guide. Both current audit documents are reconciled through
+Verification, with whole-corpus acceptance and independent approval unclaimed.

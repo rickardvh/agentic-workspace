@@ -17,5 +17,3 @@ Current repo-specific skills:
 - `self-improvement-dogfooding`
 
 Prefer exact semantic routes where one exists. Lexical activation hints are discovery aids only; they should not turn a narrow maintainer procedure into a mandatory workflow for unrelated work.
-
-Write these procedures using the canonical [agent-facing writing guide](../../.agentic-workspace/instructions/agent-facing-style.md).
