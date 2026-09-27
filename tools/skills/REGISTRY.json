@@ -109,7 +109,7 @@
       },
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "independent external assessment of a submitted change by an agent that did not implement or modify the patch",
+      "summary": "independently assess a PR after establishing reviewer eligibility and current evidence",
       "semantic_routes": [
         {
           "id": "github/pr/review",
@@ -124,7 +124,7 @@
       "path": "github-issue-shaping/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "shape or refine repo GitHub issues before creation or update while preserving intent, scope, evidence, and closure boundaries",
+      "summary": "define the problem, complete scope, evidence and closure rule before creating or updating an issue",
       "semantic_routes": [
         {
           "id": "github/issues/create",
@@ -178,7 +178,7 @@
       "path": "self-improvement-dogfooding/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "triage a new improvement finding discovered while dogfooding without turning the skill into an ambient implementation gate",
+      "summary": "decide whether a new incidental finding needs a bounded repair, an issue or human product direction",
       "activation_hints": {
         "verbs": [
           "triage",
@@ -221,7 +221,7 @@
       },
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "create GitHub issues from current repo issue forms after shaping has established the issue boundary",
+      "summary": "prepare the current issue form, publish authorized fields and verify the created issue",
       "semantic_routes": [
         {
           "id": "github/issues/create",

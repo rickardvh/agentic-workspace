@@ -39,7 +39,10 @@ ongoing external-state admission. A changed head/base or `stale` packet requires
 fresh preparation. `partial`/`unavailable` observations cannot mean no blockers.
 
 For a recheck, retain the prior packet with an `obligations` list containing the
-reviewer's unresolved blockers and pass `--previous <prior-packet.json>`. The helper
+reviewer's unresolved blockers and pass `--previous <prior-packet.json>`. Each entry
+may be a plain string naming the finding, affected path and evidence still needed;
+for example, `"Check lost-reply recovery in the changed issue publication path"`.
+The helper preserves this list without interpreting its entries. The helper
 reobserves current evidence and reports changed/added/removed evidence and file
 identities. For a usable exact prior head, `evidence.followup_patch` also carries
 the prior-head to current-head text patches from a read-only GitHub comparison;

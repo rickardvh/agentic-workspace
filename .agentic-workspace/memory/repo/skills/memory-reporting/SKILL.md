@@ -14,10 +14,9 @@ query does not authorize cleanup, promotion or a completion claim.
 
 ## Source-maintenance diagnostics
 
-When maintaining the Memory package in this source checkout, its separate
-maintenance CLI supports `uv run agentic-memory doctor --target . --format json`
-and `uv run agentic-memory report --target . --format json`. The package
-`check-memory` Make target runs these diagnostics against the repository.
-These are maintenance observations, not native AW commands or owner mutations.
-Use the returned diagnostic scope and findings when reporting results; do not
-infer whole-workspace health, trust freshness or intent satisfaction from exit zero.
+For source maintenance, `make verify-memory` runs the native Memory declaration
+checks and `make memory-freshness` runs the repository freshness checker. Inspect
+those current Makefile targets when choosing evidence for a specific change.
+The retired `agentic-memory doctor/report` commands are not current entry points.
+Report each check's scope and findings; exit zero does not establish workspace
+health, current trust or task completion.
