@@ -19,7 +19,7 @@ revision, exact descriptor digest, reads, effects, exclusive claims, restriction
 scope and durable settings in `modules.independent`. Declared capabilities do
 not supply these grants. Current Configuration requests read and propose changes
 to that source; settings requirements return that same owner route. Configuration
-retains its exact bounded human-answer authorisation for a write.
+retains its exact bounded domain-answer authorisation for a write.
 
 First-line discovery inspects compact identities and admitted scopes. A relevant
 changed path or explicit current owner request selects detail; other installed

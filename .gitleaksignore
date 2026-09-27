@@ -1,0 +1,11 @@
+# Historical synthetic signing keys used only by retired test evidence helpers.
+# Exact commit/file/rule/line fingerprints preserve detection for other secrets.
+4122707fa04e9dd4bae365ee2f94c9c0a1dbd86a:tests/test_workspace_evaluation.py:private-key:56
+736b029afbcc88e2284201effd148927a0b72f89:tests/test_workspace_config_cli.py:private-key:6
+403b6b593725db256853d40559be57ef1f7923ca:tests/test_workspace_proof_cli.py:private-key:8
+25ab24b03ca925e3ed3b94076fcc5c69325f654d:tests/test_external_operation_clients.py:private-key:83
+6151a62217747cc7d4b73c9cd241d0d515ba52a7:tests/test_workspace_evaluation.py:private-key:83
+25ab24b03ca925e3ed3b94076fcc5c69325f654d:tests/test_workspace_config_cli.py:private-key:49
+ad8b87e44370aa82d1c01b62fd7f612ca7886620:tests/test_workspace_proof_cli.py:private-key:50
+# A test operation's idempotency identifier, not an API credential.
+33baa7c01a627cac29f5f15f8d4e226fb8a175bc:tests/test_workspace_config_cli.py:generic-api-key:2597

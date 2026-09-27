@@ -372,17 +372,31 @@ pub fn restrict_pending(
             }
         }
     }
-    if pending.iter().any(|action| {
+    for action in pending.iter().filter(|action| {
         action["source_owner"] == "verification" && action["operation_id"] == "proof.report"
     }) {
+        let writes = crate::native_proof::write_scope(action)?;
         for source in view["sources"].as_array().into_iter().flatten() {
             let metadata = &source["metadata"];
             if source["valid"] == true
                 && applicability(metadata, &[], route, &[])?["route_applies"] == true
                 && (!strings(&metadata["protect"]).is_empty())
             {
-                additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"proof-execution-scope-unresolved",
-                    "The declared shell command has no bounded write scope proving these current protections and checks are preserved.",vec!["effect:proof-execution".into()]));
+                if strings(&metadata["protect"]).iter().any(|pattern| {
+                    writes
+                        .iter()
+                        .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                }) {
+                    additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"protected-proof-publication-write",
+                        "Current protection forbids a proof publication, retirement, journal or custody write.",vec!["effect:proof-execution".into()]));
+                }
+                if action["arguments"]["record_receipt"] != true
+                    && action["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]["kind"]
+                        != crate::proof_executor::KIND
+                {
+                    additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"proof-execution-scope-unresolved",
+                        "An enforced execution boundary is unavailable. Human approval cannot supply this capability.",vec!["effect:proof-execution".into()]));
+                }
             }
         }
     }

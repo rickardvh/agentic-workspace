@@ -19,5 +19,5 @@ the same references manually:
 
 Finish with a confirmed authorised disposition or the exact remaining gap.
 No matching material means no corpus sweep. Optional method selection cannot
-waive explicit candidate obligations, human authorization or receiving evidence.
+waive explicit candidate obligations, current task authority or receiving evidence.
 Missing native runtime leaves current custody unknown; preserve managed sources.

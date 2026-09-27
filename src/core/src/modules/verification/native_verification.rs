@@ -1205,6 +1205,9 @@ pub(crate) fn view_with_applicability(
         }
     }
     let mut strategy = json!({"source":MANIFEST,"protocols":protocols,"proof_routes":routes,"scenarios":scenarios});
+    if !manifest["execution"].is_null() {
+        strategy["execution"] = crate::proof_executor::configuration(target)?;
+    }
     for row in assurance["requirements"].as_array().unwrap() {
         if row["status"] != "applicable" {
             continue;
@@ -1386,7 +1389,7 @@ pub(crate) fn view_with_applicability(
     if let Some(assessment) = strategy_assessment.as_ref() {
         strategy_request["arguments"] = assessment.clone();
     }
-    let execution = crate::native_proof::select_mode(
+    let mut execution = crate::native_proof::select_mode(
         target,
         task,
         changed,
@@ -1399,6 +1402,27 @@ pub(crate) fn view_with_applicability(
                 || (applicability.proof && proof_choice.is_none() && !requested),
         },
     )?;
+    if execution["status"] == "selected"
+        && reported_observation.is_none()
+        && execution["selection"]["proof_subject"]["runtime"]["executor"]["kind"]
+            != crate::proof_executor::KIND
+        && instruction_view["sources"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|source| {
+                source["valid"] == true
+                    && source["applicability"]["route_applies"] == true
+                    && source["metadata"]["protect"]
+                        .as_array()
+                        .is_some_and(|p| !p.is_empty())
+            })
+    {
+        execution["status"] = json!("blocked");
+        execution["reason"] = json!("proof-execution-scope-unresolved");
+        execution["recovery"] = json!({"kind":"capability-gap","human_answer_allowed":false,
+            "detail":"Configure an available enforced proof executor. Human permission cannot bound an unrestricted shell."});
+    }
     let execution_actions = crate::native_proof::action(
         target,
         task,
@@ -1498,6 +1522,13 @@ pub(crate) fn view_with_applicability(
     } else {
         json!([])
     };
+    if execution["status"] == "blocked" && execution["recovery"]["kind"] == "capability-gap" {
+        blockers.as_array_mut().unwrap().push(
+            json!({"code":format!("verification:{}",execution["reason"].as_str().unwrap()),
+            "message":"The configured proof executor is unavailable.",
+            "recovery":execution["recovery"]["detail"],"affects":["effect:proof-execution"]}),
+        );
+    }
     if strict_closeout {
         blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
     }

@@ -87,6 +87,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     answer["proposal_revision"] = json!(pr);
     answer.as_object_mut().unwrap().remove("answer");
     let decisions = json!([{"id":"verification-claim-review","question":"Confirm this exact claim judgment against the resulting work and current evidence?","material":result["proposal"],"response_request":{"request_kind":REQUEST,"arguments":answer},"choices":[{"id":"confirm","label":"Confirm exact claim judgment"},{"id":"defer","label":"Leave claim unresolved"}],"affects":["claim:complete"]}]);
+
     let compiled = crate::compile_value(
         json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
     )?;
@@ -94,7 +95,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     let scope: Vec<String> = sources.keys().cloned().collect();
     let delegated = crate::native_decision_authority::delegated(config, "verification", &scope);
     if args["answer"].is_null() && delegated.is_none() {
-        result["status"] = json!("bounded-human-answer-required");
+        result["status"] = json!("bounded-domain-answer-required");
         result["decisions"] = decisions;
         return Ok(result);
     }
@@ -146,7 +147,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         "insufficient"
     });
     result["gaps"] = json!(gaps);
-    result["authority_basis"]=delegated.unwrap_or_else(||json!({"kind":"exact-bounded-human-answer","request_revision":digest(request).unwrap(),"identity_authentication":"not-claimed"}));
+    result["authority_basis"]=delegated.unwrap_or_else(||json!({"kind":"exact-bounded-domain-answer","request_revision":digest(request).unwrap(),"identity_authentication":"not-claimed"}));
     result["claim"] = json!({"work":work,"subject":subject,"judgment":args["disposition"],"binding_revision":digest(&binding)?});
     Ok(result)
 }

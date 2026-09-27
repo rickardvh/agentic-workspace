@@ -660,6 +660,7 @@ pub(crate) fn view(
         }
         result["status"] = json!("authorization-required");
         result["contribution"]["decisions"] = json!([{"id":"repository-adoption-authorization","question":"Authorize these exact package integration changes and preserve the listed repository/domain/local state?","material":effective,"response_request":{"request_kind":EDIT,"arguments":answer},"choices":[{"id":"authorize-write","label":"Authorize this bounded repository integration change"}],"affects":["effect:configuration-source"]}]);
+
         return Ok(());
     }
     let bound = json!({"policy":binding,"state":effective});

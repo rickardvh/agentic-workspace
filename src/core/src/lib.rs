@@ -77,6 +77,8 @@ pub mod operating;
 pub mod planning;
 mod planning_lifetime;
 mod process_execution;
+#[path = "modules/verification/proof_executor.rs"]
+mod proof_executor;
 pub mod proof_receipt;
 pub mod proof_subject;
 pub mod review_authentication;
@@ -288,11 +290,68 @@ struct BoundedDecisionInput {
     #[serde(default)]
     question: String,
     material: Option<Value>,
+    human_context: Option<HumanDecisionContext>,
+    human_eligibility: Option<HumanEligibility>,
     response_request: AnswerRequestInput,
     #[serde(default)]
     choices: Vec<Choice>,
     #[serde(default)]
     affects: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct HumanEligibility {
+    kind: String,
+    source_revision: String,
+    current_work: Value,
+    reference: String,
+    declaration_revision: String,
+    declaration: Value,
+}
+
+impl HumanEligibility {
+    fn validate(&self, owner: &str, revision: &str, work: &Value) -> Result<(), CoreError> {
+        require_text(&self.reference, "human eligibility reference")?;
+        if self.source_revision != revision
+            || self.current_work != *work
+            || self.declaration_revision != digest(&self.declaration)?
+        {
+            return Err(CoreError::new(
+                "human eligibility must match the current owner, work and declaration",
+            ));
+        }
+        let eligible = match self.kind.as_str() {
+            "verification-judgment" => {
+                owner == "verification" && self.declaration["human_judgment_required"] == true
+            }
+            "human-assignment" => {
+                owner == "assignment"
+                    && self.declaration["owner_kind"] == "human"
+                    && self.declaration["target_id"]
+                        .as_str()
+                        .is_some_and(|s| !s.trim().is_empty())
+            }
+            _ => false,
+        };
+        if !eligible {
+            return Err(CoreError::new(
+                "human eligibility requires an explicit Verification judgment or human-owned assignment",
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct HumanDecisionContext {
+    proposed_action: String,
+    reason: String,
+    context: String,
+    consequences: BTreeMap<String, String>,
+    defer_preserves: String,
+    authority_boundary: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -458,6 +517,7 @@ struct NormalizedAction {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedBlocker {
+    resolution: &'static str,
     consequence_id: String,
     code: String,
     message: String,
@@ -470,6 +530,11 @@ struct NormalizedBlocker {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedDecision {
+    resolution: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    human_context: Option<HumanDecisionContext>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    human_eligibility: Option<HumanEligibility>,
     consequence_id: String,
     id: String,
     owner: String,
@@ -1158,8 +1223,14 @@ fn normalize_blocker(
         )));
     }
     let affected = affects(input.affects, &format!("{owner}.blockers[{index}].affects"))?;
-    let identity = json!({"code": code, "message": message, "owner": blocker_owner, "revision": revision, "affects": affected, "recovery": input.recovery});
+    let recovery = input.recovery.filter(|value| !value.trim().is_empty());
+    let identity = json!({"code": code, "message": message, "owner": blocker_owner, "revision": revision, "affects": affected, "recovery": recovery});
     Ok(NormalizedBlocker {
+        resolution: if recovery.is_some() {
+            "owner-recovery-required"
+        } else {
+            "owner-resolution-unavailable"
+        },
         consequence_id: format!("blocker:{owner}:{revision}:{}", digest(&identity)?),
         code: identity["code"].as_str().expect("code is text").to_owned(),
         message: identity["message"]
@@ -1172,7 +1243,7 @@ fn normalize_blocker(
             .to_owned(),
         revision: revision.to_owned(),
         affects: serde_json::from_value(identity["affects"].clone()).expect("affects are strings"),
-        recovery: input.recovery.filter(|value| !value.is_empty()),
+        recovery,
     })
 }
 
@@ -1241,6 +1312,41 @@ fn normalize_decision(
         input.affects,
         &format!("{owner}.decisions[{index}].affects"),
     )?;
+    if input.human_context.is_some() != input.human_eligibility.is_some() {
+        return Err(CoreError::new(
+            "human context requires an explicit current human eligibility basis",
+        ));
+    }
+    if let Some(eligibility) = &input.human_eligibility {
+        eligibility.validate(owner, revision, &json!(current))?;
+    }
+    if let Some(context) = &input.human_context {
+        for (field, value) in [
+            ("proposed_action", &context.proposed_action),
+            ("reason", &context.reason),
+            ("context", &context.context),
+            ("defer_preserves", &context.defer_preserves),
+            ("authority_boundary", &context.authority_boundary),
+        ] {
+            require_text(
+                value,
+                &format!("{owner}.decisions[{index}].human_context.{field}"),
+            )?;
+        }
+        if choices.is_empty()
+            || context.consequences.len() != choices.len()
+            || choices.iter().any(|choice| {
+                context
+                    .consequences
+                    .get(&choice.id)
+                    .is_none_or(|text| text.trim().is_empty())
+            })
+        {
+            return Err(CoreError::new(
+                "human decision requires one consequence for every offered choice",
+            ));
+        }
+    }
     let mut identity = json!({
         "id": id, "owner": owner, "revision": revision, "question": question,
         "response_request": input.response_request, "response_schema": shape.input_schema, "current_work": current, "capability_revision": contract.revision, "choices": choices, "affects": affected,
@@ -1248,12 +1354,27 @@ fn normalize_decision(
     if let Some(material) = &input.material {
         identity["material"] = material.clone();
     }
+    if let Some(context) = &input.human_context {
+        identity["human_context"] =
+            serde_json::to_value(context).map_err(|e| CoreError::new(e.to_string()))?;
+    }
+    if let Some(eligibility) = &input.human_eligibility {
+        identity["human_eligibility"] =
+            serde_json::to_value(eligibility).map_err(|e| CoreError::new(e.to_string()))?;
+    }
     let consequence_id = format!("decision:{owner}:{revision}:{}", digest(&identity)?);
     let response_request = json!({"kind": PUBLIC_REQUEST_KIND, "id": format!("answer:{consequence_id}"),
         "owner": owner, "owner_revision": capability.revision, "source_revision": revision,
         "request_kind": input.response_request.request_kind, "capability_revision": contract.revision,
         "task_identity": current, "arguments": input.response_request.arguments});
     Ok(NormalizedDecision {
+        resolution: if input.human_context.is_some() {
+            "bounded-human-answer"
+        } else {
+            "bounded-domain-answer"
+        },
+        human_context: input.human_context,
+        human_eligibility: input.human_eligibility,
         material: input.material,
         consequence_id,
         response_request,
@@ -2092,6 +2213,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         .collect::<Vec<_>>();
     if let Some(blocker) = &composition_blocker {
         let mut blocker = blocker.clone();
+        blocker["resolution"] = json!("owner-resolution-unavailable");
         let consequence_id = format!(
             "blocker:operating-decision:{input_revision}:{}",
             digest(&blocker)?

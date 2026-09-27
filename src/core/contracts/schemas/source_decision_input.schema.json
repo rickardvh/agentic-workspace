@@ -1284,6 +1284,59 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "question": {"type": "string", "minLength": 1},
+        "human_eligibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Positive current owner declaration for a permitted human exception. The compiler binds this basis to the exact answer; the native owner reobserves it before admission.",
+          "properties": {
+            "kind": {
+              "enum": [
+                "verification-judgment",
+                "human-assignment"
+              ]
+            },
+            "source_revision": {
+              "type": "string",
+              "minLength": 1
+            },
+            "current_work": {
+              "type": "object"
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1
+            },
+            "declaration_revision": {
+              "type": "string",
+              "minLength": 1
+            },
+            "declaration": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "source_revision",
+            "current_work",
+            "reference",
+            "declaration_revision",
+            "declaration"
+          ]
+        },
+        "human_context": {
+          "description": "Owner-written explanation for a genuine human decision. Bound into exact answer identity and preserved in every projection. Absence identifies a domain judgment, never a human permission escalation.",
+          "type": "object",
+          "properties": {
+            "proposed_action": {"type": "string", "minLength": 1},
+            "reason": {"type": "string", "minLength": 1},
+            "context": {"type": "string", "minLength": 1},
+            "consequences": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string", "minLength": 1}, "description": "Exactly one bounded consequence for each offered choice ID."},
+            "defer_preserves": {"type": "string", "minLength": 1},
+            "authority_boundary": {"type": "string", "minLength": 1}
+          },
+          "required": ["proposed_action", "reason", "context", "consequences", "defer_preserves", "authority_boundary"],
+          "additionalProperties": false
+        },
         "material": {"description": "Owner-supplied context needed to judge this exact question, such as selected subject or before/after proposal. Included unchanged in compact and full projections and bound into question identity; grants no authority."},
         "response_request": {"type": "object", "properties": {"request_kind": {"type": "string", "minLength": 1}, "arguments": {"type": "object", "not": {"required": ["answer"]}}}, "required": ["request_kind", "arguments"], "additionalProperties": false, "description": "Owner request kind and fixed arguments; only the answer slot is human/domain supplied."},
         "choices": {
@@ -1297,6 +1350,7 @@
         },
         "affects": {"$ref": "#/$defs/affects"}
       },
+      "dependentRequired": {"human_context": ["human_eligibility"], "human_eligibility": ["human_context"]},
       "required": ["id", "question", "response_request", "affects"]
     },
     "outcome": {

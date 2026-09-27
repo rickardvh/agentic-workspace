@@ -1,5 +1,5 @@
 //! Verification's proposed source assessments and exact publication authority.
-//! Authorization retains a proposal, never attesting personal review or truth.
+//! Domain judgment retains an assessment, never attesting human review or truth.
 use crate::{CoreError, digest, native_planning};
 use cap_std::{
     ambient_authority,
@@ -16,7 +16,7 @@ use std::{
 pub(crate) const REQUEST: &str = "verification/reconcile-sources/v1";
 pub(crate) const OP: &str = "verification.record-source-reconciliation";
 const EFFECT: &str = "proof-execution";
-const SEMANTICS: &str = "source-reconciliation/v4";
+const SEMANTICS: &str = "source-reconciliation/v5";
 const GROUP_SIZE: usize = 64;
 
 fn err(e: impl std::fmt::Display) -> CoreError {
@@ -159,7 +159,9 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
 }
 
 fn assessment_semantics(binding: &Value) -> Value {
-    json!({
+    // Historical custody must be verified under the semantics it recorded.
+    // It is not reusable current coverage when its producer/basis changed.
+    let mut semantics = json!({
         "assessment_role":"untrusted-caller-proposal",
         "decision_role":"authorize-exact-proposal-publication",
         "scope":{"relation_id":binding["relation_id"],
@@ -172,7 +174,14 @@ fn assessment_semantics(binding: &Value) -> Value {
             "independent_review":"not-granted","completion_authority":false},
         "consequences":{"confirm":"Authorize publication of this exact proposed assessment for this group; no personal correctness attestation or independent acceptance.",
             "defer":"Do not publish this proposal; leave this group unresolved."}
-    })
+    });
+    if binding["semantics"] == SEMANTICS {
+        semantics["decision_role"] = json!("confirm-exact-domain-assessment");
+        semantics["consequences"]["confirm"] = json!(
+            "Record the caller's exact assessment for this group; no human authorization, personal correctness attestation or independent acceptance."
+        );
+    }
+    semantics
 }
 
 fn result(binding: &Value, request: &Value) -> Result<Value, CoreError> {
@@ -188,10 +197,18 @@ fn result(binding: &Value, request: &Value) -> Result<Value, CoreError> {
             "source judgment requires the exact bounded confirmation",
         ));
     }
+    let authority = binding.get("decision_authority").cloned().unwrap_or_else(|| {
+        let mut basis = json!({"kind":"exact-bounded-human-answer","request_revision":digest(request).unwrap(),"proposal_revision":request["arguments"]["proposal_revision"],"identity_authentication":"not-claimed"});
+        if binding["semantics"] == SEMANTICS {
+            basis["kind"] = json!("exact-bounded-domain-judgment");
+            basis["human_authorization"] = json!(false);
+        }
+        basis
+    });
     Ok(
         json!({"kind":"agentic-workspace/source-reconciliation/v1","binding_revision":digest(binding)?,
         "judgments":judgments,"assessment_semantics":assessment_semantics(binding),
-        "authority_basis":binding.get("decision_authority").cloned().unwrap_or_else(||json!({"kind":"exact-bounded-human-answer","request_revision":digest(request).unwrap(),"proposal_revision":request["arguments"]["proposal_revision"],"identity_authentication":"not-claimed"})),
+        "authority_basis":authority,
         "completion_authority":false,"semantic_truth":"judgment-not-mechanically-proven"}),
     )
 }
@@ -743,11 +760,19 @@ fn same_basis(current: &Value, accepted: &Value) -> Result<bool, CoreError> {
     let adapt = |value: &Value| -> Result<_, CoreError> {
         let mut identity = value.clone();
         let mut dependencies = Vec::new();
+        let mut absent_consumers = BTreeSet::new();
         for field in ["sources", "dependencies", "work_postimages"] {
             for (path, observation) in value[field]
                 .as_object()
                 .ok_or_else(|| err("invalid dependency basis"))?
             {
+                // An exact absent consumer is an assessable postimage (for
+                // example, a removed file). Missing governing/read sources
+                // still cannot establish currentness.
+                if field == "work_postimages" && *observation == json!({"status":"absent"}) {
+                    absent_consumers.insert(path.clone());
+                    continue;
+                }
                 dependencies.push(Observation {
                     identity: format!("{field}:{path}"),
                     scheme: Scheme::RawBytes,
@@ -761,6 +786,7 @@ fn same_basis(current: &Value, accepted: &Value) -> Result<bool, CoreError> {
             }
             identity.as_object_mut().unwrap().remove(field);
         }
+        identity["absent_consumers"] = json!(absent_consumers);
         Ok((identity, dependencies))
     };
     let (current_identity, current_observations) = adapt(current)?;
@@ -936,10 +962,10 @@ fn group_view(
         let proposal_revision = digest(&proposal)?;
         view["proposal"] = proposal;
         let arguments = json!({"relation_id":binding["relation_id"],"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
-        let decisions = json!([{"id":"source-reconciliation","question":"Authorize publication of this caller-proposed source assessment for this exact group? This does not attest personal source review or independently approve the work.",
+        let decisions = json!([{"id":"source-reconciliation","question":"Confirm your source assessment for this exact group after checking the supplied sources and resulting work, or defer if the evidence is insufficient. This is an agent/domain judgment; no human approval is required and no independent review is granted.",
                 "material":view["proposal"],
                 "response_request":{"request_kind":REQUEST,"arguments":arguments},
-                "choices":[{"id":"confirm","label":"Authorize this exact proposal for this group"},{"id":"defer","label":"Do not publish; leave this group unresolved"}],"affects":["claim:complete"]}]);
+                "choices":[{"id":"confirm","label":"Record this exact domain assessment"},{"id":"defer","label":"Do not publish; leave this group unresolved"}],"affects":["claim:complete"]}]);
         if request["arguments"]["answer"].is_null() {
             if request["id"] != REQUEST {
                 return Err(err(
@@ -963,7 +989,7 @@ fn group_view(
                     Context { subject, executing },
                 );
             }
-            view["status"] = json!("bounded-human-answer-required");
+            view["status"] = json!("bounded-domain-judgment-required");
             view["decisions"] = decisions;
             return Ok(view);
         }
@@ -1184,5 +1210,25 @@ mod basis_tests {
         delegated["decision_authority"] =
             json!({"kind":"exact-policy-delegated-decision","grant":"new"});
         assert!(!same_basis(&delegated, &accepted).unwrap());
+        let request = json!({"arguments":{"judgments":{"guide.md":{"disposition":"reviewed-current","reason":"Checked."}},"answer":"confirm","proposal_revision":"proposal"}});
+        let current = result(&accepted, &request).unwrap();
+        assert_eq!(
+            current["authority_basis"]["kind"],
+            "exact-bounded-domain-judgment"
+        );
+        assert_eq!(current["authority_basis"]["human_authorization"], false);
+        let mut historical = accepted.clone();
+        historical["semantics"] = json!("source-reconciliation/v4");
+        let old = result(&historical, &request).unwrap();
+        assert_eq!(old["authority_basis"]["kind"], "exact-bounded-human-answer");
+        assert!(old["authority_basis"].get("human_authorization").is_none());
+        assert!(!same_basis(&historical, &accepted).unwrap());
+        let mut absent = accepted.clone();
+        absent["work_postimages"]["consumer.md"] = json!({"status":"absent"});
+        assert!(same_basis(&absent, &absent).unwrap());
+        assert!(!same_basis(&absent, &accepted).unwrap());
+        assert!(!same_basis(&accepted, &absent).unwrap());
+        absent["sources"]["guide.md"] = json!({"status":"absent"});
+        assert!(!same_basis(&absent, &absent).unwrap());
     }
 }

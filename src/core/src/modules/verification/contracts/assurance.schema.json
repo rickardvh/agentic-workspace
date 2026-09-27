@@ -583,6 +583,11 @@
                 ]
               }
             }
+          },
+          "human_judgment_required": {
+            "type": "boolean",
+            "default": false,
+            "description": "Explicitly require a human to judge this Verification assessment. Absence keeps routine assessment with the domain owner; delegation cannot waive a true value."
           }
         },
         "allOf": [
@@ -710,6 +715,23 @@
                   "maxLength": 4096
                 }
               }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "human_judgment_required": {
+                  "const": true
+                }
+              },
+              "required": [
+                "human_judgment_required"
+              ]
+            },
+            "then": {
+              "required": [
+                "freshness"
+              ]
             }
           }
         ],

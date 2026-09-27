@@ -8,8 +8,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted": "The detail-route review correction is already implemented: freshness.procedure owns repository procedure content and detail_route retains owner-route/command semantics. Current task is to fix the failing hosted checks on the two remaining PRs, preserving external rebases and merged lower work.",
-    "frontier": "Hosted Merge proof failed the explicit capability-contract size budget in all four adapters; Merge sufficiency failed consequentially. The correction separately bounds the five current-evidence API descriptors and their restriction effect, preserving earlier contract ceilings. The next assertion exposed an empty current-evidence view on repositories without declarations; that view is now omitted while retirement/recovery remain exposed. Two named operation revisions receive an explicit bound like existing retention operations. Compact and current-state budget ceilings remain unchanged. This record belongs to layer 3684."
+    "accepted": "The user requires AW regular operation to resolve without human escalation. Only Verification steps requiring human judgement and tasks explicitly configured for human owners may escalate. This is a product requirement, not a blanket fabricated human answer or proof/review waiver. Earlier source-assessment approval removal remains valid. Fresh subagents remain authorised only for behavioural exercises.",
+    "frontier": "The bounded implementation leaves #3686, #3687 and #3692 are implemented and validated in #3690 then #3689. The previous publication, restacking, image-pin and native-proof continuations are complete and are not pending tasks. Current PR heads and hosted status remain directly observable on GitHub; the cited runs record completed evidence. The user has requested the final comment corrections and merge. Preserve the protected decision-point intent and local proof custody, including the two earlier failures and successful native receipts. No fabricated human answer or blanket authority override was used. Resume only genuinely separate parent acceptance work or a concrete new external finding."
   },
   "creation_provenance": {
     "custody": {
@@ -32,7 +32,7 @@
   },
   "id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
   "intent": {
-    "outcome": "Implement every open P1 issue through complete bounded stacked PRs, with required evidence and source reconciliation; leave independent review to externally initiated reviewers."
+    "outcome": "Implement remaining P0 #3686 and P1 #3687 with bounded evidence and stacked PRs; audit parent #3641/#3665 acceptance. Independent review remains externally initiated."
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
@@ -41,48 +41,46 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Push the CI correction on 3682 and rebase 3684 to inherit it; verify both remote heads and wait for their hosted checks. Repair any further failure from those current runs. Do not merge or implement 3686/3687 as part of this CI repair.",
+  "next_action": "Complete separately defined parent acceptance for #3641 and #3665 through their responsible owners. No implementation or publication work remains for #3686, #3687 or #3692; independent review and merge remain externally controlled.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "implementation",
+  "phase": "closeout",
   "proof": {
-    "observed": "Focused former-route and lifecycle tests pass across the existing four adapters and both non-path detail-route cases. Ordinary state and compact response ceilings are retained. Hosted CI on the pushed heads remains the final check of this correction.",
-    "remaining": "Observe the current-head hosted Merge proof, Merge sufficiency, security and Semver results. Native proof/source admission and independent acceptance retain their separate boundaries; a hosted pass does not manufacture those results."
+    "observed": "Implemented and published #3687/#3692 in foundation #3690 and #3686 in executor #3689, ordered master -> #3690 -> #3689. Foundation tests passed: 180 Rust cases (three subprocess-only ignores), 174 public owner cases (one host file-symlink skip), nine final exception/domain controls, 163 shared/source cases, 19 Configuration cases (same host skip), four contract-budget controls and eight Planning custody cases. Fresh behavioural readers distinguished ordinary domain decisions, both human exceptions and non-waivable blockers. The actual replacement image pin committed through native Configuration without a human answer. Executor native proof passed all 25 selected strategy cases and published proof://receipts/6fbf0a5eb9869bfa with source_current=true while protection remained intact. Source reconciliation was verified current at each independent layer: 368 foundation and 369 executor consumers. Exhaustive hosted runs 36348941385 and 36349105476 passed every job; ordinary PR runs 36349870340 and 36350024484 and Semver admission also passed. External reviews 5860022809 and 5860023121 found no remaining code or semantic blocker and requested only this Planning correction.",
+    "remaining": "Separate parent acceptance for #3641 and #3665. Independent review and merge decisions are external authority; implementation evidence does not grant either."
   },
   "references": [
-    "https://github.com/rickardvh/agentic-workspace/pull/3685",
-    "https://github.com/rickardvh/agentic-workspace/pull/3676",
-    "https://github.com/rickardvh/agentic-workspace/pull/3678",
-    "https://github.com/rickardvh/agentic-workspace/pull/3679",
-    "https://github.com/rickardvh/agentic-workspace/pull/3682",
-    "https://github.com/rickardvh/agentic-workspace/pull/3684",
-    "https://github.com/rickardvh/agentic-workspace/issues/3680",
     "https://github.com/rickardvh/agentic-workspace/issues/3686",
-    "https://github.com/rickardvh/agentic-workspace/issues/3687"
+    "https://github.com/rickardvh/agentic-workspace/issues/3687",
+    "https://github.com/rickardvh/agentic-workspace/issues/3641",
+    "https://github.com/rickardvh/agentic-workspace/issues/3665",
+    "https://github.com/rickardvh/agentic-workspace/pull/3689",
+    "https://github.com/rickardvh/agentic-workspace/pull/3690",
+    "https://github.com/rickardvh/agentic-workspace/issues/3692"
   ],
   "relationships": {},
-  "revision": 15,
+  "revision": 27,
   "scope": {
-    "constraints": "Repair the existing six PRs against external review. Do not implement 3686 or 3687 until this stack is repaired and checked. Independent review is external. Every independently mergeable head must have truthful continuation and its own current evidence.",
-    "order": "The lower four PRs were merged externally. Remaining stack: 3682 lifecycle on master, then 3684 entry. Both are externally marked ready; preserve that state while fixing hosted failures."
+    "constraints": "Prior six PRs merged externally. Keep current file protection. Native proof, local validation, hosted checks and independent review remain separate. No author self-review.",
+    "order": "#3690 implements #3687 and #3692 on master; #3689 implements #3686 above that foundation. Both implementation slices and their immediate validation are complete."
   },
-  "title": "Implement all P1 issues in leverage-ordered stacked PRs",
+  "title": "Implement remaining P0 and P1 issues in stacked PRs",
   "update_provenance": {
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/da5a3fa2799b99c607ee271d1db051f039d94bd0886ab39e3e6f13e54608c37a.attempt.json",
-        "revision": "sha256:9f9bfdddc074e4574131b5434da5c97cff4ee045505ceb83f7920644a4492a75",
+        "path": ".agentic-workspace/local/effects/30194bc9a51cbb0fcaffad9b93712e9e96b6fdd4fc196780f44b2259e7cf52b2.attempt.json",
+        "revision": "sha256:8cbde7d18b632916fb58ac46fb31da162e77f74f670766b891e066d0b4929a69",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/da5a3fa2799b99c607ee271d1db051f039d94bd0886ab39e3e6f13e54608c37a.result.json",
-        "revision": "sha256:0044047c2470e4d937cd3ecf3433942a65921e14da0c6b7b48fd71981d280a83",
+        "path": ".agentic-workspace/local/effects/30194bc9a51cbb0fcaffad9b93712e9e96b6fdd4fc196780f44b2259e7cf52b2.result.json",
+        "revision": "sha256:d08469f44be22d0d0da0e3cfd836f503d686e2de7e9a9db715d2f6f735e53a9a",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:49e8a617ed15d334790580d0b38d712ff8cc648ad1f5443ec34539c01d449fbc",
+    "invocation_revision": "sha256:4b61c3a2368c6d60fec0d7c96d58090805460d15949c16218015b792b2760616",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +88,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:61c92cb7474c4c3428f75fe0de29f736ad5f4c8b298a009052035c47dd26740a",
+        "document_revision": "sha256:c935990cdd3f6fc4e58e3b3c4cd06fa8114e922bd45fa64aa31de31224f37876",
         "owner_id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
         "owner_path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json"
       }

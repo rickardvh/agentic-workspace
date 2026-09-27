@@ -3,11 +3,12 @@
 The accepted style guide is in #3666/#3667. The implementation is divided into
 three complete source families:
 
-| Child | Audit | Draft PR |
+| Child | Audit | PR |
 | --- | --- | --- |
 | #3668 core | [Core dispositions and reader evidence](agent-facing-core-audit.md) | #3671 |
 | #3669 modules | [Planning and Memory dispositions](agent-facing-module-audit.md) | #3672 |
 | #3670 maintainers | [Maintainer dispositions and reader evidence](agent-facing-maintainer-audit.md) | #3674 |
+| #3687 runtime decisions | [Human decision producers and reader evidence](human-decision-audit.md) | #3690 |
 
 These audits disposition every tracked file in the canonical core, instruction,
 Planning, Memory, repository Memory-skill, maintainer and fallback directories,

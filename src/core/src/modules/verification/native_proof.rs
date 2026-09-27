@@ -53,8 +53,11 @@ fn shell() -> Result<PathBuf, CoreError> {
     }
     Err(err("native-proof-shell-unavailable"))
 }
-fn binary(path: &Path) -> Result<Value, CoreError> {
-    let mut file = std::fs::File::open(path).map_err(err)?;
+pub(crate) fn binary(path: &Path) -> Result<Value, CoreError> {
+    // Node's Windows launcher uses a namespaced path; native/Python launchers
+    // may not. Observe one filesystem identity for the same actual executable.
+    let path = std::fs::canonicalize(path).map_err(err)?;
+    let mut file = std::fs::File::open(&path).map_err(err)?;
     let mut hash = Sha256::new();
     let mut chunk = [0; 65536];
     loop {
@@ -66,7 +69,17 @@ fn binary(path: &Path) -> Result<Value, CoreError> {
     }
     Ok(json!({"path":path,"sha256":format!("{:x}",hash.finalize())}))
 }
-fn runtime(strategy: &Value) -> Result<Value, CoreError> {
+fn runtime(target: &Path, strategy: &Value) -> Result<Value, CoreError> {
+    let execution = crate::proof_executor::configuration(target)?;
+    if !execution.is_null() {
+        return Ok(
+            json!({"implementation":"native-aw-proof","producer_contract":REVISION,
+            "producer":binary(&std::env::current_exe().map_err(err)?)?,
+            "executor":crate::proof_executor::observe(target, &execution)?,
+            "shell_dialect":"posix-sh", "strategy_revision":digest(strategy)?,
+            "environment_scope":"isolated-image-and-readonly-source", "nested_tool_runtime":"image-bound"}),
+        );
+    }
     Ok(
         json!({"implementation":"native-aw-proof","producer_contract":REVISION,
         "producer":binary(&std::env::current_exe().map_err(err)?)?,"shell":binary(&shell()?)?,
@@ -237,11 +250,21 @@ pub(crate) fn select_mode(
             }
         }
     }
-    let semantic_strategy = json!({"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies,"source_strategy_revision":digest(strategy)?,"assessment":strategy["assessment"],"assurance_request":strategy["assurance_request"],"strategy_coverage":if source_selected{"selected-command-covered"}else{"unproven"}});
+    let semantic_strategy = json!({"execution":strategy["execution"],"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies,"source_strategy_revision":digest(strategy)?,"assessment":strategy["assessment"],"assurance_request":strategy["assurance_request"],"strategy_coverage":if source_selected{"selected-command-covered"}else{"unproven"}});
     let observed = if report.is_some() {
         json!({"implementation":"interoperability-report","strategy_revision":digest(&semantic_strategy)?,"producer_admission":"unproven","environment_scope":"unobserved"})
     } else {
-        runtime(&semantic_strategy)?
+        match runtime(target, &semantic_strategy) {
+            Ok(value) => value,
+            Err(error) if !strategy["execution"].is_null() => {
+                return Ok(
+                    json!({"status":"blocked","reason":"proof-execution-capability-unavailable","recovery":{"kind":"capability-gap","human_answer_allowed":false,
+                        "detail":"The selected proof cannot run with its configured isolation. Prepare the Linux Docker daemon and the declared immutable image with the command's offline dependencies, then select the proof again. Human approval cannot supply this capability.",
+                        "diagnostic":error.to_string()},"choices":available}),
+                );
+            }
+            Err(error) => return Err(error),
+        }
     };
     let subject = proof_subject::build(target, changed, command, None, None, &[], &observed)?;
     if subject["identity_complete"] != true {
@@ -303,7 +326,14 @@ pub(crate) fn freshness(
             json!({"status":"stale","strategy_coverage":"unproven","reason":"planning-proof-subject-changed"}),
         );
     }
-    let mut observed = runtime(&Value::Null)?;
+    let mut observed = match runtime(target, &json!({"execution":strategy["execution"]})) {
+        Ok(value) => value,
+        Err(_) => {
+            return Ok(
+                json!({"status":"unproven","strategy_coverage":"unproven","reason":"proof-execution-capability-unavailable"}),
+            );
+        }
+    };
     observed["strategy_revision"] =
         receipt["proof_subject"]["runtime"]["strategy_revision"].clone();
     let current_subject = proof_subject::build(
@@ -411,7 +441,7 @@ pub(crate) fn freshness(
     Ok(
         json!({"status":"reusable","strategy_coverage":if coverage{"selected-command-covered"}else{"unproven"},"command_coverage":if coverage{choice.clone()}else{Value::Null},"comparison":comparison,
         "sufficiency_currentness":sufficiency.status,"changed_dependencies":compared.changed,"remaining_gaps":current["gaps"],
-        "environment_scope":"producer-and-declared-shell","nested_tool_runtime":"unobserved"}),
+        "environment_scope":observed["environment_scope"],"nested_tool_runtime":observed["nested_tool_runtime"]}),
     )
 }
 
@@ -460,6 +490,19 @@ pub(crate) fn run_path(invocation: &Value) -> Result<String, CoreError> {
         "{RUNS}/native-{}/run.json",
         digest(&invocation["idempotency_key"])?.replace(':', "-")
     ))
+}
+/// Publication may replace the receipt index and retire superseded native
+/// receipts/runs. These bounded owner directories are checked independently of
+/// the child-process filesystem, including locks and attempt custody.
+pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
+    let mut writes =
+        crate::attempt_store::write_paths(&json!({"idempotency_key":action["logical_effect_id"]}))?;
+    writes.extend([
+        ".agentic-workspace/proof/receipts/**".into(),
+        format!("{RUNS}/**"),
+        ".agentic-workspace/local/effects/source-reconciliation.lock".into(),
+    ]);
+    Ok(writes)
 }
 /// A retained carrier only supplies exact attempt references. The common store
 /// verifies those bytes and the current invocation before any replay decision.
@@ -610,6 +653,15 @@ pub(crate) fn execute(
         .unwrap_or("");
     let mut result = if manual {
         json!({"status":selection["reported_observation"]["result"],"execution_kind":"interoperability-report","producer_admission":"unproven","reported_observation":selection["reported_observation"],"output":{}})
+    } else if selection["proof_subject"]["runtime"]["executor"]["kind"]
+        == crate::proof_executor::KIND
+    {
+        crate::proof_executor::execute(
+            target,
+            invocation,
+            command,
+            selection["timeout_seconds"].as_u64().unwrap(),
+        )?
     } else {
         process(
             command,
@@ -658,7 +710,7 @@ pub(crate) fn execute(
         "claim_boundary":{"completion_claim_allowed":false,"task_judgment":"not-produced","independent_review":"not-produced"},
         "producer_admission":if manual {"unproven-interoperability-observation"}else{"retained-native-execution"},
         "strategy_coverage":selection["strategy"]["strategy_coverage"],
-        "environment_scope":if manual {"unobserved"}else{"producer-and-declared-shell"},"nested_tool_runtime":"unobserved"});
+        "environment_scope":selection["proof_subject"]["runtime"]["environment_scope"],"nested_tool_runtime":selection["proof_subject"]["runtime"]["nested_tool_runtime"]});
     let outcome = json!({"status":"applied","effects":["proof-execution"],"value":value});
     let committed = if still_current {
         crate::proof_publication::publish(

@@ -12,6 +12,8 @@ Human configuration. Unknown fields are rejected; absence uses owner defaults.
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Human configuration. Unknown fields are rejected; absence uses owner defaults. |  | x-agentic-workspace-doc-role: "public-reference"<br>x-agentic-workspace-unknown-properties: "reject" |
+| `proof_execution` | object | no |  | Machine-local image pin for the Verification manifest's enforced proof executor. This configures a capability and grants no policy waiver. |  |  |
+| `proof_execution.image` | string | yes |  | Immutable Docker image available on this host, containing the selected command's tools, /usr/bin/timeout and /usr/bin/setpriv. Overrides the manifest image pin. |  |  |
 | `workspace` | object | no |  | Local workspace preferences that should not be checked into shared repo config. |  |  |
 | `workspace.enabled` | boolean | no |  | Machine-local override for whether ordinary Agentic Workspace operation should run in this repository. When false, ordinary commands return a disabled-state packet; set true here to re-enable even if repo config disables AW. |  |  |
 | `workspace.cli_invoke` | string | no |  | Command prefix this machine should show in copyable Agentic Workspace commands, such as `uv run agentic-workspace`. |  |  |
@@ -44,3 +46,4 @@ Human configuration. Unknown fields are rejected; absence uses owner defaults.
 | `delegation_targets.<^.+$>.latency_class` | enum `"fast"`, `"standard"`, `"slow"`, `"unknown"` | no | `"unknown"` | Advisory relative latency class for local routing tradeoffs. |  |  |
 | `delegation_targets.<^.+$>.forbidden_task_classes` | array of enum `"boundary-shaping"`, `"reasoning-heavy"`, `"mixed"`, `"mechanical-follow-through"` | no |  | Capability classes this target must not execute directly, regardless of model confidence. |  |  |
 | `delegation_targets.<^.+$>.confidence_source` | string | no |  | Optional provenance of the human-authored advisory prior. New evaluation or lifecycle observations belong to the target-evidence owner, not configuration. |  |  |
+| `delegation_targets.<^.+$>.owner_kind` | enum `"agent"`, `"human"` | no | `"agent"` | Explicit task owner type. Human targets use manual task handoff only. A manual transport alone does not identify a human. |  |  |

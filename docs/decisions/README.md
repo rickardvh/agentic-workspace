@@ -22,7 +22,7 @@ An agent may also decide under current explicit shared policy delegating this
 durable owner and exact path set. The decision owner binds the full material,
 work, dependencies, destination/postimage and policy/capability revisions, and
 records the matching policy basis without claiming authenticated identity.
-Absent a matching grant, the complete bounded human request remains required.
+Absent a matching grant, the complete bounded domain request remains required.
 See [standing policy delegation](../maintainer/native-decision-archive-dogfood.md#standing-policy-delegation).
 
 Prefer adding a few decisions with future value over summarising history. The
@@ -47,13 +47,13 @@ consumes this path through all four surfaces. Its fixture admission does not
 supply independent acceptance of current repository changes. This read path
 also does not promote the April note, author a decision or advance the
 repository's configured admission. Native Memory fallback capture keeps its
-exact human-answer or current policy-delegation basis separate from its
+exact domain-answer or current policy-delegation basis separate from its
 publication/recovery path; that path cannot
 capture a competing fallback when this stronger repository owner is configured.
 
 New repository capture preserves ordinary readable decision, consequence,
 rationale and alternatives. Unknown material authorship remains unattributed;
-an exact bounded human answer does not claim cryptographic identity. A successful
+an exact bounded domain answer does not claim cryptographic identity. A successful
 no-retention disposition creates no new decision record. Do not add a record
 solely to exercise capture or reopen the already settled April-note disposition.
 

@@ -261,6 +261,7 @@ pub(crate) fn view(
                 let mut answer = args.clone();
                 answer["proposal_revision"] = json!(pr);
                 intent["contribution"]["decisions"] = json!([{"id":"intent-write-authorization","question":"Accept this semantic reconciliation and authorize this exact retained interpretation?","material":write["proposal"],"response_request":{"request_kind":EDIT,"arguments":answer},"choices":[{"id":"authorize-write","label":"Accept this exact reconciliation"},{"id":"defer","label":"Preserve unresolved interpretation"}],"affects":["effect:system-intent-source"]}]);
+
                 intent["reconciliation"] = write;
                 return Ok(());
             }

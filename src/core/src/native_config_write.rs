@@ -20,6 +20,7 @@ const EFFECT: &str = "configuration-source";
 // Durable choices consumed by current owners, including explicit native module
 // admission. Task answers, learned evidence and operational registries stay out.
 const CHOICES: &[(&str, &str)] = &[
+    (LOCAL, "proof_execution.image"),
     (SHARED, "workspace.enabled"),
     (LOCAL, "workspace.enabled"),
     (LOCAL, "session_logging.enabled"),
@@ -256,7 +257,8 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     alternatives.push(json!({"properties":{"source":{"type":"string"},"key":{"const":PAYLOAD_KEY},"value":{"type":"string"}}}));
     alternatives.push(json!({"properties":{"source":{"enum":[crate::native_configuration_assessment::SHARED,crate::native_configuration_assessment::LOCAL]},"key":{"const":crate::native_configuration_assessment::KEY},"value":{"type":"object"}}}));
     let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
-    args["properties"]["nomination"] = crate::native_owner_change::schema();
+    args["properties"]["reason"] = json!({"type":"string","minLength":1,"maxLength":4096,"description":"Task reason and expected behavior; bound to the exact domain answer."});
+    crate::native_owner_change::extend_schema(&mut args);
     args["properties"]["source"] = json!({"type":"string"});
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"type":"string"},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v4","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
@@ -818,10 +820,11 @@ pub(crate) fn view_selected(
             }
             let mut answer = request.clone();
             answer["arguments"]["proposal_revision"] = json!(proposal);
-            result["status"] = json!("human-decision-required");
-            result["proposal"] = json!({"before":before_value,"after":value,"source":source,"key":key,"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"authority":"bounded-human-answer","source_ownership":if key == PAYLOAD_KEY {"package-managed; unrelated source and local state preserved"} else {"repo-human"}});
+            result["status"] = json!("domain-decision-required");
+            result["proposal"] = json!({"before":before_value,"after":value,"source":source,"key":key,"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"authority":"bounded-domain-answer","source_ownership":if key == PAYLOAD_KEY {"package-managed; unrelated source and local state preserved"} else {"repo-human"}});
             result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":if key == PAYLOAD_KEY {"Authorize this exact artifact-derived package file refresh? Preserve unrelated repository and local state."} else {"Authorize this exact configuration-source edit? The source remains repo/human-owned."},"response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
             result["contribution"]["decisions"][0]["material"] = result["proposal"].clone();
+
             return Ok(result);
         }
         if args["proposal_revision"] != proposal {

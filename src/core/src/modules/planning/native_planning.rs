@@ -1,5 +1,5 @@
 //! Read current Planning selection through its owner contract. Public requests
-//! express applicability or an explicit bounded human selector transfer answer;
+//! express applicability or an explicit bounded domain selector transfer answer;
 //! source evidence and effect bindings are derived from confined reads.
 use crate::{CoreError, decision_source, digest, prepare_request_value};
 use cap_std::{ambient_authority, fs::Dir};
@@ -654,6 +654,7 @@ fn resolve_context(
             "former_execplan",
             "update_recovery_request",
             "operation_arguments",
+            "posture_request",
         ] {
             arguments["$defs"].as_object_mut().unwrap().remove(unused);
         }
@@ -687,7 +688,7 @@ fn resolve_context(
         template["arguments"]["owner_ref"] = json!(reference);
     }
     // Recognition grants no mutation authority. The owner supplies the entire
-    // exact transition binding; only the bounded answer comes from the human.
+    // exact transition binding; the acting agent supplies the bounded domain answer.
     let transfer = if let Some(previous) = selection.as_ref().filter(|s| s.get(RETAINED).is_none())
     {
         let bytes = read(&root, SELECTION)?
@@ -763,11 +764,11 @@ fn resolve_context(
             {
                 return Err(error(
                     SELECTION,
-                    "human selector transfer authorization is stale or already consumed",
+                    "domain selector transfer authorization is stale or already consumed",
                 ));
             }
             transfer_authorized = true;
-            transition = json!({"prior_sha256":transfer["binding"]["selector"]["revision"],"human_authorization":request,"selection":selection});
+            transition = json!({"prior_sha256":transfer["binding"]["selector"]["revision"],"domain_authorization":request,"selection":selection});
             status = "current";
             planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work}});
         } else if matches!(
@@ -833,12 +834,15 @@ fn resolve_context(
         status = "custody-required";
         planning_input = Value::Null;
     }
-    let blockers = if custody_required {
-        json!([{"code":"planning-selection-custody-required", "message":"The existing local Planning selection has no native producer custody. Preserve it unless a human explicitly authorizes the exact owner-generated selector_transfer.request. Supply only answer=authorize-selector-transfer; this transfers selector custody once and grants no Planning material, proof or completion effect.", "affects":["task"]}])
-    } else {
-        json!([])
-    };
-    let decisions = if matches!(status, "unresolved" | "stale") {
+    // The pending transfer decision itself constrains the task. A second
+    // blocker would falsely promise a separate owner recovery for that choice.
+    let blockers = json!([]);
+    let decisions = if custody_required {
+        json!([{"id":"planning-selector-transfer","question":"Let native Planning maintain the existing saved plan selection?",
+            "material":transfer["binding"],
+            "response_request":{"request_kind":"planning/continuation/v1","arguments":transfer["request"]["arguments"]},
+            "choices":[{"id":"authorize-selector-transfer","label":"Authorize this one-time transfer"}],"affects":["task"]}])
+    } else if matches!(status, "unresolved" | "stale") {
         json!([{"id":"planning-continuation","question":"Does the current task continue the remembered Planning owner?","material":{"incumbent_owner":selected},"response_request":{"request_kind":"planning/continuation/v1","arguments":{}},"choices":[{"id":"continue-selected","label":"Continue the remembered Planning owner"},{"id":"independent","label":"This work is independent of that owner"}],"affects":["task"]}])
     } else if status == "independent" {
         json!([{"id":"planning-posture","question":"Is this independent work direct or planned?","response_request":{"request_kind":"planning/posture/v1","arguments":{"task_relation":"independent"}},"choices":[{"id":"direct","label":"Bounded direct work"},{"id":"planned","label":"Create or select a Planning owner"}],"affects":["task"]}])
@@ -926,8 +930,11 @@ fn resolve_execution(
         reference,
     )?;
     if !view["selector_transfer"].is_null()
-        && let Some(request) = invocation
-            .and_then(|i| i["arguments"]["selection_transition"].get("human_authorization"))
+        && let Some(request) = invocation.and_then(|i| {
+            i["arguments"]["selection_transition"]
+                .get("domain_authorization")
+                .or_else(|| i["arguments"]["selection_transition"].get("human_authorization"))
+        })
     {
         view = resolve_context(
             target,
@@ -1104,14 +1111,15 @@ fn execute_checked(
             let view =
                 resolve_for_invocation(&target, current_work, current_full_contract, invocation)?;
             let transition = &view["selection_transition"];
-            if transition["human_authorization"].is_null()
+            if (transition["domain_authorization"].is_null()
+                && transition["human_authorization"].is_null())
                 || *transition != invocation["arguments"]["selection_transition"]
                 || transition["prior_sha256"] != format!("sha256:{:x}", Sha256::digest(bytes))
                 || transition["selection"] != value
             {
                 return Err(error(
                     SELECTION,
-                    "existing local selection requires producer custody or exact human transfer authorization; preserved",
+                    "existing local selection requires producer custody or exact domain transfer authorization; preserved",
                 ));
             }
         }
@@ -1526,19 +1534,19 @@ mod tests {
                         ["id"] = json!("different-owner")
                 }
                 "answer" => {
-                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"]
+                    invocation["arguments"]["selection_transition"]["domain_authorization"]["arguments"]
                         ["answer"] = json!("continue-selected")
                 }
                 "binding" => {
-                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"]
+                    invocation["arguments"]["selection_transition"]["domain_authorization"]["arguments"]
                         ["transfer_revision"] = json!("different-binding")
                 }
                 "owner-choice" => {
-                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"]
+                    invocation["arguments"]["selection_transition"]["domain_authorization"]["arguments"]
                         ["owner_ref"] = json!(PLAN)
                 }
                 _ => {
-                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"].as_object_mut().unwrap().remove("answer");
+                    invocation["arguments"]["selection_transition"]["domain_authorization"]["arguments"].as_object_mut().unwrap().remove("answer");
                 }
             }
             let selector = fs::read(target.0.join(SELECTION)).unwrap();
@@ -1634,9 +1642,20 @@ mod tests {
         let view = continued(&target);
         assert_eq!(view["status"], "custody-required");
         assert!(view["planning_input"].is_null());
+        assert!(
+            view["contribution"]["blockers"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(
-            view["contribution"]["blockers"][0]["code"],
-            "planning-selection-custody-required"
+            view["contribution"]["decisions"][0]["id"],
+            "planning-selector-transfer"
+        );
+        assert!(
+            view["contribution"]["actions"]
+                .as_array()
+                .is_none_or(|actions| actions.is_empty())
         );
         assert!(
             execute(&target.0, &work(), &invocation, &contract)

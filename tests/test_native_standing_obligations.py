@@ -11,13 +11,17 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-@pytest.mark.parametrize("detail_route", ["measurement:latency", "uv run pytest tests/test_latency.py -q"])
-def test_standing_assessment_publication_recovery_and_retirement(tmp_path, shared_core_binary, native_cli, detail_route):
+@pytest.mark.parametrize(
+    "detail_route,human_required",
+    [("measurement:latency", False), ("uv run pytest tests/test_latency.py -q", False), ("measurement:latency", True)],
+)
+def test_standing_assessment_publication_recovery_and_retirement(tmp_path, shared_core_binary, native_cli, detail_route, human_required):
     manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
     manifest.parent.mkdir(parents=True)
     header = 'schema_version = "agentic-workspace/verification-manifest/v1"\n'
     manifest.write_text(
         header + "[assurance.requirements.example]\n"
+        f"human_judgment_required = {str(human_required).lower()}\n"
         'level = "medium"\nforce = "required-before-closeout"\nrequirement_class = "current-evidence"\n'
         'source_intent_ref = "interface.json"\nsource_intent_revision = "v1"\n'
         'evidence_owner = "verification:example"\nrequired_evidence = ["Recorded comparison"]\n'
@@ -32,6 +36,12 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
         "evidence.md": "The comparison found no difference.",
     }.items():
         (tmp_path / path).write_text(content)
+    if human_required:
+        (tmp_path / ".agentic-workspace/config.toml").write_text(
+            '[assurance]\ndecision_delegations=[{owner="verification",scope=['
+            '"path:.agentic-workspace/verification/manifest.toml","path:procedure.md",'
+            '"path:interface.json","path:evidence.md"]}]\n'
+        )
     context = {"target": str(tmp_path), "task": "Assess the declared example obligation"}
 
     def call(extra=None):
@@ -55,14 +65,39 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
     )
     proposed = call({"request": request})
     decision = next(q for q in proposed["decision_packet"]["pending_consequences"]["decisions"] if q["id"] == "current-evidence-assessment")
+    assert decision["resolution"] == ("bounded-human-answer" if human_required else "bounded-domain-answer")
+    assert ("human_eligibility" in decision) == human_required
+    if human_required:
+        assert decision["human_eligibility"]["declaration"]["human_judgment_required"] is True
+        assert decision["human_eligibility"]["reference"].endswith("#assurance.requirements.example")
+    for projection in ["compact", "carried"]:
+        projected = call({"request": request, "projection": projection})
+        view = projected.get("view", projected)
+        projected_decision = next(
+            q for q in view["decision_packet"]["pending_consequences"]["decisions"] if q["id"] == "current-evidence-assessment"
+        )
+        assert projected_decision.get("human_eligibility") == decision.get("human_eligibility")
+        assert projected_decision.get("human_context") == decision.get("human_context")
     answer = decision["response_request"]
     answer["arguments"]["answer"] = "confirm"
+    if human_required:
+        original_manifest = manifest.read_bytes()
+        manifest.write_bytes(original_manifest.replace(b"human_judgment_required = true", b"human_judgment_required = false"))
+        with pytest.raises(AssertionError):
+            call({"request": answer})
+        manifest.write_bytes(original_manifest)
+        deferred = json.loads(json.dumps(answer))
+        deferred["arguments"]["answer"] = "defer"
+        assert call({"request": deferred})["verification"]["current_evidence"]["status"] == "deferred"
+        assert not (tmp_path / ".agentic-workspace/proof/current/current-evidence.json").exists()
     ready = call({"request": answer})
     action = next(a for a in ready["decision_packet"]["ready_actions"] if a["operation_id"] == "verification.record-current-evidence")
     done = call({"invocation": action})
     assert done["status"] == "applied", done
     state = tmp_path / ".agentic-workspace/proof/current/current-evidence.json"
     published = state.read_bytes()
+    authorization = json.loads(published)["assessments"]["example"]["assessment"]["authorization"]
+    assert authorization["kind"] == ("exact-bounded-human-answer" if human_required else "exact-bounded-domain-answer")
     observed = call()
     assert observed["verification"]["current_evidence"]["entries"][0]["status"] == "satisfied"
     requirement = next(r for r in observed["verification"]["assurance_applicability"]["requirements"] if r["id"] == "example")

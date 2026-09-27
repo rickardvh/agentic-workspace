@@ -13,6 +13,18 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 # rather than weakening the detector globally.
 ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
 ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
+    # Fixed isolated executor paths; no maintainer filesystem is mounted.
+    Path("src/core/src/modules/verification/proof_executor.rs"): frozenset(
+        "/" + path
+        for path in (
+            "workspace,volume-nocopy",
+            "workspace",
+            "tmp:rw,exec,nosuid,nodev,size=536870912,mode=1777",
+            "workspace/{path}:rw,exec,nosuid,nodev,size=2147483648,mode=1777",
+        )
+    ),
+    Path("docs/maintainer/selected-proof-execution.md"): frozenset({"/" + "tmp"}),
+    Path("tests/test_native_proof_producer.py"): frozenset({"/" + "var/run/docker.sock"}),
     Path("src/tooling/model-cli-harness/consumer_agent.py"): frozenset(
         "/" + path
         for path in (

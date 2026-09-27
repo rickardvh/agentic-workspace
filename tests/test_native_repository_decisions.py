@@ -117,7 +117,7 @@ def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_pa
         return call(request=request, **extra)
 
     initial = propose()
-    assert initial[section]["capture"]["status"] == "human-decision-required"
+    assert initial[section]["capture"]["status"] == "domain-decision-required"
     subject = initial[section]["capture"]["delegation_subject"]
     config = tmp_path / ".agentic-workspace/config.toml"
     original = config.read_text()
@@ -134,13 +134,13 @@ def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_pa
     config.write_text(original + grant)  # Explicit fixture repository-policy admission.
     for pattern in ["src/*.rs", "src/?.rs", "src/[ab].rs", "src/a[.rs", "src/a].rs"]:
         fallback = propose(changed=[pattern])
-        assert fallback[section]["capture"]["status"] == "human-decision-required"
+        assert fallback[section]["capture"]["status"] == "domain-decision-required"
         answer = fallback["decision_packet"]["decision_request"]["response_request"]
         assert answer["arguments"]["proposal_revision"] == fallback[section]["capture"]["proposal"]["proposal_revision"]
         assert "answer" not in answer["arguments"]
         assert fallback["decision_packet"]["primary_action"] is None
     assert propose(task="Different work")[section]["capture"]["status"] == "write-ready"
-    assert propose(changed=["src/other.rs"])[section]["capture"]["status"] == "human-decision-required"
+    assert propose(changed=["src/other.rs"])[section]["capture"]["status"] == "domain-decision-required"
     changed = {**material, "consequence": "A different boundary"}
     assert propose(changed)[section]["capture"]["status"] == "write-ready"
     dependency = tmp_path / material["dependency_paths"][0]
@@ -150,7 +150,7 @@ def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_pa
     dependency.write_bytes(before)
     foreign = "memory" if destination == "repository" else "repository"
     config.write_text(original + grant.replace(f'owner="{destination}"', f'owner="{foreign}"'))
-    assert propose()[section]["capture"]["status"] == "human-decision-required"
+    assert propose()[section]["capture"]["status"] == "domain-decision-required"
     config.write_text(original + grant)
     dismissed = propose(disposition="no-retention")
     assert dismissed[section]["capture"]["response"]["authority_basis"]["kind"] == "exact-policy-delegated-decision"
@@ -286,7 +286,7 @@ def test_standing_decision_scope_uses_bounded_configuration_admission(tmp_path, 
     for paths in [["src/a.rs"], ["src/a.rs", "src/b.rs", "src/c.rs"]]:
         smaller = call(changed=paths)["memory"]["capture"]["requests"][0]
         smaller["arguments"] = request["arguments"]
-        assert call(request=smaller, changed=paths)["memory"]["capture"]["status"] == "human-decision-required"
+        assert call(request=smaller, changed=paths)["memory"]["capture"]["status"] == "domain-decision-required"
     call(invocation=action)
     assert call(task="Later independent affected work")["decision_packet"]["decision_context"]["consequences"]
 
@@ -328,7 +328,7 @@ def test_repository_material_targets_stronger_owner_without_memory(tmp_path, sha
     consequences = fresh["decision_packet"]["decision_context"]["consequences"]
     assert len(consequences) == 1
     assert consequences[0]["source"]["owner"] == "repository"
-    assert consequences[0]["authority"]["basis"][0]["owner"] == "bounded-human-answer"
+    assert consequences[0]["authority"]["basis"][0]["owner"] == "bounded-domain-answer"
     request = fresh["decision_sources"]["requests"][0]
     detail = call(task="Fresh affected session", request=request)
     assert detail["decision_sources"]["response"]["authority_effect"] == "no-new-authority"

@@ -1,5 +1,14 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+# The host pins its prepared tool image in config.local.toml proof_execution.image.
+# Native Verification copies only these inputs and enforces read-only source.
+[execution]
+kind = "docker-readonly-source-v1"
+inputs = ["src", "tests", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "pyproject.toml", "uv.lock", "README.md", "LICENSE", ".agentic-workspace/skills", ".agentic-workspace/planning/skills"]
+scratch_paths = ["target"]
+[execution.environment]
+RUSTUP_TOOLCHAIN = "1.98.1"
+
 [scenarios]
 
 [scenarios.aw_context_consistency]

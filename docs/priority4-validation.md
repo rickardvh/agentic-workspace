@@ -8,7 +8,7 @@ slices; it does not close the larger coordination issue or claim external review
 
 The source owner publishes exact Markdown in either canonical directory through
 `instructions/edit-source/v1` and `instructions.write`. Source scope follows the
-user's intended portability. Publication requires an exact bounded human answer
+user's intended portability. Publication requires an exact bounded domain answer
 or an explicit current shared-policy grant for that exact instruction source.
 The six optional authoring fields are `paths`, `read`, `reconcile`, `use`, `checks`
 and `protect`; legacy route metadata remains readable but is not new authoring.
@@ -46,7 +46,7 @@ independent reviewer or weakens another owner's proof floor.
 
 `verification/review-claim/v1` provides a bounded positive semantic claim-review
 path over exact current work/Planning subject, source postimages, strategy and
-current evidence. A human answer or exact current policy delegation supplies the
+current evidence. A domain answer or exact current policy delegation supplies the
 judgement. Caller carriage can reuse that answer only while every binding remains
 current; no rendered outcome or process-local authority is retained. Ordinary
 unrequested work does not scan claim postimages or create proof/Planning state.
@@ -59,9 +59,10 @@ semantic agent judgement never impersonates independent acceptance.
 ## Configuration source lifetime and decisions
 
 The existing durable-choice writer remains the mutation owner. An explicit shared
-policy delegation for an exact config source can authorise ordinary durable edits;
-module enablement, independent capability admission and delegation-policy editing
-still require the exact human decision. Discovery/defaults are not recommendations
+policy delegation for an exact config source can authorise ordinary durable edits.
+The acting agent supplies other exact Configuration decisions under current task
+authority, including module enablement, capability admission and policy editing.
+Discovery/defaults are not recommendations
 or permission. Source, policy, capability and postimage drift invalidate answers.
 
 A deliberate deferred choice can invoke `configuration.defer-choice`. One bounded

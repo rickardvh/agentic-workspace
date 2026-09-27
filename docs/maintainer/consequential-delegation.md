@@ -38,6 +38,13 @@ not grant execution, safety or proof authority. A manual-only target can win,
 and the retained current target can win when it satisfies the requirements.
 Availability and economics remain local facts, never shared routing policy.
 
+For an explicitly human-owned task, set `owner_kind = "human"` and a nonempty
+`target_id` in that target profile. Assignment uses the existing manual handoff
+and return contract, with a current `human_eligibility` declaration in the sealed
+packet. It never launches a process or treats the person as the current agent.
+A manual transport without this explicit owner type remains an agent target.
+The returned observations still need their normal evidence and review admission.
+
 `independent_context = true` is a separate work-relative requirement. None of the
 currently supported native configurations asserts an independent review relation;
 such a requirement remains unsatisfied. A capability tag, model name or new
