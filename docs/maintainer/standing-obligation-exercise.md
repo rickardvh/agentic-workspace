@@ -82,6 +82,13 @@ longer create that false gap.
 
 ## Mechanical evidence and limits
 
+The detail-route review correction separates `freshness.procedure` from the
+existing evidence-detail route. The native lifecycle/entry case now runs with
+both `measurement:latency` and a pytest command as `detail_route`, while activation
+routes to `procedure.md`. Both forms retain publication, quietness, recovery and
+portable-currentness coverage. The fresh-agent observations above preceded this
+field separation; the regression checks establish the corrected routing contract.
+
 The native lifecycle test covers exact publication, protected writes, failed
 recovery after evidence changes, successful recovery without republishing,
 replacement currentness and retirement preserving evidence. It now also compares
