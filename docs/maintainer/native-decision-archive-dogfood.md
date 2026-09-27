@@ -133,7 +133,8 @@ within the existing exact admitted predecessor and successor-scope checks.
 Configured policy may itself be a material dependency: there is no task-hash
 grant stored in that file that would require a self-referential policy hash.
 
-The current bounded human path remains the fallback wherever current policy does
-not establish delegation. Broader #3040 disposition/continuity, repository-lifetime
+New decisions now use an exact bounded domain answer under current task authority
+where current policy does not establish delegation. Historical human decisions
+retain their recorded provenance. Broader #3040 disposition/continuity, repository-lifetime
 dogfood and #2909 acceptance remain open. The archive path here remains repository
 dogfood, not a portable default.

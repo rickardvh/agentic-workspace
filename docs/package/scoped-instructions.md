@@ -111,9 +111,9 @@ instruction-write authorisation question. To drive it directly:
    `arguments.content` to the complete Markdown. Save that returned request as
    `request.json`, then run the same `start` command with `--input request.json`.
 3. Inspect the source/postimage and pending `instruction-write-authorization`
-   decision. The responsible human supplies `authorize-write` or `defer` in its
-   returned response request; return that request through `start --input`.
-   An agent must not invent an actor label or answer for the human.
+   decision. The acting agent supplies `authorize-write` or `defer` under current
+   task authority in its returned response request; return that request through
+   `start --input`. Preserve exact source protections and proposal binding.
 4. If authorised, invoke only the exact returned action with `invoke --target .`
    and the same task/changed context plus `--input action.json`. Re-run `start`.
    Expect a committed effect and current source admission, or retain the owner's
@@ -214,10 +214,10 @@ Propose `updated` or `reviewed-current`, with a reason, for each named source:
 
 Material alone does not admit a judgement. Verification constructs the complete
 proposal and a bounded confirm/defer request in the decision packet's pending
-decisions. With no current admitted delegated authority for this scope, obtain
-the human answer to that exact request. Neither a model assertion nor an actor
-label supplies authority. The confirmed basis records the exact request/proposal
-and answer, without claiming cryptographically authenticated human identity.
+decisions. The acting agent supplies this domain judgement from the current
+sources and resulting work; it need not ask a human to approve its own assessment.
+The confirmed basis records the exact request, proposal and answer as a domain
+judgement, without claiming human authorisation or authenticated identity.
 Independent review retains its separate identity and separation-of-duty rules.
 
 Publication uses existing Verification proof/effect custody. Its receipt is
@@ -225,12 +225,13 @@ evidence of the bounded answer, not deciding authority or a semantic truth oracl
 It satisfies only the source-reconciliation obligation; other completion checks
 remain pending. No source body is copied into a documentation store.
 
-Currentness binds the selected Planning subject when present,
-canonical sources, declared context dependencies, admitted instruction content,
+Currentness binds canonical sources, declared context dependencies, admitted instruction content,
 relevant work files, the matching decision delegation and producer semantics.
 Admission is checked afresh; changing its Git pointer to identical instruction
 content preserves accepted coverage. Unrelated configuration and other owners'
-capability changes also preserve coverage. Fresh publication requests and actions
+capability changes also preserve coverage. Task and Planning identity remain
+invocation and claim context, outside the reusable source assessment.
+Fresh publication requests and actions
 still require their current capability envelope and exact authority. Every entry
 reobserves the declared file set, including additions made outside AW. An incomplete
 caller change list or a quiet event stream cannot prove freshness. Discovery is

@@ -52,7 +52,10 @@ def test_exact_source_judgment_is_retained_and_selectively_stales(tmp_path, shar
         "docs/guide.md": {"disposition": disposition, "reason": "Checked the guide against the exact feature behavior."}
     }
     proposed = call({"request": request})
-    request = proposed["decision_packet"]["pending_consequences"]["decisions"][0]["response_request"]
+    decision = proposed["decision_packet"]["pending_consequences"]["decisions"][0]
+    assert decision["resolution"] == "bounded-domain-answer"
+    assert decision.get("human_context") is None
+    request = decision["response_request"]
     request["arguments"]["answer"] = "confirm"
     ready = call({"request": request})
     action = ready["decision_packet"]["primary_action"]
@@ -62,7 +65,8 @@ def test_exact_source_judgment_is_retained_and_selectively_stales(tmp_path, shar
     assert result["status"] == "applied", result
     current = call()["verification"]["source_reconciliation"]
     assert current["status"] == "current", current
-    assert current["evidence"]["authority_basis"]["kind"] == "exact-bounded-human-answer"
+    assert current["evidence"]["authority_basis"]["kind"] == "exact-bounded-domain-judgment"
+    assert current["evidence"]["authority_basis"]["human_authorization"] is False
     assert current["evidence"]["authority_basis"]["identity_authentication"] == "not-claimed"
     assert (tmp_path / "docs/guide.md").read_bytes() == before
     assert not (tmp_path / ".agentic-workspace/planning").exists()
@@ -170,7 +174,7 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     ready = call({"request": answer})
     semantics = ready["verification"]["source_reconciliation"]["proposal"]["assessment_semantics"]
     assert semantics["assessment_role"] == "untrusted-caller-proposal"
-    assert semantics["decision_role"] == "authorize-exact-proposal-publication"
+    assert semantics["decision_role"] == "confirm-exact-domain-assessment"
     assert semantics["scope"]["sources"] == ["docs/guide.md"]
     assert semantics["scope"]["work_references"] == ["src/feature.txt"]
     assert semantics["scope"]["publication_scope"] == "this-group-only"
@@ -254,7 +258,7 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     nomination = membership["requests"][0]
     nomination["arguments"]["judgments"] = {"docs/guide.md": {"disposition": "reviewed-current", "reason": "Checked the new consumer."}}
     proposed = call({"request": nomination})
-    assert proposed["verification"]["source_reconciliation"]["status"] == "bounded-human-answer-required"
+    assert proposed["verification"]["source_reconciliation"]["status"] == "bounded-domain-judgment-required"
     next_action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
     assert call({"invocation": next_action})["status"] == "applied"
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted_groups"] == 2
@@ -303,7 +307,7 @@ def test_interrupted_publication_recovers_exact_owner_answer(tmp_path, shared_co
     if old_receipt is not None:
         assert not old_receipt.exists()
     assert call()["verification"]["source_reconciliation"]["status"] == "current"
-    assert json.loads(before)["value"]["authority_basis"]["kind"] == "exact-bounded-human-answer"
+    assert json.loads(before)["value"]["authority_basis"]["kind"] == "exact-bounded-domain-judgment"
 
 
 def test_defer_and_changed_proposal_do_not_publish(tmp_path, shared_core_binary, native_cli):

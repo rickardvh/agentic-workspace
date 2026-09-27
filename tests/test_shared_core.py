@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 import re
@@ -592,6 +593,120 @@ def test_human_answer_uses_only_current_returned_authority(shared_core_binary: P
     }
     with pytest.raises(DecisionContractError, match="violate input_schema"):
         answer_decision(current, key, {"hidden_target": "other"}, payload["capability_contract"])
+
+
+@pytest.mark.parametrize(
+    "eligible_owner,kind,declaration",
+    [
+        ("verification", "verification-judgment", {"human_judgment_required": True}),
+        ("assignment", "human-assignment", {"owner_kind": "human", "target_id": "domain-expert"}),
+    ],
+)
+def test_human_context_is_complete_and_bound_to_exact_answer(shared_core_binary: Path, eligible_owner, kind, declaration) -> None:
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "task-decision-is-current-and-bounded"))
+    source = payload["contributions"][0]["decisions"][0]
+    context = {
+        "proposed_action": "Judge the proposed evidence against the current requirement.",
+        "reason": "The requirement explicitly calls for human judgment.",
+        "context": "The current requirement has no accepted assessment.",
+        "consequences": {"mit": "Accept this exact evidence assessment."},
+        "defer_preserves": "The assessment remains unresolved.",
+        "authority_boundary": "The choice grants no release or review approval.",
+    }
+    source["human_context"] = context
+    # Context alone (including repository-owner prose) cannot escalate.
+    with pytest.raises(DecisionContractError, match="eligibility"):
+        _compile(payload)
+    payload["capability_contract"]["owners"] = [o for o in payload["capability_contract"]["owners"] if o["owner"] != eligible_owner]
+    payload["capability_contract"]["restriction_authorities"] = [
+        o for o in payload["capability_contract"]["restriction_authorities"] if o["owner"] != eligible_owner
+    ]
+    payload = json.loads(json.dumps(payload).replace("repository", eligible_owner))
+    source = payload["contributions"][0]["decisions"][0]
+    source["human_eligibility"] = {
+        "kind": kind,
+        "source_revision": "r2",
+        "current_work": payload["intent"]["current_work"],
+        "reference": "manifest.toml#assurance.requirements.example",
+        "declaration": declaration,
+        "declaration_revision": "sha256:"
+        + hashlib.sha256(json.dumps(declaration, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+    }
+    for key, bad in [
+        ("source_revision", "old"),
+        ("current_work", {"kind": "current-work", "id": "old"}),
+        ("declaration", {"human_judgment_required": False}),
+        ("kind", "routine-permission"),
+    ]:
+        invalid = deepcopy(payload)
+        invalid["contributions"][0]["decisions"][0]["human_eligibility"][key] = bad
+        with pytest.raises(DecisionContractError):
+            _compile(invalid)
+    invalid = deepcopy(payload)
+    denied = (
+        {"human_judgment_required": False} if eligible_owner == "verification" else {"owner_kind": "agent", "target_id": "domain-expert"}
+    )
+    basis = invalid["contributions"][0]["decisions"][0]["human_eligibility"]
+    basis["declaration"] = denied
+    basis["declaration_revision"] = (
+        "sha256:" + hashlib.sha256(json.dumps(denied, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    with pytest.raises(DecisionContractError, match="explicit"):
+        _compile(invalid)
+    decision = _compile(payload)
+    question = decision["decision_request"]
+    assert question["resolution"] == "bounded-human-answer"
+    assert question["human_context"] == context
+    assert answer_decision(decision, question["consequence_id"], "mit", payload["capability_contract"])["request"]["arguments"] == {
+        "answer": "mit"
+    }
+    for field in context:
+        invalid = deepcopy(payload)
+        invalid["contributions"][0]["decisions"][0]["human_context"].pop(field)
+        with pytest.raises(DecisionContractError):
+            _compile(invalid)
+    for consequences in [{}, {"mit": ""}, {"mit": "Select MIT", "hidden": "Extra authority"}]:
+        invalid = deepcopy(payload)
+        invalid["contributions"][0]["decisions"][0]["human_context"]["consequences"] = consequences
+        with pytest.raises(DecisionContractError):
+            _compile(invalid)
+    source["human_context"]["context"] = "The requirement now has an existing assessment to replace."
+    with pytest.raises(DecisionContractError, match="stale or absent"):
+        answer_decision(_compile(payload), question["consequence_id"], "mit", payload["capability_contract"])
+    source.pop("human_context")
+    source.pop("human_eligibility")
+    assert _compile(payload)["decision_request"]["resolution"] == "bounded-domain-answer"
+    payload["contributions"][0].pop("decisions")
+    payload["contributions"][0]["blockers"] = [
+        {
+            "code": "executor-missing",
+            "message": "No isolated executor is available.",
+            "recovery": "Prepare the supported executor.",
+            "affects": ["task"],
+        }
+    ]
+    blocked = _compile(payload)
+    assert blocked["decision_request"] is None
+    assert blocked["blockers"][0]["resolution"] == "owner-recovery-required"
+    assert blocked["blockers"][0]["recovery"] == "Prepare the supported executor."
+    for recovery in (None, "", "   "):
+        blocker = payload["contributions"][0]["blockers"][0]
+        if recovery is None:
+            blocker.pop("recovery", None)
+        else:
+            blocker["recovery"] = recovery
+        unresolved = _compile(payload)
+        assert unresolved["decision_request"] is None
+        assert unresolved["primary_action"] is None
+        assert unresolved["blockers"][0]["resolution"] == "owner-resolution-unavailable"
+        assert not unresolved["blockers"][0].get("recovery")
+
+    incomparable = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "incomparable-actions-fail-closed-losslessly"))
+    unresolved = _compile(incomparable)
+    assert unresolved["primary_action"] is None
+    assert unresolved["decision_request"] is None
+    assert unresolved["blockers"][0]["resolution"] == "owner-resolution-unavailable"
+    assert not unresolved["blockers"][0].get("recovery")
 
 
 def test_result_composition_is_shared_and_never_reuses_a_view(shared_core_binary: Path) -> None:

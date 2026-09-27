@@ -18,7 +18,7 @@ Advisory capture works even when a stronger repository decision archive exists.
 Its `lesson` and `rationale` are not a decision record, policy, proof or target
 evidence. `confirm-retention` admits the exact proposal, separately from material
 authorship, which remains unattributed. Existing exact Memory policy delegation
-can admit the retention choice without another human answer. A no-retention
+can admit the retention choice without another bounded answer. A no-retention
 advisory request returns without publication or an authorisation roundtrip.
 
 The note and manifest use the existing bounded capture publication/recovery
@@ -60,7 +60,7 @@ schema into unrelated work.
 Current `workspace.improvement_latitude` controls opportunity proposals. `none`
 and `reporting` produce reports; `conservative` allows proposals within
 current work; `proactive` also permits proactive proposals. None grants mutation.
-The destination's exact current delegation or bounded human answer is still
+The destination's exact current delegation or bounded domain answer is still
 required. Package defects report to the package owner rather than borrowing
 host-repository initiative latitude. The existing configuration writer can edit
 the latitude under its normal explicit authority.

@@ -5,6 +5,22 @@
   "description": "Human configuration. Unknown fields are rejected; absence uses owner defaults.",
   "type": "object",
   "properties": {
+    "proof_execution": {
+      "type": "object",
+      "description": "Machine-local image pin for the Verification manifest's enforced proof executor. This configures a capability and grants no policy waiver.",
+      "properties": {
+        "image": {
+          "type": "string",
+          "maxLength": 1024,
+          "pattern": "^(sha256:|[^ ]+@sha256:)[a-f0-9]{64}$",
+          "description": "Immutable Docker image available on this host, containing the selected command's tools, /usr/bin/timeout and /usr/bin/setpriv. Overrides the manifest image pin."
+        }
+      },
+      "required": [
+        "image"
+      ],
+      "additionalProperties": false
+    },
     "workspace": {
       "type": "object",
       "properties": {
@@ -373,12 +389,39 @@
               "type": "string",
               "minLength": 1,
               "description": "Optional provenance of the human-authored advisory prior. New evaluation or lifecycle observations belong to the target-evidence owner, not configuration."
+            },
+            "owner_kind": {
+              "enum": [
+                "agent",
+                "human"
+              ],
+              "default": "agent",
+              "description": "Explicit task owner type. Human targets use manual task handoff only. A manual transport alone does not identify a human."
             }
           },
           "additionalProperties": false,
           "description": "One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates.",
           "required": [
             "transports"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "owner_kind": {
+                    "const": "human"
+                  }
+                },
+                "required": [
+                  "owner_kind"
+                ]
+              },
+              "then": {
+                "required": [
+                  "target_id"
+                ]
+              }
+            }
           ]
         }
       },

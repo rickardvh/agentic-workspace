@@ -64,11 +64,13 @@ Good dynamic control should normally end in something the agent can actually do:
 - a routed skill;
 - an exact selector/owner;
 - a bounded recovery;
-- or an explicit human decision with the relevant facts.
+- or, for a Verification step requiring human judgement or a task explicitly assigned to a human owner, a human decision with the relevant facts.
 
 A transition name without a supported route is not an adequate instruction.
 
 A question should identify what is unresolved, why it changes the action or claim, and what bounded answer is needed. Do not ask the human to repeat facts available from current sources or decisions already admitted by standing authority. Preserve a truthful insufficient-evidence path rather than forcing a choice. Carry a uniquely determined authorised action without a model turn just to select it; genuinely different choices must remain visible.
+
+Regular operation must resolve through agents and domain owners. Repository ownership, a managed write or the absence of an explicit agent delegation must not create a human approval step. Human escalation requires one of the two exceptions above, with its Verification requirement or configured human assignment identified. A capability or evidence gap requires recovery through its owner.
 
 ### 6. Use one generic loop
 

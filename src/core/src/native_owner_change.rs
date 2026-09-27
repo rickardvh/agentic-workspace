@@ -5,9 +5,12 @@ use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
 use std::path::Path;
 
-pub(crate) fn schema() -> Value {
-    let text = json!({"type":"string","minLength":1,"maxLength":2048});
-    json!({"type":"object","additionalProperties":false,"properties":{
+pub(crate) fn extend_schema(schema: &mut Value) {
+    // Reuse the same bounded text constraint within each standalone request
+    // schema instead of repeating it for every nomination/evidence field.
+    schema["$defs"]["text"] = json!({"type":"string","minLength":1,"maxLength":2048});
+    let text = json!({"$ref":"#/$defs/text"});
+    schema["properties"]["nomination"] = json!({"type":"object","additionalProperties":false,"properties":{
         "origin":{"enum":["trusted-correction","owner-friction","repo-opportunity"]},
         "concern":{"enum":["package","repository"]},
         "disposition":{"enum":["change","already-owned","report","no-action"]},
@@ -15,7 +18,7 @@ pub(crate) fn schema() -> Value {
         "reason":text,"expected_effect":text,"validation":text,"supersession":text,
         "evidence":{"type":"array","maxItems":8,"items":{"type":"object","additionalProperties":false,
             "properties":{"reference":text,"revision":text},"required":["reference","revision"]}}},
-        "required":["origin","concern","disposition","scope","reason","expected_effect","validation","supersession","evidence"]})
+        "required":["origin","concern","disposition","scope","reason","expected_effect","validation","supersession","evidence"]});
 }
 
 /// Return a non-mutating disposition, or leave admission with the destination.

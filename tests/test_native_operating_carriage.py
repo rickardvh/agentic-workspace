@@ -244,6 +244,9 @@ def test_exact_answer_and_action_carriage_preserve_full_effects(tmp_path, shared
     question = view["decision_packet"]["decision_request"]
     assert question["request_material"] == full["decision_packet"]["decision_request"]["response_request"]["arguments"]
     assert question["material"] == full["configuration_write"]["proposal"]
+    assert question["resolution"] == "bounded-domain-answer"
+    assert "human_context" not in question
+    assert "human_eligibility" not in question
     assert "response_request" not in question
     assert size(view) < size(full)
     # Ordinary compact output without a host still includes the exact executable

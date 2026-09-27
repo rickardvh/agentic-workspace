@@ -598,11 +598,23 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     assert unrelated.read_text() == "Preserve concurrent work.\n"
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_current_capsule_and_typed_return_without_parent_context(tmp_path, shared_core_binary, native_cli, surface):
+@pytest.mark.parametrize(
+    "surface,human_owner", [("native", False), ("json", False), ("python", False), ("typescript", False), ("native", True)]
+)
+def test_current_capsule_and_typed_return_without_parent_context(tmp_path, shared_core_binary, native_cli, surface, human_owner):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    source.write_text(BASE)
+    config = (
+        BASE.replace("[delegation_targets.expert]\n", '[delegation_targets.expert]\nowner_kind="human"\ntarget_id="domain-expert"\n')
+        if human_owner
+        else BASE
+    )
+    if human_owner:
+        config = config.replace(
+            'transports=[{kind="manual"}]',
+            'transports=[{kind="manual"},{kind="process",command=["never-launch-human-task"],timeout_seconds=1}]',
+        )
+    source.write_text(config)
     dependency = tmp_path / "dependency.md"
     dependency.write_text("Domain rule: blå means blue.\n", encoding="utf-8", newline="\n")
     context = {"target": str(tmp_path), "task": "Explain the supplied domain rule in English; return findings only.", "changed": []}
@@ -663,6 +675,9 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
         if r["configuration"]["id"] == "expert:manual"
     )
     assert not manual["eligible"]
+    if human_owner:
+        candidates = before["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+        assert all(c["configuration"]["transport"] == "manual" for c in candidates if c["configuration"]["target"] == "expert")
     inputs = before["task_requirements"]["handoff_inputs"]["requests"][0]
     inputs[-1]["arguments"].update(
         input_refs=input_refs,
@@ -682,6 +697,12 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     export = current["task_requirements"]["handoff"]["requests"][0]
     exported = call(export)["task_requirements"]["handoff"]
     packet = exported["packet"]
+    assert ("human_eligibility" in packet) == human_owner
+    if human_owner:
+        assert packet["resolution"] == "human-owned-task"
+        assert packet["human_eligibility"]["declaration"]["owner_kind"] == "human"
+        assert packet["human_eligibility"]["declaration"]["target_id"] == "domain-expert"
+        assert packet["transport"] == "manual"
     worker = packet["worker_context"]
     assert worker["intent"]["outcome"] == context["task"]
     assert worker["inputs"]["capsule"] == [
@@ -820,7 +841,7 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     dependency.write_text("Changed domain rule.\n")
     with pytest.raises(AssertionError, match="changed|stale"):
         call(export)
-    assert source.read_text() == BASE
+    assert source.read_text() == config
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

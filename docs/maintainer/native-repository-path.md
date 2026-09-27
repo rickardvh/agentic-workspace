@@ -30,7 +30,7 @@ The former Planning bridge preserves established selection and material:
 
 - A recognised former source is readable context, not native mutation custody.
 - An occupied legacy selector requires the exact owner-produced, revision-bound
-  transfer request and an explicit human answer. Transfer preserves the selector's
+  transfer request and an explicit domain answer. Transfer preserves the selector's
   selection and the plan bytes. It grants neither proof nor completion.
 - Following acquisition, native updates preserve owner identity and relationships.
   Reconcile the changed source before reusing its current subject or proof.
@@ -90,7 +90,7 @@ procedures before the corresponding external mutation.
 
 For a bounded correction to an existing `workspace.cli_invoke` control, choose
 its source from `configuration_write.requests`, supply the intended value, and
-submit that exact request. The ordinary decision packet asks for a bounded human
+submit that exact request. The ordinary decision packet asks for a bounded domain
 answer to the source/value proposal; only that answer can produce the write
 operation. A same-value request is a quiet no-op. Deferral writes nothing.
 Other keys, missing controls, redirected shared sources, and shared/local

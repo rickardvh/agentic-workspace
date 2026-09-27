@@ -26,6 +26,16 @@ a result that allows it; continue authorised work outside that scope. Having a
 shell or editor does not remove a restriction. See
 [restricted actions](references/constraints.md) when the result needs interpretation.
 
+A restriction is not a request for human approval. Relay the owner's complete
+human decision context only when its returned resolution requires a bounded
+human answer and its `human_eligibility` names a current Verification requirement
+for human judgment or an explicitly configured human task owner. Routine domain
+decisions belong to the acting agent under the current task authority.
+For `owner-recovery-required`, follow the supplied recovery. For
+`owner-resolution-unavailable`, explain the missing fact or capability and that
+no supported resolution is currently supplied. Preserve the affected block and
+continue unrelated work; do not invent a recovery or ask the user to waive it.
+
 AW calls the component responsible for a rule, record or operation its **owner**.
 For changes to managed state, use that component's exact returned request/action
 through [the owner interaction procedure](references/owners.md).

@@ -653,14 +653,56 @@
         "selection": {
           "type": "object",
           "description": "Legacy selector plus custody only."
+        },
+        "domain_authorization": {
+          "type": "object",
+          "description": "Human answer; revalidate before transfer.",
+          "properties": {
+            "arguments": {
+              "$ref": "#/$defs/continuation_request",
+              "properties": {
+                "answer": {
+                  "const": "authorize-selector-transfer"
+                }
+              },
+              "required": [
+                "answer",
+                "transfer_revision"
+              ]
+            }
+          },
+          "required": [
+            "arguments"
+          ]
         }
       },
       "required": [
         "prior_sha256",
-        "human_authorization",
         "selection"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "human_authorization"
+          ],
+          "not": {
+            "required": [
+              "domain_authorization"
+            ]
+          }
+        },
+        {
+          "required": [
+            "domain_authorization"
+          ],
+          "not": {
+            "required": [
+              "human_authorization"
+            ]
+          }
+        }
+      ]
     },
     "posture_request": {
       "type": "object",

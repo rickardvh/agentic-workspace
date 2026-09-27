@@ -424,7 +424,7 @@ pub(crate) fn view(
         if args["answer"].is_null() {
             let mut answer = args.clone();
             answer["proposal_revision"] = json!(proposal);
-            result["status"] = json!("human-decision-required");
+            result["status"] = json!("domain-decision-required");
             let field = args["fact"].as_str().map_or_else(
                 || format!("notes.{source}.disposition"),
                 |id| format!("durable_facts.{id}.disposition"),
@@ -443,6 +443,7 @@ pub(crate) fn view(
                 "material":result["proposal"],
                 "choices":[{"id":"authorize-disposition","label":"Authorize this exact disposition"},{"id":"defer","label":"Defer without mutation"}],
                 "affects":["task","effect:memory-state"]}]);
+
             return Ok(result);
         }
         if args["proposal_revision"] != proposal {

@@ -2,10 +2,10 @@
 
 Discover the relevant current Configuration choice through `start`; use its exact
 returned read/edit/creation request and schema. Compare the existing value with
-the outcome and establish cheap current facts before asking an irreducible
-question. Supply an existing human answer only when it authorizes this exact
-current proposal. Explicit source delegations may admit ordinary agent choices;
-capability enablement and delegation-policy changes keep their own authority.
+the outcome and establish cheap current facts. The acting agent supplies the exact
+domain answer under the current task authority. Missing delegation does not require
+a human approval. Preserve source protection and exact proposal binding; a
+configuration change grants no proof or independent review acceptance.
 
 Pass the returned exact action to native `invoke`. It returns
 `effect_outcome`, `configuration_behavior`, actual `session_capture`

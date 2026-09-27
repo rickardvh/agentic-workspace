@@ -162,6 +162,9 @@ fn state(root: &Dir) -> Result<Value, CoreError> {
 // Bind only authority applicable to this requirement and its exact evidence.
 // Invocation admission still checks the complete live Configuration revision.
 fn authority(configuration: &Value, basis: &Value, evidence: &Value) -> Value {
+    if basis["requirement"]["human_judgment_required"] == true {
+        return json!({"kind":"verification-human-judgment-required"});
+    }
     let mut scope = vec![MANIFEST.to_owned()];
     scope.extend(
         basis["dependencies"]
@@ -181,7 +184,7 @@ fn authority(configuration: &Value, basis: &Value, evidence: &Value) -> Value {
     scope.dedup();
     let mut value =
         crate::native_decision_authority::delegated(configuration, "verification", &scope)
-            .unwrap_or_else(|| json!({"kind":"bounded-human-decision-required"}));
+            .unwrap_or_else(|| json!({"kind":"bounded-domain-decision-required"}));
     value.as_object_mut().unwrap().remove("policy_revision");
     value
 }
@@ -234,11 +237,20 @@ fn assessment_status(
     if current != value["evidence"] {
         return Ok(("due", "evidence-changed"));
     }
+    if row["human_judgment_required"] == true
+        && value["authorization"]["kind"] != "exact-bounded-human-answer"
+    {
+        return Ok(("due", "human-judgment-required"));
+    }
     match value["outcome"].as_str() {
         Some("satisfied")
             if matches!(
                 value["authorization"]["kind"].as_str(),
-                Some("exact-bounded-human-answer" | "exact-policy-delegated-decision")
+                Some(
+                    "exact-bounded-human-answer"
+                        | "exact-bounded-domain-answer"
+                        | "exact-policy-delegated-decision"
+                )
             ) =>
         {
             Ok(("satisfied", "current-authorised-assessment"))
@@ -549,8 +561,12 @@ pub(crate) fn view(
         scope.extend(refs);
         scope.sort();
         scope.dedup();
-        let delegated =
-            crate::native_decision_authority::delegated(configuration, "verification", &scope);
+        let human_required = row["human_judgment_required"] == true;
+        let delegated = if human_required {
+            None
+        } else {
+            crate::native_decision_authority::delegated(configuration, "verification", &scope)
+        };
         let proposal = json!({"id":id,"assessment":assessment,"retired":output["retired"],"destination":STATE,
             "assessment_role":"untrusted-caller-proposal","identity_authentication":"not-claimed",
             "claim_boundary":"Authorise this bounded semantic assessment; no command proof, independent review or task completion."});
@@ -558,9 +574,24 @@ pub(crate) fn view(
         let mut arguments = args.clone();
         arguments.as_object_mut().unwrap().remove("answer");
         arguments["proposal_revision"] = json!(proposal_revision);
-        let decisions = json!([{"id":"current-evidence-assessment","question":"Publish this exact current-evidence assessment?",
+        let mut decisions = json!([{"id":"current-evidence-assessment","question":"Publish this exact current-evidence assessment?",
             "material":proposal,"response_request":{"request_kind":REQUEST,"arguments":arguments},
             "choices":[{"id":"confirm","label":"Publish this assessment"},{"id":"defer","label":"Leave it unresolved"}],"affects":["effect:proof-execution"]}]);
+        if human_required {
+            decisions[0]["human_eligibility"] = json!({
+                "kind":"verification-judgment", "source_revision":revision,
+                "current_work":work, "reference":format!("{MANIFEST}#assurance.requirements.{id}"),
+                "declaration_revision":digest(row)?, "declaration":row
+            });
+            decisions[0]["human_context"] = json!({
+                "proposed_action":"Retain the proposed assessment of whether the current evidence satisfies this repository requirement.",
+                "reason":"This current Verification requirement explicitly requires human judgment before accepting its assessment.",
+                "context":format!("Requirement: {id}. Proposed outcome: {}. Assessment rationale: {reason}.",args["outcome"].as_str().unwrap_or("")),
+                "consequences":{"confirm":"Publish this exact assessment, bound to the current requirement, dependencies and cited evidence.","defer":"Publish nothing and leave this requirement's assessment unresolved."},
+                "defer_preserves":"Existing assessments and evidence remain unchanged. Work requiring this assessment remains pending.",
+                "authority_boundary":"This assessment does not execute a command, grant independent review or establish task completion."
+            });
+        }
         let mut authorised = request.clone();
         if args["answer"].is_null() {
             if delegated.is_none() {
@@ -595,7 +626,7 @@ pub(crate) fn view(
         }
         let mut assessment = assessment;
         assessment["authorization"] = delegated.unwrap_or_else(|| {
-            json!({"kind":"exact-bounded-human-answer",
+            json!({"kind":if human_required {"exact-bounded-human-answer"} else {"exact-bounded-domain-answer"},
             "proposal_revision":proposal_revision,"identity_authentication":"not-claimed"})
         });
         after["assessments"][id] = json!({"revision":digest(&assessment)?,"assessment":assessment});

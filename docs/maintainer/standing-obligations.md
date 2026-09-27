@@ -85,6 +85,14 @@ an existing policy delegation covering the manifest, procedure, dependencies and
 evidence. A declaration does not create such a delegation. The action remains
 subject to current effect admission and scoped write restrictions.
 
+Ordinary assessments use the acting agent's bounded domain answer. If the
+condition actually requires human judgement, set `human_judgment_required = true`
+on this requirement, alongside its `freshness` declaration. Verification then
+returns the exact requirement and its revision as `human_eligibility`, with the
+proposed assessment, choices and consequences. Policy delegation cannot waive
+this requirement. A changed declaration invalidates the earlier answer; deferring
+preserves the existing assessment and leaves the requirement unresolved.
+
 The published assessment is a repository-owned semantic judgement. Its hashes
 establish currentness, not the identity or honesty of its author. It is not an
 authenticated command receipt, independent review, or permission to complete work.

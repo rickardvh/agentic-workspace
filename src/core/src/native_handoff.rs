@@ -406,6 +406,35 @@ pub(crate) fn view(
         packet["return_contract"]["maximum_complete_stdout_bytes"] = json!(65536);
         packet = crate::assignment_packet::seal(&packet)?;
     }
+    let declaration = &selected["execution"]["owner_declaration"];
+    if declaration["owner_kind"] == "human" {
+        if selected["transport"] != "manual" {
+            return Err(CoreError::new("human-owned tasks require manual handoff"));
+        }
+        let eligibility = crate::HumanEligibility {
+            kind: "human-assignment".into(),
+            source_revision: source.clone(),
+            current_work: work.clone(),
+            reference: selected["execution"]["owner_reference"]
+                .as_str()
+                .unwrap_or("")
+                .into(),
+            declaration_revision: digest(declaration)?,
+            declaration: declaration.clone(),
+        };
+        eligibility.validate("assignment", &source, work)?;
+        packet["human_eligibility"] =
+            serde_json::to_value(eligibility).map_err(|e| CoreError::new(e.to_string()))?;
+        packet["resolution"] = json!("human-owned-task");
+        packet["human_context"] = json!({
+            "proposed_action":task,
+            "reason":"The selected current target is explicitly configured as a human task owner.",
+            "context":"Perform the task using the attached inputs and return contract. Return missing-input blockers when necessary.",
+            "defer_preserves":"The assignment remains pending; no result or completion is admitted.",
+            "authority_boundary":"The returned work is an unproven observation, not independent review, command proof or completion authority."
+        });
+        packet = crate::assignment_packet::seal(&packet)?;
+    }
     let schema: Value = serde_json::from_str(include_str!(
         "../contracts/schemas/assignment_worker_context.schema.json"
     ))

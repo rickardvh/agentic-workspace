@@ -277,7 +277,14 @@ pub(crate) fn view(
             }
         }
         let mut transports = transports;
-        if current {
+        if profile["owner_kind"] == "human" {
+            // A configured person receives the task through the existing manual
+            // handoff. Never launch a process or impersonate the current host.
+            transports.retain(|v| v["method"] == "manual");
+            if transports.is_empty() && source_policy["manual_transport_policy"] != "disabled" {
+                transports.push(json!({"kind":"manual","method":"manual","command":[]}));
+            }
+        } else if current {
             transports.retain(|v| v["kind"] != "internal");
             transports.insert(
                 0,
@@ -383,7 +390,7 @@ pub(crate) fn view(
             let capability = digest(
                 &json!({"profile":profile,"target_scope":target_scope[name],"transport":transport,"executable":observed,"host_capability":capability_observation,"process_supported":process,"result_classes":result_classes,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
             )?;
-            candidates.push(json!({"id":format!("{name}:{variant}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&process&&(!host||capability_observation["status"]=="available"),"result_classes":result_classes,"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution_guarantees":profile["execution_guarantees"].as_array().cloned().unwrap_or_default(),"execution":{"adapter":transport,"observed_executable":observed,"host_capability":capability_observation,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
+            candidates.push(json!({"id":format!("{name}:{variant}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&process&&(!host||capability_observation["status"]=="available"),"result_classes":result_classes,"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution_guarantees":profile["execution_guarantees"].as_array().cloned().unwrap_or_default(),"execution":{"owner_declaration":profile,"owner_reference":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"adapter":transport,"observed_executable":observed,"host_capability":capability_observation,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
         }
     }
     let mut input = requirements["requirements"].clone();

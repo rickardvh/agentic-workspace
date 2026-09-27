@@ -169,7 +169,7 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     )
     fresh["arguments"]["value"] = "another-override"
     override = call(request=fresh)["configuration_write"]
-    assert override["status"] == "human-decision-required"
+    assert override["status"] == "domain-decision-required"
     assert "another-override" in override["proposal"]["postimage"]
     assert source.read_bytes() == original
     local.unlink()
@@ -203,7 +203,7 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     # Historical evidence does not authorize a new edit.
     next_request = current["configuration_write"]["requests"][0]
     next_request["arguments"]["value"] = "yet-another-command"
-    assert call(request=next_request)["configuration_write"]["status"] == "human-decision-required"
+    assert call(request=next_request)["configuration_write"]["status"] == "domain-decision-required"
     # Malformed current bytes are preserved and never interpreted as a repair grant.
     source.write_bytes(b"[broken")
     rejected = call(request=answer)

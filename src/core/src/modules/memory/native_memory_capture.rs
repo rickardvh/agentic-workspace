@@ -1,4 +1,4 @@
-//! Exact human-answer or policy-delegated decisions in the existing archives.
+//! Exact domain-answer or policy-delegated decisions in the existing archives.
 //! Publication custody and deciding authority are checked separately. This is
 //! not identity authentication, a trust-pin writer, or generic archive custody.
 use crate::{CoreError, digest};
@@ -15,7 +15,7 @@ pub(crate) const CAPTURE: &str = "memory/capture-decision/v1";
 pub(crate) const RECOVER: &str = "memory/recover-decision/v1";
 pub(crate) const REPOSITORY_CAPTURE: &str = "decision-continuity/capture-decision/v1";
 pub(crate) const REPOSITORY_RECOVER: &str = "decision-continuity/recover-decision/v1";
-const SEMANTICS: &str = "memory-bounded-human-decision-v1";
+const SEMANTICS: &str = "memory-bounded-domain-decision-v2";
 const EFFECT: &str = "memory-state";
 const DEFAULT_ARCHIVE: &str = ".agentic-workspace/memory/repo/decisions";
 const MANIFEST: &str = ".agentic-workspace/memory/repo/manifest.toml";
@@ -84,7 +84,7 @@ impl Destination {
         match self {
             Self::Memory => SEMANTICS,
             Self::Advisory => "memory-bounded-advisory-v1",
-            Self::Repository => "repository-bounded-human-decision-v1",
+            Self::Repository => "repository-bounded-domain-decision-v2",
         }
     }
     fn result_kind(self) -> &'static str {
@@ -493,17 +493,23 @@ fn material_bytes(material: &Value, binding: &Value) -> Result<Vec<u8>, CoreErro
         }
         return Ok(format!("# Advisory knowledge\n\n{}\n\n## Future value\n\n{}\n\nMaterial authorship is unattributed. Retention was admitted through the current owner request; this note grants no decision, policy, proof or completion authority.\n", lesson, material["rationale"].as_str().unwrap()).into_bytes());
     }
-    let basis = digest(&json!([destination.semantics(), material, binding]))?;
+    let basis = digest(&json!([binding["semantics"], material, binding]))?;
+    let historical_human = matches!(
+        binding["semantics"].as_str(),
+        Some("memory-bounded-human-decision-v1" | "repository-bounded-human-decision-v1")
+    );
     let agent = binding.get("decision_authority").is_some();
-    let reference = json!({"owner":if agent {"policy-delegated-decision"} else {"bounded-human-answer"},"reference":basis,"revision":basis});
+    let reference = json!({"owner":if agent {"policy-delegated-decision"} else if historical_human {"bounded-human-answer"} else {"bounded-domain-answer"},"reference":basis,"revision":basis});
     let provenance = if agent {
         "Deciding provenance is an exact current repository-policy delegation for this owner-computed material subject. The acting agent is not identified or authenticated. Publication alone does not admit this consequence."
-    } else {
+    } else if historical_human {
         "Deciding provenance is an exact bounded human answer, not cryptographically authenticated identity. Publication alone does not admit this consequence."
+    } else {
+        "Deciding provenance is an exact bounded domain answer under the current task and owner contract. The acting agent is not authenticated. Publication alone does not admit this consequence."
     };
     let record = json!({"id":material["id"],"decision":material["decision"],"consequence":material["consequence"],
         "authors":[{"kind":"unattributed","id":format!("request-material:{}",digest(material)?)}],"contributors":[],
-        "authority":{"actor":{"kind":if agent {"agent"} else {"human"},"id":if agent {format!("policy-delegation:{basis}")} else {format!("bounded-answer:{basis}")}},"basis":[reference]},
+        "authority":{"actor":{"kind":if historical_human && !agent {"human"} else {"agent"},"id":if agent {format!("policy-delegation:{basis}")} else {format!("bounded-answer:{basis}")}},"basis":[reference]},
         "scope":binding["scope"],"dependencies":binding["dependencies"].as_object().unwrap().iter().map(|(p,r)|json!({"owner":"repository","reference":p,"revision":r})).collect::<Vec<_>>(),
         "context":[],"supersedes":material["supersedes"]});
     let mut text = format!(
@@ -519,7 +525,7 @@ fn material_bytes(material: &Value, binding: &Value) -> Result<Vec<u8>, CoreErro
             material["consequence"].as_str().unwrap(),
             material["rationale"].as_str().unwrap(),
             serde_json::to_string(&material["alternatives"]).map_err(err)?,
-            if agent {
+            if agent || !historical_human {
                 provenance
             } else {
                 "The deciding basis is the exact bounded human answer to the owner-issued proposal, not authenticated human identity. Publication is separate from deciding authority."
@@ -576,7 +582,11 @@ fn retained(target: &Path, source: &str) -> Result<Option<Value>, CoreError> {
         || i["source_owner"] != destination.owner()
         || args["target"] != target.to_str().unwrap()
         || binding["source"] != source
-        || binding["semantics"] != destination.semantics()
+        || !(binding["semantics"] == destination.semantics()
+            || (destination == Destination::Memory
+                && binding["semantics"] == "memory-bounded-human-decision-v1")
+            || (destination == Destination::Repository
+                && binding["semantics"] == "repository-bounded-human-decision-v1"))
         || request["request_kind"] != destination.capture()
         || request["task_identity"] != binding["work"]
         || request["capability_revision"] != binding["capability_revision"]
@@ -674,7 +684,7 @@ pub(crate) fn view_for(
         "source_revision":revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args})
     };
     let mut view = json!({"status":"available","requests":[],"contribution":{"owner":destination.owner(),"revision":revision,"actions":[]},
-        "agent_authority":"not-established-by-current-policy-facts"});
+        "agent_authority":"exact-domain-answer-under-current-task-authority"});
     if destination == Destination::Memory
         && let Some(stronger) = config["admissions"]["decision_record_target"]
             .as_str()
@@ -963,16 +973,17 @@ pub(crate) fn view_for(
             "material":{"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,
                 "disposition":args["disposition"].as_str().unwrap_or("retain"),"publishes_source":args["disposition"] != "no-retention"},
             "response_request":{"request_kind":destination.capture(),"arguments":answer},"choices":[{"id":destination.answer(),"label":if destination == Destination::Advisory {"Retain this exact advisory knowledge"} else {"Confirm this exact bounded decision"}},{"id":"defer","label":"Defer without publication"}],"affects":["task",format!("effect:{}",destination.effect())]}]);
+
         if args["answer"].is_null() && !agent {
             if request["id"] != destination.capture() {
                 return Err(err(
                     "decision material must use the issued material request",
                 ));
             }
-            view["status"] = json!("human-decision-required");
+            view["status"] = json!("domain-decision-required");
             view["proposal"] = json!({"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"proposal_revision":proposal,
                 "disposition":args["disposition"].as_str().unwrap_or("retain"),"publishes_source":args["disposition"] != "no-retention",
-                "authority_basis":"exact-bounded-human-answer; no authenticated identity claim"});
+                "authority_basis":"exact-bounded-domain-answer; no authenticated identity claim"});
             view["contribution"]["decisions"] = decisions;
             return Ok(view);
         }
@@ -1006,7 +1017,7 @@ pub(crate) fn view_for(
         if args["disposition"] == "no-retention" {
             view["status"] = json!("no-retention");
             view["response"] = json!({"kind":"agentic-workspace/decision-disposition/v1","disposition":"no-retention",
-                "proposal_revision":proposal,"authority_basis":if agent {binding["decision_authority"].clone()} else {json!({"kind":"exact-bounded-human-answer","request_revision":digest(request)?,"identity_authentication":"not-claimed"})},"durable_state_created":false,"completion_authority":false});
+                "proposal_revision":proposal,"authority_basis":if agent {binding["decision_authority"].clone()} else {json!({"kind":"exact-bounded-domain-answer","request_revision":digest(request)?,"identity_authentication":"not-claimed"})},"durable_state_created":false,"completion_authority":false});
             return Ok(view);
         }
         if let Some(record) = retained(target, &source)?
@@ -1431,7 +1442,9 @@ pub(crate) fn context_for(
             // and permits a new exact decision to supersede the former record.
             if matches!(
                 dependency["owner"].as_str(),
-                Some("bounded-human-answer" | "policy-delegated-decision")
+                Some(
+                    "bounded-human-answer" | "bounded-domain-answer" | "policy-delegated-decision"
+                )
             ) && (binding["policy_revision"] != config["revision"]
                 || (dependency["owner"] == "policy-delegated-decision"
                     && delegated(
@@ -1471,6 +1484,50 @@ pub(crate) fn context_for(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn historical_human_material_keeps_its_provenance() {
+        let material = json!({"id":"fixture:history","decision":"Keep the boundary",
+            "consequence":"Preserve scope", "rationale":"A durable fixture choice",
+            "alternatives":[], "supersedes":[]});
+        for (destination, old) in [
+            (Destination::Memory, "memory-bounded-human-decision-v1"),
+            (
+                Destination::Repository,
+                "repository-bounded-human-decision-v1",
+            ),
+        ] {
+            let mut binding = json!({"semantics":old,"source":"docs/decision.md",
+                "scope":["path:src/a.rs"],"dependencies":{}});
+            let historical = material_bytes(&material, &binding).unwrap();
+            let record = crate::decision_source::record(
+                &historical,
+                "docs/decision.md",
+                destination.record_owner(),
+            )
+            .unwrap();
+            assert_eq!(record["authority"]["actor"]["kind"], "human");
+            assert_eq!(
+                record["authority"]["basis"][0]["owner"],
+                "bounded-human-answer"
+            );
+            binding["semantics"] = json!(destination.semantics());
+            let current = material_bytes(&material, &binding).unwrap();
+            let record = crate::decision_source::record(
+                &current,
+                "docs/decision.md",
+                destination.record_owner(),
+            )
+            .unwrap();
+            assert_eq!(record["authority"]["actor"]["kind"], "agent");
+            assert_eq!(
+                record["authority"]["basis"][0]["owner"],
+                "bounded-domain-answer"
+            );
+            binding["semantics"] = json!(old);
+            assert_eq!(material_bytes(&material, &binding).unwrap(), historical);
+        }
+    }
 
     #[test]
     fn standing_delegation_rejects_patterns_even_without_schema_validation() {

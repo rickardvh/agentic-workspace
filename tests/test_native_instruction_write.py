@@ -78,7 +78,7 @@ def test_current_nomination_uses_destination_authority_and_quiets_after_change(t
     assert view(call(request=candidate))["status"] == "report-to-package-owner"
     candidate = request()
     proposed = call(request=candidate)
-    assert view(proposed)["status"] == "human-decision-required"  # Latitude is not mutation authority.
+    assert view(proposed)["status"] == "domain-decision-required"  # Latitude is not mutation authority.
     answer = next(
         d
         for d in proposed["decision_packet"]["pending_consequences"]["decisions"]

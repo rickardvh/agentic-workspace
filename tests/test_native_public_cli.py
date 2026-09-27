@@ -342,7 +342,10 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
     if selection_source == "shared":
         assert not selection.parent.exists(), "constructing intention must not mutate state"
     if selection_source == "local":
-        assert any(item["code"] == "planning-selection-custody-required" for item in continued["decision_packet"]["blockers"])
+        decision = continued["decision_packet"]
+        assert decision["decision_request"]["id"] == "planning-selector-transfer"
+        assert decision["primary_action"] is None
+        assert not any(item["code"] == "planning-selection-custody-required" for item in decision["blockers"])
         assert not (tmp_path / ".agentic-workspace/local/effects").exists()
         assert "reconciliation" not in json.loads(selection.read_text())
         assert plan.read_bytes() == original

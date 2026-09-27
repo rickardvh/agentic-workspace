@@ -131,11 +131,12 @@ def test_bounded_decision_capture_recall_and_currentness(tmp_path: Path, shared_
     assert states[0]["id"] == "fixture:bounded-decision"
     consequence = fresh["decision_packet"]["decision_context"]["consequences"][0]
     assert consequence["authors"][0]["kind"] == "unattributed"
-    assert consequence["authority"]["basis"][0]["owner"] == "bounded-human-answer"
+    assert consequence["authority"]["basis"][0]["owner"] == "bounded-domain-answer"
     assert fresh["decision_sources"]["requests"]
     read = fresh["decision_sources"]["requests"][0]
     detail = call(task="Fresh session, relevant source", request=read)
-    assert "bounded human answer" in detail["decision_sources"]["response"]["body"]
+    assert consequence["authority"]["actor"]["kind"] == "agent"
+    assert detail["decision_sources"]["response"]["body"] == source.read_text()
     quiet = call(task="Unrelated", changed=["src/other.rs"])
     assert not quiet["decision_packet"].get("decision_context", {}).get("states")
     with pytest.raises(AssertionError, match="collision|stale|consumed"):

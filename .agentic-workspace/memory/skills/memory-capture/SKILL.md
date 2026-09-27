@@ -18,5 +18,5 @@ the same references manually:
 
 Finish by verifying the saved result or explaining why nothing should be retained.
 No useful finding means no capture retrospective. Optional method selection cannot
-waive explicit candidate obligations, human authorization or receiving evidence.
+waive explicit candidate obligations, current task authority or receiving evidence.
 Missing native runtime leaves current custody unknown; preserve managed sources.

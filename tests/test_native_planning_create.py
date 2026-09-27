@@ -100,8 +100,13 @@ def test_real_former_owner_can_evolve_after_native_custody(
     if selector_mode == "legacy-local":
         assert selected["planning"]["status"] == "custody-required"
         before_selector = selector.read_bytes()
-        transfer = first["planning"]["selector_transfer"]["request"]
-        assert "answer" not in transfer["arguments"], "the owner cannot answer for the human"
+        question = selected["decision_packet"]["decision_request"]
+        assert question["resolution"] == "bounded-domain-answer"
+        assert not any(b["code"] == "planning-selection-custody-required" for b in selected["decision_packet"]["blockers"])
+        assert selected["decision_packet"]["primary_action"] is None
+        assert "human_context" not in question
+        transfer = question["response_request"]
+        assert "answer" not in transfer["arguments"], "the owner requires an exact domain answer"
         with pytest.raises(AssertionError):
             call({**context, "request": transfer})
         transfer["arguments"]["answer"] = "authorize-selector-transfer"
@@ -134,7 +139,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
         transferred = json.loads(selector.read_bytes())
         assert {k: v for k, v in transferred.items() if k != "reconciliation"} == legacy
         retained = transferred["reconciliation"]
-        assert retained["invocation"]["arguments"]["selection_transition"]["human_authorization"] == transfer
+        assert retained["invocation"]["arguments"]["selection_transition"]["domain_authorization"] == transfer
         assert retained["custody"]["committed"]
         assert call({**context, "invocation": action})["value"] == acquired["value"]
         assert selector.read_bytes() == json.dumps(transferred, indent=2).encode()

@@ -15,7 +15,7 @@ evidence, expected effect, validation and supersession meaning. Trusted correcti
 owner friction and repo opportunity remain distinct origins. Apparent usefulness
 or recurrence never authorizes publication. Repository opportunity latitude may
 permit an in-work or proactive proposal; the destination still needs its exact
-current grant or authorized human answer. Package defects route to the package
+current domain confirmation under task authority. Package defects route to the package
 owner rather than consuming repository improvement latitude.
 
 Read the actual current owner consequence before declaring `already-owned`.
