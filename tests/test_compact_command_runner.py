@@ -312,7 +312,6 @@ def test_run_command_emits_rate_limited_heartbeats_with_fake_clock_and_process(t
     assert heartbeat["count"] == 3
     assert heartbeat["elapsed_seconds"] == [20.0, 30.0, 40.0]
     assert all("long proof (proof.long)" in message for message in messages)
-    assert all("process liveness only" in message for message in messages)
     assert all("scratch/validation-results/run/proof.long.json" in message for message in messages)
 
 

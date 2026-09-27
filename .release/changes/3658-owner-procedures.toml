@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose the owner interaction procedure beside current requests and clarify structured input, correction and recovery handling."

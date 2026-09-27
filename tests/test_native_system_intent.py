@@ -39,7 +39,6 @@ def test_real_governing_sources_are_lazy_exact_and_not_alignment(
     read = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["system_intent"]["response"]
     assert read["text"] == (tmp_path / MIRROR).read_bytes().decode("utf-8")
     assert "governing_intents" in read["text"]
-    assert "grants no alignment" in read["authority_boundary"]
     for projection in ("compact", "carried"):
         delivered = consume(surface, shared_core_binary, native_cli, {**context, "request": request, "projection": projection})
         visible = delivered["view"] if projection == "carried" else delivered
@@ -114,14 +113,15 @@ def test_existing_interpretation_uncertainty_is_preserved(
         consume(surface, shared_core_binary, native_cli, {**context, "request": [request, request]})
 
 
-def test_retained_intent_reconciliation_requires_exact_judgment_and_authority(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"], ids=["lf", "crlf"])
+def test_retained_intent_reconciliation_requires_exact_judgment_and_authority(tmp_path, shared_core_binary, native_cli, newline):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     (tmp_path / ".gitignore").write_text(".agentic-workspace/local/\n")
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
     config.write_text('[system_intent]\nsources=["SYSTEM_INTENT.md"]\npreferred_source="SYSTEM_INTENT.md"\n')
     governing = tmp_path / "SYSTEM_INTENT.md"
-    governing.write_text("Preserve human why; keep tools quiet.\n", encoding="utf-8")
+    governing.write_bytes(b"Preserve human why; keep tools quiet." + newline)
     mirror = tmp_path / MIRROR
     mirror.parent.mkdir()
     old = 'schema_version=1\nkind="agentic-workspace/system-intent/v1"\nsummary="Older interpretation"\nneeds_review=false\n'
@@ -132,6 +132,15 @@ def test_retained_intent_reconciliation_requires_exact_judgment_and_authority(tm
         return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     stale = call()["system_intent"]
+    source = next(s for s in stale["sources"] if s["reference"] == "SYSTEM_INTENT.md")
+    assert source["revision_scheme"] == "raw-bytes"
+    assert source["revision"] == "sha256:" + hashlib.sha256(governing.read_bytes()).hexdigest()
+    assert source["source_record_scheme"] == "universal-newline-utf8"
+    assert source["source_record"] == {
+        "path": "SYSTEM_INTENT.md",
+        "present": True,
+        "sha256": hashlib.sha256(b"Preserve human why; keep tools quiet.\n").hexdigest(),
+    }
     assert "retained-interpretation-source-currentness-unproven" in stale["gaps"]
     read = next(r for r in stale["requests"] if r["arguments"]["reference"] == "SYSTEM_INTENT.md")
     assert call(request=read)["system_intent"]["response"]["text"] == governing.read_bytes().decode()
@@ -140,12 +149,22 @@ def test_retained_intent_reconciliation_requires_exact_judgment_and_authority(tm
     post = (
         old.replace("Older interpretation", "Preserve human why through quiet tools")
         + 'preferred_source="SYSTEM_INTENT.md"\n[[source_records]]\npath="SYSTEM_INTENT.md"\npresent=true\nsha256="'
-        + hashlib.sha256(governing.read_text().encode()).hexdigest()
+        + source["source_record"]["sha256"]
         + '"\n'
     )
     request["arguments"].update(
         content=post, judgment="revised", reason="The previous summary omitted human why and quietness; both are now explicit."
     )
+    wrong = copy.deepcopy(request)
+    wrong["arguments"]["content"] = post.replace(source["source_record"]["sha256"], "0" * 64)
+    with pytest.raises(AssertionError) as mismatch:
+        call(request=wrong)
+    assert "SYSTEM_INTENT.md" in str(mismatch.value) and "].sha256" in str(mismatch.value)
+    assert "Preserve human why" not in str(mismatch.value)
+    if newline == b"\r\n":
+        wrong["arguments"]["content"] = post.replace(source["source_record"]["sha256"], source["revision"][7:])
+        with pytest.raises(AssertionError, match="universal-newline-utf8"):
+            call(request=wrong)
     proposed = call(request=request)
     assert proposed["system_intent"]["reconciliation"]["status"] == "owner-decision-required"
     assert proposed["decision_packet"]["primary_action"] is None

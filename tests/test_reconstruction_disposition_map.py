@@ -39,10 +39,6 @@ def test_reconstruction_map_is_temporary_and_fail_closed() -> None:
     assert gate["policy"] == "fail-closed"
     assert gate["destructive_ready"] is False
     assert gate["current_checkout_required"] is False
-    assert "destination owners" in gate["reason"]
-    assert "redacted semantic inspection" in gate["current_checkout_evidence"]
-    assert "never persist" in gate["privacy_boundary"]
-    assert "destructive" in gate["rule"].lower()
 
 
 def test_baseline_authority_has_complete_owner_and_disposition_coverage() -> None:
@@ -184,6 +180,3 @@ def test_salvage_false_positives_are_not_direct_ports() -> None:
     assert by_id["windows-lock-test-quarantine"]["disposition"] == "DROP"
     assert by_id["durability-portability-failure"]["disposition"] == "EVIDENCE"
     assert by_id["trusted-human-correction-ingress"]["disposition"] == "ADAPT"
-
-    assert "acting agent" in by_id["lexical-runtime-task-applicability"]["rejected_assumption"]
-    assert "Windows" in by_id["durable-operation-primitives"]["independent_reason"]

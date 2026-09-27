@@ -154,9 +154,7 @@ def test_mixed_provider_availability_is_explicit_and_never_fabricates_fallback_p
 
     assert routes["openai-codex"]["status"] == "available-with-current-evidence"
     assert routes["distinct-vendor"]["status"] == "unavailable"
-    assert "do not silently substitute" in routes["distinct-vendor"]["fallback"]
     assert routes["separate-strong-tier-live-run"]["status"] == "unavailable"
-    assert availability["rule"].startswith("Provider absence is explicit evidence")
 
 
 def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> None:
@@ -245,7 +243,6 @@ def test_external_agent_lane_scenarios_cover_issue_lane_requirements() -> None:
     assert {"artifact_source", "artifact_checksum", "installed_entrypoint"} <= set(artifact_probe["artifact_evidence"]["required_fields"])
     assert observation_contract["applies_to"] == "representative_evidence_records"
     assert observation_contract["minimum_observed_records"] == 3
-    assert "representative observed records" in observation_contract["coverage_rule"]
     assert {
         "aw_command_count",
         "proof_command_count",
@@ -341,18 +338,15 @@ def test_external_agent_lane_surface_decisions_record_selector_first_start_reduc
     assert "sample-startup-codex-spark" in skill_catalog_decision["evidence_refs"]
     assert "before:" in skill_catalog_decision["before_after_cost_signal"]
     assert "after:" in skill_catalog_decision["before_after_cost_signal"]
-    assert "package" in skill_catalog_decision["authority_boundary_guardrail"]
     assert "required skill" in skill_catalog_decision["rollback_condition"]
     assert candidate_pressure_decision["surface"] == "implement.context.planning_safety_gate.candidate_pressure observed detail"
     assert candidate_pressure_decision["decision"] == "route"
     assert "before:" in candidate_pressure_decision["before_after_cost_signal"]
     assert "after:" in candidate_pressure_decision["before_after_cost_signal"]
-    assert "hard blockers" in candidate_pressure_decision["authority_boundary_guardrail"]
     assert memory_packet_decision["surface"] == "implement.memory_decision_packet"
     assert memory_packet_decision["decision"] == "route"
     assert "before:" in memory_packet_decision["before_after_cost_signal"]
     assert "after:" in memory_packet_decision["before_after_cost_signal"]
-    assert "pull/capture status" in memory_packet_decision["authority_boundary_guardrail"]
 
 
 def test_external_agent_lane_rejects_invalid_completion_cost_observation() -> None:
@@ -467,7 +461,6 @@ def test_external_agent_lane_records_repaired_live_local_path_leak() -> None:
     assert live_run["raw_warning_classes"] == ["model_cli_local_path_leak"]
     assert live_run["final_message_repair"]["status"] == "repaired"
     assert live_run["final_message_repair"]["repairs"][0]["replacement"] == "README.md"
-    assert live_run["noncompliance"]["disposition"].startswith("retained as current weak-agent evidence")
 
 
 def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None:

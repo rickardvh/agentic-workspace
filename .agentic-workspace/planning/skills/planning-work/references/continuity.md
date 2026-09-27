@@ -66,6 +66,9 @@ Updates use `arguments.material`, like creation. Supply the complete requested
 record (the semantic postimage), preserving unchanged fields; a partial delta or an invented
 `document` field is not the update contract. Use the schema supplied by current
 Planning detail or its exact `planning/update/v1` capability declaration.
+Start from the selected record and keep the fields admitted by that schema.
+An update includes the current `lifecycle` and `phase`; creation material alone
+is incomplete. Preserve their actual values unless the task changes them.
 
 On fresh entry, use the supplied issue/owner pointer or current selected-owner
 reference, establish its relation to today's task, and recover only that owner's

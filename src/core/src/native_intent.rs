@@ -13,15 +13,72 @@ pub(crate) fn hash(bytes: &[u8]) -> String {
     dependency_binding::revision(bytes, Scheme::RawBytes).expect("raw bytes always have a revision")
 }
 pub(crate) fn observation(root: &Dir, reference: &str) -> Value {
+    source_observation(root, reference, false)
+}
+fn source_observation(root: &Dir, reference: &str, governing: bool) -> Value {
     match bytes(root, reference) {
         Ok(Some(bytes)) => {
-            json!({"reference":reference,"revision":hash(&bytes),"bytes":bytes.len(),"status":"present"})
+            let mut source = json!({"reference":reference,"revision":hash(&bytes),"bytes":bytes.len(),"status":"present"});
+            if governing {
+                source["revision_scheme"] = json!(Scheme::RawBytes);
+                source["source_record_scheme"] = json!(Scheme::UniversalNewlineUtf8);
+                match dependency_binding::revision(&bytes, Scheme::UniversalNewlineUtf8) {
+                    Ok(revision) => {
+                        source["source_record"] = json!({"path":reference,"present":true,"sha256":revision.strip_prefix("sha256:").unwrap()})
+                    }
+                    Err(_) => {
+                        source["source_record_status"] =
+                            json!("unavailable: governing source is not UTF-8")
+                    }
+                }
+            }
+            source
         }
         Ok(None) => json!({"reference":reference,"status":"missing"}),
         Err(error) => {
             json!({"reference":reference,"status":"unavailable","reason":error.to_string()})
         }
     }
+}
+pub(crate) fn source_record_mismatches(
+    root: &Dir,
+    declaration: &Value,
+    value: &Value,
+) -> Vec<String> {
+    stale_references(root, declaration, value)
+        .into_iter()
+        .map(|reference| {
+            if matches!(reference.as_str(), "source_records" | "preferred_source") {
+                return reference;
+            }
+            let records: Vec<_> = value["source_records"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|record| record["path"] == reference)
+                .collect();
+            let declared = declaration["sources"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|source| source == &reference);
+            let field = if records.len() != 1 || !declared {
+                "path"
+            } else {
+                let observed =
+                    dependency_binding::observe(root, &reference, Scheme::UniversalNewlineUtf8);
+                if observed.status == Currentness::Missing
+                    || matches!(observed.status, Currentness::Current)
+                        && records[0]["present"] != json!(observed.status == Currentness::Current)
+                {
+                    "present"
+                } else {
+                    "sha256"
+                }
+            };
+            format!("source_records[path={reference:?}].{field}")
+        })
+        .collect()
 }
 pub(crate) fn stale_references(root: &Dir, declaration: &Value, value: &Value) -> Vec<String> {
     let references: Vec<&str> = declaration["sources"]
@@ -102,7 +159,7 @@ pub(crate) fn view(
         .or_else(|| references.first().copied());
     let mut sources: Vec<Value> = references
         .iter()
-        .map(|reference| observation(&root, reference))
+        .map(|reference| source_observation(&root, reference, true))
         .collect();
     let mirror = observation(&root, MIRROR);
     let mut gaps: Vec<String> = sources

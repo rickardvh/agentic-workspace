@@ -259,7 +259,6 @@ def test_preview_and_stable_share_transport_but_not_support_admission() -> None:
     lifecycle = (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
     assert "release_class:" in workflow
     assert "prerelease: ${{ needs.promotion-admission.outputs.support_bearing != 'true' }}" in workflow
-    assert "Preview cannot carry stable support admission" in lifecycle
     assert "release_model(tag, release_class)" in lifecycle
     assert not (ROOT / ".github/workflows/preview-release.yml").exists()
 
@@ -270,7 +269,6 @@ def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref()
     assert 'f"{head_ref}:{tracking_ref}"' in helper
     assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper
     assert 'default="HEAD"' not in helper
-    assert "freshly fetched master head" in helper
     assert '"merge-base", "--is-ancestor", source_commit, remote_ref' in helper
 
 

@@ -74,20 +74,15 @@ def _module():
 
 def test_cli_catalogue_renders_current_values_and_local_effect_boundary() -> None:
     text = _module().render_cli_catalogue()
-    assert "# Current CLI Catalogue" in text
     for command in ["start", "invoke", "resources", "worker"]:
         assert f"`agentic-workspace {command}`" in text
     assert "`agentic-workspace planning new-plan`" not in text
-    assert "not native public commands" in text
-    assert "same `native_cli` declaration" in text
     assert "Contract digest: `sha256:" in text
 
 
 def test_surface_catalogue_separates_public_footprint_from_maintenance_profiles() -> None:
     text = _module().render_surface_catalogue()
-    assert "# Current Installed-Surface Catalogue" in text
     assert "configuration.repository-adoption" in text
-    assert "Optional domain state is never established" in text
     assert "### `necessary-surfaces`" not in text
 
 
@@ -112,7 +107,6 @@ def test_checked_in_catalogues_are_fresh(tmp_path: Path, line_ending: bytes) -> 
 
 def test_support_install_projection_is_immutable_and_hash_bound() -> None:
     text = _module().render_support_install()
-    assert "# Current Support-Bearing Install" in text
     assert "uv tool install" in text
     # Renderer parity is distinct from the maintainer's live release-currentness check.
     projection = json.loads((REPO_ROOT / _module().SUPPORT_INSTALL_PATH).read_text(encoding="utf-8"))

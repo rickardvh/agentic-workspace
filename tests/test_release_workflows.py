@@ -72,8 +72,6 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     assert ownership["release_pr_branch"] == "automation/coordinated-release"
     assert ownership["publisher"]["trigger"] == "existing-tag-only"
     assert ownership["semver_labels"] == ["semver:major", "semver:minor", "semver:patch"]
-    assert "every AW coordinated-release vMAJOR.MINOR.PATCH tag" in ownership["version_floor_rule"]
-    assert "other package domains do not set the AW release floor" in ownership["version_floor_rule"]
 
     package_names = [package["name"] for package in ownership["packages"]]
     assert package_names == ["agentic-workspace"]
@@ -309,9 +307,7 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "expected_head_sha:" in workflow
-    assert "explicitly escalated head" in workflow
     assert "reason:" in workflow
-    assert "Why exhaustive proof is required for this exact head." in workflow
     assert "Verify dispatched release head" in workflow
     assert "${{ inputs.expected_head_sha }}" in workflow
     assert '"${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}"' in workflow

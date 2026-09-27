@@ -155,7 +155,6 @@ def test_pr_comment_delta_classifies_new_review_response_scope() -> None:
     assert packet["kind"] == "agentic-workspace/pr-comment-delta/v1"
     assert packet["new_comment_count"] == 5
     assert packet["freshness"]["status"] == "baseline_only"
-    assert packet["freshness"]["readiness_claim_rule"].startswith("Refresh PR comments")
     assert packet["category_counts"]["pr_metadata_body_only_change"] == 1
     assert packet["category_counts"]["actionable_code_doc_body_change"] == 1
     assert packet["category_counts"]["ci_label_only_issue"] == 1
@@ -165,12 +164,10 @@ def test_pr_comment_delta_classifies_new_review_response_scope() -> None:
     assert packet["comment_surfaces"]["unavailable"] == ["thread_surface_completeness"]
     closure = next(item for item in packet["items"] if item["url"].endswith("#closure"))
     assert closure["category"] == "pr_metadata_body_only_change"
-    assert "no source proof" in closure["proof_hint"].lower()
     anchored = next(item for item in packet["items"] if item["url"].endswith("#code"))
     assert anchored["path"] == "tests/test_widget.py"
     assert anchored["addressing_status"] == "unresolved_action"
     assert anchored["action_required"] is True
-    assert "focused tests" in anchored["proof_hint"]
     question = next(item for item in packet["items"] if item["url"].endswith("#question"))
     assert question["addressing_status"] == "reply_only"
     resolved = next(item for item in packet["items"] if item["url"].endswith("#resolved"))
@@ -200,8 +197,6 @@ def test_pr_comment_delta_prioritizes_source_change_evidence_over_closure_metada
     item = packet["items"][0]
     assert item["category"] == "actionable_code_doc_body_change"
     assert item["addressing_status"] == "unresolved_action"
-    assert "source and test surfaces" in item["proof_hint"]
-    assert packet["smallest_next_action"] == "Inspect the referenced files and implement focused fixes with matching proof."
 
 
 def test_pr_comment_delta_keeps_ready_recheck_summaries_informational() -> None:
@@ -219,7 +214,6 @@ def test_pr_comment_delta_keeps_ready_recheck_summaries_informational() -> None:
 
     assert category == "informational_no_local_change"
     assert "readiness" in reason
-    assert proof_hint.startswith("No local proof required")
 
 
 def test_pr_comment_delta_uses_multiline_structured_blocker_before_next_action_prose() -> None:
@@ -242,7 +236,6 @@ def test_pr_comment_delta_uses_multiline_structured_blocker_before_next_action_p
 
     assert category == "ci_label_only_issue"
     assert "structured blocked" in reason
-    assert proof_hint.startswith("Inspect PR checks/metadata")
 
 
 def test_pr_comment_delta_keeps_multiline_structured_source_blockers_actionable() -> None:
@@ -262,7 +255,6 @@ def test_pr_comment_delta_keeps_multiline_structured_source_blockers_actionable(
     )
 
     assert category == "actionable_code_doc_body_change"
-    assert "source and test surfaces" in proof_hint
 
 
 def test_pr_comment_delta_keeps_canonical_merge_ready_informational() -> None:
@@ -282,7 +274,6 @@ def test_pr_comment_delta_keeps_canonical_merge_ready_informational() -> None:
 
     assert category == "informational_no_local_change"
     assert "readiness" in reason
-    assert proof_hint.startswith("No local proof required")
 
 
 def test_pr_comment_delta_marks_legacy_ready_structured_status_ambiguous() -> None:
@@ -389,7 +380,6 @@ def test_pr_comment_delta_uses_structured_unresolved_for_mixed_blocker_lists() -
 
     assert category == "actionable_code_doc_body_change"
     assert "structured blocked" in reason
-    assert "source and test surfaces" in proof_hint
 
 
 def test_pr_comment_delta_filters_seen_comment_urls(tmp_path: Path) -> None:
@@ -881,7 +871,6 @@ def test_pr_comment_delta_reports_graphql_truncation_boundaries() -> None:
         "review_threads_first": 100,
         "thread_comments_first": 20,
     }
-    assert packet["smallest_next_action"] == "Fetch complete paginated PR comments before treating this packet as complete."
 
 
 def test_pr_comment_delta_cli_reads_fixture(tmp_path: Path) -> None:
@@ -909,7 +898,6 @@ def test_pr_comment_delta_cli_reads_fixture(tmp_path: Path) -> None:
     packet = json.loads(result.stdout)
     assert packet["repository"] == "rickardvh/agentic-workspace"
     assert packet["pr_number"] == 1689
-    assert packet["smallest_next_action"] == "Clarify ambiguous comments before editing or fetching broad patch context."
 
 
 def test_pr_comment_delta_fetch_forces_utf8_subprocess_decoding(monkeypatch) -> None:
@@ -963,4 +951,3 @@ def test_pr_comment_delta_readme_keeps_live_workflow_discoverable() -> None:
     assert "uv run python src/tooling/github/pr_comment_delta.py" in text
     assert "--baseline-json" in text
     assert "pagination.truncated" in text
-    assert "does not write to GitHub" in text

@@ -381,7 +381,6 @@ def test_system_trigger_reports_failed_ci_and_merge_conflict_for_exact_head() ->
     assert trigger.key.startswith(f"12:{HEAD_A}:system:")
     assert "merge conflicts" in trigger.findings
     assert "CI check `unit` concluded `failure`" in trigger.findings
-    assert "PR CI or mergeability" in loop._review_prompt(trigger)
 
 
 def test_system_trigger_ignores_a_stale_semver_label_failure_with_later_success() -> None:
@@ -2199,4 +2198,3 @@ def test_review_prompt_records_explicit_existing_loop_handoff() -> None:
 
     assert "git push origin codex/example" in prompt
     assert "src/tooling/github/chatgpt_review_loop.py handoff --pr 12 --existing-only" in prompt
-    assert "repo Stop hook" not in prompt

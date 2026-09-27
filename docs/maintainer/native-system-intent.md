@@ -31,7 +31,21 @@ retained interpretation using their exact read requests. Supply the complete
 proposed TOML, a `faithful` or `revised` semantic judgement, and the reason for that
 judgement through `system-intent/edit-source/v1`. `unresolved` preserves the gap.
 The proposed `source_records` must match the declared sources (historical
-universal-newline SHA-256 format); constructing these records is bookkeeping
+universal-newline SHA-256 format). Each governing entry in `system_intent.sources`
+exposes a `source_record` containing its current `path`, `present` and `sha256`.
+Use that record after review. `source_record_scheme` is `universal-newline-utf8`:
+decode UTF-8, replace CRLF and lone CR with LF, then hash the UTF-8 bytes. The
+record's hex digest has no `sha256:` prefix. Its identity is equal for otherwise
+identical LF and CRLF text, including on Windows.
+
+The entry's separate `revision` uses `revision_scheme = "raw-bytes"` and includes
+the `sha256:` prefix. Read requests and effect bindings use this raw identity,
+so a line-ending change still invalidates a previously issued request or action.
+Do not copy its digest into a source record. Mismatch diagnostics identify the
+source-record path and field without printing source contents. An unavailable
+UTF-8 identity cannot supply a current record.
+
+Constructing these records is bookkeeping
 **after** semantic review, never the judgement itself. Preserve useful human-owned
 why, unresolved questions and extension fields when revising the interpretation.
 

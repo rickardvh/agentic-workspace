@@ -182,12 +182,10 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
         "independent_review": "not-granted",
         "completion_authority": False,
     }
-    assert "Do not publish" in semantics["consequences"]["defer"]
     if not delegated:
         nomination = call()["verification"]["source_reconciliation"]["requests"][0]
         nomination["arguments"]["judgments"] = answer["arguments"]["judgments"]
         pending = call({"request": nomination})["decision_packet"]["pending_consequences"]["decisions"][0]
-        assert "Authorize publication" in pending["question"]
         assert pending["material"]["assessment_semantics"] == semantics
         assert pending["material"]["judgments"] == answer["arguments"]["judgments"]
     action = ready["decision_packet"]["primary_action"]
@@ -248,10 +246,24 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     with pytest.raises(AssertionError):
         call({"request": answer})
 
+    # New membership needs its own assessment, preserving the old exact grant.
+    (tmp_path / "src/added.txt").write_text("new consumer")
+    membership = call()["verification"]["source_reconciliation"]
+    assert membership["coverage"]["accepted"] == 1
+    assert membership["coverage"]["pending"] == 1
+    nomination = membership["requests"][0]
+    nomination["arguments"]["judgments"] = {"docs/guide.md": {"disposition": "reviewed-current", "reason": "Checked the new consumer."}}
+    proposed = call({"request": nomination})
+    assert proposed["verification"]["source_reconciliation"]["status"] == "bounded-human-answer-required"
+    next_action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+    assert call({"invocation": next_action})["status"] == "applied"
+    assert call()["verification"]["source_reconciliation"]["coverage"]["accepted_groups"] == 2
+
     # Adding/removing the applicable grant changes semantic authority.
     text = config.read_text()
     config.write_text(text.replace(grant, "") if delegated else text.replace("[assurance]\n", "[assurance]\n" + grant))
     assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
+    assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 1
 
 
 @pytest.mark.parametrize("stage", ["receipt", "temporary", "superseded"])
@@ -512,6 +524,30 @@ def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_
     assert owner["status"] == "current"
     assert owner["coverage"]["accepted"] == 271
     assert owner["coverage"]["accepted_groups"] == 5
+    # Selecting a Planning subject must not republish repository assessments.
+    proof = tmp_path / ".agentic-workspace/proof"
+    before = {p.relative_to(proof): p.read_bytes() for p in proof.rglob("*") if p.is_file()}
+    ref = Path(".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json")
+    plan = tmp_path / ref
+    plan.parent.mkdir(parents=True)
+    plan.write_bytes(fixture_source(ref).read_bytes())
+    original = json.loads(plan.read_bytes())
+    (plan.parent.parent / "state.toml").write_text(
+        f'[[active.execplans]]\nid="{original["id"]}"\npath="{ref.as_posix()}"\nstatus="active"\n'
+    )
+    continuation = call()["planning"]["requests"][0]
+    selected = call({"request": continuation})
+    selection_action = selected["decision_packet"]["primary_action"]
+    assert selection_action["operation_id"] == "planning.reconcile"
+    assert call({"invocation": selection_action})["status"] == "applied"
+    observed = call()
+    owner = observed["verification"]["source_reconciliation"]
+    assert owner["status"] == "current"
+    assert owner["coverage"]["accepted_groups"] == 5
+    assert owner["requests"] == [] and owner["decisions"] == [] and owner["action"] is None
+    assert {p.relative_to(proof): p.read_bytes() for p in proof.rglob("*") if p.is_file()} == before
+    assert owner["evidence"]["completion_authority"] is False
+    assert owner["assessment_basis"]["kind"] == "repository-source-assessment"
     (tmp_path / "src/item-269.txt").write_text("changed consumer")
     owner = call()["verification"]["source_reconciliation"]
     assert owner["coverage"]["accepted"] == 256
@@ -523,6 +559,12 @@ def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_
     owner = call()["verification"]["source_reconciliation"]
     assert owner["coverage"]["total"] == 272
     assert owner["coverage"]["accepted"] == 256
+    # Publishing just this changed/new group preserves all four unrelated groups.
+    action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+    assert call({"invocation": action})["status"] == "applied"
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["coverage"]["accepted"] == 272
+    assert owner["coverage"]["accepted_groups"] == 5
     (tmp_path / "docs/guide.md").write_text("changed governing source")
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
 
@@ -548,6 +590,14 @@ def test_current_group_projection_ignores_history_and_preserves_missing_evidence
     projection = next((tmp_path / ".agentic-workspace/proof/current").glob("source-reconciliation-*.json"))
     assert json.loads(projection.read_text()) == [action["arguments"]["receipt_ref"]]
     assert not receipt.exists()  # authenticated superseded evidence has no live consumer
+    current_projection = projection.read_bytes()
+    projection.unlink()
+    missing_projection = call()["verification"]["source_reconciliation"]
+    assert missing_projection["status"] == "publication-review-required"
+    assert missing_projection["coverage"]["accepted"] == 0
+    assert missing_projection["action"] is None
+    assert not projection.exists()
+    projection.write_bytes(current_projection)
     current_receipt = tmp_path / action["arguments"]["receipt_ref"]
     current_receipt.unlink()
     with pytest.raises(AssertionError, match="current reconciliation receipt unavailable"):

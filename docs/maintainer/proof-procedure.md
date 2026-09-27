@@ -38,6 +38,9 @@ Confirmed effects remain distinct from continuation. Loss of continuation cannot
 authorise replay. Fresh owner recovery uses existing custody. Domain restrictions,
 source reconciliation, independent review and future-value candidate obligations
 survive missing optional skills. No new evidence store or procedure cursor exists.
+Repository [source assessments](reusable-source-assessments.md) can be reused by
+later tasks while their semantic dependencies remain current; task claims still
+need their own evidence and judgement.
 
 Validation follows real resource lifecycle and proof-to-receipt journeys through
 the direct owners, including stale policy/source, strict claims, measurement and

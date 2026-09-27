@@ -6,8 +6,10 @@ description: Choose evidence for a test or completion claim, interpret failures 
 # Select and interpret proof
 
 Use this method before choosing validation or interpreting whether its results
-support a claim. Name the outcome being tested and obtain current Verification
-requirements through `start`. Verification is the component that records required
+support a claim. Name the outcome being tested. For actual validation or completion,
+obtain missing current Verification requirements through `start`; explaining a
+hypothetical evidence choice from supplied facts needs no runtime call.
+Verification is the component that records required
 checks, execution receipts and claim decisions. You judge whether the evidence
 addresses the actual outcome; a passing command alone does not settle that question.
 

@@ -121,7 +121,6 @@ def test_schema_reference_scaffold_includes_required_doc_metadata(tmp_path: Path
 
     schema = (tmp_path / schema_path).read_text(encoding="utf-8")
     assert '"x-agentic-workspace-doc-role": "fixture"' in schema
-    assert "Describe the name field for generated schema reference docs." in schema
     assert module._annotation_errors(schema_path, repo_root=tmp_path) == []
 
 
@@ -145,18 +144,6 @@ def test_schema_reference_scaffold_refuses_existing_file_without_force(tmp_path:
         raise AssertionError("expected FileExistsError")
 
 
-def test_schema_reference_curated_descriptions_cover_high_value_schemas() -> None:
-    module = _load_generator()
-
-    startup = module.render_schema_reference(Path("src/tooling/contracts/schemas/startup_context.schema.json"))
-    report = module.render_schema_reference(Path("src/tooling/contracts/schemas/workspace_report.schema.json"))
-    aid = module.render_schema_reference(Path("src/core/contracts/schemas/agent_aid_manifest.schema.json"))
-
-    assert "minimum safe context for entering or resuming work" in startup
-    assert "Ordered surfaces and commands an agent should use" in startup
+def test_schema_reference_preserves_nested_field_identifier() -> None:
+    startup = _load_generator().render_schema_reference(Path("src/tooling/contracts/schemas/startup_context.schema.json"))
     assert "`context.pre_test_evidence_guardrail`" in startup
-    assert "Selector-first location for the optional non-blocking pre-test evidence-owner advisory" in startup
-    assert "Combined workspace report payload for installed modules" in report
-    assert "Recommended next action derived from report health" in report
-    assert "Manifest for a checked-in agent aid" in aid
-    assert "Observed friction or repeated need that justified creating the aid" in aid

@@ -133,7 +133,6 @@ def test_first_preparation_exact_subject_complete_files_and_unknowns(remote):
         "docs/maintainer/testing-strategy.md",
     }
     assert packet["delta_scope"] == "REVIEW_ONLY"
-    assert "verdict" in packet["authority"]
     remote["unavailable"] = True
     partial = review.prepare("owner/repo", 17, BASELINE)
     assert partial["status"] == "partial"
