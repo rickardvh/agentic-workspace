@@ -145,6 +145,13 @@ jobs:
       - name: Verify instruction checks preserve write protections
         timeout-minutes: 2
         run: uv run pytest tests/test_native_instruction_verification.py::test_current_check_releases_claim_but_preserves_same_instruction_protection -v
+      - name: Verify enforced native proof execution
+        timeout-minutes: 5
+        env:
+          AW_REQUIRE_PROOF_EXECUTOR: "1"
+        run: |
+          docker pull ubuntu:24.04
+          uv run pytest tests/test_native_proof_producer.py -k "isolated_proof or cannot_bypass or missing_executor" -q
       - name: Verify deferred configuration continuation
         timeout-minutes: 2
         run: uv run pytest tests/test_native_configuration_write.py::test_configuration_defer_resumes_outside_human_policy -v

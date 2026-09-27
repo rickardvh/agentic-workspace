@@ -24,12 +24,25 @@ impl Drop for ProcessGuard {
     }
 }
 pub(crate) fn run(
-    mut command: Command,
+    command: Command,
     input: Option<Vec<u8>>,
     budget: Duration,
 ) -> Result<Value, CoreError> {
+    run_with_input_limit(command, input, budget, 1_048_576)
+}
+
+pub(crate) fn run_with_input_limit(
+    mut command: Command,
+    input: Option<Vec<u8>>,
+    budget: Duration,
+    input_limit: usize,
+) -> Result<Value, CoreError> {
     use process_wrap::std::*;
-    if input.as_ref().is_some_and(|bytes| bytes.len() > 1_048_576) {
+    if input_limit > 160 * 1024 * 1024
+        || input
+            .as_ref()
+            .is_some_and(|bytes| bytes.len() > input_limit)
+    {
         return Err(err("process input exceeds bounded handoff limit"));
     }
     command

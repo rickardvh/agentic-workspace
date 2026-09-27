@@ -2,6 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
+    "execution": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "docker-readonly-source-v1" },
+        "image": { "type": "string", "maxLength": 1024, "pattern": "^(sha256:|[^ ]+@sha256:)[a-f0-9]{64}$" },
+        "inputs": { "type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+        "scratch_paths": { "type": "array", "maxItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+        "environment": { "type": "object", "maxProperties": 32, "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "maxLength": 128 }, "additionalProperties": { "type": "string", "maxLength": 2048 } }
+      },
+      "required": ["kind", "inputs"],
+      "additionalProperties": false
+    },
     "schema_version": {
       "const": "agentic-workspace/verification-manifest/v1"
     },

@@ -21,6 +21,7 @@ base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 jsonschema = { version = "0.53", default-features = false }
 cap-std = "4.0.3"
+tar = "0.4"
 toml = "0.8"
 toml_edit = "0.22"
 process-wrap = { version = "10", default-features = false, features = ["std", "process-group", "job-object", "creation-flags"] }

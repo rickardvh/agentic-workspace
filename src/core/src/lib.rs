@@ -77,6 +77,8 @@ pub mod operating;
 pub mod planning;
 mod planning_lifetime;
 mod process_execution;
+#[path = "modules/verification/proof_executor.rs"]
+mod proof_executor;
 pub mod proof_receipt;
 pub mod proof_subject;
 pub mod review_authentication;

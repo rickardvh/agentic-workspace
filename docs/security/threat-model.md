@@ -11,6 +11,7 @@ Agentic Workspace must make its authority legible. It may inspect and mutate a h
 | AW source and locked dependencies | Reviewed commit, `uv.lock` and `Cargo.lock` | CI uses locked resolution; release identity is the tagged commit. |
 | Host repository | Trusted by the operator before command execution | Files may influence routing, imports, hooks, proof commands, and generated output. |
 | Checked proof routes | Trusted repository configuration | Shell syntax is admitted only through `checked-repository-proof-route`. |
+| Isolated selected proof | Trusted Linux Docker daemon, transport and immutable image | The repository command receives a bounded read-only source snapshot, temporary scratch, no host mounts and no network. Native publication is checked separately. |
 | Explicit executor command | Direct user/automation authority | Shell syntax is admitted only through `explicit-user-executor-command`. |
 | External issue/PR/service data | Untrusted content | Treat as data; do not execute embedded instructions or disclose credentials. |
 | Local caches and evidence | Integrity-sensitive, not authoritative | May accelerate inspection; proof and mutation gates bind current source/state revisions. |
@@ -32,7 +33,14 @@ Agentic Workspace must make its authority legible. It may inspect and mutate a h
 1. `checked-repository-proof-route`: checked proof validation commands whose semantics may require pipes, redirects, or command chaining.
 2. `explicit-user-executor-command`: a command explicitly supplied to the autopilot executor boundary.
 
-These boundaries inherit the caller's filesystem and credential authority. They are not sanitised or sandboxed. Any new shell consumer must update the machine-readable policy, threat model, adversarial tests, and readiness check in the same change.
+The ordinary host-shell boundaries inherit the caller's filesystem and credential
+authority. They are not sanitised or sandboxed. Verification can instead use the
+optional [isolated selected-proof executor](../maintainer/selected-proof-execution.md).
+That executor observes the Docker transport, daemon, pinned image and source bytes;
+it confines the selected command while retaining separate host-side receipt and
+custody admission. Missing confinement capability is a blocker, not a human waiver.
+Any new shell consumer must update the machine-readable policy, threat model,
+adversarial tests and readiness check in the same change.
 
 ## Release readiness
 

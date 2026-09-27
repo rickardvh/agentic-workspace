@@ -204,6 +204,163 @@ def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, sh
     assert not (tmp_path / ".agentic-workspace/local/effects").exists()
 
 
+@pytest.mark.parametrize("mode", ["read", "write", "publication", "interruption"])
+def test_native_isolated_proof_preserves_protected_source(tmp_path: Path, shared_core_binary: Path, native_cli: Path, mode: str) -> None:
+    import shutil
+    import subprocess
+
+    from tests.test_native_public_cli import pin_instructions
+
+    if not shutil.which("docker"):
+        if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
+            pytest.fail("Required Docker proof executor is unavailable")
+        pytest.skip("Docker executor integration requires Docker")
+    image = subprocess.run(["docker", "image", "inspect", "ubuntu:24.04", "--format", "{{.Id}}"], capture_output=True, text=True)
+    if image.returncode:
+        if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
+            pytest.fail(image.stderr)
+        pytest.skip("Docker executor integration requires the ubuntu:24.04 fixture image")
+    context = fixture(tmp_path)
+    protected = tmp_path / "protected.txt"
+    protected.write_text("preserved")
+    command = "test $(cat a.txt | wc -c) -gt 0; test $(cat protected.txt) = preserved; test ! -e /var/run/docker.sock; test $(id -u) = 10001; echo verified"
+    if mode == "write":
+        command = "echo changed > protected.txt"
+    if mode == "interruption":
+        command = "cat protected.txt; sleep 30"
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    text = manifest.read_text()
+    manifest.write_text(
+        text[: text.index("commands=")]
+        + "commands=["
+        + json.dumps(command)
+        + "]\n"
+        + ("timeout_seconds=5\n" if mode == "interruption" else "")
+        + '[execution]\nkind="docker-readonly-source-v1"\nimage='
+        + json.dumps(image.stdout.strip())
+        + '\ninputs=["a.txt", "protected.txt"]\n'
+    )
+    instruction = tmp_path / ".agentic-workspace/instructions/preserve.md"
+    instruction.parent.mkdir(parents=True)
+    path = ".agentic-workspace/proof/receipts/index.json" if mode == "publication" else "protected.txt"
+    instruction.write_text(f"---\nprotect: [{path}]\n---\nPreserve this source.\n")
+    pin_instructions(tmp_path)
+
+    def call(value: dict) -> dict:
+        return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    request = call(context)["verification"]["execution_requests"][0]
+    selected = call({**context, "request": request})
+    if mode == "publication":
+        assert any(b["code"].endswith(":protected-proof-publication-write") for b in selected["decision_packet"]["blockers"])
+        assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+        return
+    action = selected["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "proof.report"
+    forged = json.loads(json.dumps(action))
+    forged["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]["source_access"] = "read-write"
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "invocation": forged})
+    assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+    if mode == "interruption":
+        import time
+
+        def running():
+            return set(subprocess.check_output(["docker", "ps", "-q", "--filter", "label=aw.proof.attempt"], text=True).split())
+
+        before = running()
+        process = subprocess.Popen(
+            [
+                str(native_cli),
+                "invoke",
+                "--target",
+                str(tmp_path),
+                "--task",
+                context["task"],
+                "--changed",
+                "a.txt",
+                "--input",
+                "-",
+                "--format",
+                "json",
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        label = None
+        try:
+            process.stdin.write(json.dumps(action))
+            process.stdin.close()
+            until = time.monotonic() + 30
+            worker = set()
+            while time.monotonic() < until and not worker:
+                worker = running() - before
+                time.sleep(0.05)
+            assert len(worker) == 1
+            worker_id = worker.pop()
+            details = json.loads(subprocess.check_output(["docker", "inspect", worker_id], text=True))[0]
+            label = details["Config"]["Labels"]["aw.proof.attempt"]
+            process.kill()
+            process.wait(timeout=5)
+            until = time.monotonic() + 10
+            while worker_id in running() and time.monotonic() < until:
+                time.sleep(0.1)
+            assert worker_id not in running(), "The root deadline must survive loss of the native caller"
+            with pytest.raises(AssertionError, match="proof-execution-uncertain"):
+                call({**context, "invocation": action})
+            assert protected.read_text() == "preserved"
+            assert not (tmp_path / ".agentic-workspace/proof/receipts/index.json").exists()
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
+            if label:
+                selector = "label=aw.proof.attempt=" + label
+                containers = subprocess.check_output(["docker", "ps", "-aq", "--filter", selector], text=True).split()
+                if containers:
+                    subprocess.run(["docker", "rm", "-f", *containers], check=True, capture_output=True)
+                volumes = subprocess.check_output(["docker", "volume", "ls", "-q", "--filter", selector], text=True).split()
+                if volumes:
+                    subprocess.run(["docker", "volume", "rm", *volumes], check=True, capture_output=True)
+        return
+    applied = call({**context, "invocation": action})
+    result = applied["value"]
+    assert result["process"]["status"] == ("failed" if mode == "write" else "passed")
+    assert protected.read_text() == "preserved"
+    assert result["publication"]["status"] == "published"
+    assert call({**context, "invocation": action})["value"] == result
+    claim = call(context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [result["publication"]["reference"]]
+    evidence = call({**context, "request": claim})["verification"]["evidence"][0]
+    assert evidence["evidence_freshness"] == "reusable"
+    assert evidence["receipt_admission"]["proof_sufficient"] is (mode == "read")
+    protected.write_text("new source")
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "invocation": action})
+
+
+def test_native_missing_executor_is_a_capability_gap_not_a_human_choice(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    with manifest.open("a") as stream:
+        stream.write('[execution]\nkind="docker-readonly-source-v1"\nimage="sha256:' + "0" * 64 + '"\ninputs=["a.txt"]\n')
+    current = consume("native", shared_core_binary, native_cli, context)
+    request = current["verification"]["execution_requests"][0]
+    blocked = consume("native", shared_core_binary, native_cli, {**context, "request": request})
+    execution = blocked["verification"]["execution"]
+    assert execution["status"] == "blocked"
+    assert execution["recovery"]["kind"] == "capability-gap"
+    assert execution["recovery"]["human_answer_allowed"] is False
+    assert blocked["decision_packet"]["primary_action"] is None
+    assert blocked["decision_packet"]["decision_request"] is None
+    gap = next(b for b in blocked["decision_packet"]["blockers"] if b["code"] == "verification:proof-execution-capability-unavailable")
+    assert gap["resolution"] == "owner-recovery-required"
+    assert gap["recovery"] == execution["recovery"]["detail"]
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
 @pytest.mark.parametrize("consumer", ["json", "python", "typescript"])
 def test_native_producer_reused_by_fresh_adapters_through_same_core(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, consumer: str
