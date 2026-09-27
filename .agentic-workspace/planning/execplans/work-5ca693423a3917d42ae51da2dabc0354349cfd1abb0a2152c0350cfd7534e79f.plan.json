@@ -9,7 +9,7 @@
   "canonical_core": {},
   "continuation": {
     "accepted": "External review accepts the direction of source reuse, proof selection, owner transport and source identity, but no PR is ready. The former standing-obligation registry violates issue 3680; replace it with an extension of assurance.requirements/current-evidence before composing entry. Historical branch snapshots preserve the superseded work.",
-    "frontier": "This head is layer 3685. The source reuse fix is now the foundation and has no implementation dependency on later layers. Native proof admission remains unresolved under 3686. The previous 25-test command was externally instructed local validation on the former combined stack only; it is not current native evidence for these rebased heads. No permission exchange is retained as future authority."
+    "frontier": "This head is layer 3676. The source reuse fix is now the foundation and has no implementation dependency on later layers. Native proof admission remains unresolved under 3686. The previous 25-test command was externally instructed local validation on the former combined stack only; it is not current native evidence for these rebased heads. No permission exchange is retained as future authority."
   },
   "creation_provenance": {
     "custody": {
@@ -61,7 +61,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3687"
   ],
   "relationships": {},
-  "revision": 8,
+  "revision": 9,
   "scope": {
     "constraints": "Repair the existing six PRs against external review. Do not implement 3686 or 3687 until this stack is repaired and checked. Independent review is external. Every independently mergeable head must have truthful continuation and its own current evidence.",
     "order": "Source assessment reuse 3685 first; then 3676 proof selection, 3678 owner procedures, 3679 source identity, redesigned 3682 assurance current-evidence lifecycle, and corrected 3684 entry composition."
@@ -71,18 +71,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f5a53394b6a6f2941edc2305cab773b2611438da2f6a55daf0eef2f64504bc18.attempt.json",
-        "revision": "sha256:31762083b7596423fdb61a243ddf87884e4b280946ce55e9fedb9791b50e7784",
+        "path": ".agentic-workspace/local/effects/1d876a5dd3f5fa3e01a65f22aa5b4ae2bf5f51f93b5de2c2729e4bedd0bbb9d0.attempt.json",
+        "revision": "sha256:1bab57e95f07352199c2613bcb1f9324461920246ff437c99cfbfc7f4c1ecf9b",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f5a53394b6a6f2941edc2305cab773b2611438da2f6a55daf0eef2f64504bc18.result.json",
-        "revision": "sha256:e4ef8ccdae579ecf4990e7ac422c54a340fdb6242b822afc9b3640a070ef5b46",
+        "path": ".agentic-workspace/local/effects/1d876a5dd3f5fa3e01a65f22aa5b4ae2bf5f51f93b5de2c2729e4bedd0bbb9d0.result.json",
+        "revision": "sha256:8283162a2a1a09381ccd904a693ada31b52b951306b6e438b137eae0b4173072",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:256aa4c785712e4c9b6153e9cd03a292fd249a5388517a27e40becab7f7e6bea",
+    "invocation_revision": "sha256:f1c70c62aedb5622115cd6f61746719408f7a6bb5c6354299379450fd15b6d40",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:69e64342e1e14a4c1ce6b789d3fb9870c2ae77633286db1436195e5eda932589",
+        "document_revision": "sha256:cdde5b7eb70ffcff90a1e2be976da050af42c5358aa981f4f9168e287b9967f8",
         "owner_id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
         "owner_path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json"
       }
