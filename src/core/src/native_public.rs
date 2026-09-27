@@ -96,7 +96,7 @@ fn resolve_selected(
         work_identity["maintenance"] = json!(maintenance);
     }
     let work = json!({"kind":"current-work", "id":digest(&work_identity)?});
-    let material = crate::native_material::view(target, &work, &input.material)?;
+    let mut material = crate::native_material::view(target, &work, &input.material)?;
     let mut requests = owner_requests(if executing {
         input
             .invocation
@@ -184,6 +184,8 @@ fn resolve_selected(
                 && i["operation_id"] != "decision-continuity.capture-decision"
                 && i["operation_id"] != "decision-continuity.recover-decision"
                 && i["operation_id"] != crate::native_source_reconciliation::OP
+                && i["operation_id"] != crate::current_evidence::OP
+                && i["operation_id"] != crate::current_evidence::RECOVERY
                 && !(i["operation_id"] == "planning.update"
                     && (i["arguments"]["consumed_return"].is_object()
                         || i["arguments"]["retained_handoff"].is_object()))
@@ -1246,6 +1248,59 @@ fn resolve_selected(
             planning["source_reconciliation"] = reconciliation;
         }
     }
+    if available("verification") {
+        let standing_request = verification_request(crate::current_evidence::REQUEST)
+            .or_else(|| verification_request(crate::current_evidence::RETIRE))
+            .or_else(|| verification_request(crate::current_evidence::RECOVER));
+        let standing = crate::current_evidence::view(
+            target,
+            &work,
+            &configuration,
+            &contract,
+            standing_request,
+        )?;
+        if standing_request.is_some() {
+            verification["contribution"]["revision"] = standing["revision"].clone();
+        }
+        if standing["action"].is_object() {
+            verification["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .push(standing["action"].clone());
+        }
+        if standing["decisions"]
+            .as_array()
+            .is_some_and(|a| !a.is_empty())
+        {
+            if verification["contribution"]["decisions"].is_null() {
+                verification["contribution"]["decisions"] = json!([]);
+            }
+            verification["contribution"]["decisions"]
+                .as_array_mut()
+                .unwrap()
+                .extend(standing["decisions"].as_array().unwrap().clone());
+        }
+        if input.maintenance.is_none() {
+            material["items"]
+                .as_array_mut()
+                .unwrap()
+                .extend(crate::current_evidence::needs(
+                    &standing,
+                    &work,
+                    &configuration,
+                )?);
+        }
+        crate::current_evidence::compose(&mut verification, &standing);
+        if standing_request.is_some()
+            || ["entries", "requests"].iter().any(|field| {
+                standing[*field]
+                    .as_array()
+                    .is_some_and(|rows| !rows.is_empty())
+            })
+        {
+            verification["current_evidence"] = standing;
+        }
+    }
     contributions.push(verification["contribution"].clone());
     let mut requirements = native_requirements::view(
         target,
@@ -1508,6 +1563,8 @@ fn resolve_selected(
                             | crate::native_planning_retention::RECOVERY
                             | crate::native_proof_retention::OP
                             | crate::native_proof_retention::RECOVERY
+                            | crate::current_evidence::OP
+                            | crate::current_evidence::RECOVERY
                             | "configuration.write"
                             | "configuration.recover-write"
                             | "configuration.defer-choice"
@@ -1701,7 +1758,10 @@ fn resolve_selected(
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
     }
-    if !input.material.is_empty() {
+    if material["items"]
+        .as_array()
+        .is_some_and(|items| !items.is_empty())
+    {
         public["material"] = material;
     }
     public["_detail_bindings"] = json!({
@@ -2068,6 +2128,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "decision-continuity.capture-decision"
         && invocation["operation_id"] != "decision-continuity.recover-decision"
         && invocation["operation_id"] != crate::native_source_reconciliation::OP
+        && invocation["operation_id"] != crate::current_evidence::OP
+        && invocation["operation_id"] != crate::current_evidence::RECOVERY
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -2110,6 +2172,28 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         )?;
         let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         return Ok(result);
+    }
+    if matches!(
+        invocation["operation_id"].as_str(),
+        Some(crate::current_evidence::OP | crate::current_evidence::RECOVERY)
+    ) {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        progress.entered_effect_owner = true;
+        let executed = crate::current_evidence::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
     }
     if invocation["operation_id"] == crate::native_source_reconciliation::OP {
         crate::admit_invocation_value(

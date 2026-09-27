@@ -397,7 +397,10 @@ pub fn restrict_pending(
                 && matches!(
                     action["operation_id"].as_str(),
                     Some(
-                        crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY
+                        crate::native_proof_retention::OP
+                            | crate::native_proof_retention::RECOVERY
+                            | crate::current_evidence::OP
+                            | crate::current_evidence::RECOVERY
                     )
                 ))
             || (action["source_owner"] == "planning"
@@ -418,6 +421,11 @@ pub fn restrict_pending(
             Some(crate::native_memory_retention::OP | crate::native_memory_retention::RECOVERY)
         ) {
             crate::native_memory_retention::write_scope(action)?
+        } else if matches!(
+            action["operation_id"].as_str(),
+            Some(crate::current_evidence::OP | crate::current_evidence::RECOVERY)
+        ) {
+            crate::current_evidence::write_scope(action)?
         } else if matches!(
             action["operation_id"].as_str(),
             Some(crate::native_proof_retention::OP | crate::native_proof_retention::RECOVERY)
@@ -480,6 +488,14 @@ pub fn restrict_pending(
                     .iter()
                     .any(|path| instruction_applicability::patterns_overlap(pattern, path))
             }) {
+                if matches!(
+                    action["operation_id"].as_str(),
+                    Some(crate::current_evidence::OP | crate::current_evidence::RECOVERY)
+                ) {
+                    additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"protected-standing-write",
+                        "Current source protection forbids this exact standing assessment or custody write.",vec!["effect:proof-execution".into()]));
+                    continue;
+                }
                 additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"protected-planning-write",
                     "The current Planning operation would write protected repository state; preserve the source and resolve that restriction before execution.",vec!["effect:planning-state".into()]));
             }

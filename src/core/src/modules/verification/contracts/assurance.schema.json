@@ -541,6 +541,48 @@
             "description": "Human-readable boundary for claims supported by this subsystem profile.",
             "type": "string",
             "minLength": 1
+          },
+          "freshness": {
+            "description": "Maintain this current-evidence requirement independently of task changes. Verification observes age and exact repository dependencies; no scheduler or execution is implied.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "procedure",
+              "max_age_seconds",
+              "dependencies",
+              "disposition"
+            ],
+            "properties": {
+              "procedure": {
+                "description": "Exact repository-relative procedure file for assessing this requirement. Separate from detail_route, which retains its owner-route or command semantics. Excludes local runtime storage and the current assessment source.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "pattern": "^(?!\\s*$)(?!\\.agentic-workspace/local/)(?!\\.agentic-workspace/proof/current/current-evidence\\.json$)(?!.*(?:^|/)(?:\\.|\\.\\.|\\.git)(?:/|$))[^/\\\\:\\u0000\\n]+(?:/[^/\\\\:\\u0000\\n]+)*$"
+              },
+              "max_age_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 315576000
+              },
+              "dependencies": {
+                "type": "array",
+                "maxItems": 24,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              },
+              "disposition": {
+                "enum": [
+                  "report",
+                  "route",
+                  "work"
+                ]
+              }
+            }
           }
         },
         "allOf": [
@@ -643,6 +685,29 @@
                     "current-evidence",
                     "guideline"
                   ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "freshness"
+              ]
+            },
+            "then": {
+              "required": [
+                "requirement_class",
+                "notes",
+                "detail_route"
+              ],
+              "properties": {
+                "requirement_class": {
+                  "const": "current-evidence"
+                },
+                "notes": {
+                  "minLength": 1,
+                  "maxLength": 4096
                 }
               }
             }

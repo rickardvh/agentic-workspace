@@ -1,5 +1,9 @@
 # Native semantic scope and measurement admission
 
+For repository conditions that outlive a task, see
+[standing obligations](standing-obligations.md). Their recorded semantic
+assessments remain separate from the proof and review admission described here.
+
 Verification uses its existing `verification/assurance-applicability/v1` request
 for owner-issued `protocol:<id>` and `domain:<id>` identities as well as assurance
 requirements. The answer is `applicable`, `not-applicable`, or `unresolved` for

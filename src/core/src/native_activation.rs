@@ -205,15 +205,22 @@ pub(crate) fn view(
     full: &Value,
     request: Option<&Value>,
 ) -> Result<Value, CoreError> {
-    let materials = full["material"]["items"]
+    let all_materials = full["material"]["items"]
         .as_array()
         .cloned()
         .unwrap_or_default();
+    // Owner-specified procedures already have a precise source. Do not fan these
+    // needs out over every optional registry procedure.
+    let materials: Vec<_> = all_materials
+        .iter()
+        .filter(|m| m["procedure"].is_null())
+        .cloned()
+        .collect();
     let blockers = full["decision_packet"]["blockers"]
         .as_array()
         .cloned()
         .unwrap_or_default();
-    if materials.is_empty() && blockers.is_empty() && request.is_none() {
+    if all_materials.is_empty() && blockers.is_empty() && request.is_none() {
         return Ok(Value::Null);
     }
     let work = &full["current_work"];
@@ -237,6 +244,25 @@ pub(crate) fn view(
         .map_err(|_| err("activation root unavailable"))?;
     let entries = crate::native_routes::activation_entries(target)?;
     let mut candidates = Vec::new();
+    for signal in all_materials.iter().filter(|m| m["procedure"].is_object()) {
+        let id = digest(&json!([signal["material"]["id"], signal["procedure"]]))?;
+        let revision = digest(&json!([work, signal]))?;
+        let judgment = request
+            .and_then(|r| r["arguments"]["judgments"].as_array())
+            .into_iter()
+            .flatten()
+            .find(|j| j["id"] == id);
+        if judgment.is_some_and(|j| j["revision"] != revision) {
+            return Err(err("standing need changed; reconsider dependent judgement"));
+        }
+        candidates.push(json!({"id":id,"revision":revision,
+            "status":judgment.map(|j|j["status"].clone()).unwrap_or(json!("applicable")),
+            "source":signal["material"]["source"]["reference"],"occasion":signal,
+            "applicability":"A declared repository condition is due or unknown.",
+            "outcome":signal["material"]["summary"],"entry":signal["procedure"],
+            "disposition":signal["disposition"],"outcome_status":"unsettled","judgment":judgment,
+            "authority":"Follow the declared procedure within current owner restrictions and improvement latitude; this candidate grants no mutation or completion authority."}));
+    }
     let mut seen = BTreeSet::new();
     for indexed in entries {
         let source = indexed["source"].as_str().unwrap();

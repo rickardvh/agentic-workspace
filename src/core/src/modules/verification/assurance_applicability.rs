@@ -56,6 +56,9 @@ pub fn view(input: Value) -> Result<Value, CoreError> {
     for requirement in requirements {
         let id = requirement["id"].as_str().unwrap();
         let mut reasons = vec![];
+        if requirement.get("freshness").is_some() {
+            reasons.push("repository current-evidence freshness requirement".into());
+        }
         let mut paths = BTreeSet::new();
         for path in strings(&input["changed_paths"]) {
             for pattern in strings(&requirement["applies_to_paths"]) {
