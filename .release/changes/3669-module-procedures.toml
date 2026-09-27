@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Clarify Planning and Memory procedures and remove retired launcher guidance."

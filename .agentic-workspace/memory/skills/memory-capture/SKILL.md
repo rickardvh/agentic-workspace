@@ -1,18 +1,22 @@
 ---
 name: memory-capture
-description: Select bounded candidate disposition or authored decision publication while native owners retain evidence and authority.
+description: Decide whether a useful lesson or decision should be saved and use its supported publication request.
 ---
 
 # Memory capture
 
-Use selected current Memory detail and the shared startup owner carriage. Read
-only the relevant sources. Select [the current question](procedure.md), or read
+Use when a finding could prevent future rediscovery or a current result asks what
+to do with a proposed lesson. Memory stores advice; it does not set policy or prove
+a claim. Prefer fixing the source that controls the behaviour when that is the
+appropriate authorised change. Otherwise inspect the selected Memory result and
+its exact request. Read only relevant sources. Select [the current question](procedure.md), or read
 the same references manually:
 
 - [Choose the smallest responsible home](references/destination.md).
-- [Authored decision and publication](references/publication.md).
-- [Explicit candidate consequences](references/candidate.md).
+- [Publish an authored decision through the returned request](references/publication.md).
+- [Answer a returned question about saving a lesson](references/candidate.md).
 
-No signal requires no capture retrospective. Optional method selection cannot
+Finish by verifying the saved result or explaining why nothing should be retained.
+No useful finding means no capture retrospective. Optional method selection cannot
 waive explicit candidate obligations, human authorization or receiving evidence.
 Missing native runtime leaves current custody unknown; preserve managed sources.

@@ -1,12 +1,15 @@
 ---
 name: planning-assignment
-description: Judge a concrete delegation choice, supply current Assignment assessment, and continue admitted work.
+description: Decide whether a bounded task benefits from delegation, or follow an existing assignment and its return requirements.
 ---
 
-# Choose delegation and use current Assignment custody
+# Choose delegation or follow an existing assignment
 
 Use when a bounded outcome presents a concrete local/delegate choice, or current
 Assignment asks for assessment or continuation. Ordinary local work needs no visit.
+Assignment records the selected worker, scope and permitted next action. Once its
+result binds work to a worker, that assignment controls who may implement the
+slice; a transport failure does not assign it back to you.
 Before binding, compare useful independent progress with context preparation,
 coordination, proof, repair and integration cost. Judge the outcome's coupling and
 needed capabilities; keywords, size, model/provider price or a classifier do not
@@ -20,12 +23,12 @@ reopening the strategic choice.
 
 Select [the current question](procedure.md) or follow the same sources manually:
 
-- [Supply unresolved assessment](references/assessment.md).
+- [Supply missing requirements or compare eligible workers](references/assessment.md).
 - [Continue locally](references/local.md).
 - [Follow current role, target and transport](references/binding.md).
-- [Carry a sealed manual packet](references/manual.md).
-- [Admit and integrate returned material](references/return.md).
-- [Preserve uncertain transport and continuity](references/recovery.md).
+- [Deliver an exported assignment through permitted manual transport](references/manual.md).
+- [Check and integrate a worker's returned result](references/return.md).
+- [Recover when dispatch or return delivery is uncertain](references/recovery.md).
 
 Native owners retain binding facts, permissions, evidence, effects and recovery.
 Missing optional procedure cannot waive them. Missing runtime permits relevant

@@ -1,6 +1,6 @@
 ---
 name: planning-reporting
-description: Read current Planning custody, continuation and restrictions through native owner detail.
+description: Report the selected plan, remaining steps and restrictions from current Planning detail.
 ---
 
 # Planning Reporting

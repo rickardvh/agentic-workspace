@@ -1,4 +1,4 @@
 interface:
   display_name: "Memory Consultation And Residue"
-  short_description: "Classify memory consultation, durable residue, and improvement-signal routing."
-  default_prompt: "Use $memory-consultation-and-residue to decide whether Memory was consulted, whether durable residue exists, and where any improvement signal should route."
+  short_description: "Use selected advice and identify useful follow-through."
+  default_prompt: "Use $memory-consultation-and-residue to use the selected advice and decide whether a useful conclusion should be retained."

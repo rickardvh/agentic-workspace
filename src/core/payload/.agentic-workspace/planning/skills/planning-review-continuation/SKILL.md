@@ -1,13 +1,16 @@
 ---
 name: planning-review-continuation
-description: Receive current review findings and route justified Planning continuation without granting approval.
+description: Decide which current review findings need action and preserve any justified unfinished work.
 ---
 
-# Triage review findings and continue owned work
+# Assess review findings and continue the affected work
 
 Use for findings from an externally initiated bounded review or explicitly requested
 analysis. This is neither reviewer dispatch nor a PR approval method. An implementer
 cannot turn their own inspection or this skill into independent review acceptance.
+Read the review's actual scope, evidence and source revision before deciding
+whether a finding still needs action. Finish with a concrete source repair or
+saved next step, a justified dismissal, or the exact unresolved fact.
 
 Select [the current question](procedure.md) or follow the same sources manually:
 

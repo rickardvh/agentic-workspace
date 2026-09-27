@@ -1,4 +1,8 @@
-# Explicit candidate consequences
+# Answer a returned question about a lesson
+
+Use this path when a check returns `future_value_candidate` with a `lesson` and
+`rationale`, and the current result asks what to do with it. Read that exact
+candidate and its evidence before deciding whether it would help a later task.
 
 An explicit structured future-value observation from an admitted native check can
 already place a bounded disposition question at the current frontier, without a

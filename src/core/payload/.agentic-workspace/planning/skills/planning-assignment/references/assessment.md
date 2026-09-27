@@ -1,4 +1,10 @@
-# Supply unresolved assessment
+# Supply missing requirements and compare workers
+
+Use when the current result requests task requirements or a comparison before
+assigning work. Read the returned template, including `target_scope` questions
+about configured task prohibitions. Judge whether each restriction applies to
+this task and explain why. An unresolved restriction is not permission to use
+that target. These are task judgments, not configuration changes.
 
 For a justified delegate choice, state the independent bounded outcome and what
 stays local. Separate why delegation helps from whether any target is currently

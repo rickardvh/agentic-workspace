@@ -1,7 +1,8 @@
 # Route a justified finding to its owner
 
-Recheck that a selected finding is current, supported and concrete, with a clear
-source class and an explicit promotion trigger. Do not promote every finding.
+Recheck that the finding still applies to the current source and has concrete
+evidence. Name whether it comes from observed behaviour or analysis, and what
+makes a repair or saved next step worthwhile. Do not turn every finding into work.
 Measured friction, repeated failure or explicit maintainer direction may justify
 planned work; mere analysis does not automatically create an execution obligation.
 If the case is weak, defer or dismiss without a new backlog or standing suppression.

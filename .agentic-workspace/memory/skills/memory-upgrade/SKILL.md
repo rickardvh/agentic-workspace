@@ -7,9 +7,11 @@ description: Refresh managed guidance while preserving custom Memory content.
 
 Refresh managed guidance while preserving custom Memory content.
 
-Use the target repository's `.agentic-workspace/skills/workspace-setup-jumpstart/`
-entry and its `references/package.md` for the shared method. In an AW source
-checkout, read that canonical source; do not maintain a second command recipe here.
+Use the target repository's
+[setup entry](../../../skills/workspace-setup-jumpstart/SKILL.md) and its
+[package refresh section](../../../skills/workspace-setup-jumpstart/references/package.md#package-and-host-exposure).
+The same paths are canonical sources in an AW source checkout. Do not maintain
+a second command recipe here.
 
 If that source or the configured native runtime is unavailable, read target policy
 and report the exact lifecycle gap. Preserve existing material; no historical

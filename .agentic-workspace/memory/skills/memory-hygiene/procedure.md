@@ -4,21 +4,21 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which current Memory need is supported by the selected evidence?",
+  "question": "What needs attention in the selected Memory material?",
   "branches": [
     {
       "id": "disposition",
-      "description": "Retain, retire or promote selected material",
+      "description": "Decide whether to keep advice, stop selecting it, or confirm another source accepted it",
       "next": "references/disposition.md"
     },
     {
       "id": "repair",
-      "description": "Repair and receiving evidence",
+      "description": "The note conflicts with a source or needs a change beyond disposition metadata",
       "next": "references/repair.md"
     },
     {
       "id": "declarations",
-      "description": "Inspect bounded declaration hygiene",
+      "description": "Inspect selected note declarations for structural or routing errors",
       "next": "references/declarations.md"
     }
   ],
@@ -26,8 +26,8 @@
     "occasions": [
       "need"
     ],
-    "applicability": "Known Memory residue is stale, duplicated or no longer useful for current work.",
-    "outcome": "Current owner disposition preserves unique value and removes misleading applicability."
+    "applicability": "Selected Memory advice is stale, duplicated or no longer useful.",
+    "outcome": "Useful advice is preserved and an authorised disposition stops misleading selection."
   }
 }
 ```

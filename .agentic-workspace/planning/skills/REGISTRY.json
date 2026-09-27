@@ -26,7 +26,7 @@
           "observation",
           "binding"
         ],
-        "outcome": "Current bounded Planning custody, or justified direct work without retained planning."
+        "outcome": "The needed task record is saved and verified, or no plan is needed."
       },
       "id": "planning-work",
       "path": "planning-work/SKILL.md",
@@ -61,7 +61,7 @@
         "occasions": [
           "need"
         ],
-        "outcome": "Current receiving-owner admission and a bounded continuation; no self-approval."
+        "outcome": "Supported findings have an authorised next step; approval remains separate."
       },
       "id": "planning-review-continuation",
       "path": "planning-review-continuation/SKILL.md",
@@ -105,7 +105,7 @@
       "path": "bootstrap-upgrade/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "upgrade planning bootstrap files for an already bootstrapped repository safely"
+      "summary": "Refresh managed guidance while preserving Planning state and custody."
     },
     {
       "id": "planning-closeout-trust",
@@ -116,7 +116,7 @@
         "planning/work/closeout"
       ],
       "stability": "package-managed",
-      "summary": "Compare original/larger intent, proof and residue before native owner-admitted closeout."
+      "summary": "Check whether delivered work satisfies the requested outcome and identify what must remain open."
     },
     {
       "activation_hints": {
@@ -150,7 +150,7 @@
       "path": "planning-reporting/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "project active planning state, proof expectations, and next-action guidance from canonical summary JSON"
+      "summary": "Report selected work, remaining steps and restrictions from current Planning detail."
     },
     {
       "id": "planning-work",
@@ -161,7 +161,7 @@
         "planning/work/continuity"
       ],
       "stability": "package-managed",
-      "summary": "Shape upstream work, bound structure and tighten native Planning continuity."
+      "summary": "Relate a task to an existing plan, divide substantial work, and save what a later session needs."
     },
     {
       "id": "planning-assignment",
@@ -172,7 +172,7 @@
         "planning/assignment/lifecycle"
       ],
       "stability": "package-managed",
-      "summary": "Judge a concrete delegation choice, supply current Assignment assessment, and continue admitted work."
+      "summary": "Decide whether a bounded task benefits from delegation, or follow an existing assignment and its return requirements."
     },
     {
       "id": "planning-review-continuation",
@@ -186,7 +186,7 @@
         "planning/review/continuation"
       ],
       "stability": "package-managed",
-      "summary": "Receive current review findings and route justified Planning continuation without granting approval."
+      "summary": "Decide which current review findings need action and preserve any justified unfinished work."
     }
   ],
   "source_kind": "bundled-package-skills"

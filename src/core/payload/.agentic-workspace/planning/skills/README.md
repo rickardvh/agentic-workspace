@@ -1,18 +1,19 @@
 # Planning skills
 
-The registry owns discovery; native owners retain state, authority and effects.
+Use the registry to find a procedure for the task. Planning maintains work records
+and permissions; a skill explains the method without granting an operation.
 Use the target configured `start`/`invoke` and shared startup carriage.
 
 - `bootstrap-upgrade`
   - upgrade planning bootstrap files for an already bootstrapped repository safely
 - `planning-closeout-trust`
-  - Compare original/larger intent, proof and residue before native owner-admitted closeout.
+  - Compare delivered work and evidence with the requested outcome before claiming completion.
 - `planning-reporting`
-  - project active planning state, proof expectations, and next-action guidance from canonical summary JSON
+  - report the selected work, remaining steps and restrictions from current Planning detail
 - `planning-work`
-  - Shape upstream work, bound structure and tighten native Planning continuity.
+  - Relate a task to its plan, divide substantial work and save useful progress.
 - `planning-assignment`
-  - Supply requested assessment, carry admitted transport and reconcile returned work.
+  - Compare workers when asked, follow the selected assignment and check returned results.
 - `planning-review-continuation`
   - Receive current review findings and route justified Planning continuation without granting approval.
 
