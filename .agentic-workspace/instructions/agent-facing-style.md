@@ -16,6 +16,7 @@ paths:
   - .agentic-workspace/fallback/*.md
   - tools/skills/*.md
   - tools/skills/REGISTRY.json
+  - prompts/**
   - '**/prompts/**'
   - src/core/payload/**.md
   - src/core/payload/**/REGISTRY.json
@@ -29,7 +30,8 @@ paths:
 Use this guide when writing or reviewing text an agent must act on: instructions,
 skills, procedure choices, prompts, tool explanations and handoffs. Assume a
 capable reader who has not seen the author's chat or design discussion. Explain
-what the reader needs for this task, not the whole AW architecture.
+what the reader needs for this task, not the whole Agentic Workspace (AW)
+architecture.
 
 This is the canonical writing guide for this repository's agent-facing material.
 The path scope supplies it for the usual source locations. For agent-directed
