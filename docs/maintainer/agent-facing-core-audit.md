@@ -101,11 +101,14 @@ The startup entry shrank from 500 to 457 whitespace-delimited words. Both reader
 chose zero AW calls for the supplied-text control; this establishes the bounded
 quiet-entry behaviour, not token or monetary savings.
 
-Validation: native binaries built; 58 existing interface/startup/proof/configuration
-cases passed across the initial run and the repaired 16-case interface rerun.
-The initial run had one failure because a prose contract quoted the prior wording;
-its assertions now check the same obligations in the rewritten source. Source
-Markdown lint, changed-source links, generator parity and whitespace checks passed.
+Validation: native binaries built. The initial 58-case run had one failure from
+an obsolete prose-wording test. Updating its expected phrases did not prove the
+procedure's meaning. That test is now deleted on the core PR itself, with no
+replacement phrase, regex or snapshot assertion. The remaining structural and
+native consumer tests establish executable contracts; fresh-reader exercises
+supply the interpretation evidence. The surviving 15-case interface suite passed
+again after deletion. Markdown lint, changed-source links, generator parity and
+whitespace checks passed.
 No permanent test or CI job was added. Existing native checks cover unchanged
 mechanisms; fresh-reader exercises cover interpretation. Independent review remains
 pending and is not supplied by these implementation-lineage exercises.
@@ -121,3 +124,11 @@ scratch. The pointers now link the exact startup fallback and cleanup names the
 resource type. The package link now says refresh and assessment. No wrong action
 or user intervention was observed; this is author-side evidence, not independent
 review. Generated parity, links, Markdown and commit hooks validate these repairs.
+
+## Blocking-review repair
+
+The core layer owns deletion of its obsolete correction-retention wording test.
+Documentation reconciliation is published through Verification for the current
+core audit and authoring guide, with unchanged group members retained only on
+unchanged source evidence. This is bounded source reconciliation, not independent
+approval or a reassessment of the documentation corpus.

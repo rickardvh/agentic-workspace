@@ -304,32 +304,6 @@ def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():
     assert "no mutation" in profile["authority"] and "issue-close" in profile["authority"]
 
 
-def test_canonical_procedure_preserves_correction_retention_boundary():
-    # This is a prose contract regression, not proof of a persistence owner.
-    # The existing drift guard also requires these instructions in shipped bytes.
-    skill = (ROOT / MAIN).read_text()
-    assert "references/reconcile.md" in skill
-    shared = (ROOT / Path(MAIN).parent / "references/reconcile.md").read_text()
-    section = shared.split("## Corrections and retention\n", 1)[1].split("\n## ", 1)[0]
-    for obligation in (
-        "correction, source conflict, environment fact or conclusion",
-        "Awareness does not grant authority",
-        "Keep the requested task primary",
-        "Weak cosmetic findings need no record",
-        "even without\na request to remember",
-        "`material` input",
-        "returned request for the source",
-        "intended future scope remains",
-        "do not turn a task-local fact into policy",
-        "One-off\ninformation may need no saved record",
-        "verify its outcome before claiming the correction was retained",
-        "surface the exact owner/path gap",
-        "retention is not established",
-        "Do not substitute an apology, chat promise, Memory note, invented persistence",
-    ):
-        assert obligation in section
-
-
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_fresh_skill_consumer_queries_then_performs_bounded_write(tmp_path, shared_core_binary, native_cli, surface):
     (tmp_path / "AGENTS.md").write_text(STARTUP_POINTER)
