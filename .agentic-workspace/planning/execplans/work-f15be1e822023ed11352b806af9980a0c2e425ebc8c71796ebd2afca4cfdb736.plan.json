@@ -1,11 +1,11 @@
 {
   "blockers": [
-    "Independent review and approval remain externally initiated; implementation custody cannot supply them. No P0 implementation acceptance gap is carried into this PR."
+    "Independent review and approval remain externally initiated. No admitted native proof receipt is claimed while proof-execution-scope-unresolved persists."
   ],
   "canonical_core": {},
   "continuation": {
-    "evidence": "Retained managed scratch 80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d contains entry-baseline.json, entry-context-entry.json, source-probe.json, context-source-probe.json (failed timing-only reentry), native-source-probe.json and entry-native-entry.json (final). The prior optional activated-procedure baseline/candidate control remains applicable; owner semantics are unchanged. Preserve the two prior local failures and failed full Planning journey; #3658 owns its post-entry transport gap, and deferred-3658.patch is advisory unfinished work only. Deterministic evidence: 16 adoption/skills tests, 2 adoption/reentry cases, and 15 skills tests after final payload change passed; paired native build, generated drift check and commit hooks passed. Authentic installed binding output is current-binding-assignment-required with implementation/completion scope; worker remains unchanged and independent reading completes. Both soft baseline and candidate pass overlapping installed controls, so no universal reliability or general economic advantage is asserted. The exact source replay removes the observed fresh-entry omission. Full token/call/byte/time costs, failed attempts and limitations belong in the PR body. Native compact proof remains unavailable under proof-execution-scope-unresolved; protected source 73a213e66cd48a33 is unchanged and no admitted native proof is claimed. Generated skill payloads are current. No whole-corpus source reassessment or trust revision advance is warranted. Scratch retention is native-committed through review; all completed actor sandboxes are removed. An accidental separate build-cache directory remains after automatic cleanup rejection. The instruction owner rejected exact restoration of a previously published postimage as already consumed; fresh recovery offered no pending request and the source was unchanged. The meaningful revised postimage links the existing canonical owner procedure and removes the duplicate paragraph. This native publication limitation was observed but is not an invitation to expand deferred P1 implementation. Added one native applicability regression using actual checked-in instruction bytes: Cargo.toml-only implementation delivers the rule, and a no-change README explanation adds no instruction gate, read/procedure requirement or action. Both exclude workspace-operating.md. The 15 existing skills tests passed; after correcting an initial test assertion to use the public decision packet instead of the internal contribution, the new control passed (0.73 s). Fresh processes against this repository confirm both controls in global-pr-rule-root-observed.json and global-pr-rule-quiet-observed.json. Two instruction publications committed through their owner. No portable runtime/payload behavior changed, so prior real-agent evidence is reused; no provider rerun or new CI lane is warranted.",
-    "frontier": "P0 #3659 implementation is ready for independent review on work/complete-owner-entry. PRs #3661 and #3662 merged; #3660 is closed. Timing-only fence candidate e107003da still skipped native entry in fresh read-only source sessions, so it was not submitted as complete. Final product 6b887a636 makes native start explicit for read-only explanation/shaping and reuses current paired binaries across conversations. The exact three-session source replay now enters native startup in every session with no tracked edits; installed direct, binding, scoped unrelated reading and no-carriage fresh controls pass. Publish/maintain one coherent PR closing #3659. The user's issue-completion correction was published through the native instruction owner and delivered by fresh startup. The later clarification established that command transport already belongs to workspace-startup/references/owners.md. Remove the redundant command-length instruction and link that canonical procedure from the existing operating guidance; do not infer a rejection cause or add duplicate Memory guidance. Native publication and fresh observation establish that reconciliation. P1 #3658, #3653 and #3641 remain deferred; no preliminary P1 changes remain in the branch. External review at b78c062c9 accepted the #3659 implementation but identified the PR-completion rule's narrowed path applicability. The rule is now owned by globally applicable .agentic-workspace/instructions/github-pr-completion.md, with its original wording preserved and removed from workspace-operating.md. Other operating paths, protections and closeout guidance are unchanged. The requested root-only implementation and read-only quiet controls pass. This finishes the review correction in PR #3664; independent acceptance remains external."
+    "evidence": "Frozen source a80639665e33c0407f82fd21641421d04f0f7105, inventory 61e438609e88d7d902cb6f1538202ef311332dbdc59c5b1252845872a95bff41. selective-v2-selective-entry.json passed all 3 fresh sessions in 303.723s: current native local admission precedes controller-verified edit; changed current-binding-assignment-required prevents edit despite genuine stale admission while unrelated inventory is reported; static-only session reads procedure with zero native calls and no file changes. Candidate command/native/token/byte counts: local 17/12/486674/105387, binding 12/10/313452/83530, quiet 3/0/53935/4121. Baseline continuation and quiet pass in160.854s using genuine same-subject admission from selective-baseline.json; latest baseline local stopped unresolved in125.47s, not an unsafe bypass. Both initial runs had a compact-output observer error and remain harness failures. Original historical thread 01a0dd3b-a919-7c73-9fec-b1a65e2a83d3 turn01a0de53-e202-7f80-bf6f-2c2539ffeb6c confirms the actual implementation-without-admission failure after native blocker delivery; issue3659 documents it. This is not a controlled reproduction of that failure or statistical reliability/economic proof. All16 skills tests pass in18.96s; paired build and generated check pass. Existing optional activation evidence remains applicable; prior Planning failure is preserved under3658. All old runs/costs remain retained. Managed scratch80ca32db16202bb8d05b48bfeb7cff6eab1ce083c302338b71246055d5e2c18d contains scripts, raw native receipts, traces and manifests; all probe sandboxes removed. Protected source73a213e66cd48a33 unchanged; no native receipt/self-review claimed. Existing blocked-cleanup residue remains as recorded.",
+    "frontier": "PR #3664 correction implemented at a80639665: mandatory canonical procedure entry, selective current native resolution. Fresh context alone is not a runtime trigger. Startup, ordinary-use, source-build and generated payload guidance agree. The accepted global issue-completion rule remains intact. P1 remains deferred. The prior read-only native-call-count closure interpretation is withdrawn. Current finite historical-before/current-after evidence addresses the actual #3657 Assignment bypass, not static omission; the recent soft baseline also passes binding and quiet controls, so causal improvement is not claimed. Ready for externally initiated review after publication of the corrected evidence."
   },
   "creation_provenance": {
     "custody": {
@@ -37,7 +37,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Externally initiated independent review of the issue-closing P0 PR from work/complete-owner-entry, followed by user-directed merge. Its Closes #3659 reference closes the issue on merge; do not close it manually from implementation custody. Retain raw evidence until review disposition, then settle native scratch lifetime. Leave all P1 implementation for later.",
+  "next_action": "Publish the reconciled evidence commit and rewritten PR3664 description/comment. Leave independent review external. Respond to any concrete review finding in this PR; do not start P1, merge, manually close3659, or direct the reviewer.",
   "owner_level": "lane",
   "parent": {},
   "phase": "closeout",
@@ -56,7 +56,7 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3664"
   ],
   "relationships": {},
-  "revision": 7,
+  "revision": 9,
   "scope": {
     "excluded": "P1 implementation, post-entry Planning transport repair, owner semantic redesign, universal host enforcement, self-review or approval.",
     "included": "Complete #3659 mandatory bootstrap/native entry and finite failure-specific behavioral proof, generated/install surfaces, and retained user corrections. #3660 repository migration is already merged and closed."
@@ -66,18 +66,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4d8470ac0bac4a0024dcad0bdd42356a2d49368fa1d8844cf9ab7326ae8f18cc.attempt.json",
-        "revision": "sha256:60ed8022451f0c580f45883736c9e15a18e846d178742ed2a0689ccd575a9bad",
+        "path": ".agentic-workspace/local/effects/06c98d013606b749efff35f1ad04ac66c15183004763f27f13657db78d52a5b8.attempt.json",
+        "revision": "sha256:77e4389ae05da53c158851f895a4ce08251b974ea3f637bc5e7d4407d0721691",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4d8470ac0bac4a0024dcad0bdd42356a2d49368fa1d8844cf9ab7326ae8f18cc.result.json",
-        "revision": "sha256:b5b0cf73bf7479ee9d5a2d31767c40ffbc3e9268b737ee205524297f0897274d",
+        "path": ".agentic-workspace/local/effects/06c98d013606b749efff35f1ad04ac66c15183004763f27f13657db78d52a5b8.result.json",
+        "revision": "sha256:297d831bf2e9a9c2a7f6afbae7d38a6ce0a255c777b819c7edd36fa0deec18f4",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:4024c39928ef239fe51e2c3f8aa8fd993b731c24d10a99ab8260cd3ff80cab28",
+    "invocation_revision": "sha256:a360b1017c71361d47d06a3b9e03e8e7c86f7ec123c3396dedf192edf82b0e51",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -85,7 +85,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:799eb7e264126a3b6bc1d97a14d036391c9439ffc7b326868c0009604cdd0f25",
+        "document_revision": "sha256:f67f9f9034a3af206f61206892daa37acecc5a1b07f7b8c5aee03020da6bda01",
         "owner_id": "work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736",
         "owner_path": ".agentic-workspace/planning/execplans/work-f15be1e822023ed11352b806af9980a0c2e425ebc8c71796ebd2afca4cfdb736.plan.json"
       }
