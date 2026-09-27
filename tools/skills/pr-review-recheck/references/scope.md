@@ -16,6 +16,15 @@ Use the prepared complete changed-file set before opening broad files.
 
 For first review, compare the diff against the linked issue's final intended outcome, non-solutions, and evidence requirements after the assumption and closure-shape audits.
 
+When a change authors instructions, skills, prompts or agent-directed tool text,
+apply the [agent-facing writing guide](../../../../.agentic-workspace/instructions/agent-facing-style.md)
+from the same trusted baseline as this review procedure. This also covers prose
+embedded in code outside the usual skill/instruction directories. Judge whether a
+fresh reader can recognise the situation, choose the action and know when to stop;
+reading a file or running a command is not sufficient evidence of understanding.
+Use the direct source link when executable AW is unavailable. Unrelated code
+changes do not require loading the guide.
+
 ## Assumption audit example
 
 If an issue requires every selector to be cheaper than every default projection, but a selector intentionally requests extra enrichment, do not demand caching machinery solely to satisfy that impossible absolute. Recommend refining the issue to require query-shaped dependencies and attributable extra work, then review the PR against that invariant. This challenges the proposed mechanism without silently replacing the human-owned goal of bounded projection cost.
