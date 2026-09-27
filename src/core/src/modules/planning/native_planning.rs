@@ -654,6 +654,7 @@ fn resolve_context(
             "former_execplan",
             "update_recovery_request",
             "operation_arguments",
+            "posture_request",
         ] {
             arguments["$defs"].as_object_mut().unwrap().remove(unused);
         }

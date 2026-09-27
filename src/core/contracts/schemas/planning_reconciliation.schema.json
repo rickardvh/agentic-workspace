@@ -622,7 +622,7 @@
     },
     "human_selection_transfer": {
       "type": "object",
-      "description": "One-shot human transfer from absent native custody.",
+      "description": "One-shot selector transfer from absent native custody.",
       "properties": {
         "prior_sha256": {
           "type": "string",
@@ -655,25 +655,8 @@
           "description": "Legacy selector plus custody only."
         },
         "domain_authorization": {
-          "type": "object",
-          "description": "Human answer; revalidate before transfer.",
-          "properties": {
-            "arguments": {
-              "$ref": "#/$defs/continuation_request",
-              "properties": {
-                "answer": {
-                  "const": "authorize-selector-transfer"
-                }
-              },
-              "required": [
-                "answer",
-                "transfer_revision"
-              ]
-            }
-          },
-          "required": [
-            "arguments"
-          ]
+          "$ref": "#/$defs/human_selection_transfer/properties/human_authorization",
+          "description": "Domain answer; revalidate before transfer."
         }
       },
       "required": [
@@ -685,22 +668,12 @@
         {
           "required": [
             "human_authorization"
-          ],
-          "not": {
-            "required": [
-              "domain_authorization"
-            ]
-          }
+          ]
         },
         {
           "required": [
             "domain_authorization"
-          ],
-          "not": {
-            "required": [
-              "human_authorization"
-            ]
-          }
+          ]
         }
       ]
     },
