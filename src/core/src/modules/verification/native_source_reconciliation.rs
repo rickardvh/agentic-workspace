@@ -16,7 +16,7 @@ use std::{
 pub(crate) const REQUEST: &str = "verification/reconcile-sources/v1";
 pub(crate) const OP: &str = "verification.record-source-reconciliation";
 const EFFECT: &str = "proof-execution";
-const SEMANTICS: &str = "source-reconciliation/v3";
+const SEMANTICS: &str = "source-reconciliation/v4";
 const GROUP_SIZE: usize = 64;
 
 fn err(e: impl std::fmt::Display) -> CoreError {
@@ -403,7 +403,6 @@ fn relation_view(
     context: Context<'_>,
 ) -> Result<Value, CoreError> {
     let (instructions, observations) = inputs;
-    let subject = context.subject;
     let mut view = json!({"status":"not-required","obligations":[],"requests":[],"action":null,"decisions":[]});
     let mut sources = BTreeMap::new();
     let mut dependencies = BTreeMap::new();
@@ -473,7 +472,7 @@ fn relation_view(
     for path in scope {
         postimages.insert(path.clone(), observe(&root, &path, observations)?);
     }
-    let binding = json!({"semantics":SEMANTICS,"relation_id":instructions["relation_id"],"subject":subject,"declarations":declarations,
+    let binding = json!({"semantics":SEMANTICS,"relation_id":instructions["relation_id"],"declarations":declarations,
         "sources":sources,"dependencies":dependencies,"work_postimages":postimages});
     // Retained semantic judgment is valid only under its actual producer as
     // well as current sources. No old receipt can survive an implementation
@@ -489,18 +488,6 @@ fn relation_view(
         .unwrap()
     });
     binding["producer_revision"] = json!(&*PRODUCER);
-    let mut judgment_paths: Vec<String> = sources.keys().cloned().collect();
-    judgment_paths.extend(postimages.keys().cloned());
-    judgment_paths.sort();
-    judgment_paths.dedup();
-    if let Some(mut authority) =
-        crate::native_decision_authority::delegated(configuration, "verification", &judgment_paths)
-    {
-        // Only the matching grant determines retained judgment authority.
-        // Fresh requests/actions still bind the aggregate capability contract.
-        authority.as_object_mut().unwrap().remove("policy_revision");
-        binding["decision_authority"] = authority;
-    }
     grouped_view(
         Inputs {
             target,
@@ -514,6 +501,36 @@ fn relation_view(
         context,
         binding,
     )
+}
+
+fn bind_authority(binding: &mut Value, configuration: &Value) {
+    binding
+        .as_object_mut()
+        .unwrap()
+        .remove("decision_authority");
+    let mut judgment_paths: Vec<String> = binding["sources"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .cloned()
+        .collect();
+    judgment_paths.extend(
+        binding["work_postimages"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned(),
+    );
+    judgment_paths.sort();
+    judgment_paths.dedup();
+    if let Some(mut authority) =
+        crate::native_decision_authority::delegated(configuration, "verification", &judgment_paths)
+    {
+        // Only the matching grant determines retained judgment authority.
+        // Fresh requests/actions still bind the aggregate capability contract.
+        authority.as_object_mut().unwrap().remove("policy_revision");
+        binding["decision_authority"] = authority;
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -554,6 +571,7 @@ fn current_groups(root: &Dir, binding: &Value) -> Result<Vec<String>, CoreError>
     Ok(paths)
 }
 fn group_plan(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<Value, CoreError> {
+    let configuration = crate::native_config::view(target)?;
     let mut candidates = Vec::new();
     let mut paths = Vec::new();
     let observations = RefCell::new(BTreeMap::new());
@@ -575,6 +593,7 @@ fn group_plan(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<
                 .map(|key| Ok((key.clone(), observe(root, key, &observations)?)))
                 .collect::<Result<_, CoreError>>()?,
         );
+        bind_authority(&mut projected, &configuration);
         // A new source/policy basis supersedes all old groups. An overlapping
         // group supersedes the whole prior judgment, never individual subjects.
         if same_basis(&projected, old)?
@@ -646,6 +665,7 @@ fn grouped_view(
     let membership = digest(&json!(all.keys().collect::<Vec<_>>()))?;
     let mut uncovered: BTreeSet<String> = all.keys().cloned().collect();
     let mut evidence = Vec::new();
+    let mut group_status = Vec::new();
     let mut selected = None;
     for path in current_groups(&root, &binding)? {
         let bytes = native_planning::read(&root, &path)?
@@ -663,7 +683,9 @@ fn grouped_view(
                 .filter_map(|key| all.get(key).map(|v| (key.clone(), v.clone())))
                 .collect(),
         );
+        bind_authority(&mut projected, inputs.configuration);
         if !same_basis(&projected, old)? {
+            group_status.push(json!({"receipt_ref":path,"status":"non-current","reason":"semantic-dependency-or-authority-changed"}));
             continue;
         }
         let prior = retained(target, &path, old)?;
@@ -677,6 +699,7 @@ fn grouped_view(
                 uncovered.remove(key);
             }
             evidence.push(prior["value"].clone());
+            group_status.push(json!({"receipt_ref":path,"status":"current","reason":"exact-source-assessment-reused"}));
         }
     }
     let total = all.len();
@@ -692,6 +715,7 @@ fn grouped_view(
     if let Some(selected) = selected {
         group = selected;
     }
+    bind_authority(&mut group, inputs.configuration);
     let mut output = if uncovered.is_empty()
         && !evidence.is_empty()
         && request.is_none()
@@ -705,6 +729,10 @@ fn grouped_view(
         output["status"] = json!("partial");
     }
     output["coverage"] = json!({"status":if uncovered.is_empty() && !evidence.is_empty(){"current"}else if covered>0{"partial"}else{"unassessed"},"total":total,"accepted":covered,"pending":uncovered.len(),"membership_revision":membership,"complete_enumeration":true,"group_limit":GROUP_SIZE,"accepted_groups":evidence.len()});
+    output["coverage"]["groups"] = json!(group_status);
+    output["assessment_basis"] = json!({"kind":"repository-source-assessment","relation_id":binding["relation_id"],
+        "semantics":binding["semantics"],"producer_revision":binding["producer_revision"],
+        "task_identity_role":"invocation-and-task-claim-only"});
     Ok(output)
 }
 
@@ -846,6 +874,16 @@ fn group_view(
             return Ok(view);
         }
     };
+    if prior.as_ref().is_some_and(|p| p["committed"] == true) {
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+        if !current_groups(&root, &binding)?.contains(&path) {
+            view["status"] = json!("publication-review-required");
+            view["reason"] = json!(
+                "Committed source assessment is absent from the current projection; historical bytes grant no current coverage."
+            );
+            return Ok(view);
+        }
+    }
     if request.is_none()
         && !executing
         && let Some(prior) = prior
@@ -1117,4 +1155,34 @@ pub(crate) fn retention_write_scope(action: &Value) -> Result<Vec<String>, CoreE
         .collect();
     paths.push(".agentic-workspace/proof/receipts/publication.lock".into());
     Ok(paths)
+}
+
+#[cfg(test)]
+mod basis_tests {
+    use super::*;
+
+    #[test]
+    fn reusable_assessment_keeps_producer_authority_and_dependency_boundaries() {
+        let accepted = json!({"semantics":SEMANTICS,"relation_id":"instruction:example",
+            "producer_revision":"producer-a","declarations":[],
+            "sources":{"guide.md":{"status":"present","revision":"guide-a"}},
+            "dependencies":{"context.md":{"status":"present","revision":"context-a"}},
+            "work_postimages":{"consumer.md":{"status":"present","revision":"consumer-a"}}});
+        assert!(same_basis(&accepted, &accepted).unwrap());
+        for (pointer, value) in [
+            ("/producer_revision", json!("producer-b")),
+            ("/semantics", json!("different-semantics")),
+            ("/sources/guide.md/revision", json!("guide-b")),
+            ("/dependencies/context.md/revision", json!("context-b")),
+            ("/work_postimages/consumer.md/status", json!("absent")),
+        ] {
+            let mut changed = accepted.clone();
+            *changed.pointer_mut(pointer).unwrap() = value;
+            assert!(!same_basis(&changed, &accepted).unwrap(), "{pointer}");
+        }
+        let mut delegated = accepted.clone();
+        delegated["decision_authority"] =
+            json!({"kind":"exact-policy-delegated-decision","grant":"new"});
+        assert!(!same_basis(&delegated, &accepted).unwrap());
+    }
 }
