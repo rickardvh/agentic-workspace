@@ -130,10 +130,13 @@ fn proposed_content(target: &Path, config: &Value, args: &Value) -> Result<Vec<u
         toml::from_str(std::str::from_utf8(&bytes).map_err(err)?).map_err(err)?;
     let value = serde_json::to_value(value).map_err(err)?;
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    if !crate::native_intent::stale_references(&root, &config["system_intent"], &value).is_empty() {
-        return Err(err(
-            "intent postimage source records do not match exact current governing sources",
-        ));
+    let mismatches =
+        crate::native_intent::source_record_mismatches(&root, &config["system_intent"], &value);
+    if !mismatches.is_empty() {
+        return Err(err(format!(
+            "intent postimage source records do not match exact current governing sources: {}; source_records.sha256 uses universal-newline-utf8, while source revision uses raw-bytes",
+            mismatches.join(", ")
+        )));
     }
     if config["system_intent"]["sources"]
         .as_array()
