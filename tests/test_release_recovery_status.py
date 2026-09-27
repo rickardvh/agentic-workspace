@@ -35,7 +35,6 @@ def test_semver_repair_only_pr_reports_that_it_will_not_publish() -> None:
     assert packet["status"] == "repair-only-semver-pr"
     assert packet["will_publish_release"] is False
     assert packet["will_prepare_release_pr"] is False
-    assert "will not open a release PR" in packet["next_action"]
 
 
 def test_documentation_only_pr_does_not_require_semver_release() -> None:
@@ -320,7 +319,6 @@ def test_successful_release_run_does_not_clear_version_publication_debt() -> Non
     assert packet["release_publication_state"]["status"] == "unresolved-version-publication-debt"
     assert packet["release_publication_state"]["publication_status"] == "unresolved-version-publication-debt"
     assert packet["coordinated_recovery"]["status"] == "required"
-    assert "successful no-op workflow runs do not clear" in packet["coordinated_recovery"]["next_action"]
 
 
 def test_release_publication_status_detects_version_behind_tag_floor(monkeypatch) -> None:

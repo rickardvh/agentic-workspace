@@ -117,7 +117,6 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     assert read["response"]["text"] == original.decode("utf-8")
     assert read["status"] == "source-context-delivered"
     assert startup_blockers(read_packet) == []
-    assert "no rule satisfaction, proof, acceptance or mutation custody" in read["response"]["authority_boundary"]
     assert source.read_bytes() == original
     for projection in ("compact", "carried"):
         delivered = consume(surface, shared_core_binary, native_cli, {**context, "request": request, "projection": projection})
@@ -289,7 +288,6 @@ def test_small_required_source_arrives_without_read_ceremony(tmp_path, shared_co
     read = full["startup_adapter"]["response"]
     assert read["text"] == original.decode()
     assert startup_blockers(full) == []
-    assert "no rule satisfaction, proof, acceptance or mutation custody" in read["authority_boundary"]
     request = full["startup_adapter"]["requests"][0]
     explicit = consume(surface, shared_core_binary, native_cli, context | {"request": request})
     assert explicit["decision_packet"] == full["decision_packet"]

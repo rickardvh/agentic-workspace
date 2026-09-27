@@ -26,8 +26,10 @@ and the repository owner admits the revised instruction. This rule supplies no
 mutation, custody, or proof-success authority.
 
 For changes to behavior, executable tests or ordinary CI, apply the testing strategy before
-adding permanent evidence or choosing validation. Use its contract ladder,
-add/merge/convert/prune rules, and test/CI delta disposition at closeout. This
+adding permanent evidence or choosing validation. Name the claim and failure risk,
+inspect existing evidence, choose the smallest sufficient boundary, validate the
+patch, then decide separately whether any new permanent test is needed. Explain
+why proof can stop or which remaining risk requires broader evidence. This
 includes tests embedded in Rust and package code. A material duplicate, temporary
 batch taxonomy, or unjustified recurring cost must be resolved before presenting
 the work for approval. Existing workspace-proof-selection and Verification remain

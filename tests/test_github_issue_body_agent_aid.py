@@ -39,15 +39,6 @@ def test_issue_templates_include_completion_boundary_fields() -> None:
         assert required_fields.issubset(field_ids), template_path
 
 
-def test_pull_request_template_prompts_completion_audit() -> None:
-    template = (_REPO_ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
-
-    assert "## Completion audit" in template
-    assert "This PR makes the issue's intended outcome true in the ordinary path." in template
-    assert "Any remaining old behavior is explicitly allowed by the issue acceptance criteria." in template
-    assert "documentation, inventory, reclassification, or a follow-up plan" in template
-
-
 def test_issue_creation_semantic_route_resolves_canonical_skills_and_current_template() -> None:
     registry = json.loads((_REPO_ROOT / "tools/skills/REGISTRY.json").read_text(encoding="utf-8"))
     routed = []

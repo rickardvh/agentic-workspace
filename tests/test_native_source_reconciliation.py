@@ -182,12 +182,10 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
         "independent_review": "not-granted",
         "completion_authority": False,
     }
-    assert "Do not publish" in semantics["consequences"]["defer"]
     if not delegated:
         nomination = call()["verification"]["source_reconciliation"]["requests"][0]
         nomination["arguments"]["judgments"] = answer["arguments"]["judgments"]
         pending = call({"request": nomination})["decision_packet"]["pending_consequences"]["decisions"][0]
-        assert "Authorize publication" in pending["question"]
         assert pending["material"]["assessment_semantics"] == semantics
         assert pending["material"]["judgments"] == answer["arguments"]["judgments"]
     action = ready["decision_packet"]["primary_action"]

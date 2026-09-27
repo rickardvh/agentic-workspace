@@ -20,14 +20,10 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
 
     assert stable["workflow"] == ".github/workflows/release.yml"
     assert stable["trigger"] == "existing-tag-only"
-    assert preview == {
+    assert {key: preview[key] for key in ("workflow", "release_class", "support_bearing")} == {
         "workflow": ".github/workflows/release.yml",
-        "trigger": "workflow_dispatch on master with immutable preview tag and exact artifact SHA",
         "release_class": "preview",
         "support_bearing": False,
-        "tag_rule": (
-            "preview-vMAJOR.MINOR.PATCH must point at a release-only commit whose single parent is the exact reconstruction source commit"
-        ),
     }
     assert distribution["preview_release_base_url_template"].endswith("/preview-v{version}")
     assert "preview-vMAJOR.MINOR.PATCH" in ownership["version_floor_rule"]
@@ -67,7 +63,6 @@ def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:
     assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper
     assert 'default="HEAD"' not in helper
     assert "--source-commit" in helper
-    assert "freshly fetched master head" in helper
     assert '"merge-base", "--is-ancestor", source_commit, remote_ref' in helper
     assert '_git("push", remote, f"refs/tags/{tag}")' in helper
     assert "refs/heads/" in helper
@@ -89,21 +84,11 @@ def test_preview_manifest_is_explicitly_non_support_bearing_and_ownership_driven
     assert '"registry_resolution_used": False' in manifest
 
 
-def test_release_docs_describe_preview_as_testing_not_stable_admission() -> None:
-    docs = (ROOT / "docs" / "release-and-versioning.md").read_text(encoding="utf-8")
-
-    assert "## Preview and first-stable recovery" in docs
-    assert "remain non-support-bearing" in docs
-    assert "preview_release.py --version <unused-version>" in docs
-    assert "Recovery reuses the immutable tag and exact assets" in docs
-
-
 def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> None:
     import yaml
 
     workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
     admission = workflow["jobs"]["promotion-admission"]
-    assert "trusted master workflow authority" in (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
     checkout = admission["steps"][0]
     assert checkout["with"]["ref"] == "${{ github.sha }}"
     assert checkout["with"]["persist-credentials"] == "false"

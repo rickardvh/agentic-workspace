@@ -720,7 +720,8 @@ commands = [
   "uv run pytest tests/test_native_verification_strategy.py -q",
 ]
 review_aids = [
-  "Record a live proof-decision when ordinary test evidence materially changes.",
+  "Use docs/maintainer/testing-strategy.md: name the claim and failure risk, inspect existing evidence, choose the smallest sufficient boundary, validate, decide permanent retention separately, broaden only for a named remaining risk, then stop.",
+  "No new permanent test is a valid outcome. Wording assertions cannot establish prose quality or agent comprehension; retain structural, exact-transport and generated-source contracts.",
 ]
 proof_lane_hint = "test-evidence-decision"
 reason = "Test evidence changes need trust-question and replacement-evidence review beyond raw test counts."

@@ -18,7 +18,11 @@ Required source reconciliation and independent reviewer custody stay separate.
 A method's availability, skill identity or completion never grants proof or claims.
 
 Run the lowest sufficient current proof selected for the changed behavior and
-requested outcome. Broaden only for a named unresolved risk. Distinguish validation,
+requested outcome. State the failure risks covered, existing evidence reused,
+any permanent-test retention decision, and the observation that lets proof stop.
+No new permanent test is needed when current coverage is sufficient. Broaden only
+for a named unresolved risk and say what additional observation would settle it.
+Distinguish validation,
 issue completion, intent satisfaction and total operating cost. Reconcile actionable
 remaining gaps through their existing owner; retain only knowledge that prevents
 rediscovery. Do not infer lane completion from a local check or self-review.
