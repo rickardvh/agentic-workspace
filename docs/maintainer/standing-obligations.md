@@ -43,8 +43,28 @@ keeps its evidence-detail or recovery meaning, including owner routes such as
 Freshness does not open that route as a file or execute it.
 
 `freshness.disposition` records the intended response: `report`, `route` or `work`. It grants
-no execution permission. Ordinary-entry routing is a separate consumer of this
-declaration; this lifecycle exposes the callable Verification operations.
+no execution permission. Ordinary entry applies current improvement latitude:
+`none` and `reporting` report the need; `conservative` permits routing;
+`proactive` can surface declared work. A declared report stays a report.
+
+## Ordinary and external entry
+
+An ordinary `start` exposes due or unknown current-evidence requirements in
+`material.items`, with the gap and the requirement's `freshness.procedure`.
+The corresponding `activation.candidates` entry names that procedure and the
+exact Verification request. Follow it within current owner restrictions and the
+reported disposition. Use existing issue or Planning ownership for follow-up.
+The observation does not create a ticket or execute a check.
+
+Absent and satisfied requirements produce no maintenance need or activation.
+Removing the freshness declaration makes entry quiet while leaving retirement
+to Verification. Unrelated repository growth does not widen the bounded read set.
+
+An external manual or scheduled caller uses the same native `start` context with
+the repository target and actual task. Scheduling, credentials, delivery and
+enabled state belong to that caller. Keep mutable repository policy in the
+requirement rather than copying it into an account-local prompt. Another checkout
+can reuse the repository assessment with the authorship and proof limits below.
 
 ## Inspect and assess
 

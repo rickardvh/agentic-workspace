@@ -273,6 +273,38 @@ fn inspect_at(target: &Path, policy: &Value, at: u64) -> Result<Value, CoreError
     )
 }
 
+pub(crate) fn needs(
+    view: &Value,
+    work: &Value,
+    configuration: &Value,
+) -> Result<Vec<Value>, CoreError> {
+    let latitude = configuration["improvement_latitude"]
+        .as_str()
+        .unwrap_or("conservative");
+    view["entries"].as_array().into_iter().flatten()
+        .filter(|entry| entry["status"] != "satisfied")
+        .map(|entry| {
+            let declared = entry["declaration"]["freshness"]["disposition"].as_str().unwrap();
+            let disposition = match (latitude, declared) {
+                ("none" | "reporting", _) | (_, "report") => "report",
+                ("proactive", "work") => "work",
+                _ => "route",
+            };
+            let id = entry["id"].as_str().unwrap();
+            let material = json!({"id":format!("current-evidence:{id}"),"kind":"need",
+                "summary":entry["declaration"]["notes"],"work":work,
+                "source":{"producer":"verification","reference":format!("{MANIFEST}#assurance.requirements.{id}"),
+                    "revision":view["revision"],"coverage":"bounded"}});
+            Ok(json!({"material":material,"revision":digest(&json!([material,entry,disposition]))?,
+                "trust":"repository-declaration-and-currentness-observation","currentness":entry["status"],
+                "gap":entry["reason"],"disposition":disposition,"declared_disposition":declared,
+                "procedure":{"resource":entry["declaration"]["freshness"]["procedure"],
+                    "owner_reference":{"kind":"request","owner":"verification","id":if view["status"] == "publication-result-unresolved" { RECOVER.to_owned() } else { format!("current-evidence:{id}") }}},
+                "evidence_requirement":entry["declaration"]["required_evidence"],
+                "authority":"Current need only. Follow existing repository, issue or Planning ownership; no new issue, mutation, proof execution or completion is authorised by this observation."}))
+        }).collect()
+}
+
 pub(crate) fn extend_contract(owner: &mut Value) -> Result<(), CoreError> {
     let text = json!({"type":"string","minLength":1,"maxLength":4096});
     owner["requests"].as_array_mut().unwrap().extend([
@@ -794,6 +826,54 @@ mod tests {
             "outcome":"satisfied","reason":"Compared the declared sources.","evidence":observe(root,["evidence.md".into()]).unwrap(),
             "authorization":{"kind":"exact-bounded-human-answer","proposal_revision":"accepted"}});
         json!({"revision":digest(&assessment).unwrap(),"assessment":assessment})
+    }
+
+    #[test]
+    fn ordinary_needs_respect_latitude_and_quiet_controls() {
+        let f = Fixture::new();
+        let work = json!({"kind":"current-work","id":"entry-test"});
+        let config = json!({"revision":"policy-v1"});
+        let contract = crate::native_verification::contract().unwrap();
+        let initial = view(&f.0, &work, &config, &contract, None).unwrap();
+        for (latitude, wanted, expected) in [
+            ("none", "work", "report"),
+            ("reporting", "work", "report"),
+            ("conservative", "work", "route"),
+            ("proactive", "work", "work"),
+            ("proactive", "report", "report"),
+            ("proactive", "route", "route"),
+        ] {
+            let mut observed = initial.clone();
+            observed["entries"][0]["declaration"]["freshness"]["disposition"] = json!(wanted);
+            let current =
+                needs(&observed, &work, &json!({"improvement_latitude":latitude})).unwrap();
+            assert_eq!(current[0]["disposition"], expected);
+            assert_eq!(current[0]["procedure"]["resource"], "procedure.md");
+            observed["entries"][0]["status"] = json!("satisfied");
+            assert!(needs(&observed, &work, &config).unwrap().is_empty());
+        }
+        f.write(
+            MANIFEST,
+            "schema_version = 'agentic-workspace/verification-manifest/v1'\n",
+        );
+        crate::native_planning::TEST_READS.with(|reads| reads.borrow_mut().clear());
+        let empty = view(&f.0, &work, &config, &contract, None).unwrap();
+        assert!(needs(&empty, &work, &config).unwrap().is_empty());
+        let before = crate::native_planning::TEST_READS.with(|reads| reads.borrow().clone());
+        for n in 0..200 {
+            f.write(&format!("unrelated-{n}.md"), "An unrelated source.");
+        }
+        crate::native_planning::TEST_READS.with(|reads| reads.borrow_mut().clear());
+        view(&f.0, &work, &config, &contract, None).unwrap();
+        assert_eq!(
+            crate::native_planning::TEST_READS.with(|reads| reads.borrow().clone()),
+            before
+        );
+        assert!(
+            !before
+                .iter()
+                .any(|path| path.contains("procedure.md") || path.contains("interface.json"))
+        );
     }
 
     #[test]

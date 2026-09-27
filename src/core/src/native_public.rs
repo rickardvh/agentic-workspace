@@ -96,7 +96,7 @@ fn resolve_selected(
         work_identity["maintenance"] = json!(maintenance);
     }
     let work = json!({"kind":"current-work", "id":digest(&work_identity)?});
-    let material = crate::native_material::view(target, &work, &input.material)?;
+    let mut material = crate::native_material::view(target, &work, &input.material)?;
     let mut requests = owner_requests(if executing {
         input
             .invocation
@@ -1280,6 +1280,16 @@ fn resolve_selected(
                 .unwrap()
                 .extend(standing["decisions"].as_array().unwrap().clone());
         }
+        if input.maintenance.is_none() {
+            material["items"]
+                .as_array_mut()
+                .unwrap()
+                .extend(crate::current_evidence::needs(
+                    &standing,
+                    &work,
+                    &configuration,
+                )?);
+        }
         crate::current_evidence::compose(&mut verification, &standing);
         if standing_request.is_some()
             || ["entries", "requests"].iter().any(|field| {
@@ -1748,7 +1758,10 @@ fn resolve_selected(
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
     }
-    if !input.material.is_empty() {
+    if material["items"]
+        .as_array()
+        .is_some_and(|items| !items.is_empty())
+    {
         public["material"] = material;
     }
     public["_detail_bindings"] = json!({

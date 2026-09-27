@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import time
 
 import pytest
@@ -39,6 +40,15 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
     initial = call()["verification"]["current_evidence"]
     assert initial["entries"][0]["status"] == "due"
     assert initial["entries"][0]["declaration"]["detail_route"] == detail_route
+    compact = call({"projection": "compact"})
+    assert compact["material"]["items"][0]["gap"] == "no-current-assessment"
+    assert compact["activation"]["candidates"][0]["entry"]["resource"] == "procedure.md"
+    assert compact["activation"]["candidates"][0]["disposition"] == "route"
+    time.sleep(1.05)
+    detail = call({"projection": "compact", "reference": compact["detail_refs"]["/verification"]})
+    assert detail["value"]["current_evidence"] == initial
+    external = consume("json", shared_core_binary, native_cli, {**context, "projection": "compact"})
+    assert external["activation"] == compact["activation"]
     request = initial["requests"][0]
     request["arguments"].update(
         observed_at=int(time.time()), outcome="satisfied", reason="Compared the current sources.", evidence_refs=["evidence.md"]
@@ -59,6 +69,19 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
     assert requirement["status"] == "applicable"
     assert requirement["current_evidence"]["status"] == "satisfied"
     assert not any(b["code"].startswith("assurance:example:") for b in observed["decision_packet"]["blockers"])
+    quiet = call({"projection": "compact"})
+    assert "material" not in quiet
+    assert "activation" not in quiet
+    other_checkout = tmp_path / "other-checkout"
+    for source in (manifest, state, *(tmp_path / p for p in ("procedure.md", "interface.json", "evidence.md"))):
+        destination = other_checkout / source.relative_to(tmp_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+    portable = call({"target": str(other_checkout), "projection": "compact"})
+    assert "material" not in portable
+    (other_checkout / "interface.json").write_text('{"changed": true}')
+    opaque = call({"target": str(other_checkout), "projection": "compact"})
+    assert opaque["material"]["items"][0]["gap"] == "declaration-procedure-or-dependency-changed"
     context["task"] = "A different task observes the same repository condition"
     (tmp_path / "unrelated.md").write_text("An unrelated edit.")
     observed = call()
@@ -103,3 +126,4 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
     assert "current_evidence" not in call()["verification"]
     assert (tmp_path / "evidence.md").read_text() == "A new comparison is needed."
     assert not (tmp_path / ".agentic-workspace/planning").exists()
+    assert "material" not in call({"projection": "compact"})
