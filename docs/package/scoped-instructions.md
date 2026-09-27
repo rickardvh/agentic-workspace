@@ -102,8 +102,8 @@ or unadmitted source stays unresolved; copying a hash or advancing a trust revis
 by hand is not admission. A current protection is not permission to run a command.
 
 The native authoring path can create or replace one exact shared/local Markdown
-source. Ask the agent to present the entire proposed file and the current bounded
-instruction-write authorisation question. To drive it directly:
+source. The agent inspects the entire proposed file and supplies the current bounded
+instruction-write authorisation decision. To drive it directly:
 
 1. Run the `start` command above. Copy its exact
    `instructions.authoring.requests` entry for `instructions/edit-source/v1`.

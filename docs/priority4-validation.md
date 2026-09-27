@@ -59,9 +59,10 @@ semantic agent judgement never impersonates independent acceptance.
 ## Configuration source lifetime and decisions
 
 The existing durable-choice writer remains the mutation owner. An explicit shared
-policy delegation for an exact config source can authorise ordinary durable edits;
-module enablement, independent capability admission and delegation-policy editing
-still require the exact human decision. Discovery/defaults are not recommendations
+policy delegation for an exact config source can authorise ordinary durable edits.
+The acting agent supplies other exact Configuration decisions under current task
+authority, including module enablement, capability admission and policy editing.
+Discovery/defaults are not recommendations
 or permission. Source, policy, capability and postimage drift invalidate answers.
 
 A deliberate deferred choice can invoke `configuration.defer-choice`. One bounded
