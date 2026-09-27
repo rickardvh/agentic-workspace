@@ -527,6 +527,10 @@ fn resolve_owner_reference(
     let mut result = json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],
         "authority_effect":"none","continuation":"Use the exact reference through the existing owner answer/invoke path; a request template still requires its owner's requested input. Resolution never executes or retries."});
     if wanted.kind == "request" {
+        result["procedure"] = json!({
+            "reference":".agentic-workspace/skills/workspace-startup/references/owners.md",
+            "use":"Answer a simple choice directly. For substantial structured material, read this procedure and write UTF-8 JSON as data; submit it through start --input while retaining prior work-bound answers."
+        });
         result["answer_input"] = json!(
             "Object of requested argument fields, merged into the template under normal owner validation. Reuse the same work context or carriage; do not copy immutable request identity."
         );
@@ -1197,6 +1201,10 @@ mod tests {
         assert_eq!(resolved["status"], "current");
         assert_eq!(resolved["value"]["owner"], "semantic-routes");
         assert_eq!(resolved["authority_effect"], "none");
+        assert_eq!(
+            resolved["procedure"]["reference"],
+            ".agentic-workspace/skills/workspace-startup/references/owners.md"
+        );
         context["reference"] = resolved["reference"].clone();
         let exact = start(context.clone()).unwrap();
         assert_eq!(exact["value"], resolved["value"]);

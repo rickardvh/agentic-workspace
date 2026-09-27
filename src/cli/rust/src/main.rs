@@ -184,7 +184,8 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<()
     if command["accepts_input_envelope"] == true
         && (input.get(field).is_some()
             || (parsed.command == "start"
-                && (input.get("material").is_some()
+                && ((input.get("kind").is_none() && input.get("target").is_some())
+                    || input.get("material").is_some()
                     || input.get("maintenance").is_some()
                     || input.get("available_sources").is_some()
                     || input.get("delivered").is_some())))
@@ -369,6 +370,33 @@ mod tests {
             json!({"target":".", "task":"bounded task", "changed":["a","b","c"]})
         );
         assert!(parsed.input_path.is_none());
+
+        // A complete work context needs no dummy request or material field.
+        // File transport must preserve it exactly, including optional selection.
+        let contract = declaration();
+        for context in [
+            json!({"target":".","task":"bounded task"}),
+            json!({"target":".","task":"bounded task","reference":"owner:request:planning:planning/create/v1","projection":"carried"}),
+        ] {
+            let mut file = parse(&contract, &args(&["start", "--input", "-"]))
+                .unwrap()
+                .unwrap();
+            carry_input(&contract, &mut file, context.clone()).unwrap();
+            assert_eq!(file.values, context);
+            let mut conflicting = parse(
+                &contract,
+                &args(&["start", "--input", "-", "--task", "different"]),
+            )
+            .unwrap()
+            .unwrap();
+            assert!(carry_input(&contract, &mut conflicting, context).is_err());
+        }
+        let request = json!({"kind":"agentic-workspace/public-request/v1","owner":"planning"});
+        let mut bare = parse(&contract, &args(&["start", "--input", "-"]))
+            .unwrap()
+            .unwrap();
+        carry_input(&contract, &mut bare, request.clone()).unwrap();
+        assert_eq!(bare.values["request"], request);
     }
 
     #[test]

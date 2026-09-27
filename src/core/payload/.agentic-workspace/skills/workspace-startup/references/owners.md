@@ -9,6 +9,35 @@ the requested judgment or material, then inspect the result before proceeding.
 AW's **carriage** is the disposable JSON that keeps those exact objects and prior
 answers between calls. It is useful transport, not a saved plan or permission.
 
+## Choose the input method before constructing the request
+
+For a simple choice or small answer, use the returned reference directly. No
+scratch file is needed. For a substantial structured update, keep the returned
+request and prior answers as data. Use a file-writing tool to put UTF-8 JSON in
+one task scratch file, then submit that file with `start --input`. Do not embed
+the document, its nested JSON or its construction in a shell command. The shell
+should carry the invocation and file path. The examples below show how to retain
+the exact work context and answers.
+
+When the file is a complete context object, put `projection` and the task context
+inside that object; do not also pass conflicting context flags. The separate
+`--reference` and `--answer` examples below use a returned carriage envelope.
+
+If the host rejects an invocation before execution, report the observed rejection
+and keep its cause unknown unless evidence identifies it. Use the supported input
+method within existing permissions. If an effect may have happened, follow the
+recovery instructions below before trying again.
+
+A trusted correction about a recurring execution method requires source
+disposition, even when it arrives during this exchange. Apply it now, supply the
+finding through [current material](ordinary.md#current-material-and-needs), and
+use the [correction procedure](../../workspace-instruction-correction/SKILL.md).
+Compare the responsible source: apply sufficient existing guidance, make an
+authorised bounded repair, or explain why no saved change is needed. A chat
+promise does not establish that disposition.
+
+## Carry the exact request and prior answers
+
 Use the public Rust-backed contract as a tool, not as prose to memorize.
 
 For generic current resolution, a configured invocation may use `start --target . --task "<task>" --format json`. Known changed paths can be supplied with repeated `--changed` arguments. Compact output may include exact requests/actions/references and same-work carriage; optional detail remains lazy.
