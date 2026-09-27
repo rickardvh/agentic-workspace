@@ -9,7 +9,7 @@
   "canonical_core": {},
   "continuation": {
     "accepted": "The user requires AW regular operation to resolve without human escalation. Only Verification steps requiring human judgement and tasks explicitly configured for human owners may escalate. This is a product requirement, not a blanket fabricated human answer or proof/review waiver. Earlier source-assessment approval removal remains valid. Fresh subagents remain authorised only for behavioural exercises.",
-    "frontier": "The foundation is now in the primary checkout on codex/human-escalation-publication, based on master d8726b7e7, with implementation f0ef24441 and owner-published source/Planning updates. Reuse #3690 for #3687 and #3692; place #3689 above it. The local proof image is now pinned by Configuration to sha256:5bbcf3a7b0bf53e4a14ce51a26791cfb988a086496fc3e8cf9932d05d281d720. That configuration effect does not supply native command evidence: the executor layer still must establish it. Two earlier failed local proof receipts and their index are preserved in the named stash, outside commits; restore them when returning to the executor layer. Preserve the protected decision-point file. No fabricated human answers, blanket user override, proof acceptance or independent review."
+    "frontier": "The bounded implementation leaves #3686, #3687 and #3692 are implemented and validated in #3690 then #3689. The previous publication, restacking, image-pin and native-proof continuations are complete and are not pending tasks. Current PR heads and hosted status remain directly observable on GitHub; the cited runs record completed evidence. The user has requested the final comment corrections and merge. Preserve the protected decision-point intent and local proof custody, including the two earlier failures and successful native receipts. No fabricated human answer or blanket authority override was used. Resume only genuinely separate parent acceptance work or a concrete new external finding."
   },
   "creation_provenance": {
     "custody": {
@@ -41,13 +41,13 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish the repaired #3690 foundation on master, rebase #3689 above it, establish actual native executor proof, and run current hosted checks. Leave independent review externally initiated.",
+  "next_action": "Complete separately defined parent acceptance for #3641 and #3665 through their responsible owners. No implementation or publication work remains for #3686, #3687 or #3692; independent review and merge remain externally controlled.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "implementation",
+  "phase": "closeout",
   "proof": {
-    "observed": "Foundation implementation committed at f0ef24441. Rust core: 180 passed, three subprocess-only fixtures ignored. Affected public lifecycles: 174 passed, one host file-symlink skip with directory junction coverage retained. Nine final focused cases and a fresh five-packet behavioural exercise establish ordinary domain routing and both explicit human exceptions. Shared/source controls: 163 passed. Final Configuration suite: 19 passed, one file-symlink skip. Native source reconciliation is current for all 368 consumers in six groups. The replacement proof-image pin was applied through the exact native Configuration domain decision with no human answer.",
-    "remaining": "Current hosted checks, upper-layer source reconciliation and actual native executor proof after rebasing #3689, then externally initiated independent review. Parent #3641/#3665 acceptance remains separate."
+    "observed": "Implemented and published #3687/#3692 in foundation #3690 and #3686 in executor #3689, ordered master -> #3690 -> #3689. Foundation tests passed: 180 Rust cases (three subprocess-only ignores), 174 public owner cases (one host file-symlink skip), nine final exception/domain controls, 163 shared/source cases, 19 Configuration cases (same host skip), four contract-budget controls and eight Planning custody cases. Fresh behavioural readers distinguished ordinary domain decisions, both human exceptions and non-waivable blockers. The actual replacement image pin committed through native Configuration without a human answer. Executor native proof passed all 25 selected strategy cases and published proof://receipts/6fbf0a5eb9869bfa with source_current=true while protection remained intact. Source reconciliation was verified current at each independent layer: 368 foundation and 369 executor consumers. Exhaustive hosted runs 36348941385 and 36349105476 passed every job; ordinary PR runs 36349870340 and 36350024484 and Semver admission also passed. External reviews 5860022809 and 5860023121 found no remaining code or semantic blocker and requested only this Planning correction.",
+    "remaining": "Separate parent acceptance for #3641 and #3665. Independent review and merge decisions are external authority; implementation evidence does not grant either."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3686",
@@ -59,28 +59,28 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3692"
   ],
   "relationships": {},
-  "revision": 25,
+  "revision": 27,
   "scope": {
     "constraints": "Prior six PRs merged externally. Keep current file protection. Native proof, local validation, hosted checks and independent review remain separate. No author self-review.",
-    "order": "Complete #3687 and #3692 together in #3690 based on master; then rebase protected executor #3689 above this foundation and verify both independent heads."
+    "order": "#3690 implements #3687 and #3692 on master; #3689 implements #3686 above that foundation. Both implementation slices and their immediate validation are complete."
   },
   "title": "Implement remaining P0 and P1 issues in stacked PRs",
   "update_provenance": {
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/5b43fb71f506e1cc5b85f42cc26cfb8d7759344abc992e460c88631257f39fbd.attempt.json",
-        "revision": "sha256:faa8c6c641b0be4b9ac5b99baab140e44d0207880a425e99d7865c5a57be0a6f",
+        "path": ".agentic-workspace/local/effects/30194bc9a51cbb0fcaffad9b93712e9e96b6fdd4fc196780f44b2259e7cf52b2.attempt.json",
+        "revision": "sha256:8cbde7d18b632916fb58ac46fb31da162e77f74f670766b891e066d0b4929a69",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/5b43fb71f506e1cc5b85f42cc26cfb8d7759344abc992e460c88631257f39fbd.result.json",
-        "revision": "sha256:713292027102f6b088e27592c7786d2a287108709531978623ed11328c22c4c0",
+        "path": ".agentic-workspace/local/effects/30194bc9a51cbb0fcaffad9b93712e9e96b6fdd4fc196780f44b2259e7cf52b2.result.json",
+        "revision": "sha256:d08469f44be22d0d0da0e3cfd836f503d686e2de7e9a9db715d2f6f735e53a9a",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:e3b85f9f0fc0a627922e9d4a8dc7da94758aad9be28fae84b30043b563e069ed",
+    "invocation_revision": "sha256:4b61c3a2368c6d60fec0d7c96d58090805460d15949c16218015b792b2760616",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -88,7 +88,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:5a67673e812b3a4626af45a99ab2807fa7f34c5bcd038987d749ab77441217d5",
+        "document_revision": "sha256:c935990cdd3f6fc4e58e3b3c4cd06fa8114e922bd45fa64aa31de31224f37876",
         "owner_id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
         "owner_path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json"
       }
