@@ -41,14 +41,14 @@ the canonical [writing guide](../../.agentic-workspace/instructions/agent-facing
 | `.agentic-workspace/skills/workspace-resources/SKILL.md` | rewrite | Names the situation, action and completion boundary with exact deeper links. |
 | `.agentic-workspace/skills/workspace-resources/procedure.md` | rewrite | Names the situation, action and completion boundary with exact deeper links. |
 | `.agentic-workspace/skills/workspace-resources/references/build.md` | keep | Names disposable roots and creation lease; preserves unknown output. |
-| `.agentic-workspace/skills/workspace-resources/references/cleanup.md` | keep | Names retain/release/remove operations and exact-path recovery; refuses forced cleanup. |
-| `.agentic-workspace/skills/workspace-resources/references/hygiene.md` | keep | Names audit operation, shallow scope and preservation of unknown files. |
+| `.agentic-workspace/skills/workspace-resources/references/cleanup.md` | rewrite | Names retain/release/remove operations and exact-path recovery; refuses forced cleanup. |
+| `.agentic-workspace/skills/workspace-resources/references/hygiene.md` | rewrite | Names audit operation, shallow scope and preservation of unknown files. |
 | `.agentic-workspace/skills/workspace-resources/references/operation.md` | keep | Names resource proposal and invocation with exact path preservation. |
 | `.agentic-workspace/skills/workspace-resources/references/recovery.md` | keep | Names missing result and no-replay boundary with current recovery. |
 | `.agentic-workspace/skills/workspace-resources/references/select.md` | keep | Defines when scratch or isolation is needed and keeps ordinary work in the existing checkout. |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md` | rewrite | Names the situation, action and completion boundary with exact deeper links. |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md` | rewrite | Names the situation, action and completion boundary with exact deeper links. |
-| `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md` | keep | Exact source-build command and rebuild conditions; no alternate runtime authority. |
+| `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md` | rewrite | Exact source-build command and rebuild conditions; no alternate runtime authority. |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md` | keep | Names configuration result fields, affected consumer checks and lost-reply recovery. |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/package.md` | keep | Exact setup requests, witness fields, scope, recovery and terminal conditions belong in this deeper reference. |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/selection.md` | keep | Names configuration behavior request and concern values; settled choices stop. |
@@ -109,3 +109,15 @@ Markdown lint, changed-source links, generator parity and whitespace checks pass
 No permanent test or CI job was added. Existing native checks cover unchanged
 mechanisms; fresh-reader exercises cover interpretation. Independent review remains
 pending and is not supplied by these implementation-lineage exercises.
+
+## Setup and resources reader
+
+A separate fresh reader correctly kept a supplied-text edit direct, distinguished
+artifact refresh from configuration effectiveness, selected scratch without a
+worktree, and preserved owner-referenced evidence during cleanup. It followed only
+the setup/resources links needed for those questions. It found vague fallback
+pointers and an ambiguity between worktree preservation and owned disposable
+scratch. The pointers now link the exact startup fallback and cleanup names the
+resource type. The package link now says refresh and assessment. No wrong action
+or user intervention was observed; this is author-side evidence, not independent
+review. Generated parity, links, Markdown and commit hooks validate these repairs.

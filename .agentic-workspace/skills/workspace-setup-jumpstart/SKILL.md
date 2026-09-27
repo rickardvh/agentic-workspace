@@ -15,5 +15,5 @@ return to the original task.
 
 Load only needed detail: [behaviour](references/selection.md),
 [authorisation and verification](references/consequences.md),
-[package assessment](references/package.md), or
+[package refresh and assessment](references/package.md), or
 [unavailability and recovery](references/boundaries.md).
