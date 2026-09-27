@@ -73,6 +73,34 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
         render("[malformed", target=ROOT)
 
 
+def test_repository_pr_completion_is_global_without_broadening_operating_scope(tmp_path, shared_core_binary, native_cli):
+    completion = ".agentic-workspace/instructions/github-pr-completion.md"
+    operating = ".agentic-workspace/instructions/workspace-operating.md"
+    for reference in (completion, operating):
+        destination = tmp_path / reference
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((ROOT / reference).read_bytes())
+
+    for task, changed in (
+        ("Implement a Cargo.toml dependency fix and prepare its PR", ["Cargo.toml"]),
+        ("Explain README.md without editing or publishing anything", []),
+    ):
+        current = consume("native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": task, "changed": changed})
+        instructions = current["instructions"]
+        sources = {row["source"]["reference"]: row for row in instructions["sources"]}
+        assert sources[completion]["applicable"]
+        assert "Every implementation PR must fully resolve at least one existing issue" in sources[completion]["guidance"]
+        assert not sources[operating]["applicable"]
+        assert not sources[operating]["guidance"]
+        # Global delivery supplies conditional implementation-PR guidance, not
+        # a read, procedure, hard gate or effect for ordinary read-only work.
+        assert not sources[completion]["read"]
+        assert not sources[completion]["procedure_resolution"]
+        assert not sources[completion]["requirement_references"]
+        assert not [b for b in current["decision_packet"]["blockers"] if b["owner"] == "scoped-instructions"]
+        assert not [a for a in current["decision_packet"]["ready_actions"] if a["operation_id"].startswith("instructions.")]
+
+
 def test_read_profile_uses_target_git_identity(tmp_path, shared_core_binary, native_cli):
     ledger = "schema_version = 1\n# Identity source\n"
     # A plain directory cannot supply repository/path semantics.
