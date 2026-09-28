@@ -49,6 +49,12 @@ Map useful meaning to the existing fields, without another resume schema:
 
 Classify volatile PR/head/review/CI observations through existing material lifetime
 fields. Moving observations alone must not produce tracked semantic updates.
+Prefer leaving these observations with their current source. If `proof.observed`
+contains only a captured check result or status, classify it with
+`material_lifetimes.proof_observed: observation`. First separate real obligations
+into `proof.remaining` and accepted results needed for continuation into durable
+`continuation` fields. Unclassified or mixed legacy meaning stays retained;
+classification requires judgment, not matching words such as "passed".
 Replace current continuation rather than append transcript history, source bodies,
 raw logs or carriage. A retained conclusion needs its rationale, not every step.
 
@@ -93,11 +99,13 @@ If the owner is disabled or unavailable, state the exact retention gap. A readab
 record is useful evidence without executable AW but grants no mutation custody.
 Use an already authorised ordinary repository destination when sufficient; never
 hand-edit managed state or claim persistence from a chat promise. At completion,
-update the same owner's continuation to the actual outcome through its current
-request, then use current closeout and resource-retention paths. Do not leave an
-old pending prerequisite as the current next step after completing the work.
-Preserve referenced evidence
-and unfinished work while retiring disposable transport.
+update the owner only if changed durable meaning must survive or a currently
+relied-upon instruction would cause unsafe continuation. Name that consequence;
+old phase, head, check or completed-step snapshots alone need no refresh. A
+complete leaf can leave its containing lane live, and a lower PR need not mirror
+later work. Reobserve relevant facts before acting; snapshots grant no current
+proof, permission or task authority. Preserve referenced evidence and unfinished
+work while retiring disposable transport through current retention paths.
 
 Continue while the user's authorized objective has safe remaining work; a completed
 milestone alone does not end the session. Stop for completion, a real blocker or

@@ -21,7 +21,7 @@ Treat these as blockers unless the human explicitly accepts the underlying produ
 - proof is missing, stale, too narrow, or contradicted by the diff;
 - a material test/CI delta lacks its testing-strategy disposition or retains duplicate semantic proof, implementation-shaped residue, unjustified public-surface repetition, temporary batch taxonomy, opaque unbounded constituents, or recurring cost unsupported by a distinct durable merge claim;
 - incident-driven permanent regression growth lacks a missing durable failure class, or the proof argument lacks a defensible bounded stop/escalate rationale;
-- checked-in Planning, Memory, payload, or generated state is stale after the claimed closeout;
+- a wrong or missing currently relied-upon Planning or Memory fact would cause an incorrect action or unsupported claim: name that action/claim, the fact and its concrete consequence;
 - package-affecting changes lack exactly one semver label;
 - a shipped payload mirror is out of sync with the source surface;
 - an independently approved draft PR is left draft without an explicit hold reason.
@@ -50,5 +50,6 @@ Report in this shape:
 - When an eligible independent reviewer approves a draft PR, mark it ready for review in the same review pass unless explicitly instructed to keep it draft.
 - Do not require a giant PR to close a broad parent; review bounded children on their own full outcomes and let the parent close administratively when its current graph is satisfied.
 - Do not hold a complete bounded implementation leaf open for future evidence explicitly owned elsewhere.
+- Old phase, head, check status or completed-step narration alone is not a blocker. Reobserve relevant current facts; do not require a narration-only owner update, commit or rebase. Preserve pending handoffs, uncertain effects, real obligations and exact evidence currentness.
 - Keep comments focused on actionable blockers or durable suggestions.
 - When an independent reviewer shares the PR author's GitHub account and cannot submit a formal review, report the review as an ordinary PR comment identifying the reviewed head. No custom marker, App provenance or check publication is required.

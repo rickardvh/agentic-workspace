@@ -51,7 +51,7 @@
     },
     "material_lifetimes": {
       "type": "object",
-      "description": "Current owner classification of legacy mixed-lifetime slots. Durable values carry work meaning; observations carry no current external authority and are not retained by a material mutation. Omission preserves unclassified legacy meaning.",
+      "description": "Observations grant no authority and are discarded on material writes. Omission preserves legacy values.",
       "properties": {
         "next_action": {
           "enum": [
@@ -67,6 +67,10 @@
             "durable",
             "observation"
           ]
+        },
+        "proof_observed": {
+          "description": "Keep obligations and accepted results durable.",
+          "enum": ["durable", "observation"]
         }
       },
       "required": [

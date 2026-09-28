@@ -14,6 +14,7 @@ guesses from their prose:
 | next_action | durable or observation | Preserve durable work; observation becomes an empty required-schema slot |
 | relationships.external_posture | observation | Omit from durable material and current subject projection |
 | continuation.frontier | durable or observation | Preserve accepted semantic meaning; omit operational frontier text |
+| proof.observed | optional durable or observation | Preserve unknown or accepted meaning; omit explicitly classified check/status snapshots |
 | Other continuation, intent, scope, constraints, dependencies and proof obligations | durable | Preserve in full |
 | Returned / integration-pending / assignment custody | existing typed owner lifetime | Preserve; classification cannot edit or waive these owners |
 
@@ -27,6 +28,22 @@ moves.
 New declared observations are projected out before persistence. Repeated material
 submissions whose only differences are observations return unchanged and no
 Planning action: no revision increment, postimage or bookkeeping commit.
+The same projection supplies the semantic work basis used for proof reuse.
+Moving classified observations therefore needs no proof execution or publication.
+Physical source and proof input/runtime checks remain independent and exact.
+
+Prefer leaving check results with their evidence owner. Before classifying
+`proof.observed`, separate real obligations into `proof.remaining` and accepted
+results needed for continuation into durable `continuation` fields. Neither is
+filtered. Mixed or unknown legacy text stays retained until the current owner
+explicitly classifies it; a passing-status keyword is insufficient.
+
+An old phase, head, check or completed-step snapshot alone needs no cleanup commit.
+A completed leaf may leave its lane live, and a lower PR need not mirror later
+work. Reobserve relevant current facts before relying on them. A stale-state
+blocker must name the affected action or claim, the wrong or missing relied-upon
+fact, and its consequence. Shipped payload parity and actual evidence currentness
+remain required.
 
 A real change to durable meaning still requires an exact admitted update.
 Physical source revisions, invocation custody and postimage checks remain exact;

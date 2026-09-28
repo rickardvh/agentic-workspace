@@ -62,6 +62,9 @@ unchanged progress need no new artifact. On resume, establish whether the select
 plan actually belongs to this task.
 
 Finish when the requested outcome and its required evidence are established.
+Historical status alone does not reopen completed work. Reobserve a captured
+fact when the current action depends on it; update retained meaning only when
+its loss or a wrong currently relied-upon instruction would change safe continuation.
 A completed slice with a pending prerequisite leaves the objective unfinished;
 report the remaining work. Keep lessons only when they have
 [future value](references/reconcile.md). Load another [procedure](procedure.md)
