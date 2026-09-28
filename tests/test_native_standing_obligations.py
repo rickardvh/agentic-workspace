@@ -5,10 +5,41 @@ from __future__ import annotations
 import json
 import shutil
 import time
+import tomllib
+from pathlib import Path
 
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+def test_repository_coherence_declaration_reaches_native_entry(tmp_path, shared_core_binary, native_cli):
+    root = Path(__file__).resolve().parents[1]
+    manifest_path = ".agentic-workspace/verification/manifest.toml"
+    manifest = tomllib.loads((root / manifest_path).read_text(encoding="utf-8"))
+    requirement_id = "aw_repository_state_coherence"
+    declaration = manifest["assurance"]["requirements"][requirement_id]
+    assert declaration["requirement_class"] == "current-evidence"
+    freshness = declaration["freshness"]
+    for path in {manifest_path, freshness["procedure"], *freshness["dependencies"]}:
+        source = root / path
+        assert source.is_file(), path
+        destination = tmp_path / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+    context = {"target": str(tmp_path), "task": "Inspect the repository coherence condition"}
+    result = consume("native", shared_core_binary, native_cli, context)
+    entry = next(e for e in result["verification"]["current_evidence"]["entries"] if e["id"] == requirement_id)
+    assert entry["status"] == "due"
+    assert entry["reason"] == "no-current-assessment"
+    assert entry["declaration"]["freshness"] == freshness
+    candidate = next(
+        c
+        for c in result["activation"]["candidates"]
+        if c["entry"].get("owner_reference", {}).get("id") == f"current-evidence:{requirement_id}"
+    )
+    assert candidate["entry"]["resource"] == freshness["procedure"]
+    assert candidate["disposition"] == "route"
 
 
 @pytest.mark.parametrize(

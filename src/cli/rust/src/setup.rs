@@ -99,6 +99,85 @@ fn render(value: &Value, json_output: bool) {
     if value["status"] == "applied" || value["status"] == "already-current" {
         println!("{}", value["next"].as_str().unwrap());
     }
+    if let Some(message) = value["continuation_message"].as_str() {
+        println!("{message}");
+    }
+}
+
+// Relay owner-produced meaning. Exact requests and packet identities remain in
+// the structured continuation; a domain decision is not a question for a human.
+fn continuation_message(current: &Value) -> String {
+    let mut lines = vec!["No setup changes were made.".to_owned()];
+    for blocker in policy_blockers(current, false) {
+        if let Some(message) = blocker["message"].as_str() {
+            lines.push(message.to_owned());
+        }
+        if let Some(recovery) = blocker["recovery"]
+            .as_str()
+            .filter(|s| !s.starts_with("public-owner:"))
+        {
+            lines.push(recovery.to_owned());
+        }
+        lines.push(format!(
+            "Ask your agent to resolve the {} restriction before retrying setup.",
+            blocker["owner"].as_str().unwrap_or("reported")
+        ));
+    }
+    for decision in current["decision_packet"]["pending_consequences"]["decisions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|d| affects_setup(d))
+    {
+        let human = &decision["human_context"];
+        let human_required = decision["resolution"] == "bounded-human-answer"
+            && decision["human_eligibility"].is_object()
+            && human.is_object();
+        if !human_required {
+            lines.push(format!(
+                "Your agent must resolve the {} decision: {}",
+                decision["owner"].as_str().unwrap_or("current"),
+                decision["question"]
+                    .as_str()
+                    .unwrap_or("See the current setup result.")
+            ));
+            continue;
+        }
+        for key in ["proposed_action", "reason", "context"] {
+            if let Some(text) = human[key].as_str() {
+                lines.push(text.to_owned());
+            }
+        }
+        if let Some(question) = decision["question"].as_str() {
+            lines.push(question.to_owned());
+        }
+        for choice in decision["choices"].as_array().into_iter().flatten() {
+            let label = choice["label"].as_str().unwrap_or("");
+            let consequence = choice["id"]
+                .as_str()
+                .and_then(|id| human["consequences"][id].as_str())
+                .unwrap_or("");
+            lines.push(format!("  {label}: {consequence}"));
+        }
+        for key in ["defer_preserves", "authority_boundary"] {
+            if let Some(text) = human[key].as_str() {
+                lines.push(text.to_owned());
+            }
+        }
+        lines.push("Give your answer to your agent to continue this exact request.".into());
+    }
+    if lines.len() == 1 {
+        lines.push("Run setup --dry-run to inspect the current proposal before retrying.".into());
+    }
+    lines.join("\n")
+}
+
+fn affects_setup(consequence: &Value) -> bool {
+    consequence["affects"].as_array().is_some_and(|scopes| {
+        scopes
+            .iter()
+            .any(|s| s == "task" || s == "effect:configuration-source")
+    })
 }
 
 fn policy_blockers(current: &Value, disabled_maintenance: bool) -> Vec<Value> {
@@ -107,12 +186,7 @@ fn policy_blockers(current: &Value, disabled_maintenance: bool) -> Vec<Value> {
         .into_iter()
         .flatten()
         .filter(|b| {
-            (!disabled_maintenance || b["code"] != "workspace-disabled")
-                && b["affects"].as_array().is_some_and(|scopes| {
-                    scopes
-                        .iter()
-                        .any(|s| s == "task" || s == "effect:configuration-source")
-                })
+            (!disabled_maintenance || b["code"] != "workspace-disabled") && affects_setup(b)
         })
         .cloned()
         .collect()
@@ -234,18 +308,33 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
     let mut answer = decision.unwrap()["response_request"].clone();
     answer["arguments"]["answer"] = json!("authorize-write");
     let authorised = call(&context, Some(answer), false)?;
-    let action = authorised["decision_packet"]["ready_actions"].as_array()
-        .and_then(|a| a.iter().find(|a| a["operation_id"] == "configuration.repository-adoption"))
-        .ok_or_else(|| {
-            // An admitted maintenance action already narrows disablement to
-            // unrelated effects. Any remaining task restriction is real policy.
-            let blockers = policy_blockers(&authorised, false);
-            if blockers.is_empty() {
-                "The exact setup proposal is no longer actionable. Re-run setup to inspect current changes.".to_owned()
-            } else {
-                format!("Setup is blocked by current owner restrictions: {}", json!(blockers))
-            }
-        })?;
+    let action = authorised["decision_packet"]["ready_actions"]
+        .as_array()
+        .and_then(|a| {
+            a.iter()
+                .find(|a| a["operation_id"] == "configuration.repository-adoption")
+        });
+    let Some(action) = action else {
+        // Preserve the owner's current distinction between changed proposal,
+        // unresolved decision and policy restriction. --yes answers only the
+        // exact Configuration authorization above.
+        let blockers = policy_blockers(&authorised, false);
+        summary["status"] = json!(if blockers.is_empty() {
+            "continuation-required"
+        } else {
+            "policy-blocked"
+        });
+        summary["policy_blockers"] = json!(blockers);
+        summary["continuation"] = json!({
+            "context": context,
+            "decision_packet": authorised["decision_packet"],
+            "consequence_recovery": authorised["consequence_recovery"],
+            "configuration_write": authorised["configuration_write"]
+        });
+        summary["continuation_message"] = json!(continuation_message(&authorised));
+        render(&summary, json_output);
+        return Err("Setup is waiting for the reported continuation; no changes made.".into());
+    };
     let result = call(&context, Some(action.clone()), true)?;
     summary["status"] = result["status"].clone();
     summary["effect_outcome"] = result["effect_outcome"].clone();
@@ -258,4 +347,59 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn continuation_relays_human_context_without_escalating_domain_decisions() {
+        let human = json!({
+            "proposed_action":"Assess the current result.", "reason":"Expert judgment is required.",
+            "context":"The result has an unresolved tradeoff.",
+            "consequences":{"confirm":"Accept this assessment.","defer":"Keep it unresolved."},
+            "defer_preserves":"Existing evidence remains unchanged.",
+            "authority_boundary":"This does not grant independent review."
+        });
+        let mut decision = json!({
+            "owner":"verification", "resolution":"bounded-human-answer", "human_eligibility":{},
+            "affects":["task"], "question":"Accept this result?", "human_context":human,
+            "choices":[{"id":"confirm","label":"Accept"},{"id":"defer","label":"Defer"}],
+            "response_request":{"private_transport_marker":"not user-facing"}
+        });
+        let render = |d: &Value| {
+            continuation_message(
+                &json!({"decision_packet":{"pending_consequences":{"decisions":[d]}}}),
+            )
+        };
+        let message = render(&decision);
+        for key in [
+            "proposed_action",
+            "reason",
+            "context",
+            "defer_preserves",
+            "authority_boundary",
+        ] {
+            assert!(message.contains(human[key].as_str().unwrap()));
+        }
+        for choice in decision["choices"].as_array().unwrap() {
+            assert!(message.contains(choice["label"].as_str().unwrap()));
+            assert!(
+                message.contains(
+                    human["consequences"][choice["id"].as_str().unwrap()]
+                        .as_str()
+                        .unwrap()
+                )
+            );
+        }
+        assert!(message.contains(decision["question"].as_str().unwrap()));
+        assert!(!message.contains("private_transport_marker"));
+        decision["resolution"] = json!("bounded-domain-answer");
+        let domain = render(&decision);
+        assert!(domain.contains("Your agent must resolve"));
+        assert!(!domain.contains(human["proposed_action"].as_str().unwrap()));
+        decision["affects"] = json!(["claim:complete"]);
+        assert!(!render(&decision).contains(decision["question"].as_str().unwrap()));
+    }
 }
