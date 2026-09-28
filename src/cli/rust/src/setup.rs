@@ -234,18 +234,35 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
     let mut answer = decision.unwrap()["response_request"].clone();
     answer["arguments"]["answer"] = json!("authorize-write");
     let authorised = call(&context, Some(answer), false)?;
-    let action = authorised["decision_packet"]["ready_actions"].as_array()
-        .and_then(|a| a.iter().find(|a| a["operation_id"] == "configuration.repository-adoption"))
-        .ok_or_else(|| {
-            // An admitted maintenance action already narrows disablement to
-            // unrelated effects. Any remaining task restriction is real policy.
-            let blockers = policy_blockers(&authorised, false);
-            if blockers.is_empty() {
-                "The exact setup proposal is no longer actionable. Re-run setup to inspect current changes.".to_owned()
-            } else {
-                format!("Setup is blocked by current owner restrictions: {}", json!(blockers))
-            }
-        })?;
+    let action = authorised["decision_packet"]["ready_actions"]
+        .as_array()
+        .and_then(|a| {
+            a.iter()
+                .find(|a| a["operation_id"] == "configuration.repository-adoption")
+        });
+    let Some(action) = action else {
+        // Preserve the owner's current distinction between changed proposal,
+        // unresolved decision and policy restriction. --yes answers only the
+        // exact Configuration authorization above.
+        let blockers = policy_blockers(&authorised, false);
+        summary["status"] = json!(if blockers.is_empty() {
+            "continuation-required"
+        } else {
+            "policy-blocked"
+        });
+        summary["policy_blockers"] = json!(blockers);
+        summary["continuation"] = json!({
+            "context": context,
+            "decision_packet": authorised["decision_packet"],
+            "consequence_recovery": authorised["consequence_recovery"],
+            "configuration_write": authorised["configuration_write"]
+        });
+        render(&summary, json_output);
+        return Err(format!(
+            "Setup requires the current owner continuation: {}",
+            authorised["decision_packet"]
+        ));
+    };
     let result = call(&context, Some(action.clone()), true)?;
     summary["status"] = result["status"].clone();
     summary["effect_outcome"] = result["effect_outcome"].clone();

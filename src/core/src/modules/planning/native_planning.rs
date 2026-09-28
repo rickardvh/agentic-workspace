@@ -311,6 +311,27 @@ pub(crate) fn resolve(
     resolve_with_contract(target, current_work, request, None)
 }
 
+/// Explicit Configuration maintenance is bounded independent work. Resolve its
+/// posture through the same current Planning request semantics as ordinary work,
+/// without taking custody of, selecting, or changing the remembered owner.
+/// Only native ingress for the typed maintenance operation calls this method;
+/// task wording and setup's write authorization are not relation evidence.
+pub(crate) fn resolve_configuration_maintenance(
+    target: &Path,
+    current_work: &Value,
+) -> Result<Value, CoreError> {
+    let current = resolve(target, current_work, None)?;
+    let Some(mut request) = current["requests"]
+        .as_array()
+        .and_then(|r| r.first())
+        .cloned()
+    else {
+        return Ok(current);
+    };
+    request["arguments"] = json!({"answer":"independent", "task_posture":"direct"});
+    resolve(target, current_work, Some(&request))
+}
+
 /// A posture answer refines an independent relation; it cannot override a
 /// different relation or posture. Validate both envelopes against current owner
 /// sources before selecting the refinement, regardless of carriage order.
