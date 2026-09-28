@@ -4,7 +4,7 @@ schema_version = "agentic-workspace/verification-manifest/v1"
 # Native Verification copies only these inputs and enforces read-only source.
 [execution]
 kind = "docker-readonly-source-v1"
-inputs = ["src", "tests", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "pyproject.toml", "uv.lock", "README.md", "LICENSE", ".agentic-workspace/skills", ".agentic-workspace/planning/skills"]
+inputs = ["src", "tests", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "pyproject.toml", "uv.lock", "README.md", "LICENSE", ".agentic-workspace/skills", ".agentic-workspace/planning/skills", ".agentic-workspace/planning/schemas/planning-execplan.schema.json"]
 scratch_paths = ["target"]
 [execution.environment]
 RUSTUP_TOOLCHAIN = "1.98.1"
@@ -1093,8 +1093,8 @@ applies_to_paths = [
   ".agentic-workspace/planning/**",
 ]
 commands = [
-  "uv run python src/tooling/check/check_structured_file_inventory.py --quiet-success",
-  "uv run pytest tests/test_native_planning_create.py tests/test_native_planning_lifetime.py -q",
+  "uv run --frozen --active --no-sync python src/tooling/check/check_structured_file_inventory.py --quiet-success",
+  "uv run --frozen --active --no-sync python -m pytest tests/test_native_planning_create.py tests/test_native_planning_lifetime.py -q",
 ]
 review_aids = [
   "Confirm the changed records are schema-valid, remain revision-guarded, and do not alter Planning runtime or cross-surface authority.",

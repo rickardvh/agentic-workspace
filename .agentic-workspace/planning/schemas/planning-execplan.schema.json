@@ -67,6 +67,10 @@
             "durable",
             "observation"
           ]
+        },
+        "proof_observed": {
+          "description": "Classify proof.observed only after separating obligations and accepted results needed for continuation into durable fields. Omission preserves unknown legacy meaning.",
+          "enum": ["durable", "observation"]
         }
       },
       "required": [

@@ -10,8 +10,91 @@ from pathlib import Path
 
 import pytest
 from tests.test_native_planning_create import material
+from tests.test_native_proof_producer import fixture as proof_fixture
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+def test_classified_proof_observations_preserve_work_and_reusable_evidence(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path
+) -> None:
+    """One native journey covers the shared lifetime/proof boundary, not adapters."""
+    context = proof_fixture(tmp_path)
+
+    def call(value: dict) -> dict:
+        return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    value = material()
+    value["material_lifetimes"]["proof_observed"] = "observation"
+    value["relationships"]["external_posture"] = {"head": "old", "review": "pending"}
+    value["proof"] = {"observed": "Check queued at old head", "remaining": "Current input must satisfy the check"}
+    value["continuation"] = {
+        "accepted_progress": "Source boundary implemented; current evidence establishes the bounded leaf",
+        "residual": "Containing lane still requires the separate integration outcome",
+    }
+    create = call(context)["planning"]["creation_requests"][0]
+    create["arguments"] = {"material": value}
+    ready = call({**context, "request": create})
+    created = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
+    context = created["value"]["selection_context"]
+    selected = call({**context, "request": created["value"]["selection_request"]})
+    call({**context, "invocation": selected["decision_packet"]["primary_action"]})
+    plan = tmp_path / created["value"]["owner_path"]
+    before = plan.read_bytes()
+    assert "observed" not in json.loads(before)["proof"]
+    current = call(context)
+    subject = current["planning"]["current_owner"]["reconciliation"]["subject"]
+    execute = current["verification"]["execution_requests"][0]
+    action = call({**context, "request": execute})["decision_packet"]["primary_action"]
+    result = call({**context, "invocation": action})
+    reference = result["value"]["publication"]["reference"]
+    assert result["value"]["process"]["status"] == "passed"
+    receipts = tmp_path / ".agentic-workspace/proof/receipts"
+    published = {p.name: p.read_bytes() for p in receipts.glob("*.json")}
+
+    def evidence() -> dict:
+        claim = call(context)["verification"]["requests"][0]
+        claim["arguments"]["evidence_refs"] = [reference]
+        checked = call({**context, "request": claim})
+        assert checked["decision_packet"]["status"] != "terminal"
+        return checked["verification"]["evidence"][0]
+
+    update = {**value, "lifecycle": "planned", "phase": "shaping"}
+    for observation in ("Check passed at new head; leaf merged", "Provider unavailable; historical result unchanged"):
+        update["proof"]["observed"] = observation
+        update["relationships"]["external_posture"] = {"head": observation, "review": "changed"}
+        request = call(context)["planning"]["update_requests"][0]
+        request["arguments"]["material"] = update
+        resolved = call({**context, "request": request})
+        assert resolved["planning"]["update_material_status"] == "unchanged"
+        assert resolved["decision_packet"]["primary_action"] is None
+        assert plan.read_bytes() == before
+        fresh = call(context)["planning"]["current_owner"]["reconciliation"]["subject"]
+        assert fresh == subject
+        assert fresh["state"]["proof"]["declared"]["remaining"] == value["proof"]["remaining"]
+        assert fresh["state"]["residual"]["continuation"] == value["continuation"]
+        assert evidence()["evidence_freshness"] == "reusable"
+        assert {p.name: p.read_bytes() for p in receipts.glob("*.json")} == published
+        assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+
+    # Real proof inputs and obligations remain material; no rerun is hidden in resolution.
+    original = (tmp_path / "a.txt").read_bytes()
+    (tmp_path / "a.txt").write_text("changed input")
+    assert evidence()["evidence_freshness"] == "stale"
+    (tmp_path / "a.txt").write_bytes(original)
+    assert evidence()["evidence_freshness"] == "reusable"
+    update["proof"]["remaining"] = "Also establish the changed compatibility requirement"
+    request = call(context)["planning"]["update_requests"][0]
+    request["arguments"]["material"] = update
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.update"
+    call({**context, "invocation": action})
+    assert plan.read_bytes() != before
+    assert call(context)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != subject["revision"]
+    assert evidence()["evidence_freshness"] == "stale"
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "request": request})
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

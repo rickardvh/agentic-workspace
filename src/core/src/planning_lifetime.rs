@@ -10,6 +10,7 @@ const PATHS: &[(&str, &str)] = &[
     ("next_action", "/next_action"),
     ("external_posture", "/relationships/external_posture"),
     ("continuation_frontier", "/continuation/frontier"),
+    ("proof_observed", "/proof/observed"),
 ];
 
 /// Preserve every field except the exact paths explicitly classified as volatile.
@@ -130,10 +131,20 @@ mod tests {
     #[test]
     fn classification_preserves_unknown_and_durable_custody() {
         let legacy = json!({"next_action":"finish required proof","relationships":{"external_posture":{"head":"old"},"returned":{"result":{"sealed":"receipt"}},"integration_pending":{"result":"pending"}},"continuation":{"frontier":"accepted semantic result","residual":"unresolved intent"}});
+        let mut legacy = legacy;
+        legacy["proof"] = json!({"observed":"accepted result and pending validation, not yet separated","remaining":"verify current input","refs":["proof://receipt"]});
         assert_eq!(durable(&legacy), legacy);
         let mut classified = legacy.clone();
         classified[FIELD] = json!({"next_action":"durable","external_posture":"observation","continuation_frontier":"durable"});
         let output = durable(&classified);
+        assert_eq!(output["proof"], legacy["proof"]);
+        classified[FIELD]["proof_observed"] = json!("durable");
+        assert_eq!(durable(&classified)["proof"], legacy["proof"]);
+        classified[FIELD]["proof_observed"] = json!("observation");
+        let filtered = durable(&classified);
+        assert!(filtered["proof"].get("observed").is_none());
+        assert_eq!(filtered["proof"]["remaining"], legacy["proof"]["remaining"]);
+        assert_eq!(filtered["proof"]["refs"], legacy["proof"]["refs"]);
         assert!(output["relationships"].get("external_posture").is_none());
         assert_eq!(output["next_action"], legacy["next_action"]);
         assert_eq!(output["continuation"], legacy["continuation"]);

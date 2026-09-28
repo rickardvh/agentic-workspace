@@ -13,3 +13,10 @@ a follow-up, or close an issue merely to make a partial PR appear complete.
 Stacked PRs must each close an honestly bounded issue. Broader parent issues may
 remain open for their separately defined outcomes. Preserve the independent
 review boundary: implementation completion does not supply review or approval.
+
+Judge each leaf against its own outcome and current evidence. Captured Planning
+phase, head, check status or completed instructions alone require no refresh,
+rebase or bookkeeping commit. A stale-state blocker must identify the affected
+action or claim, the wrong or missing fact currently relied upon, and its concrete
+consequence. Preserve genuine obligations, pending handoffs, uncertain effects
+and evidence currentness; shipped payload and generated-source parity still apply.

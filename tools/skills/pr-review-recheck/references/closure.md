@@ -14,6 +14,13 @@ Check closure honesty:
 - whether the PR may honestly close each linked issue under that issue's closure shape;
 - whether later evidence explicitly owned elsewhere is being incorrectly used to keep an otherwise-complete bounded implementation leaf open.
 
+A completed leaf may leave its containing lane live. Each independently mergeable
+head needs its own outcome and evidence, but a lower PR's captured Planning status
+need not mirror later descendants. Old snapshots grant no present task authority;
+they also require no cleanup when no current action or claim relies on them.
+Block only the dependent scope when a real obligation, pending handoff, uncertain
+effect or missing/stale relied-upon evidence prevents safe continuation or closure.
+
 For PRs that use longitudinal evaluation as part of issue closure, check the split explicitly:
 
 - deterministic implementation behavior still needs present-tense proof and cannot be deferred into an evaluation;
