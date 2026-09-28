@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-summary = "Extend assurance current-evidence requirements with reusable freshness and satisfaction."
-bump = "patch"
