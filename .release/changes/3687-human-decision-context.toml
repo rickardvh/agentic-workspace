@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Keep routine AW decisions with domain owners; require current explicit eligibility and complete context for human Verification judgments and human-owned assignments."
