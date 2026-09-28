@@ -1,5 +1,26 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[assurance.requirements.aw_repository_state_coherence]
+level = "medium"
+force = "required-before-closeout"
+requirement_class = "current-evidence"
+source_intent_ref = "SYSTEM_INTENT.md"
+source_intent_revision = "aw-repository-state-coherence-v1"
+evidence_owner = "verification:aw-repository-state-coherence"
+detail_route = "verification:aw-repository-state-coherence"
+required_evidence = [
+  "Compare current intent, ownership and instruction bindings with their authoritative sources.",
+  "Check proof meaning and actively relied-upon continuation; preserve history and intentional exceptions.",
+  "Attribute resolved findings and scoped gaps, with existing-owner repair evidence where applicable.",
+]
+blocking_claims = ["close-parent-lane"]
+notes = "Repository operating-context assessment; unrelated work retains its own requirements."
+[assurance.requirements.aw_repository_state_coherence.freshness]
+procedure = "tools/skills/ownership-ledger-check/references/repository-state-coherence.md"
+max_age_seconds = 604800
+dependencies = ["SYSTEM_INTENT.md", ".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".agentic-workspace/instructions/workspace-operating.md"]
+disposition = "route"
+
 # The host pins its prepared tool image in config.local.toml proof_execution.image.
 # Native Verification copies only these inputs and enforces read-only source.
 [execution]
