@@ -177,7 +177,9 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     agents.write_text("Repository-owned instructions.\n", encoding="utf-8")
 
     def setup(*args, success=True):
-        result = subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), *args], capture_output=True, text=True)
+        result = subprocess.run(
+            [str(native_cli), "setup", "--target", str(tmp_path), *args], capture_output=True, text=True, encoding="utf-8"
+        )
         assert (result.returncode == 0) is success, result.stderr
         return result
 
@@ -187,9 +189,50 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     assert not (tmp_path / ".agentic-workspace").exists()
     setup("--format", "json", success=False)
     assert not (tmp_path / ".agentic-workspace").exists()
+    # Write-footprint protection is applied only once authorization produces the
+    # exact action, exercising setup's post-authorization continuation fallback.
+    protection = tmp_path / ".agentic-workspace/instructions/protect-setup.md"
+    protection.parent.mkdir(parents=True)
+    protection.write_text("---\nprotect: [AGENTS.md]\n---\nPreserve the repository instructions.\n")
+    assert json.loads(setup("--dry-run", "--format", "json").stdout)["status"] == "authorization-required"
+    blocked = json.loads(setup("--yes", "--format", "json", success=False).stdout)
+    continuation = blocked["continuation"]
+    assert continuation["configuration_write"]["status"] == "write-ready"
+    assert not continuation["decision_packet"]["ready_actions"]
+    human = setup("--yes", success=False)
+    for blocker in blocked["policy_blockers"]:
+        assert blocker["message"] in human.stdout
+    assert blocked["continuation_message"] in human.stdout
+    assert "decision_packet" not in human.stdout + human.stderr
+    assert "capability_revision" not in human.stdout + human.stderr
+    assert agents.read_text() == "Repository-owned instructions.\n"
+    assert not (tmp_path / ".agentic-workspace/local/effects/adoption.prepared.json").exists()
+    protection.unlink()
     result = json.loads(setup("--yes", "--format", "json").stdout)
     assert result["effect_outcome"]["status"] == "committed"
     assert agents.read_text().startswith("Repository-owned instructions.\n")
+    # A live owner belongs to unrelated work. Setup must derive its independent
+    # posture from typed maintenance, preserving native selection and custody.
+    from tests.test_native_planning_create import material
+
+    planning_context = {"target": str(tmp_path), "task": "Implement the unrelated feature"}
+
+    def planning_call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**planning_context, **extra}, host_path=os.environ["PATH"])
+
+    request = planning_call()["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    created = planning_call(invocation=planning_call(request=request)["decision_packet"]["primary_action"])
+    planning_context = created["value"]["selection_context"]
+    selected = planning_call(request=created["value"]["selection_request"])
+    planning_call(invocation=selected["decision_packet"]["primary_action"])
+    preserved_planning = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file() and "planning" in p.parts}
+    ordinary = planning_call(task="Set up Agentic Workspace in this repository")
+    assert ordinary["planning"]["task_relation"] == "unresolved"
+    maintenance = planning_call(task="Any wording", maintenance="configuration")
+    assert maintenance["planning"]["task_relation"] == "independent"
+    assert maintenance["planning"]["status"] == "direct"
+    assert maintenance["planning"]["selected_owner"] is None
     policy = tmp_path / ".agentic-workspace/config.toml"
     disabled = b"[workspace]\nenabled = false\n"
     policy.write_bytes(disabled)
@@ -198,7 +241,7 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     # A bounded missing package integration surface needs refresh while ordinary
     # operation is deliberately disabled. Preview and authorization must agree.
     (tmp_path / ".agentic-workspace/local/.gitignore").unlink()
-    context = {"target": str(tmp_path), "task": "Inspect disabled maintenance"}
+    context = {"target": str(tmp_path), "task": "Inspect disabled maintenance", "maintenance": "configuration"}
 
     def call(**extra):
         return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
@@ -208,6 +251,7 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
         blocker = next(b for b in call()["decision_packet"]["blockers"] if b["code"] == "workspace-disabled")
         assert "task" in blocker["affects"]
         assert custom.read_text() == "Preserve independently owned state.\n"
+        assert all(p.read_bytes() == data for p, data in preserved_planning.items())
 
     assert_disabled()
     policy.write_bytes(disabled + b'agent_instructions_file = "MISSING.md"\n')

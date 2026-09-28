@@ -374,7 +374,11 @@ fn resolve_selected(
     };
 
     let planning_probe = if available("planning") {
-        native_planning::resolve(target, &work, None)?
+        if input.maintenance.is_some() {
+            native_planning::resolve_configuration_maintenance(target, &work)?
+        } else {
+            native_planning::resolve(target, &work, None)?
+        }
     } else {
         native_planning::disabled(target)?
     };
