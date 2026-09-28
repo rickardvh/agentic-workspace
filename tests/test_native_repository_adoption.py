@@ -177,7 +177,9 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     agents.write_text("Repository-owned instructions.\n", encoding="utf-8")
 
     def setup(*args, success=True):
-        result = subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), *args], capture_output=True, text=True)
+        result = subprocess.run(
+            [str(native_cli), "setup", "--target", str(tmp_path), *args], capture_output=True, text=True, encoding="utf-8"
+        )
         assert (result.returncode == 0) is success, result.stderr
         return result
 
@@ -187,6 +189,25 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     assert not (tmp_path / ".agentic-workspace").exists()
     setup("--format", "json", success=False)
     assert not (tmp_path / ".agentic-workspace").exists()
+    # Write-footprint protection is applied only once authorization produces the
+    # exact action, exercising setup's post-authorization continuation fallback.
+    protection = tmp_path / ".agentic-workspace/instructions/protect-setup.md"
+    protection.parent.mkdir(parents=True)
+    protection.write_text("---\nprotect: [AGENTS.md]\n---\nPreserve the repository instructions.\n")
+    assert json.loads(setup("--dry-run", "--format", "json").stdout)["status"] == "authorization-required"
+    blocked = json.loads(setup("--yes", "--format", "json", success=False).stdout)
+    continuation = blocked["continuation"]
+    assert continuation["configuration_write"]["status"] == "write-ready"
+    assert not continuation["decision_packet"]["ready_actions"]
+    human = setup("--yes", success=False)
+    for blocker in blocked["policy_blockers"]:
+        assert blocker["message"] in human.stdout
+    assert blocked["continuation_message"] in human.stdout
+    assert "decision_packet" not in human.stdout + human.stderr
+    assert "capability_revision" not in human.stdout + human.stderr
+    assert agents.read_text() == "Repository-owned instructions.\n"
+    assert not (tmp_path / ".agentic-workspace/local/effects/adoption.prepared.json").exists()
+    protection.unlink()
     result = json.loads(setup("--yes", "--format", "json").stdout)
     assert result["effect_outcome"]["status"] == "committed"
     assert agents.read_text().startswith("Repository-owned instructions.\n")
