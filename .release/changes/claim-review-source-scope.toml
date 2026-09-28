@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Keep claim review scoped to current results under broad instructions, while preserving instruction currentness and bounded source discovery."
