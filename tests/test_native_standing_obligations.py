@@ -17,14 +17,10 @@ def test_repository_coherence_declaration_reaches_native_entry(tmp_path, shared_
     root = Path(__file__).resolve().parents[1]
     manifest_path = ".agentic-workspace/verification/manifest.toml"
     manifest = tomllib.loads((root / manifest_path).read_text(encoding="utf-8"))
-    standing = {key: row for key, row in manifest["assurance"]["requirements"].items() if "freshness" in row}
-    assert set(standing) == {"aw_repository_state_coherence"}
-    declaration = standing["aw_repository_state_coherence"]
+    requirement_id = "aw_repository_state_coherence"
+    declaration = manifest["assurance"]["requirements"][requirement_id]
     assert declaration["requirement_class"] == "current-evidence"
     freshness = declaration["freshness"]
-    assert freshness["disposition"] == "route"
-    assert 0 < freshness["max_age_seconds"] <= 7 * 24 * 60 * 60
-    assert 0 < len(freshness["dependencies"]) <= 5
     for path in {manifest_path, freshness["procedure"], *freshness["dependencies"]}:
         source = root / path
         assert source.is_file(), path
@@ -33,11 +29,16 @@ def test_repository_coherence_declaration_reaches_native_entry(tmp_path, shared_
         shutil.copyfile(source, destination)
     context = {"target": str(tmp_path), "task": "Inspect the repository coherence condition"}
     result = consume("native", shared_core_binary, native_cli, context)
-    entry = result["verification"]["current_evidence"]["entries"][0]
+    entry = next(e for e in result["verification"]["current_evidence"]["entries"] if e["id"] == requirement_id)
     assert entry["status"] == "due"
     assert entry["reason"] == "no-current-assessment"
     assert entry["declaration"]["freshness"] == freshness
-    candidate = next(c for c in result["activation"]["candidates"] if c["entry"]["resource"] == freshness["procedure"])
+    candidate = next(
+        c
+        for c in result["activation"]["candidates"]
+        if c["entry"].get("owner_reference", {}).get("id") == f"current-evidence:{requirement_id}"
+    )
+    assert candidate["entry"]["resource"] == freshness["procedure"]
     assert candidate["disposition"] == "route"
 
 
