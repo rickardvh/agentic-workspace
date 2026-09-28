@@ -75,6 +75,7 @@ fn observe(
 // Reobserve the applicable declared path set, including newly created files.
 // No prior AW event stream or comprehensive caller change list is freshness.
 pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<String>, CoreError> {
+    const ENTRY_LIMIT: usize = 4096;
     let mut paths = BTreeSet::new();
     let mut visited = BTreeSet::new();
     let mut pending = Vec::new();
@@ -109,10 +110,14 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
         };
         for entry in entries {
             count += 1;
-            if count > 4096 {
-                return Err(err(
-                    "source reconciliation scope exceeds bounded discovery; narrow the current work scope",
-                ));
+            if count > ENTRY_LIMIT {
+                return Err(err(format!(
+                    "source reconciliation scope exceeds bounded discovery: limit {ENTRY_LIMIT} directory entries, \
+                     directory {directory:?}, patterns {:?} ({} total). No complete scope was produced; \
+                     narrow the owner's declared discovery scope. No larger-budget override is supported.",
+                    &patterns[..patterns.len().min(8)],
+                    patterns.len()
+                )));
             }
             let entry = entry.map_err(err)?;
             let name = entry

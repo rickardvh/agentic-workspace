@@ -11,6 +11,42 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_claim_result_scope_is_distinct_from_instruction_applicability(tmp_path, shared_core_binary, native_cli):
+    instruction = tmp_path / ".agentic-workspace/instructions/broad.md"
+    instruction.parent.mkdir(parents=True)
+    instruction.write_text("---\npaths: [src/**]\n---\nPreserve the feature contract.\n")
+    result = tmp_path / "src/result.txt"
+    result.parent.mkdir()
+    result.write_text("result")
+    peer = tmp_path / "src/peer.txt"
+    peer.write_text("unrelated")
+    context = {"target": str(tmp_path), "task": "Review the bounded result", "changed": ["src/result.txt"]}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra})
+
+    request = call()["verification"]["claim_review"]["request"]
+    request["arguments"].update(disposition="satisfied", reason="Checked the current result.", evidence_refs=[])
+    proposed = call(request=request)
+    binding = proposed["verification"]["claim_review"]["proposal"]["binding"]
+    assert set(binding["postimages"]) == {"src/result.txt"}
+    assert any(row["source"]["reference"] == ".agentic-workspace/instructions/broad.md" for row in binding["instructions"])
+    answer = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")[
+        "response_request"
+    ]
+    answer["arguments"]["answer"] = "confirm"
+    peer.write_text("changed unrelated bytes")
+    (peer.parent / "new-peer.txt").write_text("new unrelated consumer")
+    assert call(request=answer)["verification"]["claim_review"]["status"] == "current"
+    for source in (result, instruction):
+        original = source.read_bytes()
+        source.write_bytes(original + b"\nChanged basis.\n")
+        with pytest.raises(AssertionError, match="stale"):
+            call(request=answer)
+        source.write_bytes(original)
+    assert call(request=answer)["verification"]["claim_review"]["status"] == "current"
+
+
 @pytest.mark.parametrize("binding_assignment", [False, True])
 def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path, shared_core_binary, native_cli, binding_assignment):
     from tests.test_native_proof_producer import fixture

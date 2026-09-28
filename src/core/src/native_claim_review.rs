@@ -43,25 +43,13 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     let Some(request) = request else {
         return Ok(result);
     };
-    let mut patterns: Vec<String> = changed.to_vec();
-    for row in instructions["sources"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter(|r| r["applicable"] == true)
-    {
-        patterns.extend(
-            row["metadata"]["paths"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .map(str::to_owned),
-        );
-    }
+    // Current work supplies the result scope. Instruction applicability describes
+    // where a rule governs, not additional results of this claim. The applicable
+    // instruction sources remain independently bound below, alongside the subject,
+    // policy and evidence; reconciliation owns discovery of their other consumers.
     let root = cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
-    let paths = crate::native_source_reconciliation::scope_files(&root, &patterns)?;
+    let paths = crate::native_source_reconciliation::scope_files(&root, changed)?;
     let mut sources = serde_json::Map::new();
     for path in paths {
         sources.insert(
