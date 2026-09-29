@@ -95,6 +95,11 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witne
 
         def session(self, work, prompt):
             if not self.observations:
+                import tomllib
+
+                assert (
+                    tomllib.loads(files[".agentic-workspace/config.toml"].decode())["workspace"]["agent_instructions_file"] == "AGENTS.md"
+                )
                 work.write(".agentic-workspace/planning/execplans/sample.plan.json", b"{}")
                 work.write(".agentic-workspace/local/scratch/sample/draft.txt", b"draft")
                 self.observations.append({})

@@ -461,7 +461,9 @@ def execute_affordance(consumer, actor):
         if actor is None or consumer.profile != "standalone":
             raise ValueError("Affordance observation requires the live standalone actor and trusted product receipts")
         recipe(work, "first-contact")
-        work.write(".agentic-workspace/config.toml", ("[workspace]\ncli_invoke=" + json.dumps(" ".join(consumer.command)) + "\n").encode())
+        work.write(".agentic-workspace/config.toml", (
+            '[workspace]\nagent_instructions_file="AGENTS.md"\ncli_invoke=' + json.dumps(" ".join(consumer.command)) + "\n"
+        ).encode())
         setup(work)
         before = work.files()
         actor.session(work,
