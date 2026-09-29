@@ -16,8 +16,6 @@ import tomllib
 import zipfile
 from pathlib import Path
 
-from first_contact import journey
-
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = "platform-release-manifest.json"
 
@@ -215,6 +213,8 @@ def assemble(inputs, directory):
 
 
 def smoke(directory, receipt):
+    from first_contact import journey
+
     """Consumer PATH contains Git and Node, but neither Cargo nor rustc."""
     data = load(directory)
     row = next(p for p in data["platforms"] if p["target"] == current_platform()["target"])

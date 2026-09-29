@@ -94,6 +94,14 @@ manual check for the same source. The checker now selects the newest attempt
 independently of API ordering, with a regression that also rejects a newer failed
 attempt. The waiting Release run was cancelled before builds or publication.
 
+At `8ba123566`, source admission, all six staged platform builds, assembly and
+all six compiler-free platform consumers passed in
+[36631037294](https://github.com/rickardvh/agentic-workspace/actions/runs/36631037294).
+The staged broad and Planning jobs exposed an import dependency in the test
+artifact selector. Moving the first-contact import to its actual smoke-test
+caller fixes that dependency; the inventory fixture now also exercises selection
+in a fresh isolated Python process. Final run observations are linked from the PR.
+
 Final hosted handoffs, timings and external independent acceptance remain
 required before completion. No production release is required solely for
 validation.
