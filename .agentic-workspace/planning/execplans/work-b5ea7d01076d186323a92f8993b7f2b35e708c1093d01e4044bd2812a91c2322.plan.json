@@ -2,7 +2,6 @@
   "adaptive_assurance": {
     "proof_profiles": [
       "workspace_behavior",
-      "verification_behavior",
       "test_evidence_change"
     ]
   },
@@ -10,7 +9,7 @@
   "canonical_core": {},
   "continuation": {
     "accepted": "Issue inventory verified against GitHub: #3706-3711 are the six issues filed today; #3708 is an aggregate parent, not another giant implementation PR. Three PR lanes remain as scoped. This Planning record was created and selected through native effects. Current Assignment chose local Astra over eligible Sol because the mixed contract/integration work benefits from retained context; Luna/Terra are prohibited for this task class.",
-    "frontier": "On codex/public-affordance-recovery. Resource operations now preserve Planning dependencies; seven resource-owner tests pass including immediate creation/removal. Recovery projection now accepts consequence-specific owner request nominations, distinguishes bounded owner selection and preserves unavailable restrictions; Verification nominates scope/strategy/claim requests. Nine operating Rust tests and 21 focused Python cases pass. Broader native resource/Verification/public CLI checks are running. No PR yet; finish lane proof, source reconciliation and audit before publishing. Then implement live dogfooding/standing requirement and opt-in reporting. Preserve pre-existing receipt files/index changes. Disposable transport is Windows TEMP aw-today-*.json; use aw-today-current-context.json and aw-today-full.json only while source/current-work bindings remain current."
+    "frontier": "Implementation is published in stacked drafts #3712 (public action/recovery, #3706/#3707), #3713 (opt-in reporting, #3711), and #3714 (live harness/standing evidence, #3709/#3710). Cross-owner recovery is propagated through all branches; finite six-class audit is in #3714. Current scorer33 and standing5 tests passed; broad native owner/public205, carriage/decision67 and source/adoption/strategy73 passed earlier. Native Verification execution passed, receipt proof://receipts/16c384cbf9de8e1f; current publication/runtime were admitted but task sufficiency was not. The machine-bound signed receipt remains local because the absolute-path commit check rejected it; do not rewrite it or stage unrelated receipt residue. Two exact-candidate live sessions completed and trusted receipts establish all interaction coverage after the acting-owner scorer correction. Final and recovery exports failed without a diagnostic, so independent artifact/preservation checks remain unknown. Verification published the actual failed standing assessment; #3710 is not satisfied and no leaf/parent completion claim is made for the live lane. First and diagnostic results are retained separately under Windows TEMP aw-today-live-*.json, with hashes in live-affordance-evidence.md. Raw transcripts stay out of Git. Managed build worktree was archived after sandbox cleanup; frozen candidate-current archive remains in TEMP aw-today-candidate. No further provider run was made after this representative failure. Preserve pre-existing receipt changes. Independent review and source/claim reconciliation remain pending."
   },
   "creation_provenance": {
     "custody": {
@@ -42,12 +41,12 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Resolve current Assignment admission, implement the public-action and recovery lane with focused behavioral evidence, then implement live dogfooding and consumer reporting, publish the three PRs and complete the finite parent audit.",
+  "next_action": "Resolve the live final-export evidence gap under #3709/#3710, obtain one fully checked live observation and publish satisfied/current only if justified. Reconcile source/claim evidence and obtain independent acceptance of the three draft PRs; then aggregate parent #3708.",
   "owner_level": "lane",
   "parent": {},
   "phase": "implementation",
   "proof": {
-    "remaining": "Focused shared-core action and restriction journeys; existing protection/currentness controls; installed skill/payload parity; deterministic live-harness scorer controls and one trusted live installed-subject run; current-evidence lifecycle and honest unavailable control; privacy/activation boundary; required repository checks and source reconciliation."
+    "remaining": "Final independent live export/artifact/authority evidence for #3709/#3710 and a justified satisfied/current native assessment; current source reconciliation and claim sufficiency; independent PR acceptance. Do not replace missing artifact checks with actor claims or retry provider runs without a named bounded diagnostic need."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3706",
@@ -55,10 +54,14 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3708",
     "https://github.com/rickardvh/agentic-workspace/issues/3709",
     "https://github.com/rickardvh/agentic-workspace/issues/3710",
-    "https://github.com/rickardvh/agentic-workspace/issues/3711"
+    "https://github.com/rickardvh/agentic-workspace/issues/3711",
+    "https://github.com/rickardvh/agentic-workspace/pull/3712",
+    "https://github.com/rickardvh/agentic-workspace/pull/3713",
+    "https://github.com/rickardvh/agentic-workspace/pull/3714",
+    "tools/skills/self-improvement-dogfooding/references/live-affordance-evidence.md"
   ],
   "relationships": {},
-  "revision": 2,
+  "revision": 4,
   "scope": {
     "constraints": "Use existing checkout. Preserve pre-existing proof receipt changes. Each PR must fully satisfy an existing issue. Preserve independent review boundary. No weakening currentness, resource custody, proof, publication consent or privacy.",
     "lanes": "PR 1: #3706/#3707 public action dependencies and consequence-specific recovery. PR 2: #3709/#3710 live operational-affordance exercise and standing current evidence. PR 3: #3711 explicit opt-in privacy-safe consumer reporting. #3708 aggregates the finite six-class audit and accepted child evidence."
@@ -68,18 +71,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/cf1256b707f81ae821f18c9df9c5dc143d44e45538828b41fb726333f136c49d.attempt.json",
-        "revision": "sha256:797780de02fa2bb91769da1074de12ed52dec21f98b8ec32ddebdffebd32a1df",
+        "path": ".agentic-workspace/local/effects/d2e43515e9adb8a2f35c9740e69f15ded0b257e6e9802b1fc2be9046f95a6745.attempt.json",
+        "revision": "sha256:7d060fc3b40da34af1c983ce6834313e8b14dbfbec6f73ec8d69b9c464f0df8b",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/cf1256b707f81ae821f18c9df9c5dc143d44e45538828b41fb726333f136c49d.result.json",
-        "revision": "sha256:c056ec6199f74aafc8b7e8a174cd7cae89ff7893bac9190974c668d2b6e87533",
+        "path": ".agentic-workspace/local/effects/d2e43515e9adb8a2f35c9740e69f15ded0b257e6e9802b1fc2be9046f95a6745.result.json",
+        "revision": "sha256:6818134a43922ef449a76be7c5bbf3deb92f62de4a7fedec9032781bf26786e3",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:43181cfa8a3aa6f1f0c438735cc716f370a531ff75fa8e8c109832702559c010",
+    "invocation_revision": "sha256:def538fb437166b5eab4f4b911dcdedceffb77d16ff2b4fd7ca9a20e05b06cfe",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -87,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:3b20f35676d4e732c0f8feb08f23dc54924160b76c231281bed170b24f1c7ca2",
+        "document_revision": "sha256:189106c6a888a446ede4704d0d1f71bbf7b1213adcd7da1ab423273e1da00f1f",
         "owner_id": "work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322",
         "owner_path": ".agentic-workspace/planning/execplans/work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322.plan.json"
       }
