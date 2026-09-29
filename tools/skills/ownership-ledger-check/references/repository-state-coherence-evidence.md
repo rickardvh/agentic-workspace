@@ -48,8 +48,17 @@ and independent review. That instruction was wrong for this closeout:
   it supplies no self-review.
 - Planning's exact update replaced the obsolete instruction with the bounded
   coherence publication and administrative parent closure. Implementation and
-  provider work are complete. The Plan retains accepted evidence and will not
-  ask a future executor to repeat final PR review or run another model.
+  provider work are complete. The Plan is closed/complete, not retired.
+- Following [the closeout review](https://github.com/rickardvh/agentic-workspace/pull/3716#issuecomment-5894520296),
+  the exact `planning/terminal-disposition/v1` request was scoped to this record.
+  Planning returned `status: quiet`, no retirement action, and a `protected`
+  entry naming `.agentic-workspace/local/planning/owner-selection.json` as its
+  consumer. The current Planning contract offers no selector-release operation.
+  This is a concrete reference-protection exception: preserve the closed record
+  while that selector relies on it. Do not bypass the owner or claim deletion.
+  A committed `planning.update` corrected the Plan's inaccurate retirement
+  statement and retained this reason. Accepted evidence remains with the merged
+  PRs and standing notes; no implementation or provider obligation is reopened.
 
 ## Preserved boundaries
 

@@ -8,7 +8,7 @@
   "canonical_core": {},
   "continuation": {
     "accepted": "All implementation children #3706, #3707, #3709, #3710 and #3711 are closed through independently accepted merged PRs #3712, #3713 and #3714. The finite six-class audit and live finding dispositions were accepted by independent review of #3714 at issuecomment-5893567940. The user explicitly requested parent #3708 closeout after merge f6a3cde3847a3ad369503d20cf8222ab8c318e83. No further implementation or provider run is required.",
-    "frontier": "All five children and the finite six-class parent audit are independently accepted and merged through #3712, #3713 and #3714. Repository-state coherence was reviewed on merged f6a3cde3847a3ad369503d20cf8222ab8c318e83; the only current mismatch was this Plan asking for already completed #3714 proof/readiness/review. Planning corrected that instruction. Verification published the bounded coherence comparison, and ordinary entry now reports both aw_repository_state_coherence and aw_live_affordance_dogfooding satisfied/current. This lane record is retired, with accepted evidence and intentional historical/custody exceptions preserved. No new product, test, workflow, live run or proof contract was introduced. GitHub requires a PR for master changes; the three-file administrative closeout PR is the delivery owner for these records and #3708 closure. A future executor must not repeat accepted child review or provider work merely because old observations remain in history."
+    "frontier": "All five children and the finite six-class parent audit are independently accepted and merged through #3712, #3713 and #3714. Repository-state coherence was reviewed on merged f6a3cde3847a3ad369503d20cf8222ab8c318e83; the only current mismatch was this Plan asking for already completed #3714 proof/readiness/review. Planning corrected that instruction. Verification published the bounded coherence comparison, and ordinary entry now reports both aw_repository_state_coherence and aw_live_affordance_dogfooding satisfied/current. This lane record is closed/complete, not retired. The exact terminal-disposition owner reports it protected by .agentic-workspace/local/planning/owner-selection.json. Preserve that referenced record until its selector has a supported owner-mediated release; the current Planning contract offers no selector-release operation. Accepted evidence remains in the merged PRs and standing notes; this record retains no new implementation obligation. Intentional historical/custody exceptions remain preserved. No new product, test, workflow, live run or proof contract was introduced. GitHub requires a PR for master changes; the three-file administrative closeout PR is the delivery owner for these records and #3708 closure. A future executor must not repeat accepted child review or provider work merely because old observations remain in history."
   },
   "creation_provenance": {
     "custody": {
@@ -62,7 +62,7 @@
     "tools/skills/ownership-ledger-check/references/repository-state-coherence-evidence.md"
   ],
   "relationships": {},
-  "revision": 12,
+  "revision": 13,
   "scope": {
     "constraints": "Use existing checkout. Preserve pre-existing proof receipt changes. Each PR must fully satisfy an existing issue. Preserve independent review boundary. No weakening currentness, resource custody, proof, publication consent or privacy.",
     "lanes": "PR 1: #3706/#3707 public action dependencies and consequence-specific recovery. PR 2: #3709/#3710 live operational-affordance exercise and standing current evidence. PR 3: #3711 explicit opt-in privacy-safe consumer reporting. #3708 aggregates the finite six-class audit and accepted child evidence."
@@ -72,18 +72,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/286f9459308aabdca6e0f5f7fae89de09b369c29cc609d22df03b3d9bd5b4b9d.attempt.json",
-        "revision": "sha256:7380f17c4f05d5f44c864b42749f6eed0d9b59f14f66b0c348dedd56b8d91e6e",
+        "path": ".agentic-workspace/local/effects/b29dfb3207d782be1e59e1f0ee6b7c63672575a5fb30fa1f6e4b694b63dd9b17.attempt.json",
+        "revision": "sha256:639035c694a5071932a04aee59fd8e61dab3acad29d3d3ff3dd44672e97dd2c4",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/286f9459308aabdca6e0f5f7fae89de09b369c29cc609d22df03b3d9bd5b4b9d.result.json",
-        "revision": "sha256:076f167e2c4aa3392cf938b867ef56aa62f9abc8abf5789e8bd7018c959334ed",
+        "path": ".agentic-workspace/local/effects/b29dfb3207d782be1e59e1f0ee6b7c63672575a5fb30fa1f6e4b694b63dd9b17.result.json",
+        "revision": "sha256:71adc4edcfd1fb842e7001c0483a9dee160c0f9fb53e73e70ddb7d1e74be2052",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:59ac2d37022122a67398f7300d8d5771dab9b88bc6db3a3b6e7a7b2d5cdd88c3",
+    "invocation_revision": "sha256:2b1faa50cab623e5f065ba20c5d8d90d5c4416e539bc8e6e64c61c1999570cc0",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -91,7 +91,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:efc6c1c435caf15c97c5b8e68cc34cea77a48341ff2f7757f209363fb0ad6d31",
+        "document_revision": "sha256:c94b3c0193b0d23fc7fef14291c66504985fe95712b7af7cacf63e6f61dc9e98",
         "owner_id": "work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322",
         "owner_path": ".agentic-workspace/planning/execplans/work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322.plan.json"
       }
