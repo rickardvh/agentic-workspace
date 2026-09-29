@@ -75,6 +75,15 @@ and post-run fixture queries cannot supply actor evidence. Provider transcripts
 and final claims remain diagnostics. This transport requires the provider
 template's Python and establishes no minimal-profile absence claim.
 
+The observer permits 128 product calls per controller-started actor session,
+matching the scorer's per-session observation bound. Setup has a separate bounded
+allowance, so preparation cannot spend the resumed actor's cleanup allowance.
+Only the root controller advances the session; actor requests cannot reset it.
+The actor still has at most three sessions with the configured time limits. The
+40 MiB receipt limit applies across the whole sandbox, and earlier receipts and
+the first observer failure survive every session boundary. Crossing a bound
+remains a failed observation, even if the final task files are correct.
+
 The on-demand finding case requires authenticated material ingress linked to
 the current activation, alongside the repository outcome and reporting policy.
 The binding Assignment case requires the actor to observe the same current

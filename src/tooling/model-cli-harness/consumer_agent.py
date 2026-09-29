@@ -18,6 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from consumer_environment import PROFILES, DockerConsumer, cleanup_record_removed, record_cleanup, run
+from consumer_product_boundary import MAX_CALLS_PER_SESSION, MAX_RECEIPT_BYTES, MAX_SESSIONS
 from run_sbx_codex_adapter import _codex_exec_command
 
 SOURCE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -225,7 +226,7 @@ class SandboxConsumer(DockerConsumer):
             [
                 "sh",
                 "-ec",
-                "test ! -w /opt/aw-observer; test ! -r /opt/aw-observer/receipts.jsonl; test ! -w /opt/aw-observer/subject/agentic-workspace; test ! -w /opt/aw-observer/config.json",
+                "test ! -w /opt/aw-observer; test ! -r /opt/aw-observer/receipts.jsonl; test ! -w /opt/aw-observer/subject/agentic-workspace; test ! -w /opt/aw-observer/config.json; test ! -w /opt/aw-observer/session.json",
             ]
         )
         before = self.product_receipts()
@@ -248,7 +249,7 @@ class SandboxConsumer(DockerConsumer):
             return []
         receipt_path = "/opt/aw-observer/receipts.jsonl"
         raw = self.root_exec(["cat", receipt_path]).stdout
-        if len(raw) > 40 * 1024 * 1024:
+        if len(raw) > MAX_RECEIPT_BYTES:
             raise ValueError("Product receipt export exceeds bound")
         receipts = [json.loads(line) for line in raw.splitlines()]
         if any(
@@ -256,6 +257,16 @@ class SandboxConsumer(DockerConsumer):
         ):
             raise ValueError("Product receipt subject differs from the admitted installation")
         return receipts
+
+    def begin_observation(self, session):
+        if not hasattr(self, "product_subject"):
+            return
+        if type(session) is not int or not 1 <= session <= MAX_SESSIONS:
+            raise ValueError("Invalid controller session boundary")
+        session_path = "/opt/aw-observer/session.json"
+        # Only the trusted controller may advance a session. The actor transport
+        # accepts argv/stdin only and cannot write this root-owned directory.
+        self.root_exec(["sh", "-ec", 'printf %s "$1" > "$2"', "sh", str(session), session_path])
 
     def verify_installation_unchanged(self):
         if self.installation_digest() != self.installed_digest:
@@ -505,7 +516,7 @@ class CodexActor:
     def __init__(self, *, model, reasoning, seconds, token_ceiling=None, billing="subscription", session_limit=3):
         if billing not in {"subscription", "metered"} or (billing == "metered" and not token_ceiling):
             raise ValueError("Metered execution requires an explicit observed token threshold")
-        if not 1 <= session_limit <= 3 or not 1 <= seconds <= 900:
+        if not 1 <= session_limit <= MAX_SESSIONS or not 1 <= seconds <= 900:
             raise ValueError("At most three sessions of at most fifteen minutes are allowed")
         self.model, self.reasoning = model, reasoning
         self.seconds, self.token_ceiling = seconds, token_ceiling
@@ -537,6 +548,7 @@ class CodexActor:
             command.insert(len(command) - 1, thread_id)
         command = consumer.exec_command(command[3:])
         self.sessions_started += 1
+        consumer.begin_observation(self.sessions_started)
         observation_start = len(consumer.product_receipts())
         result = bounded_codex(command, seconds=self.seconds, token_ceiling=self.token_ceiling, stop=consumer.stop_actor)
         receipts = consumer.product_receipts()[observation_start:]
@@ -545,6 +557,8 @@ class CodexActor:
                 **result,
                 "product_calls": receipts,
                 "product_subject": getattr(consumer, "product_subject", None),
+                "product_session": self.sessions_started,
+                "product_call_limit": MAX_CALLS_PER_SESSION,
                 "observer_failure": consumer.observer_failure(),
                 "billing": self.billing,
                 "model": self.model,

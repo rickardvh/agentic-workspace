@@ -18,6 +18,9 @@ from pathlib import Path
 
 ROOT = Path("/opt/aw-observer")
 LIMIT = 262144
+MAX_CALLS_PER_SESSION = 128
+MAX_SESSIONS = 3
+MAX_RECEIPT_BYTES = 40 * 1024 * 1024
 
 
 def receive(connection):
@@ -106,23 +109,40 @@ def invoke(value, config):
         }
 
 
-def serve_connection(connection, config, total):
+def serve_connection(connection, config, budget):
     connection.settimeout(65)
+    stage = "admission"
     try:
         # Drain the bounded request before rejecting it. Closing a Unix socket
         # with unread input can reset the client before it receives our error.
         value = receive(connection)
-        if total >= 128:
+        validate_request(value)
+        session = json.loads((ROOT / "session.json").read_text())
+        if type(session) is not int or not budget["session"] <= session <= MAX_SESSIONS:
+            raise ValueError("Invalid controller session boundary")
+        if session != budget["session"]:
+            budget.update(session=session, calls=0)
+        if budget.get("bytes_exhausted"):
+            raise ValueError("Product receipt byte budget exhausted")
+        if budget["calls"] >= MAX_CALLS_PER_SESSION:
             raise ValueError("Product observation call budget exhausted")
+        budget["calls"] += 1
+        stage = "observation"
         receipt = invoke(value, config)
-        with (ROOT / "receipts.jsonl").open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(receipt) + "\n")
-        total += 1
+        receipt["observer_session"] = budget["session"]
+        record = (json.dumps(receipt) + "\n").encode()
+        path = ROOT / "receipts.jsonl"
+        size = path.stat().st_size if path.exists() else 0
+        if size + len(record) > MAX_RECEIPT_BYTES:
+            budget["bytes_exhausted"] = True
+            raise ValueError("Product receipt byte budget exhausted")
+        with path.open("ab") as stream:
+            stream.write(record)
         reply = {key: receipt[key] for key in ("stdout", "stderr", "exit_code")}
     except (ValueError, OSError, subprocess.SubprocessError) as error:
         reason = str(error)[:1000]
         failure = {"kind": "agentic-workspace/product-observer-failure/v1", "subject": config["subject"],
-                   "reason": reason, "stage": "admission" if total >= 128 else "observation", "exit_code": 75}
+                   "reason": reason, "stage": stage, "session": budget["session"], "exit_code": 75}
         # Keep the first controller failure separately from actual product calls.
         # One bounded record survives repeated attempts without growing a log.
         path = ROOT / "failure.json"
@@ -133,14 +153,15 @@ def serve_connection(connection, config, total):
         connection.sendall(json.dumps(reply).encode())
     except (BrokenPipeError, ConnectionResetError):
         pass
-    return total
+    return budget
 
 
 def server():
     if os.getuid() != 0:
         raise ValueError("Observer requires trusted controller custody")
     config = json.loads((ROOT / "config.json").read_text())
-    total = 0
+    budget = {"session": 0, "calls": 0}
+    (ROOT / "session.json").write_text("0", encoding="utf-8")
     (ROOT / "failure.json").write_text("null", encoding="utf-8")
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
         listener.bind(str(ROOT / "socket"))
@@ -149,7 +170,7 @@ def server():
         while True:
             connection, _ = listener.accept()
             with connection:
-                total = serve_connection(connection, config, total)
+                budget = serve_connection(connection, config, budget)
 
 
 def client():

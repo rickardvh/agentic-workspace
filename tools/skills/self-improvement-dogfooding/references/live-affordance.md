@@ -13,6 +13,11 @@ exact admitted public version or a frozen target candidate containing the curren
 native pair. Record that subject; do not imply that older public bytes prove a
 new source change. A Linux guest on Windows supplies Linux evidence.
 
+The two fresh sessions each have the configured time bound and 128 observed
+product calls. Only the trusted controller starts a new allowance; setup is
+separate. Retain the aggregate 40 MiB receipt bound and all earlier failures.
+Budget exhaustion is failed evidence, not permission to extend a running session.
+
 Create the bounded scratch directory before calling the harness. Give `--result`
 a new path. Preserve the first result, including failed setup; diagnostic reruns
 use separate paths and need a named cause. Stop after one representative current
