@@ -1,15 +1,14 @@
 {
   "adaptive_assurance": {
     "proof_profiles": [
-      "workspace_behavior",
-      "test_evidence_change"
+      "workspace_behavior"
     ]
   },
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted": "Issue inventory verified against GitHub: #3706-3711 are the six issues filed today; #3708 is an aggregate parent, not another giant implementation PR. Three PR lanes remain as scoped. This Planning record was created and selected through native effects. Current Assignment chose local Astra over eligible Sol because the mixed contract/integration work benefits from retained context; Luna/Terra are prohibited for this task class.",
-    "frontier": "User-requested observer cleanup repair is implemented and pushed in 81776086fd4b34ffec06c56ab7027a30b3b62ac7. Per-controller-session call allowances replace the erroneous sandbox-global allowance, while max three sessions, time bounds, aggregate 40 MiB receipts and earlier failures remain enforced. Actor cannot reset the root-owned session boundary. All 73 focused tests pass. Real Linux socket control with synthetic product invocation completed cleanup at cumulative call129 and enforced session/custody/failure limits. One justified fresh live run on the clean exact candidate completed both sessions: 62 preparation and54 resumed calls, plus4 setup. All four interaction classes, independent artifacts, authority and cleanup/release invariant pass; no observer failure. Trusted actor events97/105 commit scratch release/removal and115 final Planning update. Raw TEMP/aw-budget-live.json SHA-256 4265e5059d907663f4a1973c4566146237d3070afea526a067245fb469019977 is unchanged and remains failed/affordance-finding. The two detector findings have bounded expected-validation dispositions: event5 repeated empty stdin invalid-json; event24 missing task context rejected before effect, same offered action committed with carried context at27. No unresolved material failure remains. Native Verification admits satisfied current evidence with those explicit dispositions, without weakening scorer or rewriting raw output. Full identities and limits are in live-affordance-evidence.md. Earlier failed raws preserved. No additional provider run. Sandbox removed and clean build worktree archived. PR3712/3713 merged externally; PR3714 is ready for final proof, publication and hosted checks after this satisfied/current gate. Independent review and accepted children remain necessary for #3708; preserve unrelated signed receipt/index dirt."
+    "accepted": "All implementation children #3706, #3707, #3709, #3710 and #3711 are closed through independently accepted merged PRs #3712, #3713 and #3714. The finite six-class audit and live finding dispositions were accepted by independent review of #3714 at issuecomment-5893567940. The user explicitly requested parent #3708 closeout after merge f6a3cde3847a3ad369503d20cf8222ab8c318e83. No further implementation or provider run is required.",
+    "frontier": "All five children and the finite six-class parent audit are independently accepted and merged through #3712, #3713 and #3714. Repository-state coherence was reviewed on merged f6a3cde3847a3ad369503d20cf8222ab8c318e83; the only current mismatch was this Plan asking for already completed #3714 proof/readiness/review. Planning corrected that instruction. Verification published the bounded coherence comparison, and ordinary entry now reports both aw_repository_state_coherence and aw_live_affordance_dogfooding satisfied/current. This lane record is closed/complete, not retired. The exact terminal-disposition owner reports it protected by .agentic-workspace/local/planning/owner-selection.json. Preserve that referenced record until its selector has a supported owner-mediated release; the current Planning contract offers no selector-release operation. Accepted evidence remains in the merged PRs and standing notes; this record retains no new implementation obligation. Intentional historical/custody exceptions remain preserved. No new product, test, workflow, live run or proof contract was introduced. GitHub requires a PR for master changes; the three-file administrative closeout PR is the delivery owner for these records and #3708 closure. A future executor must not repeat accepted child review or provider work merely because old observations remain in history."
   },
   "creation_provenance": {
     "custody": {
@@ -35,18 +34,18 @@
     "outcome": "Implement all six issues filed September 29, 2026 (#3706 through #3711), publish three logical PRs with complete leaf evidence, and audit the parent outcome."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "live",
+  "lifecycle": "closed",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Run the final native scoped verification on stable evidence files, push the evidence commit, update PR3714 with the satisfied/current observation and bounded finding dispositions, and mark ready for current hosted Merge proof/security/sufficiency. Obtain independent child acceptance before parent #3708 closeout; no merge or independent acceptance is claimed.",
+  "next_action": "No further implementation, audit, proof rerun or provider work remains in this lane. The administrative PR publishes the refreshed coherence assessment and closes #3708 on merge under repository branch rules.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "implementation",
+  "phase": "complete",
   "proof": {
-    "remaining": "Final native scoped check and hosted Merge proof/security/sufficiency on final PR head, plus independent acceptance of child implementation/evidence before parent #3708 closeout. Live evidence is satisfied/current after bounded receipt triage; raw findings remain visible."
+    "remaining": "No unresolved implementation or standing-evidence gap. Preserve independent acceptance at the merged child PRs. Administrative publication and tracker closure are the final delivery step, owned by the closeout PR for #3708."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3706",
@@ -58,10 +57,12 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3712",
     "https://github.com/rickardvh/agentic-workspace/pull/3713",
     "https://github.com/rickardvh/agentic-workspace/pull/3714",
-    "tools/skills/self-improvement-dogfooding/references/live-affordance-evidence.md"
+    "tools/skills/self-improvement-dogfooding/references/live-affordance-evidence.md",
+    "https://github.com/rickardvh/agentic-workspace/pull/3714#issuecomment-5893567940",
+    "tools/skills/ownership-ledger-check/references/repository-state-coherence-evidence.md"
   ],
   "relationships": {},
-  "revision": 10,
+  "revision": 13,
   "scope": {
     "constraints": "Use existing checkout. Preserve pre-existing proof receipt changes. Each PR must fully satisfy an existing issue. Preserve independent review boundary. No weakening currentness, resource custody, proof, publication consent or privacy.",
     "lanes": "PR 1: #3706/#3707 public action dependencies and consequence-specific recovery. PR 2: #3709/#3710 live operational-affordance exercise and standing current evidence. PR 3: #3711 explicit opt-in privacy-safe consumer reporting. #3708 aggregates the finite six-class audit and accepted child evidence."
@@ -71,18 +72,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f5942c79b6240c6d8543fc062d478ccebacc26b3a2c54bc29e0665108dedf94f.attempt.json",
-        "revision": "sha256:16620183a336a4bbeab9b990b4c992a66f2d01f85d1d1e0ed8c09e50da8a72f5",
+        "path": ".agentic-workspace/local/effects/b29dfb3207d782be1e59e1f0ee6b7c63672575a5fb30fa1f6e4b694b63dd9b17.attempt.json",
+        "revision": "sha256:639035c694a5071932a04aee59fd8e61dab3acad29d3d3ff3dd44672e97dd2c4",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f5942c79b6240c6d8543fc062d478ccebacc26b3a2c54bc29e0665108dedf94f.result.json",
-        "revision": "sha256:52243750fbcb5c07e0c228974772bdd53ff0794d5f5b9d0ea94c96f45963035c",
+        "path": ".agentic-workspace/local/effects/b29dfb3207d782be1e59e1f0ee6b7c63672575a5fb30fa1f6e4b694b63dd9b17.result.json",
+        "revision": "sha256:71adc4edcfd1fb842e7001c0483a9dee160c0f9fb53e73e70ddb7d1e74be2052",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:acb5cfad6a91796f7e1bc0ed319f900039dca29bbc1062cfd07b918ac837cc7b",
+    "invocation_revision": "sha256:2b1faa50cab623e5f065ba20c5d8d90d5c4416e539bc8e6e64c61c1999570cc0",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +91,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:cd25f4557e233f84d8141bee6122c29334fc8fa739b54db6c4ef396660e0e1c6",
+        "document_revision": "sha256:c94b3c0193b0d23fc7fef14291c66504985fe95712b7af7cacf63e6f61dc9e98",
         "owner_id": "work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322",
         "owner_path": ".agentic-workspace/planning/execplans/work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322.plan.json"
       }

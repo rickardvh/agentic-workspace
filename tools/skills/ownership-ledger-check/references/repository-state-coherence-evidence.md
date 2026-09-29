@@ -1,79 +1,75 @@
 # Current repository coherence comparison
 
-Assessment date: 2026-09-28. Scope: current operating bindings selected by the
-[procedure](repository-state-coherence.md). Verification owns the current outcome
-and observation time; replace this comparison when reassessing.
+Observed 29 September 2026 against merged source
+`f6a3cde3847a3ad369503d20cf8222ab8c318e83` and the owner-mediated continuation
+correction below. Scope is the bounded [coherence procedure](repository-state-coherence.md),
+not a whole-repository or product correctness audit. Verification owns satisfaction.
 
-## Repository findings and controls
+## Current bindings and proof meaning
 
-- `SYSTEM_INTENT.md`, `AGENTS.md`, the ownership ledger, shared configuration and
-  operating instructions agree on selective source access and owner-mediated
-  state changes. The configured native command exists. The ledger's optional
-  Planning state file is absent by design; it is not a broken mandatory binding.
-- Inspected the immediate instruction files and maintainer skill entries for
-  additional current obligations. The new procedure is reached directly from
-  Verification; no second registry, scheduler checklist or startup scan was added.
-- The manifest's generated-adapter scenario distinguishes catalogue parity from
-  runtime conformance. `generate_contract_catalogues.py --check` compares rendered
-  catalogues with checked-in files; the scenario separately names public/native
-  adapter tests. `make test-planning` still invokes the native Planning owner
-  tests. These commands support their stated, bounded evidence claims.
-- The selected Plan's next action still requested parent acceptance for #3641 and
-  #3665 and described merge work as pending. Current accepted decisions settle
-  those questions: [#3641 acceptance](https://github.com/rickardvh/agentic-workspace/issues/3641#issuecomment-5866948770)
-  and [#3665 acceptance](https://github.com/rickardvh/agentic-workspace/issues/3665#issuecomment-5866950157).
-  The relevant PRs [#3689](https://github.com/rickardvh/agentic-workspace/pull/3689)
-  and [#3690](https://github.com/rickardvh/agentic-workspace/pull/3690) were merged.
-  This was an incorrect current instruction, not a finding based on age.
-- Supplied that finding to native `start`, established the selected-owner
-  relation, then applied its exact `planning.update` action. The
-  [Plan](../../../../.agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json)
-  now retains the accepted answer and has no repeated acceptance action.
-  Its selector, lifecycle, historical proof and creation provenance were preserved.
-- #3665 explicitly leaves #3548 as future scope. The operating instruction also
-  preserves unresolved decision-point source custody. Both exceptions remain;
-  neither was silently resolved by convention. Archived Plans and old receipts
-  were not turned into tasks or rewritten.
+- `SYSTEM_INTENT.md`, `AGENTS.md`, `.agentic-workspace/OWNERSHIP.toml`, shared
+  configuration and `instructions/workspace-operating.md` agree on selective
+  source access, exact owner mutations and claim-specific restrictions. The
+  configured native command works. `WORKFLOW.md` remains a bootstrap pointer.
+- Inspected the immediate repository instruction entries and maintainer procedure
+  registry. Ownership read guidance leads to the selected Plan and Verification
+  manifest. The optional Planning state file is not a mandatory missing source.
+  The live and coherence procedures are reached directly from native standing
+  requirements; neither adds a scheduler, second registry or startup scan.
+- The changed Verification manifest gives both standing requirements a seven-day
+  expiry and restricts only `close-parent-lane`. Live dependencies cover the
+  accepted native public/resource behavior, harness and installed guidance.
+  Coherence dependencies cover intent, ownership, configuration, manifest and
+  operating guidance. Native entry reports live evidence satisfied and correctly
+  reported coherence due after the manifest changed.
+- Checked the proof meaning against current implementations: catalogue `--check`
+  compares rendered files; it does not execute a consumer. The manifest separately
+  names native adapter/artifact tests. `make test-planning` selects native Planning
+  create/lifetime tests. `test_native_standing_obligations.py` covers repository
+  wiring, honest failed/unknown assessments and publication/currentness. This
+  refresh changes no runtime, test, procedure or proof contract; accepted existing
+  proof is reused rather than presented as a new execution.
 
-No unresolved mismatch was found within these bounded comparisons. This does not
-assert that all repository documents or product behavior have been audited.
+## Selected continuation correction
 
-## Finite drift exercise
+The task-supplied lane Plan
+`work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322`
+was actively selected. Its next action still asked for #3714 final proof, readiness
+and independent review. That instruction was wrong for this closeout:
 
-Used an AW-owned disposable fixture with this exact requirement and procedure,
-the five named dependency paths, and minimal host configuration. Native CLI and
-executor-neutral JSON ingress returned the same due identity, reason, declaration
-and procedure activation. The semantic comparisons below were maintainer judgments
-against supplied current sources, not claims of an automated semantic checker.
+- #3706/#3707, #3711 and #3709/#3710 are closed through merged PRs
+  [#3712](https://github.com/rickardvh/agentic-workspace/pull/3712),
+  [#3713](https://github.com/rickardvh/agentic-workspace/pull/3713) and
+  [#3714](https://github.com/rickardvh/agentic-workspace/pull/3714).
+- [Independent review](https://github.com/rickardvh/agentic-workspace/pull/3714#issuecomment-5893567940)
+  accepted the finite six-class audit, final implementation and receipt-based live
+  finding dispositions. [Hosted checks](https://github.com/rickardvh/agentic-workspace/actions/runs/36590299805)
+  passed on the accepted head. This comparison relies on that external acceptance;
+  it supplies no self-review.
+- Planning's exact update replaced the obsolete instruction with the bounded
+  coherence publication and administrative parent closure. Implementation and
+  provider work are complete. The Plan is closed/complete, not retired.
+- Following [the closeout review](https://github.com/rickardvh/agentic-workspace/pull/3716#issuecomment-5894520296),
+  the exact `planning/terminal-disposition/v1` request was scoped to this record.
+  Planning returned `status: quiet`, no retirement action, and a `protected`
+  entry naming `.agentic-workspace/local/planning/owner-selection.json` as its
+  consumer. The current Planning contract offers no selector-release operation.
+  This is a concrete reference-protection exception: preserve the closed record
+  while that selector relies on it. Do not bypass the owner or claim deletion.
+  A committed `planning.update` corrected the Plan's inaccurate retirement
+  statement and retained this reason. Accepted evidence remains with the merged
+  PRs and standing notes; no implementation or provider obligation is reopened.
 
-| Introduced current drift | Comparison and outcome |
-| --- | --- |
-| Guidance binds ownership to absent `old/owner.md` | Current source assigns native Planning. Reported the wrong path and owner binding to the guidance owner. |
-| Guidance says catalogue parity proves installed runtime behavior | Current source limits the command to source parity. Reported the unsupported evidence claim to the guidance owner. |
-| Active next action repeats parent acceptance | `accepted.md` already settles it. Reported the obsolete continuation to Planning. The real repository repair above exercises that owner. |
-| New unanchored procedure repeats the command mismatch | It remained quiet before expiry. After expiry, bounded current-directory discovery found the new procedure and the same evidence mismatch. |
+## Preserved boundaries
 
-An archived Plan still saying “review and merge,” a historical failed receipt,
-and explicitly deferred adapter support remained unchanged controls. No new Plan
-or issue was created. A `failed` assessment retained the current findings;
-an `unknown` assessment retained a simulated unavailable GitHub decision without
-inventing its answer. Its only claim restriction was parent-lane closeout.
+The unresolved decision-point source custody named by workspace operating guidance
+is preserved. Previously accepted future scope and archived Plans remain history,
+not an execution queue. The raw live result remains finding-bearing; its two
+expected input/currentness validation outcomes remain explicitly dispositioned in
+the [live evidence note](../../self-improvement-dogfooding/references/live-affordance-evidence.md).
+No failed receipt or provider result was rewritten. The earlier finite drift
+exercise remains historical evidence in preceding revisions of this note.
 
-Verification published satisfied assessments through its exact request, decision
-and action. Repeated satisfaction replaced the same single map entry and was quiet
-in compact ordinary entry. Changing the operating-guidance anchor made it due
-immediately with `declaration-procedure-or-dependency-changed`. A new unanchored
-file alone preserved satisfaction. For finite expiry testing, a still-valid
-observation just inside the seven-day boundary was published; crossing that
-boundary produced `freshness-expired` through both entry surfaces. No assessment
-store was edited by hand.
-
-## Validation boundary
-
-The existing three standing-assessment lifecycle cases pass, together with one
-new repository declaration/procedure wiring case. The new test checks native
-acceptance and procedure reachability; it does not duplicate publication,
-recovery or retirement tests or freeze procedure prose. The finite exercise
-above covers semantic examples and history controls without a new recurring
-test framework. Product correctness and independent PR review retain their own
-evidence requirements.
+No unresolved current mismatch remains within this comparison. Publish the exact
+coherence assessment, then observe both standing requirements satisfied and quiet
+before parent closure. Future dependency changes or expiry still make them due.
