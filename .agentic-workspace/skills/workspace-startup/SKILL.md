@@ -32,6 +32,8 @@ human answer and its `human_eligibility` names a current Verification requiremen
 for human judgment or an explicitly configured human task owner. Routine domain
 decisions belong to the acting agent under the current task authority.
 For `owner-recovery-required`, follow the supplied recovery. For
+`current-owner-route`, follow the matching consequence route and complete any
+bounded owner selection; a route does not resolve the restriction. For
 `owner-resolution-unavailable`, explain the missing fact or capability and that
 no supported resolution is currently supplied. Preserve the affected block and
 continue unrelated work; do not invent a recovery or ask the user to waive it.

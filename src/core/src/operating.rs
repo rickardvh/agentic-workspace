@@ -173,7 +173,11 @@ fn request_entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreErro
         }
         if let Some(object) = value.as_object() {
             for (key, child) in object {
-                if key == "requests" || key.ends_with("_requests") {
+                if key == "requests"
+                    || key.ends_with("_requests")
+                    || key == "request"
+                    || key.ends_with("_request")
+                {
                     request_list(child, found, depth + 1);
                 } else if !matches!(
                     key.as_str(),
@@ -222,7 +226,8 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
             _ => false,
         }
     }
-    let mut owners = std::collections::BTreeMap::<String, Vec<Value>>::new();
+    let mut recoveries = Vec::new();
+    let requests = request_entries(full, context)?;
     for blocker in full["decision_packet"]["blockers"]
         .as_array()
         .into_iter()
@@ -232,45 +237,114 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
             .as_str()
             .and_then(|r| r.strip_prefix("public-owner:"))
             .or_else(|| blocker["owner"].as_str());
-        if let Some(owner) = owner {
-            owners.entry(owner.to_owned()).or_default().push(json!({
-                "consequence_id":blocker["consequence_id"], "affects":blocker["affects"]
-            }));
-        }
-    }
-    owners.into_iter().map(|(owner, consequences)| {
+        let Some(owner) = owner else { continue };
+        let consequences = json!([{
+            "consequence_id":blocker["consequence_id"], "affects":blocker["affects"]
+        }]);
         let mut routes = Vec::new();
-        for (key, value) in full.as_object().into_iter().flatten() {
-            if matches!(key.as_str(), "decision_packet" | "capability_contract" | "decision_sources") {
-                continue;
-            }
-            if has_request(value, &owner) {
-                let selector = format!("/{}", key.replace('~', "~0").replace('/', "~1"));
-                let selected = entries(full, context)?.into_iter().find(|e| e["selector"] == selector).unwrap();
-                routes.push(json!({"selector":selector,"reference":selected["reference"]}));
-            }
-        }
-        if routes.is_empty() {
-            let mut selectors = vec!["/decision_packet/primary_action".to_owned(),
-                "/decision_packet/decision_request".to_owned()];
-            if full["decision_packet"]["primary_action"].is_null() {
-                selectors.extend((0..full["decision_packet"]["ready_actions"].as_array().map_or(0, Vec::len))
-                    .map(|index| format!("/decision_packet/ready_actions/{index}")));
-            }
-            for selector in selectors {
-                let Some(envelope) = full.pointer(&selector).filter(|v| v.is_object()) else { continue };
-                if (action_selector(&selector) && envelope["source_owner"] == owner)
-                    || (selector == "/decision_packet/decision_request" && envelope["owner"] == owner)
+        let requested = blocker["recovery"]
+            .as_str()
+            .and_then(|r| r.strip_prefix("public-request:"));
+        if let Some(kind) = requested {
+            for selected in &requests {
+                if selected["envelope"]["owner"] == owner
+                    && selected["envelope"]["request_kind"] == kind
                 {
-                    routes.push(json!({"selector":selector,"reference":reference(context, &selector, envelope)?}));
+                    routes.push(json!({"selector":selected["selector"],
+                        "reference":selected["reference"], "request_kind":kind}));
                 }
             }
         }
-        Ok(json!({"owner":owner,"consequences":consequences,
+        // Without a consequence-specific owner nomination, expose a bounded
+        // selection step, never claim an arbitrary same-owner request is recovery.
+        if requested.is_none() {
+            for (key, value) in full.as_object().into_iter().flatten() {
+                if matches!(
+                    key.as_str(),
+                    "decision_packet" | "capability_contract" | "decision_sources"
+                ) {
+                    continue;
+                }
+                if has_request(value, owner) {
+                    let selector = format!("/{}", key.replace('~', "~0").replace('/', "~1"));
+                    let selected = entries(full, context)?
+                        .into_iter()
+                        .find(|e| e["selector"] == selector)
+                        .unwrap();
+                    routes.push(json!({"selector":selector,"reference":selected["reference"]}));
+                }
+            }
+            if routes.is_empty() {
+                let mut selectors = vec![
+                    "/decision_packet/primary_action".to_owned(),
+                    "/decision_packet/decision_request".to_owned(),
+                ];
+                if full["decision_packet"]["primary_action"].is_null() {
+                    selectors.extend(
+                        (0..full["decision_packet"]["ready_actions"]
+                            .as_array()
+                            .map_or(0, Vec::len))
+                            .map(|index| format!("/decision_packet/ready_actions/{index}")),
+                    );
+                }
+                for selector in selectors {
+                    let Some(envelope) = full.pointer(&selector).filter(|v| v.is_object()) else {
+                        continue;
+                    };
+                    if (action_selector(&selector) && envelope["source_owner"] == owner)
+                        || (selector == "/decision_packet/decision_request"
+                            && envelope["owner"] == owner)
+                    {
+                        routes.push(json!({"selector":selector,"reference":reference(context, &selector, envelope)?}));
+                    }
+                }
+            }
+        }
+        recoveries.push(json!({"owner":owner,"consequences":consequences,
             "status":if routes.is_empty(){"public-owner-route-unavailable"}else{"current-owner-route"},
+            "selection":if requested.is_some() {json!({"status":"owner-nominated"})}
+                else if !routes.is_empty() {json!({"status":"required",
+                    "question":format!("Which current {owner} request addresses this restriction: {}?", blocker["message"].as_str().unwrap_or("unknown")),
+                    "boundary":"Select only a request whose stated scope addresses this consequence. If none does, report the bounded resolution gap; same owner identity alone is insufficient."})}
+                else {Value::Null},
             "routes":routes,
-            "authority":"Discovery only; restrictions remain until the current owner admits their resolution."}))
-    }).collect()
+            "authority":"Discovery only; restrictions remain until the current owner admits their resolution."}));
+    }
+    Ok(recoveries)
+}
+
+fn reconcile_restriction_routes(value: &mut Value, recovery: &[Value]) {
+    fn visit(value: &mut Value, recovery: &[Value]) {
+        match value {
+            Value::Array(items) => {
+                for item in items {
+                    visit(item, recovery);
+                }
+            }
+            Value::Object(object) => {
+                if object
+                    .get("resolution")
+                    .is_some_and(|r| r == "owner-resolution-unavailable")
+                    && let Some(id) = object.get("consequence_id")
+                    && recovery.iter().any(|r| {
+                        r["status"] == "current-owner-route"
+                            && r["consequences"].as_array().is_some_and(|items| {
+                                items.iter().any(|c| &c["consequence_id"] == id)
+                            })
+                    })
+                {
+                    object.insert("resolution".into(), json!("current-owner-route"));
+                }
+                for (key, child) in object {
+                    if !matches!(key.as_str(), "arguments" | "source_requests" | "carriage") {
+                        visit(child, recovery);
+                    }
+                }
+            }
+            _ => (),
+        }
+    }
+    visit(value, recovery);
 }
 
 fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreError> {
@@ -401,6 +475,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     }
     let recovery = consequence_recovery(full, context)?;
     if !recovery.is_empty() {
+        reconcile_restriction_routes(&mut result, &recovery);
         result["consequence_recovery"] = json!(recovery);
     }
     // A selected leaf already establishes which procedure is useful. Keep its
@@ -1124,6 +1199,7 @@ pub(crate) fn project_start(
         let context = normalize_context(value)?;
         let recovery = consequence_recovery(&full, &context)?;
         if !recovery.is_empty() {
+            reconcile_restriction_routes(&mut full, &recovery);
             full["consequence_recovery"] = json!(recovery);
         }
         if let Some(object) = full.as_object_mut() {
@@ -1371,6 +1447,54 @@ mod tests {
         let next = crate::compile_value(changed).unwrap();
         assert_ne!(decision["decision_id"], next["decision_id"]);
         assert_eq!(decision["claim_boundary"], next["claim_boundary"]);
+    }
+
+    #[test]
+    fn restriction_routes_select_owner_nomination_and_keep_unavailable_scope() {
+        let work = json!({"kind":"current-work","id":"fixture"});
+        let context = json!({"target":"fixture","task":"bounded", "changed":["a"],
+            "maintenance":{"kind":"fixture"}, "request":[{"prior":"answer"}]});
+        let request = |kind: &str| {
+            json!({"kind":"agentic-workspace/public-request/v1",
+            "owner":"sample", "request_kind":kind, "task_identity":work, "arguments":{}})
+        };
+        let blocker = |id: &str| {
+            json!({"consequence_id":id,"owner":"sample",
+            "message":"Admit current evidence", "affects":["claim:complete"],
+            "resolution":"owner-resolution-unavailable"})
+        };
+        let mut nominated = blocker("nominated");
+        nominated["recovery"] = json!("public-request:sample/evidence");
+        let mut full = json!({"current_work":work,
+            "sample":{"requests":[request("sample/unrelated"),request("sample/evidence")]},
+            "decision_packet":{"blockers":[nominated,blocker("selection")],"primary_action":null}});
+        let view = compact(&full, &context, true).unwrap();
+        let routes = &view["consequence_recovery"];
+        assert_eq!(routes[0]["selection"]["status"], "owner-nominated");
+        assert_eq!(routes[0]["routes"].as_array().unwrap().len(), 1);
+        assert_eq!(routes[0]["routes"][0]["request_kind"], "sample/evidence");
+        assert_eq!(routes[1]["selection"]["status"], "required");
+        assert_eq!(
+            view["decision_packet"]["blockers"][1]["resolution"],
+            "current-owner-route"
+        );
+        let original = routes[0]["routes"][0]["reference"].clone();
+        let mut changed = context.clone();
+        changed["changed"] = json!(["b"]);
+        assert_ne!(
+            consequence_recovery(&full, &changed).unwrap()[0]["routes"][0]["reference"],
+            original
+        );
+        full["sample"]["requests"] = json!([]);
+        let absent = compact(&full, &context, true).unwrap();
+        assert_eq!(
+            absent["consequence_recovery"][1]["status"],
+            "public-owner-route-unavailable"
+        );
+        assert_eq!(
+            absent["decision_packet"]["blockers"][1]["resolution"],
+            "owner-resolution-unavailable"
+        );
     }
 
     #[test]

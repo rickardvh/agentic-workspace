@@ -1,0 +1,96 @@
+{
+  "adaptive_assurance": {
+    "proof_profiles": [
+      "workspace_behavior",
+      "verification_behavior",
+      "test_evidence_change"
+    ]
+  },
+  "blockers": [],
+  "canonical_core": {},
+  "continuation": {
+    "accepted": "Issue inventory verified against GitHub: #3706-3711 are the six issues filed today; #3708 is an aggregate parent, not another giant implementation PR. Three PR lanes remain as scoped. This Planning record was created and selected through native effects. Current Assignment chose local Astra over eligible Sol because the mixed contract/integration work benefits from retained context; Luna/Terra are prohibited for this task class.",
+    "frontier": "On codex/public-affordance-recovery. Resource operations now preserve Planning dependencies; seven resource-owner tests pass including immediate creation/removal. Recovery projection now accepts consequence-specific owner request nominations, distinguishes bounded owner selection and preserves unavailable restrictions; Verification nominates scope/strategy/claim requests. Nine operating Rust tests and 21 focused Python cases pass. Broader native resource/Verification/public CLI checks are running. No PR yet; finish lane proof, source reconciliation and audit before publishing. Then implement live dogfooding/standing requirement and opt-in reporting. Preserve pre-existing receipt files/index changes. Disposable transport is Windows TEMP aw-today-*.json; use aw-today-current-context.json and aw-today-full.json only while source/current-work bindings remain current."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/5b47d8655b7df1cef86ba128cb5d9537367ef25cbd086fbde2adc2ff5da02f53.attempt.json",
+        "revision": "sha256:0a6a49055508601c5e1ca716fd0117828f317a7725482ee78ab2daeb7d65a58a",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/5b47d8655b7df1cef86ba128cb5d9537367ef25cbd086fbde2adc2ff5da02f53.result.json",
+        "revision": "sha256:9c489a5001dd4146ba83ceaa1d780f4a7ad7db852655dca508fabc7c01e98806",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:c6126dbe861d8b6bc40a995aaee56cb79d1dd0b0d442a5363c69a2340ac31063",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:c8c511be5277791f656855d4bdcf83e82491a3b99a4bc9493456735a61d7603d"
+  },
+  "id": "work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322",
+  "intent": {
+    "outcome": "Implement all six issues filed September 29, 2026 (#3706 through #3711), publish three logical PRs with complete leaf evidence, and audit the parent outcome."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "live",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Resolve current Assignment admission, implement the public-action and recovery lane with focused behavioral evidence, then implement live dogfooding and consumer reporting, publish the three PRs and complete the finite parent audit.",
+  "owner_level": "lane",
+  "parent": {},
+  "phase": "implementation",
+  "proof": {
+    "remaining": "Focused shared-core action and restriction journeys; existing protection/currentness controls; installed skill/payload parity; deterministic live-harness scorer controls and one trusted live installed-subject run; current-evidence lifecycle and honest unavailable control; privacy/activation boundary; required repository checks and source reconciliation."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3706",
+    "https://github.com/rickardvh/agentic-workspace/issues/3707",
+    "https://github.com/rickardvh/agentic-workspace/issues/3708",
+    "https://github.com/rickardvh/agentic-workspace/issues/3709",
+    "https://github.com/rickardvh/agentic-workspace/issues/3710",
+    "https://github.com/rickardvh/agentic-workspace/issues/3711"
+  ],
+  "relationships": {},
+  "revision": 2,
+  "scope": {
+    "constraints": "Use existing checkout. Preserve pre-existing proof receipt changes. Each PR must fully satisfy an existing issue. Preserve independent review boundary. No weakening currentness, resource custody, proof, publication consent or privacy.",
+    "lanes": "PR 1: #3706/#3707 public action dependencies and consequence-specific recovery. PR 2: #3709/#3710 live operational-affordance exercise and standing current evidence. PR 3: #3711 explicit opt-in privacy-safe consumer reporting. #3708 aggregates the finite six-class audit and accepted child evidence."
+  },
+  "title": "September 29 public affordances and dogfooding",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/cf1256b707f81ae821f18c9df9c5dc143d44e45538828b41fb726333f136c49d.attempt.json",
+        "revision": "sha256:797780de02fa2bb91769da1074de12ed52dec21f98b8ec32ddebdffebd32a1df",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/cf1256b707f81ae821f18c9df9c5dc143d44e45538828b41fb726333f136c49d.result.json",
+        "revision": "sha256:c056ec6199f74aafc8b7e8a174cd7cae89ff7893bac9190974c668d2b6e87533",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:43181cfa8a3aa6f1f0c438735cc716f370a531ff75fa8e8c109832702559c010",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:3b20f35676d4e732c0f8feb08f23dc54924160b76c231281bed170b24f1c7ca2",
+        "owner_id": "work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322",
+        "owner_path": ".agentic-workspace/planning/execplans/work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322.plan.json"
+      }
+    }
+  }
+}
