@@ -18,7 +18,7 @@ notes = "Local maintenance observation; unrelated implementation remains availab
 [assurance.requirements.aw_live_affordance_dogfooding.freshness]
 procedure = "tools/skills/self-improvement-dogfooding/references/live-affordance.md"
 max_age_seconds = 604800
-dependencies = ["src/core/src/native_public.rs", "src/core/src/operating.rs", "src/core/src/modules/verification/native_verification.rs", "src/tooling/release/consumer_journeys.py", "src/tooling/model-cli-harness/consumer_outcomes.py", "src/tooling/model-cli-harness/consumer_agent.py", "src/tooling/model-cli-harness/consumer_product_boundary.py", ".agentic-workspace/skills/workspace-startup/SKILL.md", ".agentic-workspace/skills/workspace-startup/references/owners.md", ".agentic-workspace/skills/workspace-startup/references/constraints.md"]
+dependencies = ["src/core/src/native_public.rs", "src/core/src/operating.rs", "src/core/src/modules/verification/native_verification.rs", "src/tooling/release/consumer_journeys.py", "src/tooling/model-cli-harness/consumer_outcomes.py", "src/tooling/model-cli-harness/consumer_agent.py", "src/tooling/model-cli-harness/consumer_product_boundary.py", "src/tooling/model-cli-harness/run_model_cli_harness.py", ".agentic-workspace/skills/workspace-startup/SKILL.md", ".agentic-workspace/skills/workspace-startup/references/owners.md", ".agentic-workspace/skills/workspace-startup/references/constraints.md"]
 disposition = "route"
 
 [assurance.requirements.aw_repository_state_coherence]
