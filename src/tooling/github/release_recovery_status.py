@@ -52,7 +52,7 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
             "changesets": changesets,
             "changed_file_count": len(changed_files),
             "next_action": (
-                "This PR can repair release blockers, but merge will not open a release PR; add a changeset-backed package-affecting PR if publication is still needed."
+                "This PR can repair release blockers, but merge does not publish packages; add a changeset-backed package-affecting PR if publication is still needed."
                 if semver_labels
                 else "No release action is expected because no package-affecting paths changed."
             ),
@@ -85,236 +85,74 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
         }
     return {
         "kind": "agentic-workspace/semver-pr-release-action/v1",
-        "status": "will-open-release-pr",
+        "status": "ready-for-manual-release",
         "will_publish_release": False,
-        "will_prepare_release_pr": True,
+        "will_prepare_release_pr": False,
         "package_affecting": True,
         "path_classification": path_classification,
         "semver_labels": semver_labels,
         "changesets": changesets,
         "changed_file_count": len(changed_files),
-        "next_action": "Merge will let the Prepare Coordinated Release workflow open or update a release PR from pending changesets.",
+        "next_action": "After merge, dispatch Release on master with the default inputs.",
     }
 
 
 def _publisher_retry_command(tag: str, source_commit: str) -> str:
-    return f'gh workflow run release.yml --ref master -f tag="{tag}" -f source_commit="{source_commit}"'
-
-
-def _publication_inspect_command(*, repo: str | None = None, tag: str = "") -> str:
-    command = "uv run python src/tooling/release/coordinated_release.py tag-plan"
-    if repo and tag:
-        command += f" && gh release view {tag} --repo {repo} --json tagName,url,isDraft,isPrerelease,publishedAt"
-    return command
-
-
-def _local_tag_plan(*, repo_root: Path) -> dict[str, Any]:
-    script = repo_root / "src" / "tooling" / "release" / "coordinated_release.py"
-    if not script.exists():
-        raise RuntimeError(f"{script} does not exist")
-    result = subprocess.run(
-        [sys.executable, str(script), "tag-plan"],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError((result.stderr or result.stdout).strip())
-    try:
-        plan = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"tag-plan did not return JSON: {exc}") from exc
-    return plan if isinstance(plan, dict) else {}
+    return f'gh workflow run release.yml --ref master -f tag="{tag}"'
 
 
 def local_publisher_retry_status(*, repo_root: Path) -> dict[str, Any]:
-    try:
-        plan = _local_tag_plan(repo_root=repo_root)
-    except RuntimeError as exc:
+    identity_path = repo_root / "release-identity.json"
+    if not identity_path.is_file():
         return {
             "kind": "agentic-workspace/release-publisher-retry/v1",
             "status": "unavailable",
-            "reason": str(exc),
+            "reason": "Use Re-run failed jobs on the original run, or its exact retained tag for later recovery.",
         }
-    tag = _text(plan.get("tag"))
-    source_commit = _text(plan.get("release_commit"))
-    if plan.get("tag_needed"):
+    identity = _load_json(identity_path)
+    tag, source = _text(identity.get("tag")), _text(identity.get("source_commit"))
+    if not tag or not source:
         return {
             "kind": "agentic-workspace/release-publisher-retry/v1",
-            "status": "tag-not-created",
-            "tag": tag,
-            "source_commit": source_commit,
-            "reason": "The release tag is not present yet; rerun Prepare Coordinated Release before publisher dispatch.",
-        }
-    if not plan.get("publish_candidate") or not tag or not source_commit:
-        return {
-            "kind": "agentic-workspace/release-publisher-retry/v1",
-            "status": "no-existing-publishable-tag",
-            "tag": tag,
-            "source_commit": source_commit,
-            "reason": _text(plan.get("reason")) or "No existing verified release tag is ready for publisher retry.",
+            "status": "unavailable",
+            "reason": "Retained release identity is incomplete.",
         }
     return {
         "kind": "agentic-workspace/release-publisher-retry/v1",
         "status": "ready",
         "tag": tag,
-        "source_commit": source_commit,
-        "command": _publisher_retry_command(tag, source_commit),
-        "rule": "Retry publication for the existing verified tag; do not create another changeset release just to recover artifacts.",
+        "source_commit": source,
+        "command": _publisher_retry_command(tag, source),
+        "rule": "Recovery reobserves the immutable tag and retained bundle before any writes.",
     }
 
 
 def release_publication_status(*, repo_root: Path, repo: str | None = None) -> dict[str, Any]:
-    """Classify release publication from explicit version/tag/release state."""
-
-    try:
-        plan = _local_tag_plan(repo_root=repo_root)
-    except RuntimeError as exc:
-        return {
-            "kind": "agentic-workspace/release-publication-state/v1",
-            "status": "publication-observation-failed",
-            "recovery_required": True,
-            "reason": str(exc),
-            "evidence": {"source": "local-tag-plan"},
-            "next_action": _publication_inspect_command(repo=repo),
-        }
-    tag = _text(plan.get("tag"))
-    release_commit = _text(plan.get("release_commit"))
-    reason = _text(plan.get("reason"))
-    if reason == "pending-changesets-require-release-pr":
-        return {
-            "kind": "agentic-workspace/release-publication-state/v1",
-            "status": "pending-release-pr",
-            "recovery_required": False,
-            "reason": reason,
-            "evidence": {"source": "local-tag-plan", "tag_plan": plan},
-        }
-    if reason.startswith("version-not-newer-than-existing-tag-floor-"):
-        return {
-            "kind": "agentic-workspace/release-publication-state/v1",
-            "status": "unresolved-version-publication-debt",
-            "recovery_required": True,
-            "reason": reason,
-            "version": _text(plan.get("version")),
-            "tag": tag,
-            "release_commit": release_commit,
-            "evidence": {
-                "source": "local-tag-plan",
-                "tag_plan": plan,
-                "rule": "A successful release workflow run does not clear recovery when checked-in package versions are behind the tag floor.",
-            },
-        }
-    if plan.get("tag_needed"):
-        return {
-            "kind": "agentic-workspace/release-publication-state/v1",
-            "status": "verified-release-tag-missing",
-            "recovery_required": True,
-            "reason": "The coordinated release commit exists, but the matching release tag is missing.",
-            "version": _text(plan.get("version")),
-            "tag": tag,
-            "release_commit": release_commit,
-            "evidence": {"source": "local-tag-plan", "tag_plan": plan},
-        }
-    if plan.get("publish_candidate") and (not tag or not release_commit):
-        return {
-            "kind": "agentic-workspace/release-publication-state/v1",
-            "status": "publication-observation-failed",
-            "recovery_required": True,
-            "reason": "Local tag plan is missing the expected tag or release commit evidence.",
-            "version": _text(plan.get("version")),
-            "tag": tag,
-            "release_commit": release_commit,
-            "evidence": {"source": "local-tag-plan", "tag_plan": plan},
-            "next_action": _publication_inspect_command(repo=repo, tag=tag),
-        }
-    if not plan.get("publish_candidate"):
-        return {
-            "kind": "agentic-workspace/release-publication-state/v1",
-            "status": "no-existing-publishable-tag",
-            "recovery_required": False,
-            "reason": reason or "No existing verified release tag is ready for publication.",
-            "version": _text(plan.get("version")),
-            "tag": tag,
-            "release_commit": release_commit,
-            "evidence": {"source": "local-tag-plan", "tag_plan": plan},
-        }
-    release_view: dict[str, Any] = {}
+    command = [sys.executable, "src/tooling/release/release_lifecycle.py", "observe"]
     if repo:
-        try:
-            release_view_payload = _run_gh_json(
-                [
-                    "release",
-                    "view",
-                    tag,
-                    "--repo",
-                    repo,
-                    "--json",
-                    "tagName,url,isDraft,isPrerelease,publishedAt",
-                ]
-            )
-            release_view = release_view_payload if isinstance(release_view_payload, dict) else {}
-        except SystemExit as exc:
-            return {
-                "kind": "agentic-workspace/release-publication-state/v1",
-                "status": "github-release-missing",
-                "recovery_required": True,
-                "reason": str(exc) or f"GitHub Release {tag} is not visible.",
-                "version": _text(plan.get("version")),
-                "tag": tag,
-                "release_commit": release_commit,
-                "evidence": {
-                    "source": "local-tag-plan + gh-release-view",
-                    "tag_plan": plan,
-                    "release_view": {},
-                },
-                "next_action": _publication_inspect_command(repo=repo, tag=tag),
-            }
-        invalid_release_fields = []
-        if _text(release_view.get("tagName")) != tag:
-            invalid_release_fields.append("tagName")
-        if release_view.get("isDraft") is not False:
-            invalid_release_fields.append("isDraft")
-        if not _text(release_view.get("publishedAt")):
-            invalid_release_fields.append("publishedAt")
-        # Coordinated releases are stable semver releases; prereleases do not
-        # satisfy their publication contract.
-        if release_view.get("isPrerelease") is not False:
-            invalid_release_fields.append("isPrerelease")
-        if invalid_release_fields:
-            return {
-                "kind": "agentic-workspace/release-publication-state/v1",
-                "status": "github-release-unpublished",
-                "recovery_required": True,
-                "reason": f"GitHub Release {tag} is not a published stable release: invalid {', '.join(invalid_release_fields)}.",
-                "version": _text(plan.get("version")),
-                "tag": tag,
-                "release_commit": release_commit,
-                "release_url": _text(release_view.get("url")),
-                "evidence": {
-                    "source": "local-tag-plan + gh-release-view",
-                    "tag_plan": plan,
-                    "release_view": release_view,
-                },
-                "next_action": _publication_inspect_command(repo=repo, tag=tag),
-            }
+        command.extend(["--repository", repo])
+    result = subprocess.run(command, cwd=repo_root, capture_output=True, text=True, encoding="utf-8")
+    packet = {"kind": "agentic-workspace/release-publication-state/v1"}
+    if result.returncode:
+        return {
+            **packet,
+            "status": "publication-observation-failed",
+            "recovery_required": True,
+            "reason": (result.stderr or result.stdout).strip(),
+            "next_action": "Inspect the original Release run and use Re-run failed jobs.",
+        }
+    observation = json.loads(result.stdout)
+    completed, partial = observation["completed"], observation["partial"]
     return {
-        "kind": "agentic-workspace/release-publication-state/v1",
-        "status": "published" if release_view else "verified-local-tag",
-        "recovery_required": False,
-        "reason": "Verified release tag and coordinated version commit agree."
-        if not release_view
-        else "Verified release tag, coordinated version commit, and GitHub Release are present.",
-        "version": _text(plan.get("version")),
-        "tag": tag,
-        "release_commit": release_commit,
-        "release_url": _text(release_view.get("url")) if release_view else "",
-        "evidence": {
-            "source": "local-tag-plan + gh-release-view" if release_view else "local-tag-plan",
-            "tag_plan": plan,
-            "release_view": release_view,
-        },
+        **packet,
+        "status": "partial-publication" if partial else "published",
+        "recovery_required": bool(partial),
+        "tag": completed["tag"],
+        "release_commit": completed["source_commit"],
+        "version": completed["version"],
+        "evidence": observation,
+        "reason": "Remote manifest, registry receipts and matching public packages were observed.",
+        "next_action": _publisher_retry_command(partial[0], "") if partial else "Dispatch Release on master when new changes are ready.",
     }
 
 
@@ -395,9 +233,9 @@ def release_failure_status(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _run_sort_key(run: dict[str, Any]) -> datetime:
-    return _parse_timestamp(run.get("updatedAt") or run.get("updated_at") or run.get("createdAt") or run.get("created_at")) or datetime.min.replace(
-        tzinfo=timezone.utc
-    )
+    return _parse_timestamp(
+        run.get("updatedAt") or run.get("updated_at") or run.get("createdAt") or run.get("created_at")
+    ) or datetime.min.replace(tzinfo=timezone.utc)
 
 
 def _run_conclusion(run: dict[str, Any]) -> str:
@@ -467,7 +305,9 @@ def live_release_failure_status(*, repo: str, workflow: str = DEFAULT_WORKFLOW, 
         }
     failed_id = _text(failed_run.get("databaseId") or failed_run.get("id"))
     try:
-        detail = _run_gh_json(["run", "view", failed_id, "--repo", repo, "--json", "jobs,url,databaseId,workflowName,updatedAt,headBranch,headSha"])
+        detail = _run_gh_json(
+            ["run", "view", failed_id, "--repo", repo, "--json", "jobs,url,databaseId,workflowName,updatedAt,headBranch,headSha"]
+        )
     except SystemExit:
         detail = dict(failed_run)
     log = _run_gh_text(["run", "view", failed_id, "--repo", repo, "--log-failed"], allow_failure=True)
@@ -626,7 +466,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.repo and args.include_release_runs
         else None
     )
-    release_publication = release_publication_status(repo_root=args.repo_root, repo=args.repo) if args.repo and args.include_release_runs else None
+    release_publication = (
+        release_publication_status(repo_root=args.repo_root, repo=args.repo) if args.repo and args.include_release_runs else None
+    )
     packet = recovery_packet(
         repo_root=args.repo_root,
         labels=labels,

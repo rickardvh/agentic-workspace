@@ -123,7 +123,7 @@ def generate():
             capture_output=True,
             text=True,
         ).stdout.strip(),
-        "all_or_nothing": True,
+        "all_or_nothing": False,
         "project_identity": ownership["project_identity"],
         "distribution_identity": ownership["distribution_identity"],
         "packages": package_entries,
@@ -151,7 +151,22 @@ def generate():
             "source_commit": subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip(),
         },
     }
-    if os.environ["RELEASE_TAG"] == "v1.0.0":
+    staging_path = Path("release-identity.json")
+    if staging_path.is_file():
+        import coordinated_release
+
+        staging = coordinated_release.stamp_release(ownership, json.loads(staging_path.read_text()), verify=True)
+        manifest["staging"] = staging
+        (dist / "release-identity.json").write_bytes(staging_path.read_bytes())
+        (dist / "release-notes.md").write_text(
+            f"# Release {staging['tag']}\n\nSource: `{staging['source_commit']}`\n\n"
+            + "\n".join("- " + item["summary"] for item in staging["changesets"])
+            + "\n",
+            encoding="utf-8",
+        )
+        for name in ("release-identity.json", "release-notes.md"):
+            checksum_lines.append(f"{sha256(dist / name)}  {name}")
+    if os.environ["RELEASE_TAG"] == "v1.0.0" and "staging" not in manifest:
         manifest["release_candidate_promotion"] = json.loads(
             subprocess.check_output(["python", "src/tooling/release/coordinated_release.py", "verify-rc-promotion"], text=True)
         )
@@ -222,6 +237,18 @@ def verify(directory="dist"):
         ownership["distribution_identity"]["redistributable_receipt"],
         "support-bearing-promotion.json",
     }
+    if "staging" in manifest:
+        import coordinated_release
+
+        staging = manifest["staging"]
+        if staging["source_commit"] != source_commit or staging["version"] != manifest["version"] or staging["tag"] != manifest["tag"]:
+            raise SystemExit("Manifest staging identity mismatch")
+        # Verify from immutable source inputs, not development manifest literals.
+        expected = coordinated_release.staging_files(ownership, source_commit, manifest["version"])
+        transform = [{"path": path, "sha256": hashlib.sha256(content.encode()).hexdigest()} for path, content in sorted(expected.items())]
+        if transform != staging["transform"]:
+            raise SystemExit("Manifest staging transform mismatch")
+        required_assets.update({"release-identity.json", "release-notes.md"})
     security = manifest.get("security_supply_chain", {})
     if security.get("required") is not True:
         raise SystemExit("Release manifest is missing required security supply-chain readiness")

@@ -84,7 +84,10 @@ def main() -> None:
     mode.add_argument("--refresh", action="store_true")
     mode.add_argument("--observe", action="store_true", help="Report valid projection drift as a successful follow-up")
     args = parser.parse_args()
-    release = json.loads(subprocess.check_output(["gh", "api", f"repos/{REPOSITORY}/releases/latest"]))
+    from release_lifecycle import observe_stable
+
+    completed, _, _ = observe_stable(REPOSITORY)
+    release = json.loads(subprocess.check_output(["gh", "api", f"repos/{REPOSITORY}/releases/tags/{completed['tag']}"]))
     base = f"https://github.com/{REPOSITORY}/releases/download/{release['tag_name']}/"
     source = json.loads(subprocess.check_output(["gh", "api", f"repos/{REPOSITORY}/commits/{release['tag_name']}"]))["sha"]
     expected = projection(

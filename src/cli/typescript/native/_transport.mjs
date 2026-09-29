@@ -26,7 +26,7 @@ const coreBinary = () => {
     const packageJson = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../..', 'package.json'), 'utf8'));
     // The paired native/Python identity uses PEP 440; this one RC lane has an
     // explicit npm SemVer spelling. Numeric releases retain exact equality.
-    const nativeVersion = packageJson.version.replace(/^1\.0\.0-rc\.([1-9][0-9]*)$/, '1.0.0rc$1');
+    const nativeVersion = packageJson.version === '0.0.0-dev.0' ? '0.0.0.dev0' : packageJson.version.replace(/^1\.0\.0-rc\.([1-9][0-9]*)$/, '1.0.0rc$1');
     if (manifest.platform !== process.platform || manifest.arch !== process.arch || manifest.package_version !== nativeVersion) throw new Error('packaged shared-core platform/version mismatch');
     if (!existsSync(candidate) || createHash('sha256').update(readFileSync(candidate)).digest('hex') !== manifest.sha256) throw new Error('packaged shared-core artifact missing or digest mismatch');
   }

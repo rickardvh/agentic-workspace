@@ -1,232 +1,104 @@
 name: Release
-
-on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+'on':
   workflow_dispatch:
     inputs:
-      operation:
-        description: Prepare a coordinated candidate or publish an existing immutable subject.
-        type: choice
-        options: [publish, prepare]
-        default: publish
-      accepted_rc:
-        description: Accepted RC for first-stable preparation.
-        required: false
-        type: string
       tag:
-        description: Existing immutable preview, RC or stable tag to qualify or publish.
+        description: 'Recovery only: existing immutable release tag. Leave blank for the next stable release.'
         required: false
         type: string
-      source_commit:
-        description: Commit the tag must resolve to.
-        required: false
-        type: string
-      release_class:
-        description: Explicit claim carried by this immutable subject.
-        type: choice
-        options: [stable, preview, release-candidate]
-        default: stable
       qualify_only:
-        description: Exercise the exact candidate without publication effects.
+        description: Build and verify without tagging or publication.
         type: boolean
         default: false
-      registries_only:
-        description: Publish existing admitted GitHub assets to registries without rebuilding them.
-        type: boolean
-        default: false
-
 concurrency:
   group: release-${{ github.repository }}
   cancel-in-progress: false
-
 permissions:
   contents: read
-  checks: read
-
 jobs:
-  source-qualification:
-    if: inputs.operation == 'prepare'
-    uses: ./.github/workflows/ci.yml
+  source-version:
+    name: Source and version
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      release_required: ${{ steps.resolve.outputs.release_required }}
+      build_required: ${{ steps.resolve.outputs.build_required }}
+      source_commit: ${{ steps.resolve.outputs.source_commit }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+      platforms: ${{ steps.resolve.outputs.platforms }}
+      runtimes: ${{ steps.resolve.outputs.runtimes }}
     permissions:
       contents: read
       actions: read
-      pull-requests: read
-      security-events: write
-    with:
-      expected_head_sha: ${{ github.sha }}
-      reason: release source qualification
-
-  release-state:
-    name: Prepare release PR or tag verified release commit
-    if: inputs.operation == 'prepare'
-    needs: source-qualification
-    outputs:
-      tag: ${{ steps.release-commit.outputs.tag }}
-      source_commit: ${{ steps.release-commit.outputs.release_commit }}
-      publish: ${{ steps.release-commit.outputs.publish_candidate }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-      pull-requests: write
-      actions: write # dispatch exact candidate validation after creating its branch
+      checks: read
+      attestations: read
     steps:
-      - name: Require protected preparation authority
-        run: test "$GITHUB_REF" = refs/heads/master
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.13"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable-cache: true
-
-      - name: Verify committed dependency graph before release planning
-        run: uv lock --check
-
-      - name: Resolve pending release state
-        id: release-plan
-        env:
-          ACCEPTED_RC: ${{ inputs.accepted_rc }}
-        run: |
-          args=()
-          if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
-          python src/tooling/release/coordinated_release.py plan "${args[@]}" --github-output "$GITHUB_OUTPUT"
-
-      - name: Prepare coordinated release PR changes
-        if: steps.release-plan.outputs.release_required == 'true'
-        env:
-          ACCEPTED_RC: ${{ inputs.accepted_rc }}
-        run: |
-          args=()
-          if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
-          python src/tooling/release/coordinated_release.py prepare "${args[@]}"
-          uv lock
-          python src/tooling/release/coordinated_release.py verify
-
-      - name: Open or update coordinated release PR
-        id: release-pr
-        if: steps.release-plan.outputs.release_required == 'true'
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          branch: automation/coordinated-release
-          delete-branch: true
-          title: Release v${{ steps.release-plan.outputs.version }}
-          commit-message: Release v${{ steps.release-plan.outputs.version }}
-          body: |
-            Prepare coordinated workspace release v${{ steps.release-plan.outputs.version }}.
-
-            This PR was generated from source-controlled release changesets. It updates every coordinated package version mirror, refreshes `uv.lock`, commits `.release/releases/v${{ steps.release-plan.outputs.version }}.md`, and consumes the pending changesets. Merge this PR before tagging or publishing the release.
-
-      - name: Dispatch validation for the generated release head
-        if: >-
-          steps.release-pr.outputs.pull-request-operation == 'created' ||
-          steps.release-pr.outputs.pull-request-operation == 'updated'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_PR_BRANCH: ${{ steps.release-pr.outputs.pull-request-branch }}
-          RELEASE_PR_HEAD_SHA: ${{ steps.release-pr.outputs.pull-request-head-sha }}
-          SOURCE_RUN_ID: ${{ github.run_id }}
-          RELEASE_PR_NUMBER: ${{ steps.release-pr.outputs.pull-request-number }}
-        run: |
-          gh workflow run ci.yml \
-            --ref "${RELEASE_PR_BRANCH}" \
-            -f expected_head_sha="${RELEASE_PR_HEAD_SHA}" \
-            -f reason="coordinated release candidate exact-head admission" \
-            -f qualified_source="${GITHUB_SHA}" \
-            -f source_run_id="${SOURCE_RUN_ID}"
-          gh workflow run pr-semver-label.yml \
-            --ref "${RELEASE_PR_BRANCH}" \
-            -f pull_request_number="${RELEASE_PR_NUMBER}" \
-            -f expected_head_sha="${RELEASE_PR_HEAD_SHA}"
-
-      - name: Resolve pending release tag
-        id: release-commit
-        if: steps.release-plan.outputs.release_required != 'true'
-        run: |
-          git fetch origin master --tags
-          python src/tooling/release/coordinated_release.py tag-plan --github-output "$GITHUB_OUTPUT"
-
-      - name: Create annotated release tag
-        if: steps.release-commit.outputs.tag_needed == 'true'
-        run: |
-          git fetch origin master --tags
-          if ! git merge-base --is-ancestor "${{ steps.release-commit.outputs.release_commit }}" origin/master; then
-            echo "Release commit ${{ steps.release-commit.outputs.release_commit }} is no longer reachable from origin/master" >&2
-            exit 1
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.release-commit.outputs.tag }}" "${{ steps.release-commit.outputs.release_commit }}" -m "Release ${{ steps.release-commit.outputs.tag }}"
-          git push origin "${{ steps.release-commit.outputs.tag }}"
-
-
-  promotion-admission:
-    needs: [source-qualification, release-state]
-    if: ${{ !cancelled() && (inputs.operation != 'prepare' || (needs.release-state.result == 'success' && needs.release-state.outputs.publish == 'true')) }}
-    name: Admit exact release subject
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    outputs:
-      tag: ${{ steps.admit.outputs.tag }}
-      source_commit: ${{ steps.admit.outputs.source_commit }}
-      release_class: ${{ steps.admit.outputs.release_class }}
-      support_bearing: ${{ steps.admit.outputs.support_bearing }}
-      registries: ${{ steps.admit.outputs.registries }}
-      platforms: ${{ steps.admit.outputs.platforms }}
-      runtimes: ${{ steps.admit.outputs.runtimes }}
-      build_required: ${{ steps.admit.outputs.build_required }}
-    env:
-      RELEASE_CLASS: ${{ inputs.release_class || 'stable' }}
-      REGISTRIES_ONLY: ${{ inputs.registries_only }}
-      RELEASE_TAG: ${{ needs.release-state.outputs.tag || inputs.tag || github.ref_name }}
-      EXPECTED_SOURCE_COMMIT: ${{ needs.release-state.outputs.source_commit || inputs.source_commit || '' }}
-    steps:
-      - name: Checkout exact release subject
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
-      - name: Resolve and verify exact source commit checks
-        id: admit
+      - name: Resolve or recover one immutable release
+        id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python src/tooling/release/release_lifecycle.py admit --github-output "$GITHUB_OUTPUT"
-      - name: Upload server promotion receipt
-        if: steps.admit.outputs.support_bearing == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+          RELEASE_TAG: ${{ inputs.tag }}
+          QUALIFY_ONLY: ${{ inputs.qualify_only }}
+        run: |-
+          args=()
+          if [ "$QUALIFY_ONLY" = true ]; then args+=(--qualify-only); fi
+          python src/tooling/release/release_lifecycle.py resolve "${args[@]}" --source "$GITHUB_SHA" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-identity
+          path: release-identity.json
+          if-no-files-found: error
+          retention-days: 90
+        if: steps.resolve.outputs.identity_reused != 'true'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: recovered-release-bundle
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 90
+        if: steps.resolve.outputs.release_required == 'true' && steps.resolve.outputs.build_required == 'false' && steps.resolve.outputs.recovery_reused != 'true'
+      - name: Reuse exact source merge admission
+        if: steps.resolve.outputs.build_required == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python src/tooling/release/support_bearing_promotion.py github-checks --repository "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --output server-promotion-receipt.json
+          --wait-seconds 900
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-server-promotion-receipt
           path: server-promotion-receipt.json
           if-no-files-found: error
-
+          retention-days: 90
+        if: steps.resolve.outputs.build_required == 'true'
   platform-build:
-    needs: promotion-admission
-    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && needs.promotion-admission.outputs.build_required == 'true' }}
+    needs: source-version
+    if: ${{ !cancelled() && needs.source-version.result == 'success' && needs.source-version.outputs.build_required == 'true' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.promotion-admission.outputs.platforms) }}
+      matrix: ${{ fromJSON(needs.source-version.outputs.platforms) }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ needs.promotion-admission.outputs.source_commit }}
+          ref: ${{ needs.source-version.outputs.source_commit }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.13'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -238,19 +110,32 @@ jobs:
           name: platform-${{ matrix.target }}
           path: platform-dist/*
           if-no-files-found: error
+    permissions:
+      contents: read
+    env:
+      RELEASE_CLASS: stable
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
   platform-assemble:
-    needs: [promotion-admission, platform-build]
+    needs:
+      - source-version
+      - platform-build
     if: ${{ !cancelled() && needs.platform-build.result == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ needs.promotion-admission.outputs.source_commit }}
+          ref: ${{ needs.source-version.outputs.source_commit }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.13'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -266,23 +151,36 @@ jobs:
           name: complete-platform-packages
           path: dist/*
           if-no-files-found: error
+    permissions:
+      contents: read
+    env:
+      RELEASE_CLASS: stable
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
   platform-consumer:
-    needs: [promotion-admission, platform-assemble]
+    needs:
+      - source-version
+      - platform-assemble
     if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.promotion-admission.outputs.platforms) }}
+      matrix: ${{ fromJSON(needs.source-version.outputs.platforms) }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ needs.promotion-admission.outputs.source_commit }}
+          ref: ${{ needs.source-version.outputs.source_commit }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.13'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -298,42 +196,66 @@ jobs:
           name: platform-consumer-${{ matrix.target }}
           path: platform-consumer-${{ matrix.target }}.json
           if-no-files-found: error
-
+    permissions:
+      contents: read
+    env:
+      RELEASE_CLASS: stable
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
   release-runtime-matrix:
-    needs: promotion-admission
-    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && needs.promotion-admission.outputs.build_required == 'true' }}
+    needs:
+      - source-version
+      - platform-assemble
+    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
     name: Release runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.promotion-admission.outputs.runtimes) }}
+      matrix: ${{ fromJSON(needs.source-version.outputs.runtimes) }}
     steps:
       - name: Checkout exact release subject
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ needs.source-version.outputs.source_commit }}
           fetch-depth: 0
-          ref: ${{ needs.promotion-admission.outputs.source_commit }}
+          persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: ${{ matrix.node }}
-      - name: Verify lock and runtime-specific behavior
-        run: |
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-platform-packages
+          path: dist
+      - name: Check the retained artifacts on this runtime
+        run: |-
           uv lock --check
           uv sync --locked --all-groups
-          uv build --wheel --sdist --out-dir runtime-dist
-          uv run python src/tooling/release/stage_native_npm.py --output runtime-npm --native-archive-dir runtime-dist
-          npm pack ./runtime-npm --pack-destination runtime-dist
-          uv run python src/tooling/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
+          uv run python src/tooling/check/check_native_release_topology.py --artifact-dir dist --receipt-out runtime-proof.json --execution-context hosted-ci
+      - name: Prove path, subprocess, install, and semantic behavior
+        run: |
+          cargo build --locked --workspace --bins
+          cargo test --locked --workspace
+          uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
+          uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
+          uv run pytest tests/test_native_maintainer_logging.py::test_native_logging_concurrent_append_preserves_valid_sequence tests/test_native_maintainer_logging.py::test_native_logging_concurrent_registration_preserves_existing_identities -q
+      - name: Prove source-maintenance adapter conformance
+        env:
+          AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
+        run: uv run python src/tooling/check/check_native_sources.py
       - name: Write runtime support receipt
-        if: needs.promotion-admission.outputs.support_bearing == 'true'
         shell: bash
         run: |
           mkdir -p runtime-receipts
@@ -345,64 +267,71 @@ jobs:
             --proof "isolated native wheel, npm, paired archive and owner mutation on this runtime" \
             --output "runtime-receipts/${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}.json"
       - name: Upload runtime support receipt
-        if: needs.promotion-admission.outputs.support_bearing == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: runtime-${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}
           path: runtime-receipts/*.json
           if-no-files-found: error
-
+    permissions:
+      contents: read
+    env:
+      RELEASE_CLASS: stable
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
+      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
   agentic-workspace-package:
-    if: ${{ !cancelled() && needs.promotion-admission.result == 'success' && needs.release-runtime-matrix.result == 'success' && needs.platform-consumer.result == 'success' && needs.promotion-admission.outputs.build_required == 'true' }}
-    needs: [promotion-admission, release-runtime-matrix, platform-consumer]
+    if: ${{ !cancelled() && needs.source-version.outputs.build_required == 'true' && needs.release-runtime-matrix.result == 'success' && needs.platform-consumer.result
+      == 'success' && needs.workspace-checks.result == 'success' && needs.planning-handoff-checks.result == 'success' && needs.independent-owner-ingress.result ==
+      'success' }}
+    needs:
+      - source-version
+      - release-runtime-matrix
+      - platform-consumer
+      - workspace-checks
+      - planning-handoff-checks
+      - independent-owner-ingress
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: read
     env:
-      RELEASE_CLASS: ${{ needs.promotion-admission.outputs.release_class }}
-      RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
-      EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
+      RELEASE_CLASS: stable
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ needs.source-version.outputs.source_commit }}
           fetch-depth: 0
-          ref: ${{ needs.promotion-admission.outputs.source_commit }}
-
+          persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: "3.13"
-
+          python-version: '3.13'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: "24"
-
+          node-version: '24'
       - name: Download exact-commit promotion receipts
-        if: needs.promotion-admission.outputs.support_bearing == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-server-promotion-receipt
           path: promotion-inputs/server
-
       - name: Download declared runtime receipts
-        if: needs.promotion-admission.outputs.support_bearing == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: runtime-*
           path: promotion-inputs/runtime
           merge-multiple: true
-
       - name: Sync workspace dependencies
         run: uv sync --locked --all-groups
-
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: complete-platform-packages
@@ -412,81 +341,253 @@ jobs:
           pattern: platform-consumer-*
           path: dist
           merge-multiple: true
-
       - name: Build Agentic Workspace package artifacts
         run: python src/tooling/release/release_lifecycle.py build
-
       - name: Run built package smoke tests
         env:
           AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
         run: uv run pytest tests/test_native_release_topology.py -q
-
       - name: Generate release SBOM
-        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26
         with:
           path: dist
           format: spdx-json
           output-file: dist/agentic-workspace.spdx.json
           upload-artifact: false
-
       - name: Prove exact npm artifacts on Node 24
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node24.json PACKED_ARTIFACT_CONTEXT=hosted-ci
-
       - name: Set up minimum Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: "20"
-
+          node-version: '20'
       - name: Prove exact npm artifacts on Node 20
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node20.json PACKED_ARTIFACT_CONTEXT=hosted-ci
-
       - name: Set up current Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: "25"
-
+          node-version: '25'
       - name: Prove exact npm artifacts on Node 25
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node25.json PACKED_ARTIFACT_CONTEXT=hosted-ci
-
       - name: Check locked Rust advisories, licenses and sources
         run: python src/tooling/check/check_rust_dependencies.py --install
-
       - name: Compose exact release evidence and manifest
         id: compose
         run: python src/tooling/release/release_lifecycle.py compose --github-output "$GITHUB_OUTPUT"
-
-      - name: Reject replacement of existing immutable bytes
+      - name: Verify staging after build and proof
+        run: python src/tooling/release/release_lifecycle.py verify-stage
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: verified-release-bundle
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 90
+  workspace-checks:
+    needs:
+      - source-version
+      - platform-assemble
+    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/admission-dist
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.source-version.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Download the exact candidate artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-platform-packages
+          path: admission-dist
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
+      - name: Verify lock without rewriting it
+        run: uv lock --check
+      - name: Sync the workspace once
+        run: make sync-all
+      - name: Run native root CLI and thin-launcher admission
+        run: uv run pytest tests/test_native_public_cli.py -q
+      - name: Preserve real Planning custody through public consumers
+        run: uv run pytest tests/test_native_planning_create.py -k "public_creation_then_separate_selection or quiescent_selected_owner" -q
+      - name: Admit exact current source reconciliation through public consumers
+        run: uv run pytest tests/test_native_source_reconciliation.py -q
+      - name: Prove compact operating projection and exact carriage
+        run: uv run pytest tests/test_native_operating_carriage.py tests/test_native_invoke_continuation.py -q
+      - name: Preserve stronger and fallback decision ownership through public consumers
+        run: uv run pytest tests/test_native_repository_decisions.py tests/test_native_memory_capture.py -q
+      - name: Preserve owner admission, proof, custody and removal on installed artifacts
+        run: uv run pytest tests/test_native_assignment_judgment.py tests/test_native_assignment_policy.py tests/test_native_advisory_config.py tests/test_native_config_admission.py
+          tests/test_native_configuration_write.py tests/test_native_execution_configurations.py tests/test_native_instruction_write.py tests/test_native_instruction_verification.py
+          tests/test_native_claim_review.py tests/test_native_domain_proof.py tests/test_native_proof_producer.py tests/test_native_verification_strategy.py tests/test_native_planning_lifetime.py
+          tests/test_native_memory_disposition.py tests/test_native_resources.py tests/test_native_system_intent.py tests/test_native_transport.py -q
+      - name: Run shared operating-decision core proof
+        run: |
+          cargo build --locked --workspace --bins
+          cargo test --locked --workspace
+          uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
+      - name: Run workspace lint
+        run: make lint-workspace
+      - name: Run workspace typecheck without another sync
+        run: make typecheck-nosync
+      - name: Run workspace release proof
+        run: make verify-workspace
+      - name: Verify native source boundaries
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: python src/tooling/release/release_lifecycle.py check-published
-
-      - name: Attest exact release subjects
-        if: ${{ !inputs.qualify_only }}
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+          AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
+        run: uv run python src/tooling/check/check_native_sources.py
+    permissions:
+      contents: read
+  planning-handoff-checks:
+    needs:
+      - source-version
+      - platform-assemble
+    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/admission-dist
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.source-version.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Download the exact candidate artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-platform-packages
+          path: admission-dist
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
+      - name: Verify lock without rewriting it
+        run: uv lock --check
+      - name: Sync the workspace once
+        run: make sync-all
+      - name: Preserve Planning handoff continuation through public consumers
+        run: uv run pytest tests/test_native_readonly_handoff.py tests/test_native_delegation_lifecycle.py -vv -o faulthandler_timeout=120
+    permissions:
+      contents: read
+  independent-owner-ingress:
+    needs:
+      - source-version
+      - platform-assemble
+    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.source-version.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - name: Stamp the pinned release identity
+        run: python src/tooling/release/release_lifecycle.py stamp
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
+      - name: Verify lock without rewriting it
+        run: uv lock --check
+      - name: Sync the workspace once
+        run: make sync-all
+      - name: Prove independently linked native owner admission through public consumers
+        run: uv run pytest tests/test_native_independent_owner.py -vv -o faulthandler_timeout=120
+    permissions:
+      contents: read
+  publish-github:
+    name: Publish retained GitHub artifacts
+    needs:
+      - source-version
+      - agentic-workspace-package
+    if: ${{ !cancelled() && !inputs.qualify_only && needs.source-version.outputs.release_required == 'true' && (needs.agentic-workspace-package.result == 'success'
+      || (needs.source-version.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
+      EXPECTED_SOURCE_COMMIT: ${{ needs.source-version.outputs.source_commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: ${{ needs.source-version.outputs.build_required == 'true' && 'verified-release-bundle' || 'recovered-release-bundle' }}
+          path: dist
+      - name: Verify retained bytes before publication
+        run: python src/tooling/release/release_lifecycle.py verify-bundle
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        if: needs.source-version.outputs.build_required == 'true'
         with:
           subject-path: dist/*
-
-      - name: Publish GitHub release assets
-        if: ${{ !inputs.qualify_only }}
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          prerelease: ${{ needs.promotion-admission.outputs.support_bearing != 'true' }}
-          make_latest: ${{ needs.promotion-admission.outputs.support_bearing == 'true' }}
-          overwrite_files: false
-          body_path: .release/releases/${{ env.RELEASE_TAG }}.md
-          files: ${{ steps.compose.outputs.assets }}
-          fail_on_unmatched_files: true
-
-      - name: Smoke published preview from public bytes
-        if: ${{ !inputs.qualify_only && needs.promotion-admission.outputs.support_bearing != 'true' }}
+      - name: Reserve source tag and publish missing exact assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python src/tooling/release/preview_public_smoke.py --tag "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
-
+        run: python src/tooling/release/release_lifecycle.py publish
   language-registries:
-    needs: [promotion-admission, agentic-workspace-package]
-    if: ${{ !cancelled() && !inputs.qualify_only && needs.promotion-admission.outputs.registries == 'true' && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped')) }}
+    needs:
+      - source-version
+      - publish-github
+    if: ${{ !cancelled() && !inputs.qualify_only && needs.publish-github.result == 'success' }}
     runs-on: ubuntu-latest
     environment: cargo-registry
     permissions:
@@ -494,47 +595,45 @@ jobs:
       id-token: write
       attestations: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: master
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.13'
       - name: Fetch admitted Cargo sources and verify their publisher
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
-        run: python src/tooling/release/registry_release.py --fetch --tag "$RELEASE_TAG" --source "$(git rev-parse refs/tags/$RELEASE_TAG^{commit})" --artifact-dir dist
-
-      - name: Reconstruct packaging for byte comparison before credentials
-        run: |
-          git checkout --detach "${{ needs.promotion-admission.outputs.tag }}"
-          cargo fetch --locked
-          python src/tooling/release/cargo_release.py build --no-verify --artifact-dir reconstructed --staging "$RUNNER_TEMP/aw-cargo"
+          RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
+        run: python src/tooling/release/registry_release.py --fetch --tag "$RELEASE_TAG" --source "$(git rev-parse refs/tags/$RELEASE_TAG^{commit})" --artifact-dir
+          dist
       - name: Obtain short-lived crates.io identity after initial bootstrap
         id: auth
-        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18
       - name: Publish missing exact versions in paired order
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
-          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
-        run: python src/tooling/release/cargo_release.py publish --tag "$RELEASE_TAG" --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+          RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
+        run: python src/tooling/release/cargo_release.py publish --tag "$RELEASE_TAG" --artifact-dir dist
       - name: Verify public Cargo sources and isolated paired install
         env:
-          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+          RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
         run: python src/tooling/release/cargo_release.py verify --tag "$RELEASE_TAG" --artifact-dir dist
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cargo-registry-publication
           path: dist/cargo-registry-publication.json
           if-no-files-found: error
-
-  # PyPI trusts the top-level workflow; publishing from workflow_call is unsupported.
+    env:
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
+      EXPECTED_SOURCE_COMMIT: ${{ needs.source-version.outputs.source_commit }}
   language-packages:
-    needs: [promotion-admission, agentic-workspace-package]
-    if: ${{ !cancelled() && !inputs.qualify_only && needs.promotion-admission.outputs.registries == 'true' && needs.promotion-admission.result == 'success' && (needs.agentic-workspace-package.result == 'success' || (needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped')) }}
+    needs:
+      - source-version
+      - publish-github
+    if: ${{ !cancelled() && !inputs.qualify_only && needs.publish-github.result == 'success' }}
     runs-on: ubuntu-latest
     environment: package-registries
     permissions:
@@ -542,7 +641,7 @@ jobs:
       id-token: write
       attestations: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -550,8 +649,8 @@ jobs:
       - name: Bind immutable release source independently of recovery tooling
         id: release-source
         env:
-          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
-          EXPECTED_SOURCE_COMMIT: ${{ needs.promotion-admission.outputs.source_commit }}
+          RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
+          EXPECTED_SOURCE_COMMIT: ${{ needs.source-version.outputs.source_commit }}
         run: |
           set -euo pipefail
           release_source=$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")
@@ -560,31 +659,31 @@ jobs:
             exit 1
           fi
           echo "commit=$release_source" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.13'
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '24'
       - name: Install OIDC-capable npm
         run: npm install --global npm@11.5.1
       - name: Install uv for the documented Python tool journey
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
       - name: Fetch and verify admitted GitHub bytes
         env:
           RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+          RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
         run: python src/tooling/release/registry_release.py --fetch --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist
       - name: Reobserve immutable registry versions
         id: pending
         env:
-          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+          RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
           RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
         run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist --pending registry-pending >> "$GITHUB_OUTPUT"
       - name: Publish missing exact PyPI artifacts with trusted identity
         if: steps.pending.outputs.python_pending == 'true'
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
         with:
           packages-dir: registry-pending/python/
       - name: Publish missing exact npm artifact with trusted identity
@@ -594,11 +693,87 @@ jobs:
         run: npm publish registry-pending/npm/*.tgz --access public --tag "$NPM_TAG" --provenance --ignore-scripts
       - name: Verify public bytes and clean native consumers
         env:
-          RELEASE_TAG: ${{ needs.promotion-admission.outputs.tag }}
+          RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
           RELEASE_SOURCE: ${{ steps.release-source.outputs.commit }}
         run: python src/tooling/release/registry_release.py --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --artifact-dir dist --verify --receipt registry-publication.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: language-registry-publication
           path: registry-publication.json
           if-no-files-found: error
+    env:
+      RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
+      EXPECTED_SOURCE_COMMIT: ${{ needs.source-version.outputs.source_commit }}
+  verify-destinations:
+    name: Verify coordinated completion
+    needs:
+      - source-version
+      - publish-github
+      - language-registries
+      - language-packages
+    if: ${{ !cancelled() && needs.publish-github.result == 'success' && needs.language-registries.result == 'success' && needs.language-packages.result == 'success'
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-identity
+          path: .
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: ${{ needs.source-version.outputs.build_required == 'true' && 'verified-release-bundle' || 'recovered-release-bundle' }}
+          path: dist
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: language-registry-publication
+          path: dist
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: cargo-registry-publication
+          path: dist
+      - name: Retain matching destination receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python src/tooling/release/release_lifecycle.py complete
+    env:
+      EXPECTED_SOURCE_COMMIT: ${{ needs.source-version.outputs.source_commit }}
+  summary:
+    name: Release result
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - source-version
+      - agentic-workspace-package
+      - publish-github
+      - language-registries
+      - language-packages
+      - verify-destinations
+    permissions: {}
+    steps:
+      - env:
+          RESULTS: ${{ toJSON(needs) }}
+          QUALIFY_ONLY: ${{ inputs.qualify_only }}
+        run: |-
+          python - <<'PY'
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as report:
+              for name, result in results.items():
+                  report.write(f"- {name}: {result['result']}\n")
+              identity = results['source-version']['outputs']
+              report.write(f"\nSource: `{identity.get('source_commit', 'unresolved')}`; release: `{identity.get('tag', 'none')}`.\n")
+              if any(row['result'] in ('failure', 'cancelled') for row in results.values()):
+                  report.write('\nRecovery: Re-run failed jobs for this run. After tagging, a later dispatch may supply that exact tag; it must recover the retained bundle.\n')
+                  raise SystemExit(1)
+              if os.environ['QUALIFY_ONLY'] == 'true':
+                  report.write('\nValidation only; no publication was requested.\n')
+          PY

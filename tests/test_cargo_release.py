@@ -1,13 +1,58 @@
 """Cargo source closure and immutable coordinated registry identity."""
 
 import hashlib
+import io
 import json
+import struct
 import sys
+import tarfile
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_publisher_wire_body_contains_the_admitted_archive(tmp_path):
+    received = []
+
+    class Registry(BaseHTTPRequestHandler):
+        def do_PUT(self):
+            received.append(self.rfile.read(int(self.headers["Content-Length"])))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'{"warnings": {}}')
+
+        def log_message(self, *args):
+            pass
+
+    path = tmp_path / "example-1.2.3.crate"
+    content = b'[package]\nname="example"\nversion="1.2.3"\nlicense="MIT"\n[dependencies.renamed]\npackage="original"\nversion="2"\n'
+    with tarfile.open(path, "w:gz") as archive:
+        member = tarfile.TarInfo("example-1.2.3/Cargo.toml")
+        member.size = len(content)
+        archive.addfile(member, io.BytesIO(content))
+    server = HTTPServer(("127.0.0.1", 0), Registry)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        cargo.upload_archive(path, token="fixture", endpoint=f"http://127.0.0.1:{server.server_port}/api/v1/crates/new")
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
+    body = received[0]
+    length = struct.unpack("<I", body[:4])[0]
+    metadata = json.loads(body[4 : 4 + length])
+    assert metadata["name"] == "example" and metadata["vers"] == "1.2.3"
+    assert metadata["deps"][0]["name"] == "original"
+    assert metadata["deps"][0]["explicit_name_in_toml"] == "renamed"
+    assert struct.unpack("<I", body[4 + length : 8 + length])[0] == path.stat().st_size
+    assert body[8 + length :] == path.read_bytes()
+
+
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
 import cargo_release as cargo  # noqa: E402
 
@@ -75,7 +120,7 @@ def test_cargo_registry_recovery_distinguishes_absence_conflict_and_uncertainty(
         cargo.observe(crate, get=unavailable)
 
 
-@pytest.mark.parametrize("scenario", ["fresh", "partial", "conflict", "uncertain", "repack-drift"])
+@pytest.mark.parametrize("scenario", ["fresh", "partial", "conflict", "uncertain", "artifact-drift"])
 def test_cargo_publication_orders_exact_pair_and_stops_before_unsafe_effects(tmp_path, monkeypatch, scenario):
     import registry_release
 
@@ -84,10 +129,10 @@ def test_cargo_publication_orders_exact_pair_and_stops_before_unsafe_effects(tmp
     for name, binary in (("agentic-workspace-core", "agentic-workspace-core"), ("agentic-workspace-cli", "agentic-workspace")):
         asset = f"{name}-1.0.0-rc.1.crate"
         data = name.encode()
-        (tmp_path / asset).write_bytes(data)
+        (tmp_path / asset).write_bytes(b"changed" if scenario == "artifact-drift" else data)
         packaged = staging / name / "target/package"
         packaged.mkdir(parents=True)
-        (packaged / asset).write_bytes(b"changed" if scenario == "repack-drift" else data)
+        (packaged / asset).write_bytes(b"changed" if scenario == "artifact-drift" else data)
         packages.append(
             {"name": name, "binary": binary, "version": "1.0.0-rc.1", "asset": asset, "sha256": hashlib.sha256(data).hexdigest()}
         )
@@ -123,18 +168,19 @@ def test_cargo_publication_orders_exact_pair_and_stops_before_unsafe_effects(tmp
             raise TimeoutError("Unknown publication visibility")
         return "matching" if name in published else "absent"
 
-    def execute(command, **kwargs):
-        if command[1] == "publish":
-            name = Path(command[-1]).parent.name
-            assert observations[:2] == [p["name"] for p in packages]
-            if name == packages[1]["name"]:
-                assert packages[0]["name"] in published
-            uploads.append(name)
-            published.add(name)
+    def upload(path, **kwargs):
+        name = next(p["name"] for p in packages if p["asset"] == path.name)
+        assert observations[:2] == [p["name"] for p in packages]
+        assert path.read_bytes() == name.encode()
+        if name == packages[1]["name"]:
+            assert packages[0]["name"] in published
+        uploads.append(name)
+        published.add(name)
 
     monkeypatch.setattr(cargo, "observe", observe)
-    monkeypatch.setattr(cargo.subprocess, "run", execute)
-    if scenario in {"conflict", "repack-drift"}:
+    monkeypatch.setattr(cargo, "upload_archive", upload)
+    monkeypatch.setenv("CARGO_REGISTRY_TOKEN", "controlled-fixture")
+    if scenario in {"conflict", "artifact-drift"}:
         with pytest.raises(ValueError):
             cargo.main()
         assert uploads == []

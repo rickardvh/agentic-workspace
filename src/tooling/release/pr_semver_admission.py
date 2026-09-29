@@ -35,7 +35,6 @@ def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
     ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
     semver_labels = set(ownership["semver_labels"])
     changeset_dir = ownership["changeset_dir"].rstrip("/")
-    release_pr_branch = ownership["release_pr_branch"]
     semver_to_bump = {
         "semver:major": "major",
         "semver:minor": "minor",
@@ -58,18 +57,22 @@ def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
         capture_output=True,
         text=True,
     ).stdout.splitlines()
+    cleanup = subprocess.run(
+        ["git", "diff", "--name-status", "-M", f"{base}...{pr['head']['sha']}"],
+        check=True, capture_output=True, text=True,
+    ).stdout.splitlines()
+    ignored_fragments = set()
+    for row in cleanup:
+        status, *paths = row.split("\t")
+        if status in {"D", "R100"} and all(path.startswith(changeset_dir + "/") for path in paths):
+            ignored_fragments.update(paths)
+    changed = [path for path in changed if path not in ignored_fragments]
     path_classification = classify_changed_paths(changed, ownership)
     package_changed = path_classification["package_affecting"]
 
     if not package_changed:
         record_admission({}, None, "not-required")
         print("No package-affecting changes detected; semver label not required.")
-        raise SystemExit(0)
-
-    if head_ref == release_pr_branch:
-        subprocess.run(["python", "src/tooling/release/coordinated_release.py", "verify"], check=True)
-        record_admission({}, None, "release")
-        print("Release PR version state accepted.")
         raise SystemExit(0)
 
     labels = {label["name"] for label in event["pull_request"].get("labels", [])}
@@ -142,21 +145,6 @@ def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
 def main():
     event_path = os.environ["EVENT_PATH"]
     base_ref, head_ref = os.environ["BASE_REF"], os.environ["HEAD_REF"]
-    if number := os.environ.get("DISPATCH_PR"):
-        if not number.isdigit():
-            raise ValueError("Dispatch requires a numeric PR identity")
-        repository = os.environ["GITHUB_REPOSITORY"]
-        pr = json.loads(subprocess.check_output(["gh", "api", f"repos/{repository}/pulls/{number}"]))
-        if (
-            pr["state"] != "open"
-            or pr["base"]["repo"]["full_name"] != repository
-            or pr["head"]["sha"] != os.environ.get("EXPECTED_HEAD_SHA")
-            or pr["head"]["sha"] != os.environ["GITHUB_SHA"]
-        ):
-            raise ValueError("Semver dispatch must bind the exact open PR head")
-        event_path = str(Path(os.environ["SEMVER_ADMISSION_PATH"]).with_name("semver-event.json"))
-        Path(event_path).write_text(json.dumps({"pull_request": pr}), encoding="utf-8")
-        base_ref, head_ref = pr["base"]["ref"], pr["head"]["ref"]
     admit(
         event_path=event_path,
         base_ref=base_ref,

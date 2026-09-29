@@ -101,7 +101,7 @@ def test_package_affecting_semver_pr_requires_release_changeset() -> None:
     assert "release changeset" in packet["next_action"]
 
 
-def test_package_affecting_semver_pr_with_changeset_opens_release_pr() -> None:
+def test_package_affecting_semver_pr_with_changeset_is_ready_for_manual_release() -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
@@ -114,9 +114,9 @@ def test_package_affecting_semver_pr_with_changeset_opens_release_pr() -> None:
         ownership=ownership,
     )
 
-    assert packet["status"] == "will-open-release-pr"
+    assert packet["status"] == "ready-for-manual-release"
     assert packet["will_publish_release"] is False
-    assert packet["will_prepare_release_pr"] is True
+    assert packet["will_prepare_release_pr"] is False
 
 
 def test_release_failure_fixture_identifies_failed_job_step_and_error() -> None:
@@ -321,163 +321,31 @@ def test_successful_release_run_does_not_clear_version_publication_debt() -> Non
     assert packet["coordinated_recovery"]["status"] == "required"
 
 
-def test_release_publication_status_detects_version_behind_tag_floor(monkeypatch) -> None:
+@pytest.mark.parametrize("partial", [[], ["v1.7.0"]])
+def test_remote_completion_is_distinct_from_reserved_versions(monkeypatch, partial):
     module = _load_module()
-    monkeypatch.setattr(
-        module,
-        "_local_tag_plan",
-        lambda *, repo_root: {
-            "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
-            "tag_needed": False,
-            "publish_candidate": False,
-            "reason": "version-not-newer-than-existing-tag-floor-v0.34.0",
-            "version": "0.33.9",
-            "tag": "v0.33.9",
-        },
-    )
-
-    packet = module.release_publication_status(repo_root=REPO_ROOT, repo="example/repo")
-
-    assert packet["status"] == "unresolved-version-publication-debt"
-    assert packet["recovery_required"] is True
-    assert packet["reason"] == "version-not-newer-than-existing-tag-floor-v0.34.0"
-
-
-def test_release_publication_status_requires_github_release_for_live_success(monkeypatch) -> None:
-    module = _load_module()
-    monkeypatch.setattr(
-        module,
-        "_local_tag_plan",
-        lambda *, repo_root: {
-            "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
-            "tag_needed": False,
-            "publish_candidate": True,
-            "reason": "tag-already-points-at-release-commit",
-            "version": "0.34.1",
-            "tag": "v0.34.1",
-            "release_commit": "abc123",
-        },
-    )
-
-    def fake_gh_json(args: list[str]):
-        if args[:3] == ["release", "view", "v0.34.1"]:
-            raise SystemExit("release not found")
-        raise AssertionError(args)
-
-    monkeypatch.setattr(module, "_run_gh_json", fake_gh_json)
-
-    packet = module.release_publication_status(repo_root=REPO_ROOT, repo="example/repo")
-
-    assert packet["status"] == "github-release-missing"
-    assert packet["recovery_required"] is True
-    assert packet["tag"] == "v0.34.1"
-
-
-def _verified_publish_candidate() -> dict[str, object]:
-    return {
-        "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
-        "tag_needed": False,
-        "publish_candidate": True,
-        "reason": "tag-already-points-at-release-commit",
-        "version": "0.34.1",
-        "tag": "v0.34.1",
-        "release_commit": "abc123",
+    observation = {
+        "completed": {"tag": "v1.6.0", "source_commit": "a" * 40, "version": "1.6.0"},
+        "partial": partial,
+        "reserved": ["1.6.0", "1.7.0"],
     }
-
-
-def test_release_publication_observation_failures_require_recovery(monkeypatch) -> None:
-    module = _load_module()
-    monkeypatch.setattr(module, "_local_tag_plan", lambda *, repo_root: (_ for _ in ()).throw(RuntimeError("tag target mismatch")))
-
+    monkeypatch.setattr(module.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, json.dumps(observation), ""))
     packet = module.release_publication_status(repo_root=REPO_ROOT, repo="example/repo")
+    assert packet["tag"] == "v1.6.0"
+    assert packet["recovery_required"] is bool(partial)
+    assert packet["status"] == ("partial-publication" if partial else "published")
+    if partial:
+        assert 'tag="v1.7.0"' in packet["next_action"]
 
-    assert packet["status"] == "publication-observation-failed"
-    assert packet["recovery_required"] is True
-    assert "tag-plan" in packet["next_action"]
 
-
-def test_release_publication_missing_release_commit_requires_recovery(monkeypatch) -> None:
+def test_remote_observation_failure_does_not_infer_free_version(monkeypatch):
     module = _load_module()
-    plan = _verified_publish_candidate()
-    plan.pop("release_commit")
-    monkeypatch.setattr(module, "_local_tag_plan", lambda *, repo_root: plan)
-
-    packet = module.release_publication_status(repo_root=REPO_ROOT, repo="example/repo")
-
-    assert packet["status"] == "publication-observation-failed"
-    assert packet["recovery_required"] is True
-
-
-@pytest.mark.parametrize(
-    ("release_view", "invalid_field"),
-    [
-        (
-            {
-                "tagName": "v0.34.1",
-                "url": "https://example/release",
-                "isDraft": True,
-                "isPrerelease": False,
-                "publishedAt": "2026-07-24T00:00:00Z",
-            },
-            "isDraft",
-        ),
-        (
-            {"tagName": "v0.34.1", "url": "https://example/release", "isDraft": False, "isPrerelease": False, "publishedAt": ""},
-            "publishedAt",
-        ),
-        (
-            {
-                "tagName": "v0.34.2",
-                "url": "https://example/release",
-                "isDraft": False,
-                "isPrerelease": False,
-                "publishedAt": "2026-07-24T00:00:00Z",
-            },
-            "tagName",
-        ),
-        (
-            {
-                "tagName": "v0.34.1",
-                "url": "https://example/release",
-                "isDraft": False,
-                "isPrerelease": True,
-                "publishedAt": "2026-07-24T00:00:00Z",
-            },
-            "isPrerelease",
-        ),
-    ],
-)
-def test_release_publication_rejects_unpublished_github_release(monkeypatch, release_view, invalid_field: str) -> None:
-    module = _load_module()
-    monkeypatch.setattr(module, "_local_tag_plan", lambda *, repo_root: _verified_publish_candidate())
-    monkeypatch.setattr(module, "_run_gh_json", lambda args: release_view)
-
-    packet = module.release_publication_status(repo_root=REPO_ROOT, repo="example/repo")
-
-    assert packet["status"] == "github-release-unpublished"
-    assert packet["recovery_required"] is True
-    assert invalid_field in packet["reason"]
-
-
-def test_release_publication_accepts_matching_published_stable_github_release(monkeypatch) -> None:
-    module = _load_module()
-    monkeypatch.setattr(module, "_local_tag_plan", lambda *, repo_root: _verified_publish_candidate())
     monkeypatch.setattr(
-        module,
-        "_run_gh_json",
-        lambda args: {
-            "tagName": "v0.34.1",
-            "url": "https://example/release",
-            "isDraft": False,
-            "isPrerelease": False,
-            "publishedAt": "2026-07-24T00:00:00Z",
-        },
+        module.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args, 1, "", "unknown registry state")
     )
-
     packet = module.release_publication_status(repo_root=REPO_ROOT, repo="example/repo")
-
-    assert packet["status"] == "published"
-    assert packet["recovery_required"] is False
+    assert packet["status"] == "publication-observation-failed"
+    assert packet["recovery_required"] is True
 
 
 @pytest.mark.parametrize("status", ["publication-observation-failed", "github-release-unpublished"])
@@ -505,7 +373,7 @@ def test_failed_release_recovery_retries_existing_verified_tag(monkeypatch) -> N
             "status": "ready",
             "tag": "v0.34.1",
             "source_commit": "abc123",
-            "command": 'gh workflow run release.yml --ref master -f tag="v0.34.1" -f source_commit="abc123"',
+            "command": 'gh workflow run release.yml --ref master -f tag="v0.34.1"',
         },
     )
 
@@ -525,6 +393,4 @@ def test_failed_release_recovery_retries_existing_verified_tag(monkeypatch) -> N
     assert packet["release_publication_state"]["status"] == "failed-release-unpublished"
     assert packet["release_publication_state"]["publisher_retry"]["status"] == "ready"
     assert packet["coordinated_recovery"]["status"] == "required"
-    assert packet["coordinated_recovery"]["next_action"] == (
-        'gh workflow run release.yml --ref master -f tag="v0.34.1" -f source_commit="abc123"'
-    )
+    assert packet["coordinated_recovery"]["next_action"] == ('gh workflow run release.yml --ref master -f tag="v0.34.1"')
