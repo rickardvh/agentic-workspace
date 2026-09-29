@@ -40,6 +40,20 @@ def test_repository_coherence_declaration_reaches_native_entry(tmp_path, shared_
     )
     assert candidate["entry"]["resource"] == freshness["procedure"]
     assert candidate["disposition"] == "route"
+    if requirement_id == "aw_live_affordance_dogfooding":
+        original_revision = next(
+            q["source_revision"] for q in result["verification"]["current_evidence"]["requests"] if q["arguments"]["id"] == requirement_id
+        )
+        for relative in ("src/core/src/lib.rs", "src/core/src/native_resource_owner.rs", "src/core/src/native_resources.rs"):
+            dependency = tmp_path / relative
+            original = dependency.read_bytes()
+            try:
+                dependency.write_bytes(original + b"\n// Changed affordance behavior.\n")
+                changed = consume("native", shared_core_binary, native_cli, context)["verification"]["current_evidence"]
+                revision = next(q["source_revision"] for q in changed["requests"] if q["arguments"]["id"] == requirement_id)
+                assert revision != original_revision, relative
+            finally:
+                dependency.write_bytes(original)
 
 
 @pytest.mark.parametrize(

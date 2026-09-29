@@ -29,8 +29,9 @@ live satisfaction.
 
 Read the trusted run's `interactions`, independent artifact/authority checks,
 subject identity, provider/model/runtime, budget, cleanup and unknown costs.
-One detail read, legitimate exploration or a stale rejection followed by current
-recovery is not a failure. Repeated unchanged rejection, contradictory routing
+One detail read, legitimate exploration or rejection of a stale action not
+observed as offered is not a failure. An exact previously offered action's rejection
+requires triage even after successful recovery. Repeated unchanged rejection, contradictory routing
 and attempted internal recovery remain findings even after correct final files.
 Use the [dogfooding owner](../SKILL.md) to investigate and attribute each finding
 to the smallest existing issue. The tested actor has no GitHub write authority.

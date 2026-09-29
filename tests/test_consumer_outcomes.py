@@ -67,9 +67,17 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps(own
     assert not scorer.affordance_observations(single_calls, {})["coverage"]["multi_owner_action"]
     assert not scorer.affordance_observations(single_calls, {})["coverage"]["effect"]
     assert scorer.affordance_observations(observations[:1], {"status": "blocked"})["disposition"] == "unsupported-refusal"
-    # One stale rejection followed by recovery is legitimate; repeated unchanged
-    # rejection remains a finding even if the final task claim is complete.
+    # Rejecting an exact offered action remains a triage finding after recovery.
     rejection = call({"effect_outcome": {"status": "rejected-before-effect"}}, 1)
+    offered_rejection = {**rejection, "submitted_action_sha256": effect_call["submitted_action_sha256"]}
+    observations[0]["product_calls"].insert(2, offered_rejection)
+    result = scorer.affordance_observations(observations, {"status": "complete"})
+    assert all(result["coverage"].values()) and result["status"] == "finding-bearing"
+    assert result["findings"] == [{"kind": "offered-action-rejected", "event": 2, "cause": "requires-triage"}]
+    observations[0]["product_calls"].pop(2)
+    # A stale action not observed as offered can recover once without a finding.
+    # Repeated unchanged rejection still requires triage after final success.
+    rejection["submitted_action_sha256"] = "not-offered"
     observations[0]["product_calls"].insert(2, rejection)
     assert not scorer.affordance_observations(observations, {"status": "complete"})["findings"]
     observations[0]["product_calls"].insert(3, rejection)
@@ -87,8 +95,8 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps(own
     assert not scorer.affordance_observations(observations, {})["events"]
 
 
-@pytest.mark.parametrize("export_failure", [False, True])
-def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witness(monkeypatch, export_failure):
+@pytest.mark.parametrize("failure", ["missing-witness", "export", "offered-action"])
+def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_rejected_witness(monkeypatch, failure):
     from types import SimpleNamespace
 
     import consumer_journeys as journeys
@@ -96,7 +104,7 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witne
     files = {}
 
     def export():
-        if export_failure and "release.json" in files:
+        if failure == "export" and "release.json" in files:
             raise ValueError("Consumer export failed (1)")
         return dict(files)
 
@@ -109,6 +117,35 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witne
         observations = []
         source_sha256 = "controlled-actor"
 
+        def observe(self, prepared):
+            subject = {"version": "synthetic", "sha256": "fixed"}
+            action = {
+                "operation_id": "sample.effect",
+                "source_owner": "resources",
+                "source_requests": [{"owner": "planning"}],
+                "arguments": {"phase": "prepare" if prepared else "recover"},
+            }
+            action_hash = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
+
+            def call(value, code=0, submitted=None):
+                return {
+                    "kind": "agentic-workspace/observed-installed-call/v1",
+                    "subject": subject,
+                    "argv": ["invoke" if submitted else "start"],
+                    "stdout": json.dumps(value),
+                    "stderr": "",
+                    "exit_code": code,
+                    "submitted_action_sha256": submitted,
+                }
+
+            calls = [
+                call({"primary_action": action, "resolution": "current-owner-route"}),
+                call(
+                    {"effect_outcome": {"status": "rejected-before-effect" if prepared else "committed"}}, 1 if prepared else 0, action_hash
+                ),
+            ]
+            self.observations.append({"product_subject": subject, "product_calls": calls} if failure == "offered-action" else {})
+
         def session(self, work, prompt):
             if not self.observations:
                 import tomllib
@@ -118,24 +155,31 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witne
                 )
                 work.write(".agentic-workspace/planning/execplans/sample.plan.json", b"{}")
                 work.write(".agentic-workspace/local/scratch/sample/draft.txt", b"draft")
-                self.observations.append({})
+                self.observe(prepared=True)
                 return {"status": "incomplete"}
             assert json.loads(files["release.json"])["approved"] is True
             work.write("settings.json", b'{"port":8081,"host":"localhost"}')
             work.write("README.md", b"Use port 8081.")
             del files[".agentic-workspace/local/scratch/sample/draft.txt"]
-            self.observations.append({})
+            self.observe(prepared=False)
             return {"status": "complete"}
 
     result = journeys.execute_affordance(SimpleNamespace(profile="standalone", command=["aw"], observation={"installed": True}), Actor())
-    if export_failure:
+    if failure == "export":
         assert result["outcome"] == result["authority"] == "unknown"
         assert result["claim_honesty"] == "unverified" and result["checks"] == {}
         assert result["status"] == "failed" and result["failure_class"] == "artifact-export"
         return
     assert result["outcome"] == result["authority"] == "passed"
     assert result["execution_error"] is None
-    assert result["status"] == "failed" and result["failure_class"] == "affordance-coverage"
+    assert result["status"] == "failed"
+    if failure == "offered-action":
+        assert result["claim_honesty"] == "passed"
+        assert all(result["interactions"]["coverage"].values())
+        assert result["failure_class"] == "affordance-finding"
+        assert result["interactions"]["findings"] == [{"kind": "offered-action-rejected", "event": 1, "cause": "requires-triage"}]
+    else:
+        assert result["failure_class"] == "affordance-coverage"
 
 
 @pytest.mark.parametrize("content", [b'{"port":8081}', b'{\n "port": 8081, "comment": "equivalent"\n}'])

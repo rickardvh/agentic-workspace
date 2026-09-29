@@ -186,6 +186,8 @@ def affordance_observations(observations, claim):
             committed |= "committed" in outcomes and call.get("submitted_action_sha256") in composed_offered
             rejection = "rejected-before-effect" in outcomes or call.get("exit_code", 0) != 0
             offered_rejected = rejection and call.get("submitted_action_sha256") in offered
+            if offered_rejected:
+                findings.append({"kind": "offered-action-rejected", "event": len(events), "cause": "requires-triage"})
             offered.update(hashlib.sha256(json.dumps(a, sort_keys=True).encode()).hexdigest() for a in actions)
             composed_offered.update(hashlib.sha256(json.dumps(a, sort_keys=True).encode()).hexdigest() for a in composed)
             signature = call.get("input_sha256") or call.get("stdin_sha256")

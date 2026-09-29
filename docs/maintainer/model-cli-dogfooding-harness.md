@@ -91,9 +91,11 @@ an effect and fresh reentry. Missing coverage remains non-passing.
 
 Its bounded `interactions` observations distinguish current routes, unavailable
 gaps, composed operations, effect outcomes and repeated unchanged rejections.
-One stale rejection followed by recovery or an extra detail read carries no
-penalty. Repeated rejection and contradictory routing remain findings even when
-artifact checks pass. Provider command traces can flag attempted internal recovery;
+One stale rejection of an action not observed as offered, or an extra detail read,
+carries no penalty. Rejection of an exact previously offered action requires
+triage even once: the receipt does not establish a source change that explains it.
+That observation, repeated rejection and contradictory routing remain findings even
+when artifact checks pass. Provider command traces can flag attempted internal recovery;
 they cannot establish effects or hidden reasoning. Attribution still needs the
 existing dogfooding owner. See the repository's
 [standing observation procedure](../../tools/skills/self-improvement-dogfooding/references/live-affordance.md)
