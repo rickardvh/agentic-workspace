@@ -75,12 +75,40 @@ and post-run fixture queries cannot supply actor evidence. Provider transcripts
 and final claims remain diagnostics. This transport requires the provider
 template's Python and establishes no minimal-profile absence claim.
 
+The observer permits 128 product calls per controller-started actor session,
+matching the scorer's per-session observation bound. Setup has a separate bounded
+allowance, so preparation cannot spend the resumed actor's cleanup allowance.
+Only the root controller advances the session; actor requests cannot reset it.
+The actor still has at most three sessions with the configured time limits. The
+40 MiB receipt limit applies across the whole sandbox, and earlier receipts and
+the first observer failure survive every session boundary. Crossing a bound
+remains a failed observation, even if the final task files are correct.
+
 The on-demand finding case requires authenticated material ingress linked to
 the current activation, alongside the repository outcome and reporting policy.
 The binding Assignment case requires the actor to observe the same current
 owner blocker that the fixture independently confirms. An unchanged file and an
 arbitrary refusal cannot pass that case. These bounded cases do not establish
 independent review or general reliability.
+
+The on-demand `operational-affordance` family uses two fresh standalone sessions.
+The first retains a migration plan and managed temporary storage while approval
+is pending. The second reads changed repository state, completes the migration
+and retires the storage. Prompts supply no owner answers or expected commands.
+Trusted installed-call receipts must show a routed restriction, a composed action,
+an effect and fresh reentry. Missing coverage remains non-passing.
+
+Its bounded `interactions` observations distinguish current routes, unavailable
+gaps, composed operations, effect outcomes and repeated unchanged rejections.
+One stale rejection of an action not observed as offered, or an extra detail read,
+carries no penalty. Rejection of an exact previously offered action requires
+triage even once: the receipt does not establish a source change that explains it.
+That observation, repeated rejection and contradictory routing remain findings even
+when artifact checks pass. Provider command traces can flag attempted internal recovery;
+they cannot establish effects or hidden reasoning. Attribution still needs the
+existing dogfooding owner. See the repository's
+[standing observation procedure](../../tools/skills/self-improvement-dogfooding/references/live-affordance.md)
+for current-evidence publication, freshness and unavailable-provider handling.
 
 All seven families have a live path. Removal is checked before re-adoption;
 maintenance must preserve disabled policy and restore the local boundary;

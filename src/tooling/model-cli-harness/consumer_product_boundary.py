@@ -18,6 +18,9 @@ from pathlib import Path
 
 ROOT = Path("/opt/aw-observer")
 LIMIT = 262144
+MAX_CALLS_PER_SESSION = 128
+MAX_SESSIONS = 3
+MAX_RECEIPT_BYTES = 40 * 1024 * 1024
 
 
 def receive(connection):
@@ -44,6 +47,36 @@ def validate_request(value):
 
 def invoke(value, config):
     validate_request(value)
+    # Observe file input with the actor's uid, never the root observer's access.
+    # Failure to observe it is unknown; it must not replace the actual CLI call.
+    material = value["stdin"].encode()
+    argv = value["argv"]
+    if "--input" in argv:
+        index = argv.index("--input") + 1
+        if index < len(argv) and argv[index] != "-":
+            material = None
+            try:
+                with tempfile.TemporaryFile() as captured:
+                    read = subprocess.run(["/bin/cat", "--", argv[index]], stdout=captured, stderr=subprocess.DEVNULL,
+                                          cwd="/home/consumer/repo", user=10002, group=10002, extra_groups=[], timeout=5)
+                    if read.returncode == 0 and captured.tell() <= LIMIT:
+                        captured.seek(0)
+                        material = captured.read()
+            except (OSError, subprocess.SubprocessError):
+                pass
+    submitted = None
+    try:
+        document = json.loads(material) if material else {}
+        candidate = document.get("invocation", document)
+        if "--reference" in argv and isinstance(document, dict):
+            reference_index = argv.index("--reference") + 1
+            if reference_index < len(argv):
+                candidate = next((row.get("envelope") for row in document.get("envelopes", [])
+                                  if row.get("reference") == argv[reference_index]), candidate)
+        if isinstance(candidate, dict) and candidate.get("operation_id"):
+            submitted = hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()
+    except (ValueError, AttributeError):
+        pass
     # Fixed absolute executable, fixed cwd, no shell and no inherited credentials.
     # The root-owned pair cannot be replaced even temporarily by the actor.
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as errors:
@@ -68,17 +101,68 @@ def invoke(value, config):
             "subject": config["subject"],
             "argv": value["argv"],
             "stdin_sha256": hashlib.sha256(value["stdin"].encode()).hexdigest(),
+            "input_sha256": hashlib.sha256(material).hexdigest() if material is not None else None,
+            "submitted_action_sha256": submitted,
             "stdout": out.read().decode(),
             "stderr": errors.read().decode(),
             "exit_code": process.returncode,
         }
 
 
+def serve_connection(connection, config, budget):
+    connection.settimeout(65)
+    stage = "admission"
+    try:
+        # Drain the bounded request before rejecting it. Closing a Unix socket
+        # with unread input can reset the client before it receives our error.
+        value = receive(connection)
+        validate_request(value)
+        session = json.loads((ROOT / "session.json").read_text())
+        if type(session) is not int or not budget["session"] <= session <= MAX_SESSIONS:
+            raise ValueError("Invalid controller session boundary")
+        if session != budget["session"]:
+            budget.update(session=session, calls=0)
+        if budget.get("bytes_exhausted"):
+            raise ValueError("Product receipt byte budget exhausted")
+        if budget["calls"] >= MAX_CALLS_PER_SESSION:
+            raise ValueError("Product observation call budget exhausted")
+        budget["calls"] += 1
+        stage = "observation"
+        receipt = invoke(value, config)
+        receipt["observer_session"] = budget["session"]
+        record = (json.dumps(receipt) + "\n").encode()
+        path = ROOT / "receipts.jsonl"
+        size = path.stat().st_size if path.exists() else 0
+        if size + len(record) > MAX_RECEIPT_BYTES:
+            budget["bytes_exhausted"] = True
+            raise ValueError("Product receipt byte budget exhausted")
+        with path.open("ab") as stream:
+            stream.write(record)
+        reply = {key: receipt[key] for key in ("stdout", "stderr", "exit_code")}
+    except (ValueError, OSError, subprocess.SubprocessError) as error:
+        reason = str(error)[:1000]
+        failure = {"kind": "agentic-workspace/product-observer-failure/v1", "subject": config["subject"],
+                   "reason": reason, "stage": stage, "session": budget["session"], "exit_code": 75}
+        # Keep the first controller failure separately from actual product calls.
+        # One bounded record survives repeated attempts without growing a log.
+        path = ROOT / "failure.json"
+        if json.loads(path.read_text()) is None:
+            path.write_text(json.dumps(failure), encoding="utf-8")
+        reply = {"stdout": "", "stderr": f"Product observer: {reason}\n", "exit_code": 75}
+    try:
+        connection.sendall(json.dumps(reply).encode())
+    except (BrokenPipeError, ConnectionResetError):
+        pass
+    return budget
+
+
 def server():
     if os.getuid() != 0:
         raise ValueError("Observer requires trusted controller custody")
     config = json.loads((ROOT / "config.json").read_text())
-    total = 0
+    budget = {"session": 0, "calls": 0}
+    (ROOT / "session.json").write_text("0", encoding="utf-8")
+    (ROOT / "failure.json").write_text("null", encoding="utf-8")
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
         listener.bind(str(ROOT / "socket"))
         os.chmod(ROOT / "socket", 0o666)
@@ -86,22 +170,7 @@ def server():
         while True:
             connection, _ = listener.accept()
             with connection:
-                connection.settimeout(65)
-                try:
-                    if total >= 128:
-                        raise ValueError("Product observation call budget exhausted")
-                    receipt = invoke(receive(connection), config)
-                    # Flush the exact result before returning it to the caller.
-                    with (ROOT / "receipts.jsonl").open("a", encoding="utf-8") as stream:
-                        stream.write(json.dumps(receipt) + "\n")
-                    total += 1
-                    reply = {key: receipt[key] for key in ("stdout", "stderr", "exit_code")}
-                except (ValueError, OSError, subprocess.SubprocessError) as error:
-                    reply = {"stdout": "", "stderr": f"Product observer: {error}\n", "exit_code": 75}
-                try:
-                    connection.sendall(json.dumps(reply).encode())
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
+                budget = serve_connection(connection, config, budget)
 
 
 def client():

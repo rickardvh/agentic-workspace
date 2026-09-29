@@ -141,9 +141,100 @@ def test_spoofed_tool_output_never_becomes_product_evidence():
     assert "unknown" in result["measurement_boundary"]
 
 
-@pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code"])
+@pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code", "session"])
 def test_product_boundary_rejects_caller_authored_receipts(extra):
     from consumer_product_boundary import validate_request
 
     with pytest.raises(ValueError, match="Only argv and stdin"):
         validate_request({"argv": ["start"], "stdin": "", extra: "fabricated"})
+
+
+def test_product_budget_rejection_drains_request_and_retains_controller_failure(tmp_path, monkeypatch):
+    import socket
+    from concurrent.futures import ThreadPoolExecutor
+
+    import consumer_product_boundary as boundary
+
+    monkeypatch.setattr(boundary, "ROOT", tmp_path)
+    (tmp_path / "failure.json").write_text("null")
+    (tmp_path / "session.json").write_text("0")
+    subject = {"sha256": "fixed-subject"}
+    invoked = []
+    scratch = tmp_path / "fixture-scratch"
+    scratch.write_text("temporary fixture material")
+
+    def invoke(value, config):
+        invoked.append(value)
+        if value["argv"] == ["invoke", "fixture-cleanup"]:
+            scratch.unlink()
+        return {"subject": config["subject"], "stdout": "{}", "stderr": "", "exit_code": 0}
+
+    monkeypatch.setattr(boundary, "invoke", invoke)
+
+    def exchange(total, argv=None):
+        client, server = socket.socketpair()
+
+        def serve():
+            with server:
+                return boundary.serve_connection(server, {"subject": subject}, total)
+
+        with client, ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(serve)
+            client.sendall(json.dumps({"argv": argv or ["start", "--input", "-"], "stdin": "x" * 2721}).encode())
+            client.shutdown(socket.SHUT_WR)
+            return boundary.receive(client), future.result(timeout=5)
+
+    reply, total = exchange({"session": 0, "calls": 127})
+    assert reply["exit_code"] == 0 and total == {"session": 0, "calls": 128} and len(invoked) == 1
+    receipts = (tmp_path / "receipts.jsonl").read_bytes()
+    reply, total = exchange(total)
+    assert reply == {"stdout": "", "stderr": "Product observer: Product observation call budget exhausted\n", "exit_code": 75}
+    assert total == {"session": 0, "calls": 128} and len(invoked) == 1
+    assert (tmp_path / "receipts.jsonl").read_bytes() == receipts
+    failure = (tmp_path / "failure.json").read_bytes()
+    assert json.loads(failure) == {
+        "kind": "agentic-workspace/product-observer-failure/v1",
+        "subject": subject,
+        "reason": "Product observation call budget exhausted",
+        "stage": "admission",
+        "session": 0,
+        "exit_code": 75,
+    }
+    assert exchange(total)[0] == reply
+    assert (tmp_path / "failure.json").read_bytes() == failure
+
+    # Setup cannot spend the next actor's allowance. Retain all earlier evidence.
+    (tmp_path / "session.json").write_text("1")
+    reply, total = exchange(total)
+    assert reply["exit_code"] == 0 and total == {"session": 1, "calls": 1}
+    assert (tmp_path / "receipts.jsonl").read_bytes().startswith(receipts)
+    assert (tmp_path / "failure.json").read_bytes() == failure
+    total["calls"] = 127
+    assert exchange(total)[0]["exit_code"] == 0
+    assert exchange(total)[0]["exit_code"] == 75
+    # A fresh resumed actor can perform cleanup after 128 cumulative calls.
+    (tmp_path / "session.json").write_text("2")
+    assert exchange(total, ["invoke", "fixture-cleanup"])[0]["exit_code"] == 0
+    assert not scratch.exists()
+    assert json.loads((tmp_path / "receipts.jsonl").read_text().splitlines()[-1])["observer_session"] == 2
+    total["calls"] = 128
+    for session in (2, 1, 4):
+        (tmp_path / "session.json").write_text(str(session))
+        before = len(invoked)
+        assert exchange(total)[0]["exit_code"] == 75
+        assert len(invoked) == before
+    (tmp_path / "session.json").write_text("3")
+    assert exchange(total)[0]["exit_code"] == 0
+
+    # Receipt bytes are bounded across every session, not reset with call counts.
+    size = (tmp_path / "receipts.jsonl").stat().st_size
+    monkeypatch.setattr(boundary, "MAX_RECEIPT_BYTES", size)
+    (tmp_path / "failure.json").write_text("null")
+    before = len(invoked)
+    reply, total = exchange(total)
+    assert "byte budget" in reply["stderr"] and reply["exit_code"] == 75
+    assert len(invoked) == before + 1  # The first oversized observation may follow an effect.
+    assert json.loads((tmp_path / "failure.json").read_text())["stage"] == "observation"
+    assert (tmp_path / "receipts.jsonl").stat().st_size == size
+    assert exchange(total)[0]["exit_code"] == 75
+    assert len(invoked) == before + 1  # Never invoke again after aggregate bytes are exhausted.

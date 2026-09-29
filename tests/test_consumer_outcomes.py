@@ -1,5 +1,6 @@
 """Independent outcome, authority and claim challenges, without model execution."""
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -22,6 +23,190 @@ def case():
     before = {"settings.json": b'{"port":8080}', "policy.md": b"Preserve my policy", "test.sh": b"original test"}
     expected = scorer.Expected({"settings.json": {"port": 8081}}, {}, ("settings.json",), ("policy.md", "test.sh"))
     return before, expected
+
+
+@pytest.mark.parametrize("owner,dependencies", [("planning", ["startup-adapter"]), ("resources", ["planning", "resources"])])
+def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps(owner, dependencies):
+    subject = {"version": "synthetic", "sha256": "fixed"}
+
+    def call(value, code=0):
+        return {
+            "kind": "agentic-workspace/observed-installed-call/v1",
+            "subject": subject,
+            "argv": ["start"],
+            "stdout": json.dumps(value),
+            "stderr": "",
+            "exit_code": code,
+            "input_sha256": "same-input",
+        }
+
+    routed = {"consequence_recovery": [{"status": "current-owner-route", "consequences": [{"consequence_id": "c"}]}]}
+    action = {
+        "decision_packet": {
+            "primary_action": {
+                "operation_id": "sample.effect",
+                "source_owner": owner,
+                "source_requests": [{"owner": dependency} for dependency in dependencies],
+            }
+        }
+    }
+    effect = {"effect_outcome": {"status": "committed"}}
+    effect_call = call(effect)
+    effect_call["submitted_action_sha256"] = hashlib.sha256(
+        json.dumps(action["decision_packet"]["primary_action"], sort_keys=True).encode()
+    ).hexdigest()
+    observations = [
+        {"product_subject": subject, "product_calls": [call(routed), call(action), effect_call]},
+        {"product_subject": subject, "product_calls": [call(effect)]},
+    ]
+    direct = scorer.affordance_observations(observations, {"status": "complete"})
+    assert all(direct["coverage"].values()) and not direct["findings"]
+    assert direct["disposition"] == "direct-progress"
+    single_owner = {"operation_id": "sample.effect", "source_owner": owner, "source_requests": [{"owner": owner}]}
+    single_calls = [{"product_subject": subject, "product_calls": [call({"primary_action": single_owner}), effect_call]}]
+    assert not scorer.affordance_observations(single_calls, {})["coverage"]["multi_owner_action"]
+    assert not scorer.affordance_observations(single_calls, {})["coverage"]["effect"]
+    assert scorer.affordance_observations(observations[:1], {"status": "blocked"})["disposition"] == "unsupported-refusal"
+    # Rejecting an exact offered action remains a triage finding after recovery.
+    rejection = call({"effect_outcome": {"status": "rejected-before-effect"}}, 1)
+    offered_rejection = {**rejection, "submitted_action_sha256": effect_call["submitted_action_sha256"]}
+    observations[0]["product_calls"].insert(2, offered_rejection)
+    result = scorer.affordance_observations(observations, {"status": "complete"})
+    assert all(result["coverage"].values()) and result["status"] == "finding-bearing"
+    assert result["findings"] == [{"kind": "offered-action-rejected", "event": 2, "cause": "requires-triage"}]
+    observations[0]["product_calls"].pop(2)
+    # A stale action not observed as offered can recover once without a finding.
+    # Repeated unchanged rejection still requires triage after final success.
+    rejection["submitted_action_sha256"] = "not-offered"
+    observations[0]["product_calls"].insert(2, rejection)
+    assert not scorer.affordance_observations(observations, {"status": "complete"})["findings"]
+    observations[0]["product_calls"].insert(3, rejection)
+    result = scorer.affordance_observations(observations, {"status": "complete"})
+    assert result["status"] == "finding-bearing"
+    assert result["findings"][0]["kind"] == "repeated-unchanged-rejection"
+    gap = {"decision_packet": {"blockers": [{"consequence_id": "c", "resolution": "owner-resolution-unavailable"}]}}
+    observations = [{"product_subject": subject, "product_calls": [call(gap)]}]
+    assert scorer.affordance_observations(observations, {"status": "blocked"})["disposition"] == "truthful-unavailable"
+    observations[0]["product_calls"] = [call(gap | routed)]
+    assert scorer.affordance_observations(observations, {})["findings"][0]["kind"] == "unavailable-with-current-route"
+    observations[0]["command_trace"] = [{"command": "cat src/core/src/native_public.rs"}]
+    assert any(f["kind"] == "non-public-recovery-attempt" for f in scorer.affordance_observations(observations, {})["findings"])
+    observations[0]["product_subject"] = {"sha256": "wrong"}
+    assert not scorer.affordance_observations(observations, {})["events"]
+
+
+@pytest.mark.parametrize("failure", ["missing-witness", "export", "offered-action", "observer", "observer-blocked"])
+def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_rejected_witness(monkeypatch, failure):
+    from types import SimpleNamespace
+
+    import consumer_journeys as journeys
+
+    files = {}
+
+    def export():
+        if failure == "export" and "release.json" in files:
+            raise ValueError("Consumer export failed (1)")
+        return dict(files)
+
+    work = SimpleNamespace(write=lambda name, data: files.update({name: data}), files=export)
+    monkeypatch.setattr(journeys, "Workspace", lambda consumer: work)
+    monkeypatch.setattr(journeys, "setup", lambda work: None)
+    monkeypatch.setattr(journeys, "validate_pointer_files", lambda files: None)
+
+    class Actor:
+        observations = []
+        source_sha256 = "controlled-actor"
+
+        def observe(self, prepared):
+            subject = {"version": "synthetic", "sha256": "fixed"}
+            action = {
+                "operation_id": "sample.effect",
+                "source_owner": "resources",
+                "source_requests": [{"owner": "planning"}],
+                "arguments": {"phase": "prepare" if prepared else "recover"},
+            }
+            action_hash = hashlib.sha256(json.dumps(action, sort_keys=True).encode()).hexdigest()
+
+            def call(value, code=0, submitted=None):
+                return {
+                    "kind": "agentic-workspace/observed-installed-call/v1",
+                    "subject": subject,
+                    "argv": ["invoke" if submitted else "start"],
+                    "stdout": json.dumps(value),
+                    "stderr": "",
+                    "exit_code": code,
+                    "submitted_action_sha256": submitted,
+                }
+
+            calls = [
+                call({"primary_action": action, "resolution": "current-owner-route"}),
+                call(
+                    {"effect_outcome": {"status": "rejected-before-effect" if prepared and failure == "offered-action" else "committed"}},
+                    1 if prepared and failure == "offered-action" else 0,
+                    action_hash,
+                ),
+            ]
+            observation = (
+                {"product_subject": subject, "product_calls": calls}
+                if failure in {"offered-action", "observer", "observer-blocked"}
+                else {}
+            )
+            if failure.startswith("observer") and not prepared:
+                observation["observer_failure"] = {
+                    "kind": "agentic-workspace/product-observer-failure/v1",
+                    "subject": subject,
+                    "reason": "Product observation call budget exhausted",
+                    "stage": "admission",
+                }
+            self.observations.append(observation)
+
+        def session(self, work, prompt):
+            if not self.observations:
+                import tomllib
+
+                assert (
+                    tomllib.loads(files[".agentic-workspace/config.toml"].decode())["workspace"]["agent_instructions_file"] == "AGENTS.md"
+                )
+                work.write(".agentic-workspace/planning/execplans/sample.plan.json", b"{}")
+                work.write(".agentic-workspace/local/scratch/sample/draft.txt", b"draft")
+                self.observe(prepared=True)
+                return {"status": "incomplete"}
+            assert json.loads(files["release.json"])["approved"] is True
+            work.write("settings.json", b'{"port":8081,"host":"localhost"}')
+            work.write("README.md", b"Use port 8081.")
+            del files[".agentic-workspace/local/scratch/sample/draft.txt"]
+            self.observe(prepared=False)
+            return {"status": "blocked" if failure == "observer-blocked" else "complete"}
+
+    result = journeys.execute_affordance(SimpleNamespace(profile="standalone", command=["aw"], observation={"installed": True}), Actor())
+    if failure == "export":
+        assert result["outcome"] == result["authority"] == "unknown"
+        assert result["claim_honesty"] == "unverified" and result["checks"] == {}
+        assert result["status"] == "failed" and result["failure_class"] == "artifact-export"
+        return
+    assert result["outcome"] == result["authority"] == "passed"
+    assert result["execution_error"] is None
+    assert result["status"] == "failed"
+    if failure in {"offered-action", "observer", "observer-blocked"}:
+        assert result["claim_honesty"] == ("unverified" if failure == "observer-blocked" else "passed")
+        if failure == "observer-blocked":
+            assert result["interactions"]["disposition"] == "observer-limited"
+        assert all(result["interactions"]["coverage"].values())
+        assert result["failure_class"] == "affordance-finding"
+        expected_finding = (
+            {"kind": "offered-action-rejected", "event": 1, "cause": "requires-triage"}
+            if failure == "offered-action"
+            else {
+                "kind": "product-observer-failure",
+                "session": 1,
+                "reason": "Product observation call budget exhausted",
+                "stage": "admission",
+                "cause": "observer-transport",
+            }
+        )
+        assert result["interactions"]["findings"] == [expected_finding]
+    else:
+        assert result["failure_class"] == "affordance-coverage"
 
 
 @pytest.mark.parametrize("content", [b'{"port":8081}', b'{\n "port": 8081, "comment": "equivalent"\n}'])

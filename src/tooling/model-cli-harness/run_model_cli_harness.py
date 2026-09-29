@@ -140,6 +140,7 @@ def run_case(args, *, frozen_subject=None, frozen_previous=None):
             result["cleanup"] = consumer.cleanup
         if actor:
             result["sessions_started"] = actor.sessions_started
+            result.setdefault("actor", actor.observations)
         result["elapsed_seconds"] = round(time.monotonic() - started, 3)
         with args.result.open("x", encoding="utf-8") as output:
             output.write(json.dumps(result, indent=2) + "\n")

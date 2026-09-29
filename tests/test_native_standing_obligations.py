@@ -13,11 +13,11 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def test_repository_coherence_declaration_reaches_native_entry(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("requirement_id", ["aw_repository_state_coherence", "aw_live_affordance_dogfooding"])
+def test_repository_coherence_declaration_reaches_native_entry(tmp_path, shared_core_binary, native_cli, requirement_id):
     root = Path(__file__).resolve().parents[1]
     manifest_path = ".agentic-workspace/verification/manifest.toml"
     manifest = tomllib.loads((root / manifest_path).read_text(encoding="utf-8"))
-    requirement_id = "aw_repository_state_coherence"
     declaration = manifest["assurance"]["requirements"][requirement_id]
     assert declaration["requirement_class"] == "current-evidence"
     freshness = declaration["freshness"]
@@ -40,6 +40,20 @@ def test_repository_coherence_declaration_reaches_native_entry(tmp_path, shared_
     )
     assert candidate["entry"]["resource"] == freshness["procedure"]
     assert candidate["disposition"] == "route"
+    if requirement_id == "aw_live_affordance_dogfooding":
+        original_revision = next(
+            q["source_revision"] for q in result["verification"]["current_evidence"]["requests"] if q["arguments"]["id"] == requirement_id
+        )
+        for relative in ("src/core/src/lib.rs", "src/core/src/native_resource_owner.rs", "src/core/src/native_resources.rs"):
+            dependency = tmp_path / relative
+            original = dependency.read_bytes()
+            try:
+                dependency.write_bytes(original + b"\n// Changed affordance behavior.\n")
+                changed = consume("native", shared_core_binary, native_cli, context)["verification"]["current_evidence"]
+                revision = next(q["source_revision"] for q in changed["requests"] if q["arguments"]["id"] == requirement_id)
+                assert revision != original_revision, relative
+            finally:
+                dependency.write_bytes(original)
 
 
 @pytest.mark.parametrize(
@@ -90,6 +104,30 @@ def test_standing_assessment_publication_recovery_and_retirement(tmp_path, share
     assert detail["value"]["current_evidence"] == initial
     external = consume("json", shared_core_binary, native_cli, {**context, "projection": "compact"})
     assert external["activation"] == compact["activation"]
+    if not human_required:
+        for outcome, expected_status in [("unknown", "unknown"), ("failed", "due")]:
+            unavailable = call()["verification"]["current_evidence"]["requests"][0]
+            unavailable["arguments"].update(
+                observed_at=int(time.time()),
+                outcome=outcome,
+                reason="Provider unavailable; no model execution established.",
+                evidence_refs=[],
+            )
+            proposed_gap = call({"request": unavailable})
+            decision_gap = next(
+                q for q in proposed_gap["decision_packet"]["pending_consequences"]["decisions"] if q["id"] == "current-evidence-assessment"
+            )
+            answer_gap = decision_gap["response_request"]
+            answer_gap["arguments"]["answer"] = "confirm"
+            ready_gap = call({"request": answer_gap})
+            action_gap = next(
+                a for a in ready_gap["decision_packet"]["ready_actions"] if a["operation_id"] == "verification.record-current-evidence"
+            )
+            assert call({"invocation": action_gap})["status"] == "applied"
+            gap = call()
+            assert gap["verification"]["current_evidence"]["entries"][0]["status"] == expected_status
+            assert not any("effect:implementation" in b["affects"] for b in gap["decision_packet"]["blockers"])
+        initial = call()["verification"]["current_evidence"]
     request = initial["requests"][0]
     request["arguments"].update(
         observed_at=int(time.time()), outcome="satisfied", reason="Compared the current sources.", evidence_refs=["evidence.md"]
