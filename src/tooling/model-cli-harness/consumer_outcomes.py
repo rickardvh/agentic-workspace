@@ -175,7 +175,9 @@ def affordance_observations(observations, claim):
             routes = [r for r in rows if r.get("status") == "current-owner-route" or r.get("resolution") == "current-owner-route"]
             gaps = [r for r in rows if r.get("resolution") == "owner-resolution-unavailable"]
             actions = [r for r in rows if r.get("operation_id") and isinstance(r.get("source_requests"), list)]
-            composed = [a for a in actions if len({r.get("owner") for r in a["source_requests"]}) > 1]
+            composed = [a for a in actions if len(
+                ({a.get("source_owner")} | {r.get("owner") for r in a["source_requests"]}) - {None}
+            ) > 1]
             outcomes = [r["effect_outcome"]["status"] for r in rows if isinstance(r.get("effect_outcome"), dict) and "status" in r["effect_outcome"]]
             routed |= bool(routes)
             if gaps or routes or any("decision_packet" in r for r in rows):

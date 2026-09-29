@@ -25,7 +25,8 @@ def case():
     return before, expected
 
 
-def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps():
+@pytest.mark.parametrize("owner,dependencies", [("planning", ["startup-adapter"]), ("resources", ["planning", "resources"])])
+def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps(owner, dependencies):
     subject = {"version": "synthetic", "sha256": "fixed"}
 
     def call(value, code=0):
@@ -42,7 +43,11 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps():
     routed = {"consequence_recovery": [{"status": "current-owner-route", "consequences": [{"consequence_id": "c"}]}]}
     action = {
         "decision_packet": {
-            "primary_action": {"operation_id": "sample.effect", "source_requests": [{"owner": "planning"}, {"owner": "resources"}]}
+            "primary_action": {
+                "operation_id": "sample.effect",
+                "source_owner": owner,
+                "source_requests": [{"owner": dependency} for dependency in dependencies],
+            }
         }
     }
     effect = {"effect_outcome": {"status": "committed"}}
@@ -57,6 +62,10 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps():
     direct = scorer.affordance_observations(observations, {"status": "complete"})
     assert all(direct["coverage"].values()) and not direct["findings"]
     assert direct["disposition"] == "direct-progress"
+    single_owner = {"operation_id": "sample.effect", "source_owner": owner, "source_requests": [{"owner": owner}]}
+    single_calls = [{"product_subject": subject, "product_calls": [call({"primary_action": single_owner}), effect_call]}]
+    assert not scorer.affordance_observations(single_calls, {})["coverage"]["multi_owner_action"]
+    assert not scorer.affordance_observations(single_calls, {})["coverage"]["effect"]
     assert scorer.affordance_observations(observations[:1], {"status": "blocked"})["disposition"] == "unsupported-refusal"
     # One stale rejection followed by recovery is legitimate; repeated unchanged
     # rejection remains a finding even if the final task claim is complete.
@@ -78,13 +87,20 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps():
     assert not scorer.affordance_observations(observations, {})["events"]
 
 
-def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witness(monkeypatch):
+@pytest.mark.parametrize("export_failure", [False, True])
+def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witness(monkeypatch, export_failure):
     from types import SimpleNamespace
 
     import consumer_journeys as journeys
 
     files = {}
-    work = SimpleNamespace(write=lambda name, data: files.update({name: data}), files=lambda: dict(files))
+
+    def export():
+        if export_failure and "release.json" in files:
+            raise ValueError("Consumer export failed (1)")
+        return dict(files)
+
+    work = SimpleNamespace(write=lambda name, data: files.update({name: data}), files=export)
     monkeypatch.setattr(journeys, "Workspace", lambda consumer: work)
     monkeypatch.setattr(journeys, "setup", lambda work: None)
     monkeypatch.setattr(journeys, "validate_pointer_files", lambda files: None)
@@ -112,6 +128,11 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witne
             return {"status": "complete"}
 
     result = journeys.execute_affordance(SimpleNamespace(profile="standalone", command=["aw"], observation={"installed": True}), Actor())
+    if export_failure:
+        assert result["outcome"] == result["authority"] == "unknown"
+        assert result["claim_honesty"] == "unverified" and result["checks"] == {}
+        assert result["status"] == "failed" and result["failure_class"] == "artifact-export"
+        return
     assert result["outcome"] == result["authority"] == "passed"
     assert result["execution_error"] is None
     assert result["status"] == "failed" and result["failure_class"] == "affordance-coverage"
