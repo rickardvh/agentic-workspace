@@ -9,7 +9,7 @@
   "canonical_core": {},
   "continuation": {
     "accepted": "Issue inventory verified against GitHub: #3706-3711 are the six issues filed today; #3708 is an aggregate parent, not another giant implementation PR. Three PR lanes remain as scoped. This Planning record was created and selected through native effects. Current Assignment chose local Astra over eligible Sol because the mixed contract/integration work benefits from retained context; Luna/Terra are prohibited for this task class.",
-    "frontier": "Addressed the remaining review by running one fresh bounded operational-affordance exercise on clean c063be2cd after resolving the prior observer transport defect. Both provider sessions completed, all four interaction classes and migration/authority checks passed, but the observer reached 128 calls (four setup, 36 preparation, 88 resumed) before required scratch cleanup. The actor reported blocked and remaining storage; the independent cleanup/release invariant failed. The repaired observer explicitly retained admission exit 75 Product observation call budget exhausted, confirming the earlier diagnostic repair. Other findings are three repeated empty-input cases, an invocation missing task context, and a Configuration pending preview without an invocation kind submitted directly; these do not establish a native product defect. The scorer incorrectly inferred unjustified refusal from earlier product routes despite trusted observer denial. Its bounded correction now emits observer-limited and leaves claim honesty unverified, retaining failed outcome rather than authenticating actor prose. All 72 transport/scorer/consumer-journey tests pass. Raw current result aw-review-live.json in Windows TEMP remains unchanged, SHA-256 b01ca5be97fc5f1101f7647b4a544cbe8d0a0941ece3528fe2083ff88bd38e1e; exact identities, findings and limits are in live-affordance-evidence.md. Prior failed results and deterministic socket reproduction remain intact. Verification records the failed observation. No budget change, second provider attempt, merge or issue closure was performed. The live sandbox was removed and candidate build worktree archived. #3712 and #3713 were merged externally; #3714 stays draft because #3710 is not satisfied. Preserve user receipt dirt and signed local proofs. The remaining review comment is only partially fulfilled: fresh evidence and finding dispositions are supplied, but the required satisfied/current gate is still unmet."
+    "frontier": "User-requested observer cleanup repair is implemented and pushed in 81776086fd4b34ffec06c56ab7027a30b3b62ac7. Per-controller-session call allowances replace the erroneous sandbox-global allowance, while max three sessions, time bounds, aggregate 40 MiB receipts and earlier failures remain enforced. Actor cannot reset the root-owned session boundary. All 73 focused tests pass. Real Linux socket control with synthetic product invocation completed cleanup at cumulative call129 and enforced session/custody/failure limits. One justified fresh live run on the clean exact candidate completed both sessions: 62 preparation and54 resumed calls, plus4 setup. All four interaction classes, independent artifacts, authority and cleanup/release invariant pass; no observer failure. Trusted actor events97/105 commit scratch release/removal and115 final Planning update. Raw TEMP/aw-budget-live.json SHA-256 4265e5059d907663f4a1973c4566146237d3070afea526a067245fb469019977 is unchanged and remains failed/affordance-finding. The two detector findings have bounded expected-validation dispositions: event5 repeated empty stdin invalid-json; event24 missing task context rejected before effect, same offered action committed with carried context at27. No unresolved material failure remains. Native Verification admits satisfied current evidence with those explicit dispositions, without weakening scorer or rewriting raw output. Full identities and limits are in live-affordance-evidence.md. Earlier failed raws preserved. No additional provider run. Sandbox removed and clean build worktree archived. PR3712/3713 merged externally; PR3714 is ready for final proof, publication and hosted checks after this satisfied/current gate. Independent review and accepted children remain necessary for #3708; preserve unrelated signed receipt/index dirt."
   },
   "creation_provenance": {
     "custody": {
@@ -41,12 +41,12 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Review the observer-limited completion gap before any further provider execution. The fixed 128-call bound stopped mandatory scratch cleanup; do not increase it or repeat the same run merely to obtain a pass. #3710 still needs a justified satisfied/current observation, then ready status, hosted checks and independent child acceptance before #3708 closeout.",
+  "next_action": "Run the final native scoped verification on stable evidence files, push the evidence commit, update PR3714 with the satisfied/current observation and bounded finding dispositions, and mark ready for current hosted Merge proof/security/sufficiency. Obtain independent child acceptance before parent #3708 closeout; no merge or independent acceptance is claimed.",
   "owner_level": "lane",
   "parent": {},
   "phase": "implementation",
   "proof": {
-    "remaining": "A justified satisfied/current live observation for #3710 after resolving the observer-limited cleanup gap; independent review of final code and evidence, then final hosted checks once ready; accepted children before parent #3708 closeout. Current deterministic checks do not satisfy the live gate."
+    "remaining": "Final native scoped check and hosted Merge proof/security/sufficiency on final PR head, plus independent acceptance of child implementation/evidence before parent #3708 closeout. Live evidence is satisfied/current after bounded receipt triage; raw findings remain visible."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3706",
@@ -61,7 +61,7 @@
     "tools/skills/self-improvement-dogfooding/references/live-affordance-evidence.md"
   ],
   "relationships": {},
-  "revision": 8,
+  "revision": 10,
   "scope": {
     "constraints": "Use existing checkout. Preserve pre-existing proof receipt changes. Each PR must fully satisfy an existing issue. Preserve independent review boundary. No weakening currentness, resource custody, proof, publication consent or privacy.",
     "lanes": "PR 1: #3706/#3707 public action dependencies and consequence-specific recovery. PR 2: #3709/#3710 live operational-affordance exercise and standing current evidence. PR 3: #3711 explicit opt-in privacy-safe consumer reporting. #3708 aggregates the finite six-class audit and accepted child evidence."
@@ -71,18 +71,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/995001c57d314a867149a7aa26b3bd82b6f3fc7506a8ab315a1829020dceaa8d.attempt.json",
-        "revision": "sha256:867c2f8d88619ec55264b48afeb4da73a6541b01e39fb3feff4da1202ecaefa5",
+        "path": ".agentic-workspace/local/effects/f5942c79b6240c6d8543fc062d478ccebacc26b3a2c54bc29e0665108dedf94f.attempt.json",
+        "revision": "sha256:16620183a336a4bbeab9b990b4c992a66f2d01f85d1d1e0ed8c09e50da8a72f5",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/995001c57d314a867149a7aa26b3bd82b6f3fc7506a8ab315a1829020dceaa8d.result.json",
-        "revision": "sha256:e47f009f78603bac0369710932ac716dca20ac8f46fa26c5a7bc51042f6ff008",
+        "path": ".agentic-workspace/local/effects/f5942c79b6240c6d8543fc062d478ccebacc26b3a2c54bc29e0665108dedf94f.result.json",
+        "revision": "sha256:52243750fbcb5c07e0c228974772bdd53ff0794d5f5b9d0ea94c96f45963035c",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:2e6964f7ec349d2386d12eb3ac0da50deb320663f5a20d8fb77d7884d8437b93",
+    "invocation_revision": "sha256:acb5cfad6a91796f7e1bc0ed319f900039dca29bbc1062cfd07b918ac837cc7b",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:d512bf9be959a5d7efbb470759af6a6b7232b0092e28d48e227fff49f561c195",
+        "document_revision": "sha256:cd25f4557e233f84d8141bee6122c29334fc8fa739b54db6c4ef396660e0e1c6",
         "owner_id": "work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322",
         "owner_path": ".agentic-workspace/planning/execplans/work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322.plan.json"
       }
