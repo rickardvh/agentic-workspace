@@ -1588,7 +1588,8 @@ fn resolve_selected(
                             | "decision-continuity.recover-decision"
                             | "verification.record-source-reconciliation"
                     )
-                ) {
+                ) || crate::native_resource_owner::operation(&action["operation_id"])
+                {
                     let mut dependencies = action["source_requests"]
                         .as_array()
                         .cloned()

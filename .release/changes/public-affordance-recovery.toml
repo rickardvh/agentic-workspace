@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve Planning answers in ready resource actions and expose consequence-specific owner recovery without contradictory unavailable labels."

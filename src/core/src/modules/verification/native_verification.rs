@@ -1674,6 +1674,40 @@ pub(crate) fn view_with_applicability(
     } else {
         json!({"status":"not-settled","request":null})
     };
+    // Verification chooses the relevant next request. Presentation must not
+    // infer recovery from an inventory of unrelated requests owned by us.
+    for blocker in blockers.as_array_mut().unwrap() {
+        let code = blocker["code"].as_str().unwrap_or("");
+        let kind = if code.starts_with("proof-scope-unresolved:")
+            || (code.starts_with("assurance:") && code.ends_with(":unresolved"))
+        {
+            Some("verification/assurance-applicability/v1")
+        } else if strategy_control["gaps"]
+            .as_array()
+            .is_some_and(|g| g.contains(&json!(code)))
+        {
+            Some("verification/strategy/v1")
+        } else if matches!(
+            code,
+            "verification-evidence-unresolved" | "strict-closeout-judgment-required"
+        ) {
+            if !assurance_request.is_null() {
+                Some("verification/assurance-applicability/v1")
+            } else if strategy_control["gaps"]
+                .as_array()
+                .is_some_and(|g| !g.is_empty())
+            {
+                Some("verification/strategy/v1")
+            } else {
+                Some(crate::native_claim_review::REQUEST)
+            }
+        } else {
+            None
+        };
+        if let Some(kind) = kind {
+            blocker["recovery"] = json!(format!("public-request:{kind}"));
+        }
+    }
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,

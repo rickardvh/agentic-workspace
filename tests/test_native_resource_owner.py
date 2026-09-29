@@ -10,6 +10,46 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_resource_action_carries_selected_planning_answer(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_planning_create import material
+
+    context = {"target": str(tmp_path), "task": "Prepare and retire bounded task scratch"}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, context | extra)
+
+    creation = call()["planning"]["creation_requests"][0]
+    creation["arguments"] = {"material": material()}
+    call(invocation=call(request=creation)["decision_packet"]["primary_action"])
+    selection = call()["planning"]["created_owner"]["selection_request"]
+    call(invocation=call(request=selection)["decision_packet"]["primary_action"])
+
+    current = call()
+    planning = current["planning"]["requests"][0]
+    planning["arguments"] = {"answer": "continue-selected"}
+    create = current["resources"]["requests"][0]
+    create["arguments"]["request"] = {"operation": "scratch-create"}
+    ready = call(request=[planning, create])
+    action = ready["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "workspace.resources.scratch-create"
+    assert planning in action["source_requests"]
+    path = Path(ready["resources"]["proposal"]["path"])
+    assert call(invocation=action)["effect_outcome"]["status"] == "committed"
+    assert path.is_dir()
+
+    current = call()
+    planning = current["planning"]["requests"][0]
+    planning["arguments"] = {"answer": "continue-selected"}
+    remove = current["resources"]["requests"][0]
+    remove["arguments"]["request"] = {"operation": "scratch-remove", "path": ready["resources"]["proposal"]["action"]["request"]["path"]}
+    action = call(request=[planning, remove])["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "workspace.resources.scratch-remove"
+    assert planning in action["source_requests"]
+    assert remove in action["source_requests"]
+    assert call(invocation=action)["effect_outcome"]["status"] == "committed"
+    assert not path.exists()
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_resource_reference_proposal_effect_and_stale_reentry(tmp_path, shared_core_binary, native_cli, surface):
     context = {"target": str(tmp_path), "task": "Use bounded task scratch"}

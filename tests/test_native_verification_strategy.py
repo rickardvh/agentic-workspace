@@ -392,7 +392,19 @@ def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp
     current = call()
     assert current["verification"]["judgment_request"] is not None
     assert any(b["code"] == "strict-closeout-judgment-required" for b in current["decision_packet"]["blockers"])
-    request = current["verification"]["claim_review"]["request"]
+    compact = call(projection="compact")
+    blocker = next(b for b in compact["decision_packet"]["blockers"] if b["code"] == "strict-closeout-judgment-required")
+    route = next(
+        r for r in compact["consequence_recovery"] if any(c["consequence_id"] == blocker["consequence_id"] for c in r["consequences"])
+    )
+    assert route["selection"]["status"] == "owner-nominated"
+    assert len(route["routes"]) == 1
+    reference = route["routes"][0]["reference"]
+    selected = call(reference=reference)
+    request = selected["value"]
+    assert request == current["verification"]["claim_review"]["request"]
+    with pytest.raises(AssertionError, match="stale|current|reference"):
+        call(reference=reference, changed=["another.txt"])
     request["arguments"] = {"disposition": "satisfied", "reason": "Checked this exact fixture outcome.", "evidence_refs": []}
     proposed = call(request=request)
     decision = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")

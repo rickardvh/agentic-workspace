@@ -20,6 +20,12 @@ do not invent the rationale from internal paths or raw state.
 authority rules; it does not itself require a human permission request.
 `owner-recovery-required` identifies a blocker with a supplied recovery. Report
 the missing capability or fact and follow that recovery.
+`current-owner-route` means current owner work is available through the matching
+`consequence_recovery` entry. Follow its exact reference with the same work context
+and prior answers. An owner-nominated request addresses this consequence; a
+selection-required route asks you to establish that relationship before choosing
+a request. Sharing an owner alone does not make a request a recovery. Neither
+route availability nor selection resolves the restriction.
 `owner-resolution-unavailable` means no supported recovery is currently supplied.
 Keep the affected action or claim blocked, report the missing resolution to its
 owner, and continue unrelated work. Do not invent a route or a permission question.
