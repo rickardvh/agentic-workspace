@@ -233,18 +233,27 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
         .into_iter()
         .flatten()
     {
-        let owner = blocker["recovery"]
+        let requested = blocker["recovery"]
             .as_str()
-            .and_then(|r| r.strip_prefix("public-owner:"))
+            .and_then(|r| r.strip_prefix("public-request:"));
+        let owner = requested
+            .and_then(|kind| {
+                requests
+                    .iter()
+                    .find(|r| r["envelope"]["request_kind"] == kind)
+            })
+            .and_then(|r| r["envelope"]["owner"].as_str())
+            .or_else(|| {
+                blocker["recovery"]
+                    .as_str()
+                    .and_then(|r| r.strip_prefix("public-owner:"))
+            })
             .or_else(|| blocker["owner"].as_str());
         let Some(owner) = owner else { continue };
         let consequences = json!([{
             "consequence_id":blocker["consequence_id"], "affects":blocker["affects"]
         }]);
         let mut routes = Vec::new();
-        let requested = blocker["recovery"]
-            .as_str()
-            .and_then(|r| r.strip_prefix("public-request:"));
         if let Some(kind) = requested {
             for selected in &requests {
                 if selected["envelope"]["owner"] == owner
@@ -322,18 +331,31 @@ fn reconcile_restriction_routes(value: &mut Value, recovery: &[Value]) {
                 }
             }
             Value::Object(object) => {
-                if object
+                let nominated = object
+                    .get("recovery")
+                    .and_then(Value::as_str)
+                    .is_some_and(|r| {
+                        r.starts_with("public-request:") || r.starts_with("public-owner:")
+                    });
+                if (object
                     .get("resolution")
                     .is_some_and(|r| r == "owner-resolution-unavailable")
+                    || nominated)
                     && let Some(id) = object.get("consequence_id")
-                    && recovery.iter().any(|r| {
-                        r["status"] == "current-owner-route"
-                            && r["consequences"].as_array().is_some_and(|items| {
-                                items.iter().any(|c| &c["consequence_id"] == id)
-                            })
+                    && let Some(route) = recovery.iter().find(|r| {
+                        r["consequences"]
+                            .as_array()
+                            .is_some_and(|items| items.iter().any(|c| &c["consequence_id"] == id))
                     })
                 {
-                    object.insert("resolution".into(), json!("current-owner-route"));
+                    object.insert(
+                        "resolution".into(),
+                        json!(if route["status"] == "current-owner-route" {
+                            "current-owner-route"
+                        } else {
+                            "owner-resolution-unavailable"
+                        }),
+                    );
                 }
                 for (key, child) in object {
                     if !matches!(key.as_str(), "arguments" | "source_requests" | "carriage") {
@@ -1464,6 +1486,7 @@ mod tests {
             "resolution":"owner-resolution-unavailable"})
         };
         let mut nominated = blocker("nominated");
+        nominated["owner"] = json!("another-owner");
         nominated["recovery"] = json!("public-request:sample/evidence");
         let mut full = json!({"current_work":work,
             "sample":{"requests":[request("sample/unrelated"),request("sample/evidence")]},
@@ -1471,6 +1494,7 @@ mod tests {
         let view = compact(&full, &context, true).unwrap();
         let routes = &view["consequence_recovery"];
         assert_eq!(routes[0]["selection"]["status"], "owner-nominated");
+        assert_eq!(routes[0]["owner"], "sample");
         assert_eq!(routes[0]["routes"].as_array().unwrap().len(), 1);
         assert_eq!(routes[0]["routes"][0]["request_kind"], "sample/evidence");
         assert_eq!(routes[1]["selection"]["status"], "required");
@@ -1487,6 +1511,10 @@ mod tests {
         );
         full["sample"]["requests"] = json!([]);
         let absent = compact(&full, &context, true).unwrap();
+        assert_eq!(
+            absent["decision_packet"]["blockers"][0]["resolution"],
+            "owner-resolution-unavailable"
+        );
         assert_eq!(
             absent["consequence_recovery"][1]["status"],
             "public-owner-route-unavailable"

@@ -149,9 +149,17 @@ pub(crate) fn resolve_with_targets(
                 affects.push("claim:complete".into());
             }
             if applicable && (!strings(&metadata["reconcile"]).is_empty() || !upstream.is_empty()) {
-                blockers.push(blocker(reference, "source-reconciliation-required",
+                let mut reconciliation = blocker(
+                    reference,
+                    "source-reconciliation-required",
                     "Canonical sources require a current authorized updated or reviewed-current judgment against the resulting work.",
-                    vec!["claim:complete".into()]));
+                    vec!["claim:complete".into()],
+                );
+                reconciliation["recovery"] = json!(format!(
+                    "public-request:{}",
+                    crate::native_source_reconciliation::REQUEST
+                ));
+                blockers.push(reconciliation);
             }
             for pattern in strings(&metadata["protect"]) {
                 affects.push(format!("effect:write:{pattern}"));

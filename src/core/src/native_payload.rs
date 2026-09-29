@@ -232,7 +232,7 @@ pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
         _ => json!([]),
     };
     let blockers = if !satisfied && affects.as_array().is_some_and(|v| !v.is_empty()) {
-        json!([{"code":"native-payload-target-unproven","message":"Current installed payload does not match the declared target and the native artifact's shipped bytes. Preserve the source and reconcile through its package owner; provenance labels cannot waive this gate.","affects":affects}])
+        json!([{"code":"native-payload-target-unproven","message":"Current installed payload does not match the declared target and the native artifact's shipped bytes. Preserve the source and reconcile through its package owner; provenance labels cannot waive this gate.","recovery":"public-request:configuration/read-repository-adoption/v1","affects":affects}])
     } else {
         json!([])
     };
