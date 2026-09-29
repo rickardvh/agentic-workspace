@@ -15,6 +15,7 @@ import tarfile
 import threading
 import time
 import uuid
+from dataclasses import replace
 from pathlib import Path, PurePosixPath
 
 HARNESS = Path(__file__).resolve().parents[1] / "model-cli-harness"
@@ -495,7 +496,7 @@ def execute_affordance(consumer, actor):
     observations = getattr(actor, "observations", [])
     interactions = affordance_observations(observations, claim)
     expected = expected_task()
-    expected.allowed_changes += ("release.json",)
+    expected = replace(expected, allowed_changes=(*expected.allowed_changes, "release.json"))
     result = evaluate(before, after, expected, claim=claim, executed=bool(observations),
                       subject_verified=bool(consumer.observation.get("installed")), execution_error=error)
     coverage = all(interactions["coverage"].values())

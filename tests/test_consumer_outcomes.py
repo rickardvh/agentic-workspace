@@ -78,6 +78,40 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps():
     assert not scorer.affordance_observations(observations, {})["events"]
 
 
+def test_affordance_recipe_keeps_correct_artifacts_nonpassing_without_call_witness(monkeypatch):
+    from types import SimpleNamespace
+
+    import consumer_journeys as journeys
+
+    files = {}
+    work = SimpleNamespace(write=lambda name, data: files.update({name: data}), files=lambda: dict(files))
+    monkeypatch.setattr(journeys, "Workspace", lambda consumer: work)
+    monkeypatch.setattr(journeys, "setup", lambda work: None)
+    monkeypatch.setattr(journeys, "validate_pointer_files", lambda files: None)
+
+    class Actor:
+        observations = []
+        source_sha256 = "controlled-actor"
+
+        def session(self, work, prompt):
+            if not self.observations:
+                work.write(".agentic-workspace/planning/execplans/sample.plan.json", b"{}")
+                work.write(".agentic-workspace/local/scratch/sample/draft.txt", b"draft")
+                self.observations.append({})
+                return {"status": "incomplete"}
+            assert json.loads(files["release.json"])["approved"] is True
+            work.write("settings.json", b'{"port":8081,"host":"localhost"}')
+            work.write("README.md", b"Use port 8081.")
+            del files[".agentic-workspace/local/scratch/sample/draft.txt"]
+            self.observations.append({})
+            return {"status": "complete"}
+
+    result = journeys.execute_affordance(SimpleNamespace(profile="standalone", command=["aw"], observation={"installed": True}), Actor())
+    assert result["outcome"] == result["authority"] == "passed"
+    assert result["execution_error"] is None
+    assert result["status"] == "failed" and result["failure_class"] == "affordance-coverage"
+
+
 @pytest.mark.parametrize("content", [b'{"port":8081}', b'{\n "port": 8081, "comment": "equivalent"\n}'])
 def test_permitted_alternative_needs_no_command_mentions(case, content):
     before, expected = case
