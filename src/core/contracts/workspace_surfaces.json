@@ -69,7 +69,9 @@
     ".agentic-workspace/planning/skills/planning-work/references/structure.md",
     ".agentic-workspace/planning/skills/planning-work/SKILL.md",
     ".agentic-workspace/planning/skills/README.md",
-    ".agentic-workspace/planning/skills/REGISTRY.json"
+    ".agentic-workspace/planning/skills/REGISTRY.json",
+    ".agentic-workspace/skills/workspace-dogfooding/SKILL.md",
+    ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
   ],
   "surfaces": [
     {
@@ -982,6 +984,32 @@
         "mode": "package-verbatim",
         "source": ".agentic-workspace/planning/skills/REGISTRY.json"
       }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-dogfooding/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-dogfooding/SKILL.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-dogfooding/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
+      }
     }
   ],
   "identity": ".agentic-workspace/adoption.json",
@@ -1121,7 +1149,9 @@
       ".agentic-workspace/planning/skills/planning-work/references/structure.md",
       ".agentic-workspace/planning/skills/planning-work/SKILL.md",
       ".agentic-workspace/planning/skills/README.md",
-      ".agentic-workspace/planning/skills/REGISTRY.json"
+      ".agentic-workspace/planning/skills/REGISTRY.json",
+      ".agentic-workspace/skills/workspace-dogfooding/SKILL.md",
+      ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
     ],
     "source_only_inputs": [
       ".agentic-workspace/OWNERSHIP.toml",

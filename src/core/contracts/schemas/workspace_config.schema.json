@@ -187,6 +187,11 @@
           ],
           "default": "repo-owned"
         },
+        "upstream_dogfooding": {
+          "description": "Repository consent to publish anonymised AW product findings to rickardvh/agentic-workspace through an already authenticated host GitHub capability. Does not authorize disclosure of consumer material, credentials or automatic code changes.",
+          "type": "boolean",
+          "default": false
+        },
         "improvement_latitude": {
           "description": "How much repo-directed improvement initiative Agentic Workspace may surface by default.",
           "enum": [

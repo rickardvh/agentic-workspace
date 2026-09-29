@@ -1316,6 +1316,40 @@ def test_consumer_finding_latitude_is_repository_scoped(tmp_path, shared_core_bi
     assert "decision_packet" in current
 
 
+@pytest.mark.parametrize("consent", [None, False, True])
+def test_upstream_dogfooding_requires_shared_consent(tmp_path, shared_core_binary, native_cli, consent):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
+    subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes", "--format", "json"], check=True, capture_output=True)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text(
+        '[workspace]\nimprovement_latitude="proactive"\n' + ("" if consent is None else f"upstream_dogfooding={str(consent).lower()}\n")
+    )
+    context = {
+        "target": str(tmp_path),
+        "task": "Update the service configuration",
+        "material": [
+            {
+                "id": "aw-finding",
+                "kind": "observation",
+                "summary": "AW repeatedly rejects its own unchanged ready resource action before effect.",
+                "source": {"producer": "acting-agent", "reference": "current AW result", "coverage": "bounded"},
+            }
+        ],
+    }
+    current = consume("native", shared_core_binary, native_cli, context)
+    assert current["configuration"]["upstream_dogfooding"] is (consent is True)
+    candidates = [c for c in current.get("activation", {}).get("candidates", []) if c["entry"]["skill_id"] == "workspace-dogfooding"]
+    assert bool(candidates) is (consent is True)
+    assert (tmp_path / ".agentic-workspace/skills/workspace-dogfooding/SKILL.md").is_file()
+    local = tmp_path / ".agentic-workspace/config.local.toml"
+    local.write_text("[workspace]\nupstream_dogfooding=true\n")
+    rejected = subprocess.run([str(native_cli), "start", "--target", str(tmp_path), "--format", "json"], capture_output=True, text=True)
+    blocked = json.loads(rejected.stdout)
+    assert blocked["status"] == "blocked"
+    assert blocked["managed_state_interpreted"] is False
+    assert blocked["failed_checks"] == ["configuration_source_shape"]
+
+
 def test_installed_native_activation_index_repairs_new_membership(tmp_path, shared_core_binary, native_cli):
     # Only the shipped executable pair is present in this separate installation.
     install = tmp_path / "install"
