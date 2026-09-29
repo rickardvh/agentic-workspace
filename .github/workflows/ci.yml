@@ -32,7 +32,6 @@ jobs:
       contents: read
       security-events: write
       pull-requests: read
-    steps: []
   readiness:
     name: Merge sufficiency
     needs:
