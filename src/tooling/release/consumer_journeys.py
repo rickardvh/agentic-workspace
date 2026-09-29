@@ -520,6 +520,11 @@ def execute_affordance(consumer, actor):
     expected = replace(expected, allowed_changes=(*expected.allowed_changes, "release.json"))
     result = evaluate(before, after, expected, claim=claim, executed=bool(observations),
                       subject_verified=bool(consumer.observation.get("installed")), execution_error=error)
+    if interactions["disposition"] == "observer-limited":
+        # Product routes observed before a controller admission denial do not
+        # establish that the actor could continue. Do not infer claim truth from
+        # its prose, but do not label the refusal unjustified either.
+        result["claim_honesty"] = "unverified"
     coverage = all(interactions["coverage"].values())
     if interactions["findings"] or not coverage:
         result.update(status="failed", failure_class="affordance-finding" if interactions["findings"] else "affordance-coverage")

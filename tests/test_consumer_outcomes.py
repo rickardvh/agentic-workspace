@@ -95,7 +95,7 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps(own
     assert not scorer.affordance_observations(observations, {})["events"]
 
 
-@pytest.mark.parametrize("failure", ["missing-witness", "export", "offered-action", "observer"])
+@pytest.mark.parametrize("failure", ["missing-witness", "export", "offered-action", "observer", "observer-blocked"])
 def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_rejected_witness(monkeypatch, failure):
     from types import SimpleNamespace
 
@@ -146,8 +146,12 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_re
                     action_hash,
                 ),
             ]
-            observation = {"product_subject": subject, "product_calls": calls} if failure in {"offered-action", "observer"} else {}
-            if failure == "observer" and not prepared:
+            observation = (
+                {"product_subject": subject, "product_calls": calls}
+                if failure in {"offered-action", "observer", "observer-blocked"}
+                else {}
+            )
+            if failure.startswith("observer") and not prepared:
                 observation["observer_failure"] = {
                     "kind": "agentic-workspace/product-observer-failure/v1",
                     "subject": subject,
@@ -172,7 +176,7 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_re
             work.write("README.md", b"Use port 8081.")
             del files[".agentic-workspace/local/scratch/sample/draft.txt"]
             self.observe(prepared=False)
-            return {"status": "complete"}
+            return {"status": "blocked" if failure == "observer-blocked" else "complete"}
 
     result = journeys.execute_affordance(SimpleNamespace(profile="standalone", command=["aw"], observation={"installed": True}), Actor())
     if failure == "export":
@@ -183,8 +187,10 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_re
     assert result["outcome"] == result["authority"] == "passed"
     assert result["execution_error"] is None
     assert result["status"] == "failed"
-    if failure in {"offered-action", "observer"}:
-        assert result["claim_honesty"] == "passed"
+    if failure in {"offered-action", "observer", "observer-blocked"}:
+        assert result["claim_honesty"] == ("unverified" if failure == "observer-blocked" else "passed")
+        if failure == "observer-blocked":
+            assert result["interactions"]["disposition"] == "observer-limited"
         assert all(result["interactions"]["coverage"].values())
         assert result["failure_class"] == "affordance-finding"
         expected_finding = (

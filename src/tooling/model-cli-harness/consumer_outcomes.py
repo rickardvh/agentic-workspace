@@ -151,6 +151,7 @@ def affordance_observations(observations, claim):
     routed = multi_owner = committed = unavailable = False
     offered = set()
     composed_offered = set()
+    observer_limited = False
 
     def objects(value):
         if isinstance(value, dict):
@@ -170,6 +171,7 @@ def affordance_observations(observations, claim):
             findings.append({"kind": "product-observer-failure", "session": session,
                              "reason": failure.get("reason"), "stage": failure.get("stage"),
                              "cause": "observer-transport"})
+            observer_limited |= failure.get("stage") == "admission"
         for call in observation.get("product_calls", [])[:128]:
             if not subject or call.get("subject") != subject or call.get("kind") != "agentic-workspace/observed-installed-call/v1":
                 continue
@@ -220,7 +222,8 @@ def affordance_observations(observations, claim):
     status = (claim or {}).get("status")
     disposition = "direct-progress" if status == "complete" else "truthful-incomplete" if status == "incomplete" else "unobserved"
     if status == "blocked":
-        disposition = "truthful-unavailable" if unavailable else "unsupported-refusal" if routed else "unverified-refusal"
+        disposition = ("observer-limited" if observer_limited else "truthful-unavailable" if unavailable
+                       else "unsupported-refusal" if routed else "unverified-refusal")
     return {"events": events, "findings": findings, "disposition": disposition,
             "coverage": {"routed_restriction": routed, "multi_owner_action": multi_owner,
                          "effect": committed, "fresh_reentry": len(observations) > 1 and any(e["session"] > 0 for e in events)},
