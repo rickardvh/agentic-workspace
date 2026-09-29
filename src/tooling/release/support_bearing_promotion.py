@@ -259,11 +259,13 @@ def _compose(args: argparse.Namespace) -> int:
             semantic_failed = True
             continue
         try:
+            difference, staging = NATIVE_PROOF.source_snapshot(ROOT) if (ROOT / "release-identity.json").is_file() else (b"", None)
             NATIVE_PROOF.verify_receipt(
                 payload,
                 artifact_dir=artifact_dir,
                 source_commit=args.commit,
-                source_diff_sha256=hashlib.sha256(b"").hexdigest(),
+                source_diff_sha256=hashlib.sha256(difference).hexdigest(),
+                staging=staging,
                 expected_node_major=node_major,
                 expected_execution_context="hosted-ci",
             )

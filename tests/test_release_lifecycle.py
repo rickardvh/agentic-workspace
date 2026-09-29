@@ -102,10 +102,23 @@ def test_publication_resumes_retained_bytes_without_replacing_assets(tmp_path, m
         lifecycle.publish_github("repo", identity)
 
 
-def test_recovery_fails_when_original_artifact_is_expired(monkeypatch, tmp_path):
-    monkeypatch.setattr(lifecycle, "api", lambda *args: {"artifacts": [{"name": lifecycle.BUNDLE_NAME, "expired": True}]})
-    with pytest.raises(ValueError, match="Recovery gap"):
-        lifecycle.download_run_artifact("repo", 12, lifecycle.BUNDLE_NAME, tmp_path)
+@pytest.mark.parametrize("gap", ["expired", "missing-after-tag"])
+def test_recovery_fails_when_original_artifact_is_unavailable(monkeypatch, tmp_path, gap):
+    if gap == "expired":
+        monkeypatch.setattr(lifecycle, "api", lambda *args: {"artifacts": [{"name": lifecycle.BUNDLE_NAME, "expired": True}]})
+        with pytest.raises(ValueError, match="Recovery gap"):
+            lifecycle.download_run_artifact("repo", 12, lifecycle.BUNDLE_NAME, tmp_path)
+        return
+    source = "a" * 40
+    (tmp_path / lifecycle.IDENTITY_FILE).write_text(json.dumps({"dispatch_source": source, "recovery_tag": "", "tag": "v1.7.0"}))
+    monkeypatch.setattr(lifecycle, "ROOT", tmp_path)
+    monkeypatch.setattr(lifecycle, "git", lambda *args: "")
+    monkeypatch.setenv("GITHUB_RUN_ID", "12")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/master")
+    monkeypatch.setattr(lifecycle, "download_run_artifact", lambda repo, run, name, path: name == "release-identity")
+    monkeypatch.setattr(lifecycle.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, "{}", ""))
+    with pytest.raises(ValueError, match="tag is reserved.*bundle is missing"):
+        lifecycle.resolve_source("repo", source, "", False)
 
 
 @pytest.mark.parametrize(

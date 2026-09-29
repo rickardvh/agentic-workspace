@@ -149,6 +149,11 @@ def stamp_release(ownership: dict[str, Any], identity: dict[str, Any], *, verify
     changed = set(_run(["git", "diff", "--name-only", "HEAD"]).stdout.splitlines())
     if changed - expected.keys():
         raise ValueError("Unauthorised staging changes: " + ", ".join(sorted(changed - expected.keys())))
+    generated = {"release-identity.json", "runtime-proof.json", "server-promotion-receipt.json"}
+    outputs = ("dist/", "platform-dist/", "platform-inputs/", "promotion-inputs/", "runtime-receipts/")
+    for path in _run(["git", "ls-files", "--others", "--exclude-standard"]).stdout.splitlines():
+        if path not in generated and not path.startswith(outputs) and not re.fullmatch(r"platform-consumer-[\w-]+\.json", path):
+            raise ValueError("Unauthorised untracked staging input: " + path)
     if _run(["git", "diff", "--summary", "HEAD"]).stdout.strip():
         raise ValueError("Staging cannot change file modes or custody")
     for path, content in expected.items():

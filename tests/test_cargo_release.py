@@ -188,6 +188,12 @@ def test_cargo_publication_orders_exact_pair_and_stops_before_unsafe_effects(tmp
         with pytest.raises(TimeoutError):
             cargo.main()
         assert uploads == [packages[0]["name"]]
+        # Resume the same admitted pair after public visibility becomes known.
+        # The first immutable version is observed, never uploaded again.
+        scenario = "partial"
+        cargo.main()
+        cargo.main()
+        assert uploads == [p["name"] for p in packages]
     else:
         cargo.main()
         assert uploads == [p["name"] for p in packages[1 if scenario == "partial" else 0 :]]

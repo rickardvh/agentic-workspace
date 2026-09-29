@@ -74,6 +74,7 @@ jobs:
           name: release-server-promotion-receipt
           path: server-promotion-receipt.json
           if-no-files-found: error
+          overwrite: true
           retention-days: 90
         if: steps.resolve.outputs.build_required == 'true'
   platform-build:
@@ -110,6 +111,7 @@ jobs:
           name: platform-${{ matrix.target }}
           path: platform-dist/*
           if-no-files-found: error
+          overwrite: true
     permissions:
       contents: read
     env:
@@ -151,6 +153,7 @@ jobs:
           name: complete-platform-packages
           path: dist/*
           if-no-files-found: error
+          overwrite: true
     permissions:
       contents: read
     env:
@@ -196,6 +199,7 @@ jobs:
           name: platform-consumer-${{ matrix.target }}
           path: platform-consumer-${{ matrix.target }}.json
           if-no-files-found: error
+          overwrite: true
     permissions:
       contents: read
     env:
@@ -389,7 +393,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/admission-dist
+      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -417,7 +421,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: complete-platform-packages
-          path: admission-dist
+          path: dist
       - name: Admit the repository Rust toolchain
         run: rustup show active-toolchain
       - name: Verify lock without rewriting it
@@ -464,7 +468,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/admission-dist
+      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -492,7 +496,7 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: complete-platform-packages
-          path: admission-dist
+          path: dist
       - name: Admit the repository Rust toolchain
         run: rustup show active-toolchain
       - name: Verify lock without rewriting it
@@ -626,6 +630,7 @@ jobs:
           name: cargo-registry-publication
           path: dist/cargo-registry-publication.json
           if-no-files-found: error
+          overwrite: true
     env:
       RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
       EXPECTED_SOURCE_COMMIT: ${{ needs.source-version.outputs.source_commit }}
@@ -701,6 +706,7 @@ jobs:
           name: language-registry-publication
           path: registry-publication.json
           if-no-files-found: error
+          overwrite: true
     env:
       RELEASE_TAG: ${{ needs.source-version.outputs.tag }}
       EXPECTED_SOURCE_COMMIT: ${{ needs.source-version.outputs.source_commit }}

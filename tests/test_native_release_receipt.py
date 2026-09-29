@@ -18,7 +18,7 @@ checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
 
 
-@pytest.mark.parametrize("change", [None, "artifact", "proof", "context", "extra-package"])
+@pytest.mark.parametrize("change", [None, "artifact", "proof", "context", "extra-package", "staging"])
 def test_receipt_admits_only_unchanged_root_subject(tmp_path, monkeypatch, change):
     for name in (
         "agentic_workspace-1.0-py3-none-any.whl",
@@ -44,6 +44,8 @@ def test_receipt_admits_only_unchanged_root_subject(tmp_path, monkeypatch, chang
     }
     if change == "proof":
         receipt["subject"]["proof_fingerprint"] = "old"
+    if change == "staging":
+        receipt["subject"]["staging"] = {"source_commit": "unadmitted", "version": "9.0.0"}
     receipt["receipt_id"] = hashlib.sha256(json.dumps(receipt, sort_keys=True).encode()).hexdigest()
     path = tmp_path / "fixture-receipt.json"
     path.write_text(json.dumps(receipt))

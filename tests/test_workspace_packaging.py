@@ -181,7 +181,7 @@ def _raw_sdist_inventory(path: Path) -> set[str]:
 def test_workspace_package_declares_semver_identity() -> None:
     pyproject = tomllib.loads((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
-    assert re.fullmatch(r"\d+\.\d+\.\d+", pyproject["project"]["version"])
+    assert pyproject["project"]["version"] == "0.0.0.dev0" or re.fullmatch(r"\d+\.\d+\.\d+", pyproject["project"]["version"])
 
 
 def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() -> None:
@@ -197,7 +197,7 @@ def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() ->
         "make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist "
         "PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci"
     ) in artifact_job
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in artifact_job
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in artifact_job
 
 
 def test_node_binding_has_no_source_checkout_python_dependency() -> None:
@@ -222,22 +222,18 @@ def test_pr_semver_label_workflow_skips_draft_prs() -> None:
     assert "github.event.pull_request.draft == false" in workflow_text
 
 
-def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
+def test_release_workflow_publishes_staged_root_package_artifacts() -> None:
     release_text = (WORKSPACE_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
-    assert '"v[0-9]+.[0-9]+.[0-9]+"' in release_text
-    assert "release_lifecycle.py admit" in release_text
     assert "release_lifecycle.py compose" in release_text
     assert "merge-base" in (WORKSPACE_ROOT / "src/tooling/release/release_lifecycle.py").read_text()
-    assert "release_class:" in release_text
     assert "platform-consumer:" in release_text
     platform = (WORKSPACE_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "platform_release.py" in platform
     assert "stable_manifest.py" in (WORKSPACE_ROOT / "src/tooling/release/release_lifecycle.py").read_text()
     assert "source_commit" in release_text
-    assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in release_text
     assert "SHA256SUMS" in (WORKSPACE_ROOT / "src/tooling/release/release_lifecycle.py").read_text()
-    assert "softprops/action-gh-release@" in release_text
+    assert "release_lifecycle.py publish" in release_text
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:

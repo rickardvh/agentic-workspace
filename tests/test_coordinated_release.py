@@ -77,6 +77,10 @@ def test_completed_source_consumes_revisions_and_staging_rejects_other_changes(t
     assert all(len(item["sha256"]) == 64 for item in stamped["transform"])
     assert "0.0.0.dev0" not in (tmp_path / "uv.lock").read_text()
     assert 'version = "2.0.0"' in (tmp_path / "Cargo.lock").read_text()
+    save("untracked-code.py", "injected = True\n")
+    with pytest.raises(ValueError, match="untracked staging input"):
+        release.stamp_release(ownership, stamped, verify=True)
+    (tmp_path / "untracked-code.py").unlink()
     save("code.py", "original = False\n")
     with pytest.raises(ValueError, match="Unauthorised staging"):
         release.stamp_release(ownership, stamped, verify=True)
