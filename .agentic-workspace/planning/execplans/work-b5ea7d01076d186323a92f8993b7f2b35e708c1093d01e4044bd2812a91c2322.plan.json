@@ -9,7 +9,7 @@
   "canonical_core": {},
   "continuation": {
     "accepted": "Issue inventory verified against GitHub: #3706-3711 are the six issues filed today; #3708 is an aggregate parent, not another giant implementation PR. Three PR lanes remain as scoped. This Planning record was created and selected through native effects. Current Assignment chose local Astra over eligible Sol because the mixed contract/integration work benefits from retained context; Luna/Terra are prohibited for this task class.",
-    "frontier": "All implementation is published in three stacked PRs: #3712 public action/recovery (#3706/#3707), #3713 opt-in reporting (#3711), #3714 live harness/standing evidence (#3709/#3710). #3712 and #3713 are ready for review with successful merge-proof, sufficiency and security checks. #3714 remains draft because live satisfaction is unmet. The export repair in 86c47869a drains bounded tar padding before waiting; deterministic valid/malformed/oversized controls and all 49 harness/scorer tests pass. The named live export diagnostic independently passed migration artifacts and preservation, observed all four interactions with no classified findings, and removed its sandbox. Preparation completed; the resumed actor exhausted its 900-second budget while reconciling Planning, after losing carriage in fresh calls, with no final claim. No additional product cause is established. The native current-evidence owner records the actual failed observation; #3710 is not satisfied. Current source reconciliation accepted all 369 declared consumers. The finite six-class audit and evidence limits remain in #3714. Prior native proof receipt proof://receipts/16c384cbf9de8e1f is retained locally; it cannot establish independent acceptance. Raw first and diagnostic results remain outside Git in Windows TEMP; the new result is aw-finish-live.json, SHA-256 7f5b6c451c28e36918ad93e83ce45439074e4edee75f897520f739de6dc799ae. The current evidence note records exact native subject 4d4b62db88fd75792794a4cf5dd0405d0654b61f and controller digests. Preserve all prior failed results and pre-existing receipt dirt. The managed build worktree remains archived; candidate-current remains in TEMP aw-today-candidate. Independent review, completed live evidence and parent acceptance remain outstanding; no merge or issue closure was performed."
+    "frontier": "Review corrections are implemented in fafe8b575: an exact offered action rejected once now remains a triage finding after recovery and correct files; standing freshness includes lib.rs, native_resource_owner.rs and native_resources.rs with mutation controls. All 55 focused tests and the final five standing tests passed. #3712 was merged externally; #3713 received the missing fresh-reader evidence at https://github.com/rickardvh/agentic-workspace/pull/3713#issuecomment-5889022200. The clean fafe8b575 candidate completed both current live sessions; artifact/preservation/authority/claim checks and all four interaction coverage bits passed. The corrected scorer retained two findings: repeated empty resources input and offered planning.create invoked without task context, then committed when task context was restored. These are actor transport misuse, not established product nonconstructibility. The actor also reported configuration-assessment crashes; three failing shell proposal commands are retained but no trusted native crash output was captured, so cause is unresolved. Native current evidence records failed; #3710 and parent closeout remain unmet. Current raw result aw-comments-live.json in Windows TEMP has SHA-256 4ab48d7b88b3f685cc39c746f27be64f737f46cc893bb5bd3b44aff8290ff223. Exact subject/controller identities and limits are in the current live-affordance-evidence.md note. Prior results remain unchanged. No provider retry-until-green was started. Sandbox cleanup removed the live environment and the clean candidate build worktree was archived. Preserve pre-existing receipt dirt and signed local receipts. PRs #3713 and #3714 still need independent acceptance; no merge or issue closure was performed by this executor."
   },
   "creation_provenance": {
     "custody": {
@@ -41,12 +41,12 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Obtain a completed trusted live exercise for #3710 only through a justified bounded evidence step; do not repeat until green. Review and accept PRs #3712/#3713, then complete and review #3714 before aggregating parent #3708.",
+  "next_action": "Resolve the bounded configuration-proposal observation gap using retained evidence and deterministic reproduction before any justified new live exercise. Keep #3714 draft and #3710 non-satisfied until its standing owner can admit actual satisfied/current evidence. Obtain independent acceptance of children before parent #3708 closeout.",
   "owner_level": "lane",
   "parent": {},
   "phase": "implementation",
   "proof": {
-    "remaining": "Completed trusted live execution and justified satisfied/current publication for #3710; independent review and accepted children before parent #3708 closeout. A final native proof run is being selected against the stable author patch; command evidence does not resolve the live or independent-review gaps."
+    "remaining": "Resolve the configuration-proposal observation gap and establish justified satisfied/current live evidence for #3710; independent review, final hosted checks when ready, and accepted children before #3708 closeout. A final native scoped command check does not resolve these gaps."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3706",
@@ -61,7 +61,7 @@
     "tools/skills/self-improvement-dogfooding/references/live-affordance-evidence.md"
   ],
   "relationships": {},
-  "revision": 5,
+  "revision": 6,
   "scope": {
     "constraints": "Use existing checkout. Preserve pre-existing proof receipt changes. Each PR must fully satisfy an existing issue. Preserve independent review boundary. No weakening currentness, resource custody, proof, publication consent or privacy.",
     "lanes": "PR 1: #3706/#3707 public action dependencies and consequence-specific recovery. PR 2: #3709/#3710 live operational-affordance exercise and standing current evidence. PR 3: #3711 explicit opt-in privacy-safe consumer reporting. #3708 aggregates the finite six-class audit and accepted child evidence."
@@ -71,18 +71,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/95eb89e71ae1a49458dd7619974619e488ecd9949da858c22bb2f9788c36cbbf.attempt.json",
-        "revision": "sha256:b1a792794788d7ae8e4d85e552815ff3cb966619554d2461214fad2ef10da417",
+        "path": ".agentic-workspace/local/effects/20ad98b3e96d5ef08d992298f369783b09b13a01796cc66498a8953b22ce52b4.attempt.json",
+        "revision": "sha256:3c9ff52d13ebd6fc575e3c75670eba4a0ddb627f162557b7078a7e8476fa114f",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/95eb89e71ae1a49458dd7619974619e488ecd9949da858c22bb2f9788c36cbbf.result.json",
-        "revision": "sha256:6b31310f6f3033423238cb100bc3527156fc34834de3d52d7bfb3f3324537ae5",
+        "path": ".agentic-workspace/local/effects/20ad98b3e96d5ef08d992298f369783b09b13a01796cc66498a8953b22ce52b4.result.json",
+        "revision": "sha256:6f33763e21f31e97ce2cb75d2e825edd67529d0ffe6f338a256411d755181b6b",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:c5d3570e717e920ebf3edee96e01141c661dfc361eeff9fa4c6dbd7216fdd181",
+    "invocation_revision": "sha256:28b1831cfbf8ec85ca1a3ce36b6136d238b8a57144255ec651111986afbbe6dd",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +90,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:3106e46a8efff3fa8d4ad9f9f07280c2b25bc96967338e73758eda273a68cbb3",
+        "document_revision": "sha256:9c645364736dedbe75e3c34a8ce65eef51bb5a1e3904bcf94aa5be666e2ef5a5",
         "owner_id": "work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322",
         "owner_path": ".agentic-workspace/planning/execplans/work-b5ea7d01076d186323a92f8993b7f2b35e708c1093d01e4044bd2812a91c2322.plan.json"
       }
