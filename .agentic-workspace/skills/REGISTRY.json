@@ -91,6 +91,27 @@
       "semantic_routes": [
         "workspace/instructions/correction"
       ]
+    },
+    {
+      "activation": {
+        "applicability": "Repository upstream dogfooding is enabled and current material describes a material defect or repeated friction attributable to AW itself, rather than the consumer repository.",
+        "occasions": [
+          "observation"
+        ],
+        "outcome": "A safe report is published, existing coverage is confirmed, or the report is handed off with a precise capability or privacy gap; the original task continues when safe.",
+        "settled_by": [
+          {
+            "selector": "/configuration/upstream_dogfooding",
+            "value": false
+          }
+        ]
+      },
+      "id": "workspace-dogfooding",
+      "path": "workspace-dogfooding/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "workspace/dogfooding/report"
+      ]
     }
   ],
   "owner": "agentic-workspace",
@@ -231,6 +252,23 @@
       ],
       "stability": "contract-backed-projection",
       "summary": "Apply a correction or useful finding to its controlling source and verify any saved change.",
+      "visibility": "routed-on-demand"
+    },
+    {
+      "id": "workspace-dogfooding",
+      "path": "workspace-dogfooding/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "scope": "specialized-subskill",
+      "semantic_routes": [
+        {
+          "description": "Report anonymised material AW product findings under explicit repository opt-in.",
+          "id": "workspace/dogfooding/report",
+          "match": "exact",
+          "priority": 10
+        }
+      ],
+      "stability": "package-managed",
+      "summary": "Anonymise an AW product finding, deduplicate it upstream, and publish through available host capability or hand off.",
       "visibility": "routed-on-demand"
     }
   ],

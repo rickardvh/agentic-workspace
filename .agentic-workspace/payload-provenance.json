@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:30f24055d6eec2af5c1fd88298fc586af83c62cc58a492372046dde6a98fa66f",
+  "managed_revision": "sha256:65198973a10ddaecea36235224af7bc29f3775cf6c96003a920ac86f413cdf68",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -72,7 +72,9 @@
     ".agentic-workspace/planning/skills/planning-work/references/structure.md",
     ".agentic-workspace/planning/skills/planning-work/SKILL.md",
     ".agentic-workspace/planning/skills/README.md",
-    ".agentic-workspace/planning/skills/REGISTRY.json"
+    ".agentic-workspace/planning/skills/REGISTRY.json",
+    ".agentic-workspace/skills/workspace-dogfooding/SKILL.md",
+    ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
   ],
   "payload_schema": "agentic-workspace/payload/v1",
   "release_identity": {

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add repository opt-in for anonymised AW product reports through an existing authenticated host GitHub capability, with safe handoff when unavailable."
