@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve full native responses above 1 MiB in the Node facade and report subprocess launch errors directly."
