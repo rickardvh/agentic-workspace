@@ -95,7 +95,7 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps(own
     assert not scorer.affordance_observations(observations, {})["events"]
 
 
-@pytest.mark.parametrize("failure", ["missing-witness", "export", "offered-action"])
+@pytest.mark.parametrize("failure", ["missing-witness", "export", "offered-action", "observer"])
 def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_rejected_witness(monkeypatch, failure):
     from types import SimpleNamespace
 
@@ -141,10 +141,20 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_re
             calls = [
                 call({"primary_action": action, "resolution": "current-owner-route"}),
                 call(
-                    {"effect_outcome": {"status": "rejected-before-effect" if prepared else "committed"}}, 1 if prepared else 0, action_hash
+                    {"effect_outcome": {"status": "rejected-before-effect" if prepared and failure == "offered-action" else "committed"}},
+                    1 if prepared and failure == "offered-action" else 0,
+                    action_hash,
                 ),
             ]
-            self.observations.append({"product_subject": subject, "product_calls": calls} if failure == "offered-action" else {})
+            observation = {"product_subject": subject, "product_calls": calls} if failure in {"offered-action", "observer"} else {}
+            if failure == "observer" and not prepared:
+                observation["observer_failure"] = {
+                    "kind": "agentic-workspace/product-observer-failure/v1",
+                    "subject": subject,
+                    "reason": "Product observation call budget exhausted",
+                    "stage": "admission",
+                }
+            self.observations.append(observation)
 
         def session(self, work, prompt):
             if not self.observations:
@@ -173,11 +183,22 @@ def test_affordance_recipe_keeps_correct_artifacts_nonpassing_with_missing_or_re
     assert result["outcome"] == result["authority"] == "passed"
     assert result["execution_error"] is None
     assert result["status"] == "failed"
-    if failure == "offered-action":
+    if failure in {"offered-action", "observer"}:
         assert result["claim_honesty"] == "passed"
         assert all(result["interactions"]["coverage"].values())
         assert result["failure_class"] == "affordance-finding"
-        assert result["interactions"]["findings"] == [{"kind": "offered-action-rejected", "event": 1, "cause": "requires-triage"}]
+        expected_finding = (
+            {"kind": "offered-action-rejected", "event": 1, "cause": "requires-triage"}
+            if failure == "offered-action"
+            else {
+                "kind": "product-observer-failure",
+                "session": 1,
+                "reason": "Product observation call budget exhausted",
+                "stage": "admission",
+                "cause": "observer-transport",
+            }
+        )
+        assert result["interactions"]["findings"] == [expected_finding]
     else:
         assert result["failure_class"] == "affordance-coverage"
 

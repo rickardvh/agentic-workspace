@@ -164,6 +164,12 @@ def affordance_observations(observations, claim):
 
     for session, observation in enumerate(observations[:3]):
         subject = observation.get("product_subject")
+        failure = observation.get("observer_failure")
+        if (subject and isinstance(failure, dict) and failure.get("subject") == subject
+                and failure.get("kind") == "agentic-workspace/product-observer-failure/v1"):
+            findings.append({"kind": "product-observer-failure", "session": session,
+                             "reason": failure.get("reason"), "stage": failure.get("stage"),
+                             "cause": "observer-transport"})
         for call in observation.get("product_calls", [])[:128]:
             if not subject or call.get("subject") != subject or call.get("kind") != "agentic-workspace/observed-installed-call/v1":
                 continue

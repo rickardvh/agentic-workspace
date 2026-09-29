@@ -106,11 +106,42 @@ def invoke(value, config):
         }
 
 
+def serve_connection(connection, config, total):
+    connection.settimeout(65)
+    try:
+        # Drain the bounded request before rejecting it. Closing a Unix socket
+        # with unread input can reset the client before it receives our error.
+        value = receive(connection)
+        if total >= 128:
+            raise ValueError("Product observation call budget exhausted")
+        receipt = invoke(value, config)
+        with (ROOT / "receipts.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(receipt) + "\n")
+        total += 1
+        reply = {key: receipt[key] for key in ("stdout", "stderr", "exit_code")}
+    except (ValueError, OSError, subprocess.SubprocessError) as error:
+        reason = str(error)[:1000]
+        failure = {"kind": "agentic-workspace/product-observer-failure/v1", "subject": config["subject"],
+                   "reason": reason, "stage": "admission" if total >= 128 else "observation", "exit_code": 75}
+        # Keep the first controller failure separately from actual product calls.
+        # One bounded record survives repeated attempts without growing a log.
+        path = ROOT / "failure.json"
+        if json.loads(path.read_text()) is None:
+            path.write_text(json.dumps(failure), encoding="utf-8")
+        reply = {"stdout": "", "stderr": f"Product observer: {reason}\n", "exit_code": 75}
+    try:
+        connection.sendall(json.dumps(reply).encode())
+    except (BrokenPipeError, ConnectionResetError):
+        pass
+    return total
+
+
 def server():
     if os.getuid() != 0:
         raise ValueError("Observer requires trusted controller custody")
     config = json.loads((ROOT / "config.json").read_text())
     total = 0
+    (ROOT / "failure.json").write_text("null", encoding="utf-8")
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
         listener.bind(str(ROOT / "socket"))
         os.chmod(ROOT / "socket", 0o666)
@@ -118,22 +149,7 @@ def server():
         while True:
             connection, _ = listener.accept()
             with connection:
-                connection.settimeout(65)
-                try:
-                    if total >= 128:
-                        raise ValueError("Product observation call budget exhausted")
-                    receipt = invoke(receive(connection), config)
-                    # Flush the exact result before returning it to the caller.
-                    with (ROOT / "receipts.jsonl").open("a", encoding="utf-8") as stream:
-                        stream.write(json.dumps(receipt) + "\n")
-                    total += 1
-                    reply = {key: receipt[key] for key in ("stdout", "stderr", "exit_code")}
-                except (ValueError, OSError, subprocess.SubprocessError) as error:
-                    reply = {"stdout": "", "stderr": f"Product observer: {error}\n", "exit_code": 75}
-                try:
-                    connection.sendall(json.dumps(reply).encode())
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
+                total = serve_connection(connection, config, total)
 
 
 def client():

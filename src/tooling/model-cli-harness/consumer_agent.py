@@ -263,6 +263,21 @@ class SandboxConsumer(DockerConsumer):
         self.observation["post_actor_installation"] = "unchanged"
         self.observation["post_actor_verified_paths"] = self.installed_paths
 
+    def observer_failure(self):
+        if not hasattr(self, "product_subject"):
+            return None
+        failure_path = "/opt/aw-observer/failure.json"
+        raw = self.root_exec(["cat", failure_path]).stdout
+        if len(raw) > 8192:
+            raise ValueError("Product observer failure exceeds bound")
+        failure = json.loads(raw)
+        if failure is not None and (
+            failure.get("subject") != self.product_subject
+            or failure.get("kind") != "agentic-workspace/product-observer-failure/v1"
+        ):
+            raise ValueError("Product observer failure subject differs from the admitted installation")
+        return failure
+
     def observe_tools(self):
         required, forbidden = PROFILES[self.profile]
         inventory = {}
@@ -530,6 +545,7 @@ class CodexActor:
                 **result,
                 "product_calls": receipts,
                 "product_subject": getattr(consumer, "product_subject", None),
+                "observer_failure": consumer.observer_failure(),
                 "billing": self.billing,
                 "model": self.model,
                 "reasoning": self.reasoning,

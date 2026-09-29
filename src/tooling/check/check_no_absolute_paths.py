@@ -51,6 +51,7 @@ ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
             "opt/aw-observer/config.json",
             "opt/aw-observer/agentic-workspace",
             "opt/aw-observer/receipts.jsonl",
+            "opt/aw-observer/failure.json",
             "opt/aw-observer/server.log",
             "opt/aw-observer/socket",
             "tmp/input-",

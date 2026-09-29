@@ -147,3 +147,52 @@ def test_product_boundary_rejects_caller_authored_receipts(extra):
 
     with pytest.raises(ValueError, match="Only argv and stdin"):
         validate_request({"argv": ["start"], "stdin": "", extra: "fabricated"})
+
+
+def test_product_budget_rejection_drains_request_and_retains_controller_failure(tmp_path, monkeypatch):
+    import socket
+    from concurrent.futures import ThreadPoolExecutor
+
+    import consumer_product_boundary as boundary
+
+    monkeypatch.setattr(boundary, "ROOT", tmp_path)
+    (tmp_path / "failure.json").write_text("null")
+    subject = {"sha256": "fixed-subject"}
+    invoked = []
+
+    def invoke(value, config):
+        invoked.append(value)
+        return {"subject": config["subject"], "stdout": "{}", "stderr": "", "exit_code": 0}
+
+    monkeypatch.setattr(boundary, "invoke", invoke)
+
+    def exchange(total):
+        client, server = socket.socketpair()
+
+        def serve():
+            with server:
+                return boundary.serve_connection(server, {"subject": subject}, total)
+
+        with client, ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(serve)
+            client.sendall(json.dumps({"argv": ["start", "--input", "-"], "stdin": "x" * 2721}).encode())
+            client.shutdown(socket.SHUT_WR)
+            return boundary.receive(client), future.result(timeout=5)
+
+    reply, total = exchange(127)
+    assert reply["exit_code"] == 0 and total == 128 and len(invoked) == 1
+    receipts = (tmp_path / "receipts.jsonl").read_bytes()
+    reply, total = exchange(total)
+    assert reply == {"stdout": "", "stderr": "Product observer: Product observation call budget exhausted\n", "exit_code": 75}
+    assert total == 128 and len(invoked) == 1
+    assert (tmp_path / "receipts.jsonl").read_bytes() == receipts
+    failure = (tmp_path / "failure.json").read_bytes()
+    assert json.loads(failure) == {
+        "kind": "agentic-workspace/product-observer-failure/v1",
+        "subject": subject,
+        "reason": "Product observation call budget exhausted",
+        "stage": "admission",
+        "exit_code": 75,
+    }
+    assert exchange(total)[0] == reply
+    assert (tmp_path / "failure.json").read_bytes() == failure

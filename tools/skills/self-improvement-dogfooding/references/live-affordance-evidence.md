@@ -1,6 +1,6 @@
 # Current live affordance observation
 
-Observed 29 September 2026. **Failed: interaction findings require triage.** Both
+Observed 29 September 2026. **Failed: the observer exhausted its call budget.** Both
 fresh sessions completed. Artifact, preservation, authority and claim-honesty checks
 passed, but this finding-bearing result does not satisfy #3710 or parent closeout.
 
@@ -39,13 +39,21 @@ The repaired scorer retained two findings even though the final checks passed:
   for the empty task. The same action committed when the original task was restored.
   The currentness boundary worked; the finding remains visible after recovery.
 
-The actor additionally reported four configuration-assessment crashes and excluded
-configuration integration from its final claim. The retained command trace shows
-three proposal shell commands exiting 1, but trusted product receipts contain no
-corresponding crash output. Product failure versus transport failure is therefore
-unresolved; the actor report alone does not establish a native defect. No product
-repair or satisfied assessment is inferred from that claim. #3709 owns the bounded
-observation/triage gap; #3710 retains the unmet evidence requirement.
+The reported configuration-assessment crashes are now attributed to the observer
+transport. Four setup calls plus 25 preparation calls and 99 resumed calls reached
+its unchanged 128-call limit. The observer rejected later requests before reading
+them. Closing the Unix socket with unread input reset the client, hiding the budget
+diagnostic behind an exit-1 traceback. The original failed result remains intact.
+
+A deterministic Linux replay of the three exact failed shell commands against the
+original observer at that limit reproduced `ConnectionResetError`. The repaired
+observer drains the bounded request before rejection. The same commands now return
+exit 75 and `Product observation call budget exhausted`, without invoking the
+product or adding product receipts. One bounded controller failure is retained
+separately and makes the scored run finding-bearing even when final files pass.
+Socket and whole-recipe regression controls pass. This resolves the diagnostic gap
+in #3709; it does not establish a native Configuration defect or a successful live
+run of the repaired harness. #3710 retains the unmet live-evidence requirement.
 
 Cleanup removed the sandbox. Reported session token totals were 2,510,305 and
 4,089,160; cache accounting and marginal monetary cost are unknown. The review-
