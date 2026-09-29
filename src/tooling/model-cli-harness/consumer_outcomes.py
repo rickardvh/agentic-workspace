@@ -139,3 +139,77 @@ def matched_comparison(arms: dict[str, dict]) -> dict:
         "economic_claim": "not-established",
         "burden": {name: arm.get("burden") for name, arm in arms.items()},
     }
+
+
+def affordance_observations(observations, claim):
+    """Bounded causal observations from fixed-subject receipts, never reasoning.
+
+    Findings nominate an interaction for investigation, not blame for a model or
+    product. A detail read and a different successful sequence carry no penalty.
+    """
+    events, findings, rejected = [], [], {}
+    routed = multi_owner = committed = unavailable = False
+    offered = set()
+
+    def objects(value):
+        if isinstance(value, dict):
+            yield value
+            for key, child in value.items():
+                if key not in {"carriage", "capability_contract", "arguments", "source_requests"}:
+                    yield from objects(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from objects(child)
+
+    for session, observation in enumerate(observations[:3]):
+        subject = observation.get("product_subject")
+        for call in observation.get("product_calls", [])[:128]:
+            if not subject or call.get("subject") != subject or call.get("kind") != "agentic-workspace/observed-installed-call/v1":
+                continue
+            try:
+                result = json.loads(call.get("stdout", ""))
+            except ValueError:
+                result = {}
+            rows = list(objects(result))
+            routes = [r for r in rows if r.get("status") == "current-owner-route" or r.get("resolution") == "current-owner-route"]
+            gaps = [r for r in rows if r.get("resolution") == "owner-resolution-unavailable"]
+            actions = [r for r in rows if r.get("operation_id") and isinstance(r.get("source_requests"), list)]
+            composed = [a for a in actions if len({r.get("owner") for r in a["source_requests"]}) > 1]
+            outcomes = [r["effect_outcome"]["status"] for r in rows if isinstance(r.get("effect_outcome"), dict) and "status" in r["effect_outcome"]]
+            routed |= bool(routes)
+            if gaps or routes or any("decision_packet" in r for r in rows):
+                unavailable = bool(gaps) and not bool(routes)
+            multi_owner |= bool(composed)
+            committed |= "committed" in outcomes
+            rejection = "rejected-before-effect" in outcomes or call.get("exit_code", 0) != 0
+            offered_rejected = rejection and call.get("submitted_action_sha256") in offered
+            offered.update(hashlib.sha256(json.dumps(a, sort_keys=True).encode()).hexdigest() for a in actions)
+            signature = call.get("input_sha256") or call.get("stdin_sha256")
+            if rejection and signature:
+                key = (tuple(call.get("argv", [])), signature, call.get("stderr"), call.get("stdout"))
+                rejected[key] = rejected.get(key, 0) + 1
+                if rejected[key] == 2:
+                    findings.append({"kind": "repeated-unchanged-rejection", "event": len(events), "cause": "requires-triage"})
+            if routes and gaps:
+                route_ids = {c.get("consequence_id") for r in routes for c in r.get("consequences", [])} - {None}
+                if any(g.get("consequence_id") in route_ids for g in gaps):
+                    findings.append({"kind": "unavailable-with-current-route", "event": len(events)})
+            events.append({"session": session, "command": call.get("argv", [""])[0],
+                           "routed_consequence": bool(routes), "unavailable": bool(gaps),
+                           "composed_operations": sorted({a["operation_id"] for a in composed}),
+                           "effect_outcomes": outcomes, "rejected": rejection,
+                           "offered_action_rejected": offered_rejected, "input_sha256": signature})
+        # Provider command trace is a diagnostic witness, not proof of effects.
+        for row in observation.get("command_trace", [])[:128]:
+            command = row.get("command", "")
+            if any(marker in command for marker in ("src/core/src/", "native_public.rs", "aw-observer/subject/")):
+                findings.append({"kind": "non-public-recovery-attempt", "session": session,
+                                 "command_sha256": hashlib.sha256(command.encode()).hexdigest(), "boundary": "provider-command-diagnostic"})
+    status = (claim or {}).get("status")
+    disposition = "direct-progress" if status == "complete" else "truthful-incomplete" if status == "incomplete" else "unobserved"
+    if status == "blocked":
+        disposition = "truthful-unavailable" if unavailable else "unsupported-refusal" if routed else "unverified-refusal"
+    return {"events": events, "findings": findings, "disposition": disposition,
+            "coverage": {"routed_restriction": routed, "multi_owner_action": multi_owner,
+                         "effect": committed, "fresh_reentry": len(observations) > 1 and any(e["session"] > 0 for e in events)},
+            "status": "finding-bearing" if findings else "observed", "cause_boundary": "Interaction findings need owner triage; call count alone is not failure."}

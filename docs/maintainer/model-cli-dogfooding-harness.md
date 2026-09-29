@@ -82,6 +82,23 @@ owner blocker that the fixture independently confirms. An unchanged file and an
 arbitrary refusal cannot pass that case. These bounded cases do not establish
 independent review or general reliability.
 
+The on-demand `operational-affordance` family uses two fresh standalone sessions.
+The first retains a migration plan and managed temporary storage while approval
+is pending. The second reads changed repository state, completes the migration
+and retires the storage. Prompts supply no owner answers or expected commands.
+Trusted installed-call receipts must show a routed restriction, a composed action,
+an effect and fresh reentry. Missing coverage remains non-passing.
+
+Its bounded `interactions` observations distinguish current routes, unavailable
+gaps, composed operations, effect outcomes and repeated unchanged rejections.
+One stale rejection followed by recovery or an extra detail read carries no
+penalty. Repeated rejection and contradictory routing remain findings even when
+artifact checks pass. Provider command traces can flag attempted internal recovery;
+they cannot establish effects or hidden reasoning. Attribution still needs the
+existing dogfooding owner. See the repository's
+[standing observation procedure](../../tools/skills/self-improvement-dogfooding/references/live-affordance.md)
+for current-evidence publication, freshness and unavailable-provider handling.
+
 All seven families have a live path. Removal is checked before re-adoption;
 maintenance must preserve disabled policy and restore the local boundary;
 interruption checks the public stale-source rejection before fresh recovery.

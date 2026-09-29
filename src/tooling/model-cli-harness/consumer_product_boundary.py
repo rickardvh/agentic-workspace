@@ -44,6 +44,31 @@ def validate_request(value):
 
 def invoke(value, config):
     validate_request(value)
+    # Observe file input with the actor's uid, never the root observer's access.
+    # Failure to observe it is unknown; it must not replace the actual CLI call.
+    material = value["stdin"].encode()
+    argv = value["argv"]
+    if "--input" in argv:
+        index = argv.index("--input") + 1
+        if index < len(argv) and argv[index] != "-":
+            material = None
+            try:
+                with tempfile.TemporaryFile() as captured:
+                    read = subprocess.run(["/bin/cat", "--", argv[index]], stdout=captured, stderr=subprocess.DEVNULL,
+                                          cwd="/home/consumer/repo", user=10002, group=10002, extra_groups=[], timeout=5)
+                    if read.returncode == 0 and captured.tell() <= LIMIT:
+                        captured.seek(0)
+                        material = captured.read()
+            except (OSError, subprocess.SubprocessError):
+                pass
+    submitted = None
+    try:
+        document = json.loads(material) if material else {}
+        candidate = document.get("invocation", document)
+        if isinstance(candidate, dict) and candidate.get("operation_id"):
+            submitted = hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()
+    except (ValueError, AttributeError):
+        pass
     # Fixed absolute executable, fixed cwd, no shell and no inherited credentials.
     # The root-owned pair cannot be replaced even temporarily by the actor.
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as errors:
@@ -68,6 +93,8 @@ def invoke(value, config):
             "subject": config["subject"],
             "argv": value["argv"],
             "stdin_sha256": hashlib.sha256(value["stdin"].encode()).hexdigest(),
+            "input_sha256": hashlib.sha256(material).hexdigest() if material is not None else None,
+            "submitted_action_sha256": submitted,
             "stdout": out.read().decode(),
             "stderr": errors.read().decode(),
             "exit_code": process.returncode,

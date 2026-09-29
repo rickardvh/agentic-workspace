@@ -19,7 +19,7 @@ from pathlib import Path, PurePosixPath
 
 HARNESS = Path(__file__).resolve().parents[1] / "model-cli-harness"
 sys.path.insert(0, str(HARNESS))
-from consumer_outcomes import MAX_BYTES, MAX_FILES, Expected, evaluate, snapshot  # noqa: E402
+from consumer_outcomes import MAX_BYTES, MAX_FILES, Expected, affordance_observations, evaluate, snapshot  # noqa: E402
 from run_model_cli_harness import PublicClient  # noqa: E402
 
 RECIPE_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -35,6 +35,7 @@ INITIAL = {
     "notes.txt": b"Repository-owned note: keep this file.\n",
 }
 ON_DEMAND_FAMILIES = {
+    "operational-affordance": "Routed consequence, composed resource action and fresh public reentry",
     "context-continuation": "Ordinary retained progress, intact continuation and fresh-context selective reacquisition",
     "context-continuation-clean": "Fresh repository recovery from retained meaning without disposable transport or provider history",
     "activation-finding": "Source-discovered positive opportunity, report-only latitude, authorized adaptation and fresh quiet reuse",
@@ -386,6 +387,8 @@ def deterministic(work, family):
 
 
 def execute(consumer, family, *, actor=None):
+    if family == "operational-affordance":
+        return execute_affordance(consumer, actor)
     if family in {"context-continuation", "context-continuation-clean"}:
         return execute_context_continuation(consumer, actor, family=family)
     if family.startswith("activation-"):
@@ -442,6 +445,68 @@ def execute(consumer, family, *, actor=None):
             if actor.observations and all(row["tokens"] is not None for row in actor.observations)
             else None
         )
+    return result
+
+
+def execute_affordance(consumer, actor):
+    """Two ordinary sessions; only installed guidance and repository state cross.
+
+    No owner answers or expected command sequence are supplied to the actor.
+    Missing behavioral coverage stays visible even when the files are correct.
+    """
+    work = Workspace(consumer)
+    started, error, claim, before, after = time.monotonic(), None, None, {}, {}
+    try:
+        if actor is None or consumer.profile != "standalone":
+            raise ValueError("Affordance observation requires the live standalone actor and trusted product receipts")
+        recipe(work, "first-contact")
+        work.write(".agentic-workspace/config.toml", ("[workspace]\ncli_invoke=" + json.dumps(" ".join(consumer.command)) + "\n").encode())
+        setup(work)
+        before = work.files()
+        actor.session(work,
+            "Prepare a service port migration. Retain a plan for the whole task using the installed workspace's planning support. "
+            "Create managed temporary task storage and put a draft migration note there. Record enough to resume and retire that storage. "
+            "Do not change settings.json or README.md yet: the target port is awaiting confirmation. Preserve policy.md and notes.txt. "
+            "Stop after preparation; the next session will have no conversation history.")
+        prepared = work.files()
+        if prepared["settings.json"] != before["settings.json"] or prepared["README.md"] != before["README.md"]:
+            raise ValueError("Preparation crossed the pending port-confirmation boundary")
+        scratch = {name for name in prepared if "/local/scratch/" in name and name not in before}
+        plans = {name for name in prepared if "/planning/execplans/" in name and name.endswith(".plan.json")}
+        if not scratch or not plans:
+            raise ValueError("Preparation did not establish retained Planning and managed scratch")
+        # A changed ordinary source and fresh provider session force reentry.
+        work.write("release.json", b'{"port":8081,"approved":true}\n')
+        claim = actor.session(work,
+            "Resume the prepared service migration from current repository state; there is no earlier conversation. "
+            "The approved target is now in release.json. Update settings.json and README.md to that port, "
+            "retire the temporary task storage through its supported lifecycle, and reconcile the retained plan. "
+            "Preserve policy.md, notes.txt and the approved release source.")
+        after = work.files()
+        validate_pointer_files(after)
+        if scratch.intersection(after) or after.get("release.json") != b'{"port":8081,"approved":true}\n':
+            raise ValueError("Temporary task storage remains or the approved release source changed")
+    except (Exception, KeyboardInterrupt) as failure:
+        error = str(failure)[:2000]
+        try:
+            after = work.files()
+        except Exception:
+            pass
+    observations = getattr(actor, "observations", [])
+    interactions = affordance_observations(observations, claim)
+    expected = expected_task()
+    expected.allowed_changes += ("release.json",)
+    result = evaluate(before, after, expected, claim=claim, executed=bool(observations),
+                      subject_verified=bool(consumer.observation.get("installed")), execution_error=error)
+    coverage = all(interactions["coverage"].values())
+    if interactions["findings"] or not coverage:
+        result.update(status="failed", failure_class="affordance-finding" if interactions["findings"] else "affordance-coverage")
+    result.update(family="operational-affordance", driver="agent", actor=observations,
+                  interactions=interactions, environment=consumer.observation,
+                  recipe_sha256=RECIPE_SHA256, scorer_sha256=SCORER_SHA256,
+                  actor_sha256=getattr(actor, "source_sha256", None), elapsed_seconds=round(time.monotonic()-started, 3),
+                  finding_route="tools/skills/self-improvement-dogfooding/SKILL.md",
+                  support_boundary="One exact installed subject; interaction findings require owner triage, not universal model scoring.")
     return result
 
 

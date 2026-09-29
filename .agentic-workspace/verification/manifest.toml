@@ -1,5 +1,26 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[assurance.requirements.aw_live_affordance_dogfooding]
+level = "medium"
+force = "required-before-closeout"
+requirement_class = "current-evidence"
+source_intent_ref = "SYSTEM_INTENT.md"
+source_intent_revision = "aw-live-affordance-dogfooding-v1"
+evidence_owner = "verification:aw-live-affordance-dogfooding"
+detail_route = "verification:aw-live-affordance-dogfooding"
+required_evidence = [
+  "One trusted live operational-affordance run against an exact installed subject, with explicit provider/model/runtime identity.",
+  "Routed restriction, composed action and fresh reentry observed independently of final files and actor claims.",
+  "First result preserved; material interaction findings attributed to their existing product owner.",
+]
+blocking_claims = ["close-parent-lane"]
+notes = "Local maintenance observation; unrelated implementation remains available. Hosted CI remains deterministic-only."
+[assurance.requirements.aw_live_affordance_dogfooding.freshness]
+procedure = "tools/skills/self-improvement-dogfooding/references/live-affordance.md"
+max_age_seconds = 604800
+dependencies = ["src/core/src/native_public.rs", "src/core/src/operating.rs", "src/core/src/modules/verification/native_verification.rs", "src/tooling/release/consumer_journeys.py", "src/tooling/model-cli-harness/consumer_outcomes.py", "src/tooling/model-cli-harness/consumer_agent.py", "src/tooling/model-cli-harness/consumer_product_boundary.py", ".agentic-workspace/skills/workspace-startup/SKILL.md", ".agentic-workspace/skills/workspace-startup/references/owners.md", ".agentic-workspace/skills/workspace-startup/references/constraints.md"]
+disposition = "route"
+
 [assurance.requirements.aw_repository_state_coherence]
 level = "medium"
 force = "required-before-closeout"
