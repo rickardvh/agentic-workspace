@@ -92,6 +92,30 @@ def test_export_failure_keeps_bounded_diagnostic_tail():
     assert len(str(failure.value)) < 4200
 
 
+@pytest.mark.parametrize("trailer", ["bytes(262144)", "b'x'*262144", "bytes(consumer_limit+65536)"])
+def test_export_drains_only_bounded_tar_padding(monkeypatch, trailer):
+    import consumer_journeys
+
+    class Consumer:
+        name = "fixture"
+
+        def archive_command(self):
+            return [
+                sys.executable,
+                "-c",
+                f"import sys; consumer_limit=32768; sys.stdout.buffer.write(bytes(10240)+{trailer}); sys.stdout.buffer.flush()",
+            ]
+
+    monkeypatch.setattr(consumer_journeys, "EXPORT_SECONDS", 3)
+    if trailer == "bytes(262144)":
+        assert Workspace(Consumer()).files() == {}
+    else:
+        if trailer.startswith("bytes"):
+            monkeypatch.setattr(consumer_journeys, "MAX_BYTES", 32768)
+        with pytest.raises(ValueError, match="export padding"):
+            Workspace(Consumer()).files()
+
+
 def test_clean_context_preserves_selected_meaning_without_disposable_transport():
     plan = ".agentic-workspace/planning/execplans/maintenance.plan.json"
     selection = ".agentic-workspace/local/planning/owner-selection.json"

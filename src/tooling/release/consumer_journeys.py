@@ -132,7 +132,13 @@ class Workspace:
         diagnostic_reader = threading.Thread(target=read_diagnostics, daemon=True)
         diagnostic_reader.start()
         # Bound reading the header/body too, not just wait() after stream EOF.
-        timer = threading.Timer(EXPORT_SECONDS, proc.kill)
+        expired = threading.Event()
+
+        def expire():
+            expired.set()
+            proc.kill()
+
+        timer = threading.Timer(EXPORT_SECONDS, expire)
         timer.daemon = True
         timer.start()
         files = {}
@@ -152,8 +158,18 @@ class Workspace:
                         raise ValueError("Unsafe or oversized exported file set")
                     if member.isfile():
                         files[str(name)] = archive.extractfile(member).read()
+                # Tar iteration ends at the first end marker, before the producer
+                # necessarily finishes writing record padding. Drain the stream
+                # before waiting, or a full pipe can deadlock a valid export.
+                padding = 0
+                while tail := archive.fileobj.read(65536):
+                    padding += len(tail)
+                    if padding > MAX_BYTES or any(tail):
+                        raise ValueError("Unsafe or oversized export padding")
             if proc.wait(timeout=30):
                 diagnostic_reader.join(timeout=1)
+                if expired.is_set():
+                    raise ValueError(f"Consumer export timed out after {EXPORT_SECONDS} seconds")
                 raise ValueError(f"Consumer export failed ({proc.returncode}): {diagnostics.decode(errors='replace')}")
         finally:
             timer.cancel()
