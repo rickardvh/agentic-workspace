@@ -67,7 +67,14 @@ import {syncBuiltinESMExports} from 'node:module';
 import {pathToFileURL} from 'node:url';
 import fs from 'node:fs';
 const input=JSON.parse(fs.readFileSync(0,'utf8'));
-cp.spawnSync=(_binary,_args,options)=>({status:0,stdout:options.input,stderr:''});
+const spawn=cp.spawnSync;
+let mode='envelope';
+const launchError=Object.assign(new Error('native launch failed'),{code:'EACCES'});
+cp.spawnSync=(_binary,_args,options)=> {
+  if(mode==='large') return spawn(process.execPath,['-e',"process.stdout.write(JSON.stringify({text:'雪'.repeat(400000)}))"],options);
+  if(mode==='launch-error') return {status:null,error:launchError,stdout:null,stderr:null};
+  return {status:0,stdout:options.input,stderr:''};
+};
 syncBuiltinESMExports();
 process.env.AGENTIC_WORKSPACE_CORE_BINARY=input.core;
 const api=await import(pathToFileURL(input.facade));
@@ -77,11 +84,18 @@ for(const row of input.cases) {
   const actual=api[row.typescript](...row.values);
   if(JSON.stringify(actual)!==JSON.stringify(row.expected)) throw Error('envelope drift: '+row.typescript);
 }
+// Exercise real subprocess capture with more than 1 MiB of UTF-8 output.
+mode='large';
+if(api.start({}).text!=='雪'.repeat(400000)) throw Error('large native response truncated');
+mode='launch-error';
+let caught;
+try {api.start({});} catch(error) {caught=error;}
+if(caught!==launchError) throw Error('native launch error was lost');
 '''
     result = subprocess.run([shutil.which("node"), "--input-type=module", "-e", program],
                             input=json.dumps({"core": str(core), "facade": str(facade), "cases": cases(contract),
                                               "names": [op["typescript"] for op in contract["operations"]]}),
-                            text=True, capture_output=True)
+                            text=True, encoding="utf-8", capture_output=True)
     assert result.returncode == 0, result.stderr
 
 

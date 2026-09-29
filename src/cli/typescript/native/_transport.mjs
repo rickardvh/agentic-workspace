@@ -55,7 +55,11 @@ export function request(payload) {
     input: JSON.stringify(payload),
     encoding: "utf8",
     windowsHide: true,
+    // Full owner responses can exceed Node's default 1 MiB capture limit.
+    // Preserve the native response, as the Python transport does.
+    maxBuffer: Infinity,
   });
+  if (result.error) throw result.error;
   if (result.status !== 0) {
     let message = result.stderr.trim() || `shared core exited with status ${result.status}`;
     try { message = JSON.parse(result.stderr).error.message; } catch {}
