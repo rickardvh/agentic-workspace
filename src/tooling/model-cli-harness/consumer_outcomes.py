@@ -150,6 +150,7 @@ def affordance_observations(observations, claim):
     events, findings, rejected = [], [], {}
     routed = multi_owner = committed = unavailable = False
     offered = set()
+    composed_offered = set()
 
     def objects(value):
         if isinstance(value, dict):
@@ -180,10 +181,11 @@ def affordance_observations(observations, claim):
             if gaps or routes or any("decision_packet" in r for r in rows):
                 unavailable = bool(gaps) and not bool(routes)
             multi_owner |= bool(composed)
-            committed |= "committed" in outcomes
+            committed |= "committed" in outcomes and call.get("submitted_action_sha256") in composed_offered
             rejection = "rejected-before-effect" in outcomes or call.get("exit_code", 0) != 0
             offered_rejected = rejection and call.get("submitted_action_sha256") in offered
             offered.update(hashlib.sha256(json.dumps(a, sort_keys=True).encode()).hexdigest() for a in actions)
+            composed_offered.update(hashlib.sha256(json.dumps(a, sort_keys=True).encode()).hexdigest() for a in composed)
             signature = call.get("input_sha256") or call.get("stdin_sha256")
             if rejection and signature:
                 key = (tuple(call.get("argv", [])), signature, call.get("stderr"), call.get("stdout"))

@@ -65,6 +65,11 @@ def invoke(value, config):
     try:
         document = json.loads(material) if material else {}
         candidate = document.get("invocation", document)
+        if "--reference" in argv and isinstance(document, dict):
+            reference_index = argv.index("--reference") + 1
+            if reference_index < len(argv):
+                candidate = next((row.get("envelope") for row in document.get("envelopes", [])
+                                  if row.get("reference") == argv[reference_index]), candidate)
         if isinstance(candidate, dict) and candidate.get("operation_id"):
             submitted = hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()
     except (ValueError, AttributeError):

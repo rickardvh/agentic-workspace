@@ -1,5 +1,6 @@
 """Independent outcome, authority and claim challenges, without model execution."""
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -45,8 +46,12 @@ def test_affordance_observation_distinguishes_routes_retries_and_honest_gaps():
         }
     }
     effect = {"effect_outcome": {"status": "committed"}}
+    effect_call = call(effect)
+    effect_call["submitted_action_sha256"] = hashlib.sha256(
+        json.dumps(action["decision_packet"]["primary_action"], sort_keys=True).encode()
+    ).hexdigest()
     observations = [
-        {"product_subject": subject, "product_calls": [call(routed), call(action), call(effect)]},
+        {"product_subject": subject, "product_calls": [call(routed), call(action), effect_call]},
         {"product_subject": subject, "product_calls": [call(effect)]},
     ]
     direct = scorer.affordance_observations(observations, {"status": "complete"})
