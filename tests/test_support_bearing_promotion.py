@@ -54,6 +54,24 @@ def test_server_check_receipt_binds_required_check_to_exact_commit() -> None:
     )
     assert mismatched["status"] == "blocked"
 
+    attempts = [
+        {"id": 2, "name": "Merge sufficiency", "conclusion": "success", "head_sha": "expected"},
+        {"id": 1, "name": "Merge sufficiency", "conclusion": "skipped", "head_sha": "expected"},
+    ]
+    for order in (attempts, list(reversed(attempts))):
+        latest = PROMOTION.server_check_receipt(
+            repository="owner/repo", commit="expected", required=["Merge sufficiency"], check_runs={"check_runs": order}
+        )
+        assert latest["status"] == "passed"
+    attempts[0]["conclusion"] = "failure"
+    attempts[1]["conclusion"] = "success"
+    assert (
+        PROMOTION.server_check_receipt(
+            repository="owner/repo", commit="expected", required=["Merge sufficiency"], check_runs={"check_runs": attempts}
+        )["status"]
+        == "blocked"
+    )
+
 
 def test_checked_in_master_ruleset_requires_review_and_merge_sufficiency() -> None:
     policy = json.loads((ROOT / ".github/support-bearing-promotion.json").read_text(encoding="utf-8"))

@@ -6,9 +6,10 @@
     "source": "Issue #3719 acceptance and evidence requirements"
   },
   "continuation": {
-    "authority": "Earlier assignment selected codex_astra:internal for coupled redesign; revalidate any missing current restrictions. Creation/selection and implementation completion remain distinct. No PR, push or production publication yet.",
-    "findings": "Finite two-release selection/stamping fixture and controlled GitHub/Cargo endpoint checks are implemented. Native npm consumer needed explicit dev identity spelling mapping. Bundle verifier now recomputes source transformation. Review same-run reruns, legacy tag recovery, registry completion and workflow dependencies before hosted execution.",
-    "implementation": "Uncommitted changes on codex/one-dispatch-release from e927470be18c89638fa724d825cbb14eb72bff04 replace normal release PR path. See docs/maintainer/release-validation.md for graphs and pending evidence. Preserve pre-existing proof receipts and index changes."
+    "authority": "No production publication or master mutation. Independent acceptance must remain externally initiated. Earlier Assignment selected codex_astra:internal; revalidate current restrictions for completion claims.",
+    "findings": "Actual public observation verified completed v1.6.0 at e927470be18c89638fa724d825cbb14eb72bff04 with no partial release. Real Windows staging from development identity to 1.7.0 built native/wheel/npm/sdist/Cargo packages; isolated sdist and Cargo installs passed. Finite consumption, staging mutation, interrupted publication, uncertain registry retry and missing retained bundle cases pass. See docs/maintainer/release-validation.md for evidence scope and hosted attempts.",
+    "implementation": "Implemented on codex/one-dispatch-release in draft PR #3721. The single dispatch path, deterministic stamping, stable consumption boundary and exact bundle recovery replace the normal release PR flow. Preserve unrelated main-checkout proof receipts/index changes.",
+    "resources": "AW-managed sibling checkout ../aw-release-staging-3719 contains disposable build outputs from the completed local exercise. Generated stamping has been restored after retaining its identity in task scratch. Remove the checkout through AW resources; preserve any returned cleanup blocker."
   },
   "creation_provenance": {
     "custody": {
@@ -41,7 +42,7 @@
     "next_action": "durable",
     "proof_observed": "observation"
   },
-  "next_action": "Finish compatibility and recovery validation, establish actual completed public cutover boundary, build real staged packages and run hosted qualify-only workflow on the candidate.",
+  "next_action": "Finish trusted hosted qualification, repair any evidenced failure, record timings and final validation scope, clean task resources, then leave independent acceptance outstanding until externally supplied.",
   "owner_level": "slice",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3719"
@@ -49,18 +50,49 @@
   "phase": "shaping",
   "proof": {
     "remaining": [
-      "Real staged artifact identity and self-contained source installs",
-      "Controlled interrupted registry publication and missing retained bundle coverage",
-      "Hosted qualify-only run with exact source admission",
-      "Required repository checks and external independent acceptance"
+      "Trusted hosted qualify-only staged handoffs on candidate",
+      "Required repository checks",
+      "External independent acceptance"
     ]
   },
-  "references": [],
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/pull/3721",
+    "docs/maintainer/release-validation.md"
+  ],
   "relationships": {},
-  "revision": 1,
+  "revision": 2,
   "scope": {
     "excluded": "No production release, master writeback, new installed workflow, self-review or agent-directed independent reviewer.",
     "included": "Existing release workflow, changeset consumption, stamping, manifest/registry/Cargo/current-install consumers, recovery, focused and hosted proof."
   },
-  "title": "Implement #3719: one dispatch coordinated stable release"
+  "title": "Implement #3719: one dispatch coordinated stable release",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4c718262187a89db31de5dad7722b26d093bfa0d976072edf67f124deaf61ca5.attempt.json",
+        "revision": "sha256:412976977b7851db19d6c768380c6ed64e8f232e414306fc9249518b324807a0",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4c718262187a89db31de5dad7722b26d093bfa0d976072edf67f124deaf61ca5.result.json",
+        "revision": "sha256:ea7af1924d264df81c7810fa20f60e2cb1cf8cb2004e75a62c495a1c6d13d8cc",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:cd6c9ac4a88577ce9c70399eb8b043b80381afdb21f0cb3227622abbefb645ab",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:ba146b62bd530cf158c332bb85f4a7011b42ee47aa9471a87608407dcebf5ece",
+        "owner_id": "work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f",
+        "owner_path": ".agentic-workspace/planning/execplans/work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f.plan.json"
+      }
+    }
+  }
 }
