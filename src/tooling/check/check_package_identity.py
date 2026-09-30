@@ -381,6 +381,8 @@ def redistributable_receipt_errors(root: Path, dist: Path) -> list[str]:
             expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
         for artifact in dist.glob(f"agentic-workspace-native-{version}-*.zip"):
             expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
+        for artifact in dist.glob(f"agentic-workspace-entry-{npm_version(version)}.zip"):
+            expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
     except ValueError as exc:
         return [str(exc)]
     expected = list(

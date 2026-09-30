@@ -281,6 +281,11 @@ def verify(directory="dist"):
     required_assets.add(manifest["platform_release"]["asset"])
     required_assets.update(item["asset"] for item in manifest["platform_consumers"])
     required_assets.update(item["asset"] for item in manifest["native_archives"])
+    if "skill_entry" in manifest:
+        entry = manifest["skill_entry"]
+        required_assets.add(entry["asset"])
+        if checksums.get(entry["asset"]) != entry["sha256"]:
+            raise SystemExit("Skill entry manifest/checksum mismatch")
     for package in manifest["packages"]:
         required_assets.update(item["asset"] for item in package.get("wheels", []))
     missing = sorted(required_assets - set(checksums))

@@ -55,7 +55,7 @@ def test_active_executable_examples_agree_with_native_command_authority():
         blocks = [text] if path in producers else re.findall(r"`+([^`]+)`+", text)
         for block in blocks:
             for command in re.findall(
-                r"(?:\bagentic-workspace(?:\.exe)?|\brun_agentic_workspace\.py|<configured AW invocation>)\s+([a-z][\w-]*)", block
+                r"(?:\bagentic-workspace(?:\.exe)?|\brun_agentic_workspace\.py|<configured AW invocation>)[ \t]+([a-z][\w-]*)", block
             ):
                 if command not in commands:
                     unsupported.append(f"{relative}: {command}")

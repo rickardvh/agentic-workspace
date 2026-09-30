@@ -1743,6 +1743,78 @@
       "notes": "Shared assessment grants neither machine readiness nor independent acceptance. Owner write custody and consumer validation govern publication."
     },
     {
+      "pattern": ".agents/plugins/marketplace.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
+      "pattern": ".claude-plugin/marketplace.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/plugin.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
       "pattern": ".agentic-workspace/proof/current/current-evidence.json",
       "owner": "verification",
       "format": "json",
@@ -1796,6 +1868,46 @@
       "freshness_check": "uv run python src/tooling/generate/generate_agent_interface.py --check",
       "ordinary_agent_route": "canonical startup skill no-runtime branch; source refs only",
       "removal_or_demotion_path": "remove only when the supported repository-only reader has an equivalent selective source discovery surface"
+    },
+    {
+      "pattern": ".agents/plugins/marketplace.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
+    },
+    {
+      "pattern": ".claude-plugin/marketplace.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/plugin.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
     }
   ],
   "kind": "agentic-workspace/structured-file-inventory/v1",

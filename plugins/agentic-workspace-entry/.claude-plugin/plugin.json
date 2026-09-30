@@ -1,0 +1,9 @@
+{
+  "name": "agentic-workspace-entry",
+  "description": "A passive entry to the current target repository's agentic-workspace procedure.",
+  "author": {
+    "name": "Rickard von Haugwitz"
+  },
+  "repository": "https://github.com/rickardvh/agentic-workspace",
+  "license": "MIT"
+}
