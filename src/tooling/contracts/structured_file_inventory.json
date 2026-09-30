@@ -656,16 +656,21 @@
       "lifetime": "Reusable authored or generated source, replaced in place by its declared owner; no per-task append producer. A new accumulating producer requires its terminal lifetime and bounded proof."
     },
     {
-      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
+      "checked_in_justification": "Legacy upgrade input preserved until exact owner migration and disposition.",
+      "editable_by_agents": false,
       "format": "toml",
       "generated": false,
-      "notes": "Planning state is checked by summary, doctor, and planning-surface validation.",
+      "notes": "Aggregate revisions, status and continuation are not current authority. Canonical owner records preserve useful intent before guarded retirement.",
       "owner": "planning",
       "pattern": ".agentic-workspace/planning/state.toml",
-      "schema_or_validator": "planning-state/v1 parser and planning surface checker",
+      "schema_or_validator": "src/core/src/modules/planning/native_planning.rs legacy migration parser and native_planning_retention.rs disposition",
       "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "removable-duplicate",
+      "reconstructable_from": [
+        "Owner-scoped Planning records and Git history after migration"
+      ],
+      "routed_to": "#3726",
+      "lifetime": "Until canonical owner relations are reconciled and exact Planning disposition is committed."
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
@@ -1114,7 +1119,10 @@
       "format": "json",
       "generated": true,
       "notes": "Reconstructed from the canonical Planning skill registry by the agent interface generator.",
-      "reconstructable_from": [".agentic-workspace/planning/skills/REGISTRY.json", "src/tooling/generate/generate_agent_interface.py"],
+      "reconstructable_from": [
+        ".agentic-workspace/planning/skills/REGISTRY.json",
+        "src/tooling/generate/generate_agent_interface.py"
+      ],
       "owner": "planning-skills",
       "pattern": "src/core/payload/.agentic-workspace/planning/skills/REGISTRY.json",
       "schema_or_validator": "uv run python src/tooling/generate/generate_agent_interface.py --check",
@@ -1733,6 +1741,19 @@
       "checked_in_justification": "One current repository setup assessment preserves settled judgments and precise unresolved owner continuations.",
       "lifetime": "Replace through the Configuration owner when setup or bound dependencies change; never append assessment history.",
       "notes": "Shared assessment grants neither machine readiness nor independent acceptance. Owner write custody and consumer validation govern publication."
+    },
+    {
+      "pattern": ".agentic-workspace/proof/current/current-evidence.json",
+      "owner": "verification",
+      "format": "json",
+      "generated": false,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth",
+      "schema_or_validator": "validator:src/core/src/modules/verification/current_evidence.rs",
+      "checked_in_justification": "Current bounded requirement assessments are consumed by Verification.",
+      "notes": "Assessments bind exact dependencies and owner publication custody; history is not current proof.",
+      "lifetime": "Replace or retire through current Verification evidence operations when bound requirements change."
     }
   ],
   "generated_mirrors": [
