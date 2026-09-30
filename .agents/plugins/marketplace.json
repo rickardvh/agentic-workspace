@@ -1,0 +1,17 @@
+{
+  "name": "agentic-workspace",
+  "plugins": [
+    {
+      "name": "agentic-workspace-entry",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agentic-workspace-entry"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

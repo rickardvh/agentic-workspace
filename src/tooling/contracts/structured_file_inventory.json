@@ -1114,7 +1114,10 @@
       "format": "json",
       "generated": true,
       "notes": "Reconstructed from the canonical Planning skill registry by the agent interface generator.",
-      "reconstructable_from": [".agentic-workspace/planning/skills/REGISTRY.json", "src/tooling/generate/generate_agent_interface.py"],
+      "reconstructable_from": [
+        ".agentic-workspace/planning/skills/REGISTRY.json",
+        "src/tooling/generate/generate_agent_interface.py"
+      ],
       "owner": "planning-skills",
       "pattern": "src/core/payload/.agentic-workspace/planning/skills/REGISTRY.json",
       "schema_or_validator": "uv run python src/tooling/generate/generate_agent_interface.py --check",
@@ -1733,6 +1736,91 @@
       "checked_in_justification": "One current repository setup assessment preserves settled judgments and precise unresolved owner continuations.",
       "lifetime": "Replace through the Configuration owner when setup or bound dependencies change; never append assessment history.",
       "notes": "Shared assessment grants neither machine readiness nor independent acceptance. Owner write custody and consumer validation govern publication."
+    },
+    {
+      "pattern": ".agents/plugins/marketplace.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
+      "pattern": ".claude-plugin/marketplace.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/plugin.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+      "owner": "workspace-adapters",
+      "format": "json",
+      "generated": true,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter",
+      "schema_or_validator": "validator:src/tooling/generate/generate_skill_entry.py; native plugin manifest validation",
+      "checked_in_justification": "Git distribution entry for the optional passive repository bridge.",
+      "reconstructable_from": [
+        "src/adapters/skill-entry/SKILL.md",
+        "src/tooling/generate/generate_skill_entry.py",
+        "coordinated package release identity"
+      ],
+      "notes": "Contains distribution identity and paths, no runtime or repository-policy authority.",
+      "lifetime": "Regenerate with the bridge or coordinated release identity; host installation has its native lifecycle."
+    },
+    {
+      "pattern": ".agentic-workspace/proof/current/current-evidence.json",
+      "owner": "verification",
+      "format": "json",
+      "generated": false,
+      "editable_by_agents": false,
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth",
+      "schema_or_validator": "validator:src/core/src/modules/verification/current_evidence.rs",
+      "checked_in_justification": "Current bounded requirement assessments are consumed by Verification.",
+      "notes": "Assessments bind exact dependencies and owner publication custody; history is not current proof.",
+      "lifetime": "Replace or retire through current Verification evidence operations when bound requirements change."
     }
   ],
   "generated_mirrors": [

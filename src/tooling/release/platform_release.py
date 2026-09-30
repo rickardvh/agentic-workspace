@@ -75,7 +75,11 @@ def load(directory, *, require=True):
     item = data["npm"]
     if Path(item["asset"]).name != item["asset"] or digest(directory / item["asset"]) != item["sha256"]:
         raise ValueError("Universal npm artifact digest mismatch")
-    expected = {p["asset"] for p in entries(data)} | {item["asset"]}
+    if "skill_entry" in data:
+        item = data["skill_entry"]
+        if Path(item["asset"]).name != item["asset"] or digest(directory / item["asset"]) != item["sha256"]:
+            raise ValueError("Skill entry artifact digest mismatch")
+    expected = {p["asset"] for p in entries(data)} | {data["npm"]["asset"]}
     actual = {p.name for pattern in ("*.whl", "*.zip", "*.tgz") for p in directory.glob(pattern)}
     if expected != actual:
         raise ValueError("Platform inventory does not cover the exact published packages")
@@ -83,7 +87,9 @@ def load(directory, *, require=True):
 
 
 def entries(data):
-    return [item for row in data["platforms"] for item in (row["wheel"], row["native_archive"])]
+    return [item for row in data["platforms"] for item in (row["wheel"], row["native_archive"])] + (
+        [data["skill_entry"]] if "skill_entry" in data else []
+    )
 
 
 def build(directory):
@@ -195,6 +201,9 @@ def assemble(inputs, directory):
         (package / "package.json").write_text(json.dumps(metadata, indent=2) + "\n")
         run(["npm", "pack", "--pack-destination", directory], cwd=package)
     (npm_path,) = directory.glob("*.tgz")
+    import stage_skill_entry
+
+    entry = stage_skill_entry.stage(directory, metadata["version"])
     (directory / MANIFEST).write_text(
         json.dumps(
             {
@@ -204,6 +213,7 @@ def assemble(inputs, directory):
                 "staging": staging,
                 "platforms": records,
                 "npm": asset(npm_path),
+                "skill_entry": asset(entry),
             },
             indent=2,
         )
@@ -305,6 +315,8 @@ def extend_release(directory, tag):
     manifest["platform_release"] = asset(directory / MANIFEST)
     manifest["platform_consumers"] = [asset(directory / f"platform-consumer-{p['target']}.json") for p in data["platforms"]]
     manifest["native_archives"] = [p["native_archive"] for p in data["platforms"]]
+    if "skill_entry" in data:
+        manifest["skill_entry"] = data["skill_entry"]
     next(p for p in manifest["packages"] if p["ecosystem"] == "python")["wheels"] = [p["wheel"] for p in data["platforms"]]
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     update_receipts(directory, tag)

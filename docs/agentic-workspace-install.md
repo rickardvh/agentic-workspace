@@ -57,3 +57,71 @@ A fresh session follows the installed `AGENTS.md` pointer without needing the
 setup conversation. Continue with [Everyday use](everyday-use.md). For updates,
 removal or saved data, see [Your repository and data](package/installed-surfaces.md);
 for an unsuccessful setup, see [Troubleshooting](troubleshooting.md).
+
+## Optional installed entry skill
+
+`agentic-workspace-entry` follows the startup skill in the repository being worked
+on. It can serve repositories with different AW versions, including subdirectory
+and linked-worktree tasks. Runtime installation through npm, pip, uv or Cargo and
+repository setup remain separate. Keep the `AGENTS.md` pointer: passive discovery
+does not guarantee automatic activation. Select the entry skill when needed.
+
+The shared plugin exposes one skill and has no hooks, MCP server or runtime.
+Use the native host lifecycle with the Git marketplace:
+
+```sh
+codex plugin marketplace add rickardvh/agentic-workspace
+codex plugin add agentic-workspace-entry@agentic-workspace
+```
+
+```sh
+claude plugin marketplace add rickardvh/agentic-workspace
+claude plugin install agentic-workspace-entry@agentic-workspace --scope user
+```
+
+Alternatively, extract `agentic-workspace-entry-<version>.zip` from the ordinary
+release and pass the extracted directory to `plugin marketplace add`. Both
+catalogues refer to the same self-contained bundle. Select
+`$agentic-workspace-entry` in Codex or
+`/agentic-workspace-entry:agentic-workspace-entry` in Claude Code.
+
+For Codex Git updates, run `codex plugin marketplace upgrade agentic-workspace`,
+then `codex plugin add agentic-workspace-entry@agentic-workspace`. Disable it in
+the host's plugin settings or remove it with
+`codex plugin remove agentic-workspace-entry@agentic-workspace`. Claude Code
+provides `plugin update`, `plugin disable`, `plugin enable` and `plugin uninstall`
+with that selector and `--scope user`. Restart the host after lifecycle changes.
+For an extracted release, replace the marketplace directory with the chosen
+release before updating. These operations affect host storage, not repository
+integration or retained state. The generic repository pointer remains usable
+after removal.
+
+The npm package also ships `skills/agentic-workspace-entry/SKILL.md`. npm and pnpm
+install package bytes; [skills-npm](https://github.com/antfu/skills-npm) is a
+separate, opt-in skill installer. In an explicit consumer package, install AW
+normally, then declare the external source:
+
+```json
+{
+  "skills": ["npm:@agentic-workspace/workspace-cli"]
+}
+```
+
+Run `npx skills-npm@4.0.0 --agents codex --yes --no-remote` or
+`pnpm dlx skills-npm@4.0.0 --agents codex --yes --no-remote` from that consumer.
+The installer requires Node 22.20 or later. Its default package source resolves
+the declaration from the consumer, including pnpm's layout; `--source
+node_modules` also discovers bundled skills directly. No AW install hook runs
+this step. Keep an integration-only consumer package under `.agentic-workspace/`
+if it is not already part of the repository's package setup. Installer-created
+host exposure is an explicit external boundary.
+
+Update the dependency and rerun the installer. To remove this exposure, remove
+the dependency and declaration, run the package manager, then rerun skills-npm
+with cleanup enabled. Clearing the declaration alone can retain cached bundled
+skills while the package is installed. Cleanup preserves unrelated skills.
+
+See the [current local evidence and support boundary](maintainer/skill-entry-evidence.md)
+before advertising these optional paths as tested host entry. Plugin recognition
+and artifact correctness alone do not establish selected handoff or automatic
+activation.

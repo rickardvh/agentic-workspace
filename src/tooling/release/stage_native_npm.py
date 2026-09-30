@@ -64,6 +64,13 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     shutil.copy2(ROOT / "src/cli/typescript/cli.mjs", output / "src/cli.mjs")
     shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
     shutil.copy2(ROOT / "README.md", output / "README.md")
+    import stage_skill_entry
+
+    for reference, body in stage_skill_entry.outputs(version=package["version"]).items():
+        if reference.startswith("src/cli/typescript/skills/"):
+            destination = output / Path(reference).relative_to("src/cli/typescript")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(body, encoding="utf-8", newline="\n")
     binary = binaries["agentic-workspace-core"]
     for executable in binaries.values():
         shutil.copy2(executable, native / executable.name)

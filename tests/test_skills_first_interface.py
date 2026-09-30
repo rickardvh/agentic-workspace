@@ -402,3 +402,27 @@ def test_known_leaf_returns_current_procedure_and_shared_applicability(tmp_path,
         assert not stale["memory"]["selected_notes"]
         assert "detail" not in stale["semantic_routes"]["discovery"]
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+def test_entry_distribution_is_one_bridge_with_resolvable_manifest_paths():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("entry_distribution", ROOT / "src/tooling/generate/generate_skill_entry.py")
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    assert generator.synchronize(check=True) == []
+    files = generator.render()
+    skill = files[generator.NPM_SKILL]
+    assert files[f"{generator.BUNDLE}/skills/{generator.NAME}/SKILL.md"] == skill
+    for name in ["plugin.json", ".claude-plugin/plugin.json"]:
+        manifest = json.loads(files[f"{generator.BUNDLE}/{name}"])
+        assert manifest["name"] == generator.NAME
+        assert manifest["version"] == generator.release_version(ROOT)
+    codex = json.loads(files[".agents/plugins/marketplace.json"])
+    claude = json.loads(files[".claude-plugin/marketplace.json"])
+    assert len(codex["plugins"]) == len(claude["plugins"]) == 1
+    assert codex["plugins"][0]["source"]["path"] == claude["plugins"][0]["source"] == f"./{generator.BUNDLE}"
+    assert (ROOT / generator.BUNDLE / "skills" / generator.NAME / "SKILL.md").is_file()
+    package = json.loads((ROOT / "src/cli/typescript/package.json").read_text())
+    assert "skills" in package["files"]
+    assert "skills" not in package  # owned files, not self-referencing external sources

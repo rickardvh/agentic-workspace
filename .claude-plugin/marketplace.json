@@ -1,0 +1,14 @@
+{
+  "name": "agentic-workspace",
+  "description": "A passive entry to the current target repository's agentic-workspace procedure.",
+  "owner": {
+    "name": "Rickard von Haugwitz"
+  },
+  "plugins": [
+    {
+      "name": "agentic-workspace-entry",
+      "source": "./plugins/agentic-workspace-entry",
+      "version": "0.0.0-dev.0"
+    }
+  ]
+}

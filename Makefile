@@ -368,3 +368,4 @@ check-all: check-nosync
 native-sources:
 	@uv run python src/tooling/check/check_native_sources.py
 	@uv run python src/tooling/generate/generate_agent_interface.py --check
+	@uv run python src/tooling/generate/generate_skill_entry.py --check

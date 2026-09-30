@@ -166,3 +166,26 @@ def test_macos_support_policy_is_bound_by_inventory(inventory):
     (root / release.MANIFEST).write_text(json.dumps(data))
     with pytest.raises(ValueError, match="Platform declaration mismatch"):
         release.load(root)
+
+
+def test_entry_archive_uses_existing_release_inventory_and_identity(inventory, tmp_path):
+    import zipfile
+
+    import stage_skill_entry
+
+    root, data = inventory
+    archive = stage_skill_entry.stage(root, "1.0.0-rc.3")
+    data["skill_entry"] = release.asset(archive)
+    (root / release.MANIFEST).write_text(json.dumps(data))
+    assert release.load(root)["skill_entry"] == release.asset(archive)
+    assert data["skill_entry"] in release.entries(data)
+    with zipfile.ZipFile(archive) as bundle:
+        for name in ["plugin.json", ".claude-plugin/plugin.json"]:
+            manifest = json.loads(bundle.read(f"plugins/agentic-workspace-entry/{name}"))
+            assert manifest["version"] == "1.0.0-rc.3"
+        assert bundle.read("plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md") == (
+            ROOT / "src/adapters/skill-entry/SKILL.md"
+        ).read_bytes().replace(b"\r\n", b"\n")
+    archive.write_bytes(b"changed entry")
+    with pytest.raises(ValueError, match="Skill entry artifact digest"):
+        release.load(root)
