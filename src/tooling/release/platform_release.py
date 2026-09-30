@@ -16,8 +16,6 @@ import tomllib
 import zipfile
 from pathlib import Path
 
-from first_contact import journey
-
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = "platform-release-manifest.json"
 
@@ -116,9 +114,12 @@ def build(directory):
 
 def assemble(inputs, directory):
     """No cross compilation: combine exact paired bytes from each native builder."""
+    import native_toolchain
+
     directory.mkdir(parents=True, exist_ok=True)
     version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
     source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    staging = native_toolchain.source_identity(ROOT).get("source_staging")
     records = []
     with tempfile.TemporaryDirectory(prefix="aw-universal-npm-") as tmp:
         package = Path(tmp) / "package"
@@ -131,17 +132,21 @@ def assemble(inputs, directory):
                 identity = json.loads(native.read("artifact.json"))
                 py_identity = json.loads(python.read("agentic_workspace/_native/artifact.json"))
                 npm_identity = json.load(npm.extractfile("package/src/native/bin/artifact.json"))
-                if identity != npm_identity or any(
-                    identity[k] != py_identity[k]
-                    for k in (
-                        "rust_host",
-                        "rust_target",
-                        "source_head",
-                        "source_dirty",
-                        "sha256",
-                        "cli_sha256",
-                        "rust_toolchain",
-                        "package_version",
+                if (
+                    identity != npm_identity
+                    or identity.get("source_staging") != py_identity.get("source_staging")
+                    or any(
+                        identity[k] != py_identity[k]
+                        for k in (
+                            "rust_host",
+                            "rust_target",
+                            "source_head",
+                            "source_dirty",
+                            "sha256",
+                            "cli_sha256",
+                            "rust_toolchain",
+                            "package_version",
+                        )
                     )
                 ):
                     raise ValueError("Language artifacts do not share exact native identity")
@@ -149,7 +154,8 @@ def assemble(inputs, directory):
                     identity["rust_host"] != row["target"]
                     or identity["package_version"] != version
                     or identity["source_head"] != source
-                    or identity["source_dirty"]
+                    or identity.get("source_staging") != staging
+                    or (identity["source_dirty"] and not staging)
                 ):
                     raise ValueError("Platform build has wrong source, version or target")
                 if row["node_platform"] == "darwin":
@@ -195,6 +201,7 @@ def assemble(inputs, directory):
                 "kind": "agentic-workspace/platform-release/v1",
                 "version": version,
                 "source_commit": source,
+                "staging": staging,
                 "platforms": records,
                 "npm": asset(npm_path),
             },
@@ -206,6 +213,8 @@ def assemble(inputs, directory):
 
 
 def smoke(directory, receipt):
+    from first_contact import journey
+
     """Consumer PATH contains Git and Node, but neither Cargo nor rustc."""
     data = load(directory)
     row = next(p for p in data["platforms"] if p["target"] == current_platform()["target"])

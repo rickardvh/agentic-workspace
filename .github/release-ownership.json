@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/release-ownership/v1",
   "release_model": "coordinated-workspace",
-  "canonical_version_source": "pyproject.toml",
+  "canonical_version_source": "release-identity.json in the retained workflow artifact and release manifest; source manifests carry an unreleased development identity",
   "project_identity": {
     "name": "Agentic Workspace",
     "author": "Rickard von Haugwitz",
@@ -31,11 +31,10 @@
   "changeset_dir": ".release/changes",
   "release_notes_dir": ".release/releases",
   "preview_metadata_dir": ".release/previews",
-  "release_pr_branch": "automation/coordinated-release",
   "publisher": {
     "workflow": ".github/workflows/release.yml",
-    "trigger": "existing-tag-only",
-    "tag_rule": "vMAJOR.MINOR.PATCH must point at a commit whose coordinated package manifests declare the same version"
+    "trigger": "workflow_dispatch on protected master; optional existing-tag recovery or no-publication validation",
+    "tag_rule": "The annotated tag points to reviewed source; manifest staging identity and admitted digests bind the published version."
   },
   "preview_publisher": {
     "workflow": ".github/workflows/release.yml",
@@ -138,7 +137,7 @@
       "registry_status": "trusted-publication-required"
     }
   ],
-  "version_floor_rule": "The next coordinated version must be greater than every shipped package version, every AW coordinated-release vMAJOR.MINOR.PATCH tag, and every preview-vMAJOR.MINOR.PATCH package identity; tags from other package domains do not set the AW release floor.",
+  "version_floor_rule": "Completed stable source consumes fragment revisions. All remotely reserved stable/preview and public registry versions bound the next version; a partial publication requires recovery.",
   "release_candidate": {
     "tag_pattern": "v1.0.0-rc.N (N is a positive canonical integer)",
     "target_stable_tag": "v1.0.0",

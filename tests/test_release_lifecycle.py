@@ -1,5 +1,6 @@
 """Controlled source/candidate/publication journeys and immutable recovery."""
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -12,6 +13,112 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
 import registry_release as registry  # noqa: E402
 import release_lifecycle as lifecycle  # noqa: E402
+
+
+@pytest.mark.parametrize("interruption", ["before-tag", "after-tag", "after-asset", None])
+def test_publication_resumes_retained_bytes_without_replacing_assets(tmp_path, monkeypatch, interruption):
+    """Controlled GitHub endpoint state persists across an interrupted publisher."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(lifecycle, "ROOT", tmp_path)
+    monkeypatch.setenv("GITHUB_RUN_ID", "123")
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    identity = {"source_commit": "a" * 40, "tag": "v1.9.0", "version": "1.9.0", "legacy": True}
+    for name, content in (("package.whl", b"admitted bytes"), ("release-notes.md", b"release notes")):
+        (dist / name).write_bytes(content)
+    (dist / "SHA256SUMS").write_text(
+        "".join(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n" for path in sorted(dist.iterdir()))
+    )
+    monkeypatch.setattr(lifecycle.registry_release, "admitted_artifacts", lambda *args: (identity, []))
+    monkeypatch.setattr(
+        lifecycle, "observe_stable", lambda _: ({"source_commit": "b" * 40, "tag": "v1.8.0", "version": "1.8.0"}, ["1.8.0"], [])
+    )
+    monkeypatch.setattr(lifecycle.coordinated_release, "load_ownership", lambda: {})
+    monkeypatch.setattr(lifecycle.coordinated_release, "select_release", lambda *args, **kwargs: identity)
+    state = {"tag": None, "release": None, "assets": {}, "uploads": [], "fault": interruption}
+
+    def stop(point):
+        if state["fault"] == point:
+            state["fault"] = None
+            raise TimeoutError(point)
+
+    def git(*args):
+        if "tag" in args:
+            state["annotation"] = json.loads(args[-1])
+        elif args[0] == "push":
+            stop("before-tag")
+            state["tag"] = identity["source_commit"]
+            stop("after-tag")
+        return ""
+
+    def api(repository, endpoint):
+        if endpoint.startswith("commits/"):
+            return {"sha": state["tag"]}
+        if endpoint.startswith("git/tags/"):
+            return {"message": json.dumps(state["annotation"])}
+        if endpoint.startswith("releases/tags/"):
+            return {**state["release"], "assets": [{"name": name, "browser_download_url": name} for name in state["assets"]]}
+        raise AssertionError(endpoint)
+
+    def request(command, **kwargs):
+        endpoint = command[-1]
+        if "/git/ref/tags/" in endpoint:
+            value = {"object": {"type": "tag", "sha": "tag-object"}} if state["tag"] else None
+        elif "/releases/tags/" in endpoint:
+            value = api("repo", "releases/tags/" + identity["tag"]) if state["release"] else None
+        else:
+            raise AssertionError(command)
+        return subprocess.CompletedProcess(command, 0 if value else 1, json.dumps(value), "" if value else "HTTP 404")
+
+    def effect(*command):
+        if command[:3] == ("gh", "release", "create"):
+            state["release"] = {"tag_name": identity["tag"], "draft": False, "prerelease": False}
+        elif command[:3] == ("gh", "release", "upload"):
+            path = Path(command[4])
+            assert path.name not in state["assets"]
+            state["assets"][path.name] = path.read_bytes()
+            state["uploads"].append(path.name)
+            stop("after-asset")
+        elif command != ("gh", "auth", "setup-git"):
+            raise AssertionError(command)
+
+    monkeypatch.setattr(lifecycle, "git", git)
+    monkeypatch.setattr(lifecycle, "api", api)
+    monkeypatch.setattr(lifecycle.subprocess, "run", request)
+    monkeypatch.setattr(lifecycle, "run", effect)
+    monkeypatch.setattr(lifecycle.registry_release, "fetch", lambda url: state["assets"][url])
+    if interruption:
+        with pytest.raises(TimeoutError):
+            lifecycle.publish_github("repo", identity)
+    lifecycle.publish_github("repo", identity)
+    lifecycle.publish_github("repo", identity)
+    assert len(state["uploads"]) == 3
+    assert state["assets"]["package.whl"] == b"admitted bytes"
+    state["assets"]["package.whl"] = b"conflicting public bytes"
+    with pytest.raises(ValueError, match="conflict"):
+        lifecycle.publish_github("repo", identity)
+    (dist / "package.whl").unlink()
+    with pytest.raises(FileNotFoundError):
+        lifecycle.publish_github("repo", identity)
+
+
+@pytest.mark.parametrize("gap", ["expired", "missing-after-tag"])
+def test_recovery_fails_when_original_artifact_is_unavailable(monkeypatch, tmp_path, gap):
+    if gap == "expired":
+        monkeypatch.setattr(lifecycle, "api", lambda *args: {"artifacts": [{"name": lifecycle.BUNDLE_NAME, "expired": True}]})
+        with pytest.raises(ValueError, match="Recovery gap"):
+            lifecycle.download_run_artifact("repo", 12, lifecycle.BUNDLE_NAME, tmp_path)
+        return
+    source = "a" * 40
+    (tmp_path / lifecycle.IDENTITY_FILE).write_text(json.dumps({"dispatch_source": source, "recovery_tag": "", "tag": "v1.7.0"}))
+    monkeypatch.setattr(lifecycle, "ROOT", tmp_path)
+    monkeypatch.setattr(lifecycle, "git", lambda *args: "")
+    monkeypatch.setenv("GITHUB_RUN_ID", "12")
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/master")
+    monkeypatch.setattr(lifecycle, "download_run_artifact", lambda repo, run, name, path: name == "release-identity")
+    monkeypatch.setattr(lifecycle.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, "{}", ""))
+    with pytest.raises(ValueError, match="tag is reserved.*bundle is missing"):
+        lifecycle.resolve_source("repo", source, "", False)
 
 
 @pytest.mark.parametrize(
@@ -79,53 +186,6 @@ def test_registry_conflict_is_never_retried_and_channel_wait_does_not_republish(
         [{"asset": "x"}], Path("unused"), observe_artifact=lambda *_: "matching", channel_ready=lambda: next(channel), sleep=sleeps.append
     )
     assert result[0]["status"] == "matching" and sleeps == [2]
-
-
-@pytest.mark.parametrize("producer", ["release", "ci"])
-@pytest.mark.parametrize("defect", [None, "source-proof", "normalization", "missing-claim", "wrong-subject"])
-def test_candidate_requires_source_evidence_and_exact_normalization(monkeypatch, defect, producer):
-    source = "a" * 40
-
-    def api(_repository, endpoint):
-        if "/jobs?" in endpoint:
-            return {
-                "jobs": [
-                    {"name": ("source-qualification / " if producer == "release" else "") + name, "conclusion": "success"}
-                    for name in lifecycle.SOURCE_CLAIMS
-                    if defect != "missing-claim" or name != "workspace-checks"
-                ]
-            }
-        return {
-            "head_sha": "c" * 40 if defect == "wrong-subject" else source,
-            "conclusion": "failure" if defect == "source-proof" else (None if producer == "release" else "success"),
-            "path": f".github/workflows/{producer}.yml",
-            "status": "in_progress" if producer == "release" else "completed",
-            "head_branch": "master",
-            "event": "workflow_dispatch",
-            "display_title": f"CI / release-source-{source}-nonce",
-            "head_repository": {"full_name": "owner/repo"},
-        }
-
-    monkeypatch.setattr(lifecycle, "api", api)
-    monkeypatch.setattr(lifecycle, "git", lambda *_: "b" * 40)
-    monkeypatch.setattr(lifecycle.coordinated_release, "load_ownership", lambda: {})
-    monkeypatch.setattr(lifecycle.coordinated_release, "verify_workspace_versions", lambda _: {"version": "1.9.0", "tag": "v1.9.0"})
-    normalized = []
-
-    def normalization(_ownership, **kwargs):
-        normalized.append(kwargs)
-        if defect == "normalization":
-            raise SystemExit("Non-version release normalization delta")
-
-    monkeypatch.setattr(lifecycle.coordinated_release, "verify_normalization_delta", normalization)
-    if defect:
-        with pytest.raises((ValueError, SystemExit)):
-            lifecycle.candidate_admission("owner/repo", source, "7")
-    else:
-        lifecycle.candidate_admission("owner/repo", source, "7")
-        assert normalized[0]["source"] == source and normalized[0]["consume_changesets"] is True
-    if defect == "source-proof":
-        assert normalized == []
 
 
 @pytest.mark.parametrize("release_class,tag", [("stable", "v1.9.0"), ("preview", "preview-v0.99.0"), ("release-candidate", "v1.0.0-rc.3")])

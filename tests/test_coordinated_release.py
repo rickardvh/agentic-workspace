@@ -6,8 +6,113 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "src" / "tooling" / "release" / "coordinated_release.py"
+
+
+def test_completed_source_consumes_revisions_and_staging_rejects_other_changes(tmp_path, monkeypatch):
+    release = _load_module()
+    monkeypatch.setattr(release, "ROOT", tmp_path)
+
+    def git(*args):
+        return subprocess.check_output(["git", *args], cwd=tmp_path, text=True).strip()
+
+    def save(path, text):
+        target = tmp_path / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8", newline="\n")
+
+    def commit():
+        git("add", ".")
+        git("commit", "-qm", "fixture")
+        return git("rev-parse", "HEAD")
+
+    def fragment(path, bump):
+        save(".release/changes/" + path + ".toml", f'schema_version = "{release.CHANGESET_SCHEMA}"\nbump = "{bump}"\nsummary = "{path}"\n')
+
+    git("init", "-q")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test")
+    git("config", "core.autocrlf", "false")
+    ownership = {
+        "packages": [{"name": "agentic-workspace", "pyproject": "pyproject.toml", "payload_provenance": "payload.json"}],
+        "typescript_packages": [{"package_json": "package.json"}],
+        "cargo_packages": [{"name": "agentic-workspace-core", "path": "core"}],
+        "cargo_lockfiles": ["Cargo.lock"],
+    }
+    save("pyproject.toml", '[project]\nname = "agentic-workspace"\nversion = "0.0.0.dev0"\n')
+    save("package.json", '{"name":"test", "version":"0.0.0-dev.0"}\n')
+    save("core/Cargo.toml", '[package]\nname = "agentic-workspace-core"\nversion = "0.0.0-dev.0"\n')
+    save(
+        "Cargo.lock",
+        'version = 4\n\n[[package]]\nname = "agentic-workspace-core"\nversion = "0.0.0-dev.0"\n\n[[package]]\nname = "third-party"\nversion = "2.0.0"\nsource = "registry"\nchecksum = "original"\n',
+    )
+    save("uv.lock", 'version = 1\n\n[[package]]\nname = "agentic-workspace"\nversion = "0.0.0.dev0"\nsource = { editable = "." }\n')
+    save(
+        "payload.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/payload-provenance/v1",
+                "payload_schema": "agentic-workspace/payload/v1",
+                "release_identity": {"package": "agentic-workspace", "version": "0.0.0.dev0"},
+                "payload_files": ["core/Cargo.toml"],
+                "payload_capabilities": ["test"],
+            }
+        ),
+    )
+    save("code.py", "original = True\n")
+    fragment("consumed", "major")
+    boundary = commit()
+    completed = {"source_commit": boundary, "tag": "v1.6.0", "version": "1.6.0"}
+    fragment("fix", "patch")
+    fragment("feature", "minor")
+    source = commit()
+    plan = release.select_release(ownership, source=source, completed=completed, reserved=["1.6.0", "1.7.0"], partial=[])
+    assert plan["tag"] == "v1.8.0"
+    assert {item["path"] for item in plan["changesets"]} == {".release/changes/fix.toml", ".release/changes/feature.toml"}
+    stamped = release.stamp_release(ownership, plan)
+    assert release.stamp_release(ownership, stamped, verify=True) == stamped
+    assert all(len(item["sha256"]) == 64 for item in stamped["transform"])
+    assert "0.0.0.dev0" not in (tmp_path / "uv.lock").read_text()
+    assert 'version = "2.0.0"' in (tmp_path / "Cargo.lock").read_text()
+    save("untracked-code.py", "injected = True\n")
+    with pytest.raises(ValueError, match="untracked staging input"):
+        release.stamp_release(ownership, stamped, verify=True)
+    (tmp_path / "untracked-code.py").unlink()
+    save("code.py", "original = False\n")
+    with pytest.raises(ValueError, match="Unauthorised staging"):
+        release.stamp_release(ownership, stamped, verify=True)
+    git("restore", "code.py")
+    save("Cargo.lock", (tmp_path / "Cargo.lock").read_text().replace('checksum = "original"', 'checksum = "replacement"'))
+    with pytest.raises(ValueError, match="staged content"):
+        release.stamp_release(ownership, stamped, verify=True)
+    git("restore", ".")
+    # Release tags refer to the unchanged development source, never a version commit.
+    completed = {"source_commit": source, "tag": plan["tag"], "version": plan["version"]}
+    assert not release.select_release(ownership, source=source, completed=completed, reserved=[], partial=[])["release_required"]
+    git("mv", ".release/changes/feature.toml", ".release/changes/renamed.toml")
+    git("rm", ".release/changes/consumed.toml")
+    cleanup = commit()
+    assert not release.select_release(ownership, source=cleanup, completed=completed, reserved=[], partial=[])["release_required"]
+    fragment("fix", "patch")
+    save(".release/changes/fix.toml", (tmp_path / ".release/changes/fix.toml").read_text().replace('"fix"', '"new fix"'))
+    second = commit()
+    next_plan = release.select_release(ownership, source=second, completed=completed, reserved=[], partial=[])
+    assert next_plan["tag"] == "v1.8.1"
+    assert len(next_plan["changesets"]) == 1
+    with pytest.raises(ValueError, match="recovery"):
+        release.select_release(ownership, source=second, completed=completed, reserved=["1.8.1"], partial=["v1.8.1"])
+    with pytest.raises(subprocess.CalledProcessError):
+        release.select_release(ownership, source=boundary, completed=completed, reserved=[], partial=[])
+    # Branch movement cannot stamp a newly selected subject under the old plan.
+    with pytest.raises(ValueError, match="pinned"):
+        release.stamp_release(ownership, plan)
+    git("checkout", "--detach", source)
+    corrupted = {**plan, "version": "1.9.0"}
+    with pytest.raises(ValueError, match="conflicts"):
+        release.stamp_release(ownership, corrupted)
 
 
 def _load_module():
@@ -18,249 +123,6 @@ def _load_module():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
-
-
-def test_optional_rc_keeps_first_stable_gate_and_allows_later_releases(monkeypatch) -> None:
-    module = _load_module()
-    changeset = module.Changeset(path=module.ROOT / ".release/changes/a.toml", bump="major", summary="Feature")
-    monkeypatch.setattr(module, "parse_changesets", lambda ownership: [changeset])
-    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [])
-    monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("0.9.0")])
-    ownership = {"release_candidate": {}}
-
-    first_stable = module.plan_release(ownership)
-    assert first_stable["release_required"] is False
-    assert first_stable["reason"] == "first-stable-requires-explicit-accepted-rc"
-
-    monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("1.0.0")])
-    monkeypatch.setattr(
-        module,
-        "parse_changesets",
-        lambda ownership: [module.Changeset(path=changeset.path, bump="minor", summary="Feature")],
-    )
-    next_release = module.plan_release(ownership)
-    assert next_release["release_required"] is True
-    assert next_release["tag"] == "v1.1.0"
-
-
-def test_plan_uses_existing_release_tags_as_floor(monkeypatch) -> None:
-    module = _load_module()
-    monkeypatch.setattr(
-        module,
-        "parse_changesets",
-        lambda ownership: [module.Changeset(path=module.ROOT / ".release/changes/a.toml", bump="patch", summary="Fix")],
-    )
-    monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("0.33.9")])
-    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [module.Version.parse("0.34.0")])
-
-    plan = module.plan_release({})
-
-    assert plan["release_required"] is True
-    assert plan["current_floor"] == "0.34.0"
-    assert plan["version"] == "0.34.1"
-    assert plan["tag"] == "v0.34.1"
-
-
-def test_plan_applies_highest_pending_changeset_bump(monkeypatch) -> None:
-    module = _load_module()
-    monkeypatch.setattr(
-        module,
-        "parse_changesets",
-        lambda ownership: [
-            module.Changeset(path=module.ROOT / ".release/changes/a.toml", bump="patch", summary="Fix"),
-            module.Changeset(path=module.ROOT / ".release/changes/b.toml", bump="minor", summary="Feature"),
-        ],
-    )
-    monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("1.2.3")])
-    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [module.Version.parse("1.2.3")])
-
-    plan = module.plan_release({})
-
-    assert plan["bump"] == "minor"
-    assert plan["version"] == "1.3.0"
-
-
-def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, monkeypatch) -> None:
-    module = _load_module()
-    root_pyproject = tmp_path / "pyproject.toml"
-    package_pyproject = tmp_path / "packages/memory/pyproject.toml"
-    package_json = tmp_path / "generated/workspace/typescript/package.json"
-    payload_provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
-    changeset = tmp_path / ".release/changes/change.toml"
-    release_note = tmp_path / ".release/releases/v0.2.0.md"
-    package_pyproject.parent.mkdir(parents=True)
-    package_json.parent.mkdir(parents=True)
-    payload_provenance.parent.mkdir(parents=True)
-    changeset.parent.mkdir(parents=True)
-    root_pyproject.write_text('[project]\nname = "root"\nversion = "0.1.0"\n', encoding="utf-8")
-    package_pyproject.write_text('[project]\nname = "pkg"\nversion = "0.1.0"\n', encoding="utf-8")
-    package_json.write_text('{"name":"pkg","version":"0.1.0","private":false}\n', encoding="utf-8")
-    payload_provenance.write_text(
-        json.dumps(
-            {
-                **json.loads((ROOT / ".agentic-workspace/payload-provenance.json").read_text(encoding="utf-8")),
-                "release_identity": {"package": "agentic-workspace", "version": "0.1.0"},
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    changeset.write_text(
-        'schema_version = "agentic-workspace/release-change/v1"\nbump = "minor"\nsummary = "Feature"\n',
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(module, "ROOT", tmp_path)
-    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [module.Version.parse("0.1.0")])
-    ownership = {
-        "changeset_dir": ".release/changes",
-        "packages": [
-            {
-                "name": "agentic-workspace",
-                "pyproject": "pyproject.toml",
-                "payload_provenance": ".agentic-workspace/payload-provenance.json",
-            },
-            {"name": "agentic-workspace-memory", "pyproject": "packages/memory/pyproject.toml"},
-        ],
-        "typescript_packages": [{"package_json": "generated/workspace/typescript/package.json"}],
-    }
-
-    before_provenance = json.loads(payload_provenance.read_text(encoding="utf-8"))
-    plan = module.prepare_release(ownership)
-
-    assert plan["version"] == "0.2.0"
-    assert plan["release_note"] == ".release/releases/v0.2.0.md"
-    assert 'version = "0.2.0"' in root_pyproject.read_text(encoding="utf-8")
-    assert 'version = "0.2.0"' in package_pyproject.read_text(encoding="utf-8")
-    assert json.loads(package_json.read_text(encoding="utf-8"))["version"] == "0.2.0"
-    provenance = json.loads(payload_provenance.read_text(encoding="utf-8"))
-    assert "installed_by" not in provenance
-    assert provenance["release_identity"] == {"package": "agentic-workspace", "version": "0.2.0"}
-    before_provenance["release_identity"]["version"] = "0.2.0"
-    assert provenance == before_provenance
-    assert module.verify_workspace_versions(ownership)["version"] == "0.2.0"
-    import pytest
-
-    for field, value in [("version", "0.1.0"), ("package", "foreign")]:
-        changed = json.loads(json.dumps(provenance))
-        changed["release_identity"][field] = value
-        payload_provenance.write_text(json.dumps(changed), encoding="utf-8")
-        with pytest.raises(SystemExit, match="payload"):
-            module.verify_workspace_versions(ownership)
-    payload_provenance.write_text(json.dumps(provenance), encoding="utf-8")
-    assert release_note.read_text(encoding="utf-8").count("Feature") == 1
-    assert not changeset.exists()
-
-
-def test_tag_plan_targets_release_commit_after_unrelated_master_commit(tmp_path, monkeypatch) -> None:
-    module = _load_module()
-    root_pyproject = tmp_path / "pyproject.toml"
-    package_json = tmp_path / "generated/workspace/typescript/package.json"
-    release_note = tmp_path / ".release/releases/v0.34.1.md"
-    package_json.parent.mkdir(parents=True)
-    release_note.parent.mkdir(parents=True)
-    ownership = {
-        "changeset_dir": ".release/changes",
-        "release_notes_dir": ".release/releases",
-        "packages": [{"pyproject": "pyproject.toml"}],
-        "typescript_packages": [{"package_json": "generated/workspace/typescript/package.json"}],
-    }
-    monkeypatch.setattr(module, "ROOT", tmp_path)
-
-    def git(*args: str) -> str:
-        return subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
-
-    git("init")
-    git("config", "user.name", "Test User")
-    git("config", "user.email", "test@example.com")
-    root_pyproject.write_text('[project]\nname = "root"\nversion = "0.34.0"\n', encoding="utf-8")
-    package_json.write_text('{"name":"pkg","version":"0.34.0","private":false}\n', encoding="utf-8")
-    git("add", ".")
-    git("commit", "-m", "Release v0.34.0")
-    git("tag", "v0.34.0")
-
-    root_pyproject.write_text('[project]\nname = "root"\nversion = "0.34.1"\n', encoding="utf-8")
-    package_json.write_text('{"name":"pkg","version":"0.34.1","private":false}\n', encoding="utf-8")
-    release_note.write_text("# Release v0.34.1\n\n## Changes\n\n- Fix release flow\n", encoding="utf-8")
-    git("add", ".")
-    git("commit", "-m", "Release v0.34.1")
-    release_commit = git("rev-parse", "HEAD")
-
-    (tmp_path / "docs.md").write_text("unrelated\n", encoding="utf-8")
-    git("add", "docs.md")
-    git("commit", "-m", "Unrelated follow-up")
-
-    plan = module.pending_tag_plan(ownership)
-
-    assert plan["tag_needed"] is True
-    assert plan["publish_candidate"] is True
-    assert plan["tag"] == "v0.34.1"
-    assert plan["release_commit"] == release_commit
-    assert plan["release_note"] == ".release/releases/v0.34.1.md"
-
-    git("tag", "-a", "v0.34.1", release_commit, "-m", "Release v0.34.1")
-
-    retry_plan = module.pending_tag_plan(ownership)
-
-    assert retry_plan["tag_needed"] is False
-    assert retry_plan["publish_candidate"] is True
-    assert retry_plan["reason"] == "tag-already-points-at-release-commit"
-    assert retry_plan["tag"] == "v0.34.1"
-    assert retry_plan["release_commit"] == release_commit
-
-
-def test_tag_plan_targets_protected_merge_commit_not_release_side_parent(tmp_path, monkeypatch) -> None:
-    module = _load_module()
-    root_pyproject = tmp_path / "pyproject.toml"
-    package_json = tmp_path / "generated/workspace/typescript/package.json"
-    release_note = tmp_path / ".release/releases/v0.34.1.md"
-    package_json.parent.mkdir(parents=True)
-    ownership = {
-        "changeset_dir": ".release/changes",
-        "release_notes_dir": ".release/releases",
-        "packages": [{"pyproject": "pyproject.toml"}],
-        "typescript_packages": [{"package_json": "generated/workspace/typescript/package.json"}],
-    }
-    monkeypatch.setattr(module, "ROOT", tmp_path)
-
-    def git(*args: str) -> str:
-        return subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
-
-    git("init", "-b", "master")
-    git("config", "user.name", "Test User")
-    git("config", "user.email", "test@example.com")
-    root_pyproject.write_text('[project]\nname = "root"\nversion = "0.34.0"\n', encoding="utf-8")
-    package_json.write_text('{"name":"pkg","version":"0.34.0","private":false}\n', encoding="utf-8")
-    git("add", ".")
-    git("commit", "-m", "Release v0.34.0")
-    git("tag", "v0.34.0")
-
-    git("switch", "-c", "automation/coordinated-release")
-    root_pyproject.write_text('[project]\nname = "root"\nversion = "0.34.1"\n', encoding="utf-8")
-    package_json.write_text('{"name":"pkg","version":"0.34.1","private":false}\n', encoding="utf-8")
-    release_note.parent.mkdir(parents=True)
-    release_note.write_text("# Release v0.34.1\n\n## Changes\n\n- Protected release\n", encoding="utf-8")
-    git("add", ".")
-    git("commit", "-m", "Prepare v0.34.1")
-    side_parent = git("rev-parse", "HEAD")
-
-    git("switch", "master")
-    git("merge", "--no-ff", "automation/coordinated-release", "-m", "Merge protected release PR")
-    protected_merge = git("rev-parse", "HEAD")
-    git("update-ref", "refs/remotes/origin/master", protected_merge)
-
-    plan = module.pending_tag_plan(ownership)
-
-    assert plan["release_commit"] == protected_merge
-    assert plan["release_commit"] != side_parent
-
-
-def test_preview_and_stable_share_transport_but_not_support_admission() -> None:
-    workflow = (ROOT / ".github/workflows/release.yml").read_text()
-    lifecycle = (ROOT / "src/tooling/release/release_lifecycle.py").read_text()
-    assert "release_class:" in workflow
-    assert "prerelease: ${{ needs.promotion-admission.outputs.support_bearing != 'true' }}" in workflow
-    assert "release_model(tag, release_class)" in lifecycle
-    assert not (ROOT / ".github/workflows/preview-release.yml").exists()
 
 
 def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref() -> None:

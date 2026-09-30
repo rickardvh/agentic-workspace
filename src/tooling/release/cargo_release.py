@@ -12,11 +12,13 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import tarfile
 import tempfile
 import tomllib
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 import coordinated_release
 from first_contact import journey
@@ -233,12 +235,80 @@ def install_pair(packages, home, *, staging=None):
         raise ValueError("Cargo pair accepted an invalid invocation")
 
 
+def upload_archive(path, *, token, endpoint="https://crates.io/api/v1/crates/new"):
+    """Cargo's documented publish wire format, carrying the admitted .crate unchanged.
+
+    https://doc.rust-lang.org/cargo/reference/registry-web-api.html#publish
+    """
+    data = path.read_bytes()
+    with tarfile.open(path) as archive:
+        manifests = [m for m in archive.getmembers() if m.name.count("/") == 1 and m.name.endswith("/Cargo.toml")]
+        if len(manifests) != 1:
+            raise ValueError("Crate must contain one normalized manifest")
+        manifest = tomllib.loads(archive.extractfile(manifests[0]).read().decode())
+        package = manifest["package"]
+        metadata = {key: package.get(key) for key in ("name", "description", "documentation", "homepage", "repository", "license", "links")}
+        metadata.update(
+            vers=package["version"],
+            authors=package.get("authors", []),
+            keywords=package.get("keywords", []),
+            categories=package.get("categories", []),
+            features=manifest.get("features", {}),
+            license_file=package.get("license-file"),
+            rust_version=package.get("rust-version"),
+            badges=manifest.get("badges", {}),
+            deps=[],
+        )
+        readme = package.get("readme")
+        metadata["readme_file"] = readme if isinstance(readme, str) else None
+        metadata["readme"] = (
+            archive.extractfile(manifests[0].name.rsplit("/", 1)[0] + "/" + readme).read().decode() if isinstance(readme, str) else None
+        )
+        for target, table in [(None, manifest), *manifest.get("target", {}).items()]:
+            for section, kind in (("dependencies", "normal"), ("dev-dependencies", "dev"), ("build-dependencies", "build")):
+                for name, dependency in table.get(section, {}).items():
+                    dependency = {"version": dependency} if isinstance(dependency, str) else dependency
+                    if not dependency.get("version") or dependency.get("git") or dependency.get("path"):
+                        raise ValueError("Published crate dependency is not normalized")
+                    metadata["deps"].append(
+                        {
+                            "name": dependency.get("package", name),
+                            "version_req": dependency["version"],
+                            "features": dependency.get("features", []),
+                            "optional": dependency.get("optional", False),
+                            "default_features": dependency.get("default-features", True),
+                            "target": target,
+                            "kind": kind,
+                            "registry": dependency.get("registry-index"),
+                            "explicit_name_in_toml": name if dependency.get("package") else None,
+                        }
+                    )
+    encoded = json.dumps(metadata, separators=(",", ":")).encode()
+    body = struct.pack("<I", len(encoded)) + encoded + struct.pack("<I", len(data)) + data
+    request = Request(
+        endpoint,
+        data=body,
+        method="PUT",
+        headers={
+            "Authorization": token,
+            "Content-Type": "application/octet-stream",
+            "Accept": "application/json",
+            "User-Agent": "agentic-workspace-release",
+        },
+    )
+    with urlopen(request, timeout=60) as response:
+        result = json.load(response)
+    if result.get("errors"):
+        raise ValueError("Cargo registry rejected publication: " + json.dumps(result["errors"]))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=["build", "publish", "verify", "install-staged"])
     parser.add_argument("--artifact-dir", type=Path, required=True)
     parser.add_argument("--staging", type=Path)
     parser.add_argument("--tag")
+    parser.add_argument("--source", default=os.environ.get("EXPECTED_SOURCE_COMMIT"))
     parser.add_argument("--no-verify", action="store_true", help="Repackage for pre-upload byte comparison only; grants no build proof")
     args = parser.parse_args()
     if args.operation == "build":
@@ -264,7 +334,7 @@ def main():
     # Cargo is an additional artifact projection of that same release subject.
     from registry_release import admitted_artifacts
 
-    source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    source = args.source or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     identity, _ = admitted_artifacts(args.artifact_dir, args.tag, source)
     ownership = coordinated_release.load_ownership()
     admitted_manifest(args.artifact_dir, ownership, source, identity["version"])
@@ -287,17 +357,7 @@ def main():
                 continue
             if any(observe(prior) != "matching" for prior in manifest["packages"][:index]):
                 raise ValueError("Required paired predecessor is not publicly available")
-            stage = args.staging / crate["name"]
-            # Repackage first and compare before a credential-bearing operation.
-            subprocess.run(
-                ["cargo", "package", "--locked", "--allow-dirty", "--no-verify", "--manifest-path", str(stage / "Cargo.toml")], check=True
-            )
-            target = Path(os.environ.get("CARGO_TARGET_DIR", stage / "target"))
-            if sha256(target / "package" / crate["asset"]) != crate["sha256"]:
-                raise ValueError("Publication packaging changed admitted crate bytes")
-            subprocess.run(
-                ["cargo", "publish", "--locked", "--allow-dirty", "--no-verify", "--manifest-path", str(stage / "Cargo.toml")], check=True
-            )
+            upload_archive(args.artifact_dir / crate["asset"], token=os.environ["CARGO_REGISTRY_TOKEN"])
             if observe(crate) != "matching":
                 raise ValueError("Partial publication: exact predecessor not yet visible; reobserve before continuing")
     else:

@@ -19,14 +19,14 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
     distribution = ownership["distribution_identity"]
 
     assert stable["workflow"] == ".github/workflows/release.yml"
-    assert stable["trigger"] == "existing-tag-only"
+    assert "workflow_dispatch" in stable["trigger"]
     assert {key: preview[key] for key in ("workflow", "release_class", "support_bearing")} == {
         "workflow": ".github/workflows/release.yml",
         "release_class": "preview",
         "support_bearing": False,
     }
     assert distribution["preview_release_base_url_template"].endswith("/preview-v{version}")
-    assert "preview-vMAJOR.MINOR.PATCH" in ownership["version_floor_rule"]
+    assert "stable/preview" in ownership["version_floor_rule"]
 
     preview_allowed = set(ownership["preview_release_commit_allowed_paths"])
     stable_allowed = set(ownership["release_commit_allowed_paths"])
@@ -35,24 +35,6 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
     assert ".agentic-workspace/payload-provenance.json" in stable_allowed
     assert ".release/previews/" not in stable_allowed
     assert not any(path == "generated/" for path in preview_allowed)
-
-
-def test_preview_workflow_reuses_release_authorities_without_support_bearing_admission() -> None:
-    import yaml
-
-    release = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
-    jobs = release["jobs"]
-    assert not (WORKFLOW_ROOT / "preview-release.yml").exists()
-    assert jobs["promotion-admission"]["env"]["RELEASE_CLASS"] == "${{ inputs.release_class || 'stable' }}"
-    steps = jobs["agentic-workspace-package"]["steps"]
-    publish = next(step for step in steps if step.get("name") == "Publish GitHub release assets")
-    assert publish["with"]["prerelease"] == "${{ needs.promotion-admission.outputs.support_bearing != 'true' }}"
-    assert publish["with"]["make_latest"] == "${{ needs.promotion-admission.outputs.support_bearing == 'true' }}"
-    assert publish["with"]["overwrite_files"] == "false"
-    for name in ("Download exact-commit promotion receipts", "Download declared runtime receipts"):
-        assert (
-            next(step for step in steps if step.get("name") == name)["if"] == "needs.promotion-admission.outputs.support_bearing == 'true'"
-        )
 
 
 def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:
@@ -84,27 +66,10 @@ def test_preview_manifest_is_explicitly_non_support_bearing_and_ownership_driven
     assert '"registry_resolution_used": False' in manifest
 
 
-def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> None:
+def test_existing_tag_recovery_skips_all_artifact_builds():
     import yaml
 
     workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
-    admission = workflow["jobs"]["promotion-admission"]
-    checkout = admission["steps"][0]
-    assert checkout["with"]["ref"] == "${{ github.sha }}"
-    assert checkout["with"]["persist-credentials"] == "false"
-    gate = next(step for step in admission["steps"] if step.get("id") == "admit")
-    assert 'release_lifecycle.py admit --github-output "$GITHUB_OUTPUT"' in gate["run"]
-    assert not any("${{ inputs." in step.get("run", "") for step in admission["steps"])
-    for name in ("release-runtime-matrix", "agentic-workspace-package", "platform-build", "platform-assemble", "platform-consumer"):
-        job = workflow["jobs"][name]
-        assert "promotion-admission" in job["needs"]
-        assert job["steps"][0]["with"]["ref"] == "${{ needs.promotion-admission.outputs.source_commit }}"
-
-
-def test_complete_existing_preview_skips_local_artifact_operations():
-    import yaml
-
-    workflow = yaml.load((WORKFLOW_ROOT / "release.yml").read_text(), Loader=yaml.BaseLoader)
-    for name in ("platform-build", "release-runtime-matrix", "agentic-workspace-package"):
-        assert "needs.promotion-admission.outputs.build_required == 'true'" in workflow["jobs"][name]["if"]
-    assert "needs.promotion-admission.outputs.build_required == 'false'" in workflow["jobs"]["language-packages"]["if"]
+    assert "needs.source-version.outputs.build_required == 'true'" in workflow["jobs"]["platform-build"]["if"]
+    assert "needs.platform-assemble.result == 'success'" in workflow["jobs"]["release-runtime-matrix"]["if"]
+    assert "needs.source-version.outputs.build_required == 'true'" in workflow["jobs"]["agentic-workspace-package"]["if"]

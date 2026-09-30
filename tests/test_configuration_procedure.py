@@ -214,13 +214,14 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
         assert (workspace / "configuration-assessment.json").read_bytes() == saved
     # Managed-only identity changes request bounded refresh, not semantic review.
     provenance = workspace / "payload-provenance.json"
-    provenance.write_text(json.dumps({"release_identity": {"version": "1.1.0"}, "managed_revision": "prior-managed-bytes"}))
+    runtime_version = json.loads(saved)["runtime_version"]
+    provenance.write_text(json.dumps({"release_identity": {"version": runtime_version}, "managed_revision": "prior-managed-bytes"}))
     changed = call()["configuration_write"]
     assert changed["managed_refresh"]["required"] is True
     assert changed["setup_assessment"]["status"] == "settled"
     assert changed["setup_assessment"]["assessment_due"] is False
     provenance.write_text(
-        json.dumps({"release_identity": {"version": "1.1.0"}, "managed_revision": changed["managed_refresh"]["revision"]})
+        json.dumps({"release_identity": {"version": runtime_version}, "managed_revision": changed["managed_refresh"]["revision"]})
     )
     assert call()["configuration_write"]["managed_refresh"]["required"] is False
     assert (workspace / "configuration-assessment.json").read_bytes() == saved
@@ -228,7 +229,7 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     # material change under the same version is not hidden by a version stamp.
     path = workspace / "configuration-assessment.json"
     baseline = json.loads(saved)
-    baseline["runtime_version"] = "1.0.0"
+    baseline["runtime_version"] = "0.0.0.dev0" if runtime_version == "0.0.0-dev.0" else runtime_version.split(".")[0] + ".0.0"
     path.write_text(json.dumps(baseline))
     assert assessment()["status"] == "settled"
     assert "record_request" not in assessment()
@@ -311,7 +312,8 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
 
     path = workspace / "configuration-assessment.json"
     saved = json.loads(path.read_text())
-    for version, status in [("99.0.0", "major-transition"), ("1.99.0", "newer-integration-preserved")]:
+    major = saved["runtime_version"].split(".")[0]
+    for version, status in [("99.0.0", "major-transition"), (major + ".99.0", "newer-integration-preserved")]:
         saved["runtime_version"] = version
         path.write_text(json.dumps(saved))
         before = path.read_bytes()

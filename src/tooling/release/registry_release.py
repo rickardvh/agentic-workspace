@@ -49,7 +49,7 @@ def fetch_admitted(dist, tag, repository):
     """Recover immutable GitHub bytes and their original publisher before credentials."""
     identity = coordinated_release.release_identity(tag)
     dist.mkdir()
-    subprocess.run(["gh", "release", "download", tag, "--repo", repository, "--dir", str(dist)], check=True)
+    subprocess.run(["gh", "release", "download", tag, "--repo", repository, "--dir", str(dist)], check=True, stdout=sys.stderr)
     manifest_name = (
         "agentic-workspace-release-manifest.json" if identity["support_bearing"] else "agentic-workspace-preview-release-manifest.json"
     )
@@ -74,6 +74,7 @@ def fetch_admitted(dist, tag, repository):
                 f"{repository}/.github/workflows/{publisher}",
             ],
             check=True,
+            stdout=sys.stderr,
         )
 
 

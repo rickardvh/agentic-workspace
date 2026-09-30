@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -47,7 +48,15 @@ def source_identity(root: Path) -> dict[str, object]:
     if result.returncode:
         return {"source_head": None, "source_dirty": None}
     dirty = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root, text=True)
-    return {"source_head": result.stdout.strip(), "source_dirty": bool(dirty.strip())}
+    identity = {"source_head": result.stdout.strip(), "source_dirty": bool(dirty.strip())}
+    staged = root / "release-identity.json"
+    if staged.is_file():
+        subprocess.run([sys.executable, str(root / "src/tooling/release/release_lifecycle.py"), "verify-stage"], cwd=root, check=True)
+        record = json.loads(staged.read_text())
+        identity["source_staging"] = {
+            key: record[key] for key in ("source_commit", "version", "tag", "boundary", "changesets", "transform")
+        }
+    return identity
 
 
 def build_environment(toolchain: dict[str, str] | None = None) -> dict[str, str]:

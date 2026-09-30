@@ -36,9 +36,13 @@ def inventory(directory: Path) -> list[dict[str, str]]:
 
 
 def proof_identity() -> str:
-    paths = [Path(__file__), ROOT / "tests/test_native_release_topology.py",
-             ROOT / "tests/test_language_facade.py", ROOT / "src/tooling/check/check_language_facade.py",
-             ROOT / "src/core/contracts/source_decision_contract.json"]
+    paths = [
+        Path(__file__),
+        ROOT / "tests/test_native_release_topology.py",
+        ROOT / "tests/test_language_facade.py",
+        ROOT / "src/tooling/check/check_language_facade.py",
+        ROOT / "src/core/contracts/source_decision_contract.json",
+    ]
     return hashlib.sha256(b"".join(path.read_bytes() for path in paths)).hexdigest()
 
 
@@ -50,6 +54,7 @@ def verify_receipt(
     source_diff_sha256: str,
     expected_node_major: int | None = None,
     expected_execution_context: str | None = None,
+    staging: dict | None = None,
 ) -> None:
     """Validate the same exact-subject receipt for standalone and composed admission."""
     if receipt.get("kind") != KIND or receipt.get("status") != "passed":
@@ -61,6 +66,8 @@ def verify_receipt(
         raise ValueError("Stale artifact bytes or source commit")
     if subject.get("source_diff_sha256") != source_diff_sha256:
         raise ValueError("Tracked source changed since proof")
+    if subject.get("staging") != staging:
+        raise ValueError("Release staging identity changed since proof")
     if subject.get("proof_fingerprint") != proof_identity():
         raise ValueError("Stale native release proof implementation")
     if expected_node_major and int(str(subject.get("node_version", "")).lstrip("v").split(".")[0]) != expected_node_major:
@@ -70,6 +77,15 @@ def verify_receipt(
     unsigned = {key: value for key, value in receipt.items() if key != "receipt_id"}
     if receipt.get("receipt_id") != hashlib.sha256(json.dumps(unsigned, sort_keys=True).encode()).hexdigest():
         raise ValueError("Receipt digest mismatch")
+
+
+def source_snapshot(root: Path):
+    sys.path.insert(0, str(root / "src/tooling/release"))
+    import native_toolchain
+
+    staging = native_toolchain.source_identity(root).get("source_staging")
+    difference = subprocess.check_output(["git", "diff", "HEAD", "--binary"], cwd=root)
+    return difference, staging
 
 
 def main() -> int:
@@ -83,7 +99,7 @@ def main() -> int:
     args = parser.parse_args()
     artifacts = inventory(args.artifact_dir)
     source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    source_diff = subprocess.check_output(["git", "diff", "HEAD", "--binary"], cwd=ROOT)
+    source_diff, staging = source_snapshot(ROOT)
     source_diff_digest = hashlib.sha256(source_diff).hexdigest()
     if args.verify_receipt:
         receipt = json.loads(args.verify_receipt.read_text(encoding="utf-8"))
@@ -94,14 +110,15 @@ def main() -> int:
             source_diff_sha256=source_diff_digest,
             expected_node_major=args.expected_node_major,
             expected_execution_context=args.expected_execution_context,
+            staging=staging,
         )
     else:
         if not args.receipt_out:
             parser.error("--receipt-out is required when proving artifacts")
         if args.execution_context == "hosted-ci" and os.environ.get("GITHUB_ACTIONS") != "true":
             raise ValueError("hosted-ci proof requires GitHub Actions")
-        if args.execution_context == "hosted-ci" and source_diff:
-            raise ValueError("hosted-ci proof requires unchanged tracked source")
+        if args.execution_context == "hosted-ci" and source_diff and not staging:
+            raise ValueError("hosted-ci proof requires unchanged source or verified deterministic staging")
         environment = dict(os.environ, AW_NATIVE_ARTIFACT_DIR=str(args.artifact_dir.resolve()))
         subprocess.run(
             [sys.executable, "-m", "pytest", "tests/test_native_release_topology.py", "-q"], cwd=ROOT, env=environment, check=True
@@ -115,6 +132,7 @@ def main() -> int:
             "subject": {
                 "source_commit": source,
                 "source_diff_sha256": source_diff_digest,
+                "staging": staging,
                 "proof_fingerprint": proof_identity(),
                 "registry_fingerprint": None,
                 "node_version": subprocess.check_output([shutil.which("node"), "--version"], text=True).strip(),

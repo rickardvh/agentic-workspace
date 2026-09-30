@@ -20,6 +20,9 @@ fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 fn version_tuple(s: &str) -> Option<Vec<u64>> {
+    if matches!(s, "0.0.0.dev0" | "0.0.0-dev.0") {
+        return Some(vec![0, 0, 0, 0, 0]);
+    }
     let s = s.split('+').next()?;
     let (base, prerelease) = s
         .split_once("-rc.")

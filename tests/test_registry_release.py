@@ -109,52 +109,6 @@ def test_registry_requires_exact_admitted_subject(tmp_path, tag):
         registry.admitted_artifacts(tmp_path, tag, source)
 
 
-def test_registry_workflow_is_gated_projection_without_rebuild():
-    import yaml
-
-    stable = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
-    for name in ("platform-build", "release-runtime-matrix", "agentic-workspace-package"):
-        assert "needs.promotion-admission.outputs.build_required == 'true'" in stable["jobs"][name]["if"]
-        assert "needs.promotion-admission.result == 'success'" in stable["jobs"][name]["if"]
-    for name in ("language-packages", "language-registries"):
-        job = stable["jobs"][name]
-        assert "promotion-admission" in job["needs"]
-        assert "!cancelled()" in job["if"]
-        assert "needs.promotion-admission.result == 'success'" in job["if"]
-        assert (
-            "needs.promotion-admission.outputs.build_required == 'false' && needs.agentic-workspace-package.result == 'skipped'"
-            in job["if"]
-        )
-    cargo = next(job for job in stable["jobs"].values() if job.get("environment") == "cargo-registry")
-    assert cargo["permissions"]["id-token"] == "write"
-    for job in (stable["jobs"]["language-packages"], cargo):
-        fetch = next(step["run"] for step in job["steps"] if step.get("name", "").startswith("Fetch "))
-        assert "registry_release.py --fetch" in fetch
-        assert "--source" in fetch
-
-    for filename, dependency in (("release.yml", "agentic-workspace-package"),):
-        publisher = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
-        job = publisher["jobs"]["language-packages"]
-        assert dependency in job["needs"]
-        assert "uses" not in job
-        assert job["environment"] == "package-registries"
-        assert job["permissions"] == {"contents": "read", "id-token": "write", "attestations": "read"}
-        steps = job["steps"]
-        assert any(step.get("uses", "").startswith("pypa/gh-action-pypi-publish@") for step in steps)
-        names = [step.get("name") for step in steps]
-        assert (
-            names.index("Reobserve immutable registry versions")
-            < names.index("Publish missing exact PyPI artifacts with trusted identity")
-            < names.index("Verify public bytes and clean native consumers")
-        )
-        content = str(job)
-        assert "npm@11.5.1" in content and '--tag "$NPM_TAG"' in content
-        assert "uv build" not in content and "npm pack" not in content and "secrets." not in content
-        assert "${{ inputs.tag }}" not in content
-    with pytest.raises(ValueError, match="Exploratory"):
-        registry.admitted_artifacts(Path("unused"), "preview-v0.57.0", "a" * 40)
-
-
 @pytest.mark.parametrize("expected", ["matching", "mismatched", "tag-push"])
 def test_registry_recovery_binds_old_tag_independently_of_tooling_head(tmp_path, expected):
     import yaml
@@ -163,7 +117,7 @@ def test_registry_recovery_binds_old_tag_independently_of_tooling_head(tmp_path,
     steps = workflow["jobs"]["language-packages"]["steps"]
     assert steps[0]["with"]["ref"] == "${{ github.sha }}"
     binding = next(step for step in steps if step.get("id") == "release-source")
-    assert binding["env"]["EXPECTED_SOURCE_COMMIT"] == "${{ needs.promotion-admission.outputs.source_commit }}"
+    assert binding["env"]["EXPECTED_SOURCE_COMMIT"] == "${{ needs.source-version.outputs.source_commit }}"
     for step in steps:
         if "registry_release.py" in step.get("run", ""):
             assert step["env"]["RELEASE_SOURCE"] == "${{ steps.release-source.outputs.commit }}"

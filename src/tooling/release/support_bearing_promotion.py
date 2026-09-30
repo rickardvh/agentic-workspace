@@ -154,7 +154,13 @@ def _github_check_runs(repository: str, commit: str, token: str) -> dict[str, An
 
 def server_check_receipt(*, repository: str, commit: str, required: list[str], check_runs: dict[str, Any]) -> dict[str, Any]:
     observed = [item for item in check_runs.get("check_runs", []) if isinstance(item, dict)]
-    by_name = {str(item.get("name")): item for item in observed}
+    # GitHub returns newest first, but select explicitly so API ordering cannot
+    # let an older skipped/failed attempt shadow the current exact-source check.
+    by_name = {}
+    for item in observed:
+        name = str(item.get("name"))
+        if int(item.get("id", 0)) >= int(by_name.get(name, {}).get("id", -1)):
+            by_name[name] = item
     checks = []
     failures = []
     for name in required:
@@ -259,11 +265,13 @@ def _compose(args: argparse.Namespace) -> int:
             semantic_failed = True
             continue
         try:
+            difference, staging = NATIVE_PROOF.source_snapshot(ROOT) if (ROOT / "release-identity.json").is_file() else (b"", None)
             NATIVE_PROOF.verify_receipt(
                 payload,
                 artifact_dir=artifact_dir,
                 source_commit=args.commit,
-                source_diff_sha256=hashlib.sha256(b"").hexdigest(),
+                source_diff_sha256=hashlib.sha256(difference).hexdigest(),
+                staging=staging,
                 expected_node_major=node_major,
                 expected_execution_context="hosted-ci",
             )

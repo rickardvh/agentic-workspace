@@ -15,6 +15,158 @@ OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
 CHANGESET_SCHEMA = "agentic-workspace/release-change/v1"
 BUMP_ORDER = {"patch": 0, "minor": 1, "major": 2}
 PREVIEW_TAG_PREFIX = "preview-v"
+STAGING_KIND = "agentic-workspace/release-staging/v1"
+
+
+def selected_changes(ownership: dict[str, Any], boundary: str, source: str) -> list[dict[str, str]]:
+    """Consume fragment revisions at the completed source boundary, including renames."""
+    directory = str(ownership.get("changeset_dir", ".release/changes"))
+    _run(["git", "merge-base", "--is-ancestor", boundary, source])
+    old_blobs = {
+        row.split()[2] for row in _run(["git", "ls-tree", "-r", boundary, "--", directory]).stdout.splitlines() if row.endswith(".toml")
+    }
+    rows = _run(["git", "diff", "--name-status", "-M", boundary, source, "--", directory]).stdout.splitlines()
+    selected = []
+    for row in rows:
+        status, *paths = row.split("\t")
+        if status == "D" or status == "R100":
+            continue
+        path = paths[-1]
+        if not path.endswith(".toml"):
+            continue
+        entry = _run(["git", "ls-tree", source, "--", path]).stdout.split()
+        if len(entry) < 4 or entry[0] != "100644":
+            raise ValueError(f"Release fragment must be a regular file: {path}")
+        if entry[2] in old_blobs:
+            continue
+        content = _run(["git", "show", f"{source}:{path}"]).stdout
+        fragment = tomllib.loads(content)
+        if fragment.get("schema_version") != CHANGESET_SCHEMA or fragment.get("bump") not in BUMP_ORDER or not fragment.get("summary"):
+            raise ValueError(f"Invalid release fragment: {path}")
+        selected.append(
+            {
+                "path": path,
+                "blob": entry[2],
+                "sha256": hashlib.sha256(content.encode()).hexdigest(),
+                "bump": fragment["bump"],
+                "summary": fragment["summary"],
+            }
+        )
+    return sorted(selected, key=lambda item: item["path"])
+
+
+def select_release(
+    ownership: dict[str, Any], *, source: str, completed: dict[str, Any], reserved: list[str], partial: list[str]
+) -> dict[str, Any]:
+    """Remote observation is supplied by the lifecycle owner, never inferred from literals."""
+    if partial:
+        raise ValueError("Partial release requires existing-tag recovery: " + ", ".join(partial))
+    boundary = completed["source_commit"]
+    fragments = selected_changes(ownership, boundary, source)
+    floor = (
+        max(Version.parse(completed["version"]), *(Version.parse(v) for v in reserved)) if reserved else Version.parse(completed["version"])
+    )
+    result = {
+        "kind": STAGING_KIND,
+        "source_commit": source,
+        "boundary": {"source_commit": boundary, "tag": completed["tag"]},
+        "changesets": fragments,
+        "release_required": bool(fragments),
+    }
+    if fragments:
+        bump = max((item["bump"] for item in fragments), key=BUMP_ORDER.__getitem__)
+        version = str(floor.bump(bump))
+        result.update(release_identity("v" + version))
+        result["bump"] = bump
+    return result
+
+
+def staging_files(ownership: dict[str, Any], source: str, version: str) -> dict[str, str]:
+    """A closed transform: only owned identity fields change; no dependency resolution."""
+    node_version = npm_version(version)
+    paths = {str(p["pyproject"]): "python" for p in ownership["packages"]}
+    paths.update({str(p["package_json"]): "npm" for p in ownership["typescript_packages"]})
+    paths.update({_repo_path(p): "cargo" for p in cargo_manifests(ownership)})
+    paths.update({_repo_path(p): "cargo-lock" for p in cargo_lockfiles(ownership)})
+    paths.update({str(p["payload_provenance"]): "payload" for p in ownership["packages"]})
+    paths["uv.lock"] = "python-lock"
+    names = {p["name"] for p in ownership["packages"]}
+    cargo_names = {p["name"] for p in ownership.get("cargo_packages", [])}
+    result = {}
+    for path, kind in paths.items():
+        before = _run(["git", "show", f"{source}:{path}"]).stdout
+        after = before
+        if kind in {"python", "cargo"}:
+            after, count = re.subn(
+                r'^version = "[^"]+"$', f'version = "{version if kind == "python" else node_version}"', before, count=1, flags=re.MULTILINE
+            )
+            if count != 1:
+                raise ValueError(f"Missing unique version: {path}")
+        elif kind == "npm":
+            data = json.loads(before)
+            if "version" in data:
+                data["version"] = node_version
+                after = json.dumps(data, indent=2) + "\n"
+        elif kind == "payload":
+            after = json.dumps(normalized_payload_provenance(json.loads(before), version), indent=2) + "\n"
+        else:
+
+            def replace_local(match: re.Match[str]) -> str:
+                block = match[0]
+                row = tomllib.loads(block)["package"][0]
+                local = row.get("name") in (names if kind == "python-lock" else cargo_names)
+                local = local and (
+                    isinstance(row.get("source"), dict) and "editable" in row["source"] if kind == "python-lock" else "source" not in row
+                )
+                return (
+                    re.sub(
+                        r'^version = "[^"]+"$',
+                        f'version = "{version if kind == "python-lock" else node_version}"',
+                        block,
+                        count=1,
+                        flags=re.MULTILINE,
+                    )
+                    if local
+                    else block
+                )
+
+            after = re.sub(r"(?ms)^\[\[package\]\]\n.*?(?=^\[\[package\]\]|\Z)", replace_local, before)
+        if after != before:
+            result[path] = after
+    return result
+
+
+def stamp_release(ownership: dict[str, Any], identity: dict[str, Any], *, verify: bool = False) -> dict[str, Any]:
+    source, version = identity["source_commit"], identity["version"]
+    canonical = release_identity(identity["tag"])
+    if any(identity.get(key) != value for key, value in canonical.items()):
+        raise ValueError("Staging release identity conflicts with its tag")
+    if identity.get("kind") != STAGING_KIND or _run(["git", "rev-parse", "HEAD"]).stdout.strip() != source:
+        raise ValueError("Staging requires the pinned reviewed source checkout")
+    if identity["changesets"] != selected_changes(ownership, identity["boundary"]["source_commit"], source):
+        raise ValueError("Selected fragment revisions changed")
+    expected = staging_files(ownership, source, version)
+    changed = set(_run(["git", "diff", "--name-only", "HEAD"]).stdout.splitlines())
+    if changed - expected.keys():
+        raise ValueError("Unauthorised staging changes: " + ", ".join(sorted(changed - expected.keys())))
+    generated = {"release-identity.json", "runtime-proof.json", "server-promotion-receipt.json"}
+    outputs = ("dist/", "platform-dist/", "platform-inputs/", "promotion-inputs/", "runtime-receipts/")
+    for path in _run(["git", "ls-files", "--others", "--exclude-standard"]).stdout.splitlines():
+        if path not in generated and not path.startswith(outputs) and not re.fullmatch(r"platform-consumer-[\w-]+\.json", path):
+            raise ValueError("Unauthorised untracked staging input: " + path)
+    if _run(["git", "diff", "--summary", "HEAD"]).stdout.strip():
+        raise ValueError("Staging cannot change file modes or custody")
+    for path, content in expected.items():
+        current = (ROOT / path).read_text(encoding="utf-8")
+        original = _run(["git", "show", f"{source}:{path}"]).stdout
+        if current != content and (verify or current != original):
+            raise ValueError(f"Unauthorised staged content: {path}")
+        if not verify:
+            (ROOT / path).write_text(content, encoding="utf-8", newline="\n")
+    transform = [{"path": path, "sha256": hashlib.sha256(content.encode()).hexdigest()} for path, content in sorted(expected.items())]
+    if "transform" in identity and identity["transform"] != transform:
+        raise ValueError("Staging transformation identity changed")
+    return {**identity, "transform": transform}
 
 
 @dataclass(frozen=True, order=True)
@@ -151,6 +303,8 @@ def release_identity(tag: str) -> dict[str, Any]:
 
 
 def npm_version(python_version: str) -> str:
+    if python_version == "0.0.0.dev0":
+        return "0.0.0-dev.0"
     match = re.fullmatch(r"1\.0\.0rc([1-9][0-9]*)", python_version)
     if match:
         return f"1.0.0-rc.{match[1]}"
@@ -492,15 +646,21 @@ def current_package_versions(ownership: dict[str, Any]) -> list[Version]:
     versions: list[Version] = []
     for path in package_pyprojects(ownership):
         declared = tomllib.loads(path.read_text(encoding="utf-8"))["project"]["version"]
-        versions.append(Version.parse(declared))
+        versions.append(Version(0, 0, 0) if declared == "0.0.0.dev0" else Version.parse(declared))
     for path in typescript_package_jsons(ownership):
         declared = json.loads(path.read_text(encoding="utf-8")).get("version")
         if declared is not None:
-            versions.append(Version.parse(declared))
+            versions.append(Version(0, 0, 0) if declared == "0.0.0-dev.0" else Version.parse(declared))
     return versions
 
 
 def current_workspace_version(ownership: dict[str, Any]) -> str:
+    development = [tomllib.loads(path.read_text())["project"]["version"] for path in package_pyprojects(ownership)]
+    if development and all(value == "0.0.0.dev0" for value in development):
+        for path in typescript_package_jsons(ownership):
+            if json.loads(path.read_text()).get("version", "0.0.0-dev.0") != "0.0.0-dev.0":
+                raise ValueError("Development npm version mismatch")
+        return "0.0.0.dev0"
     version_texts = sorted({str(version) for version in current_package_versions(ownership)})
     if len(version_texts) != 1:
         raise SystemExit(f"All release package manifests must use one version, got {version_texts}")
@@ -572,46 +732,6 @@ def existing_release_versions(ownership: dict[str, Any]) -> list[Version]:
 
 def highest_bump(changesets: list[Changeset]) -> str:
     return sorted((changeset.bump for changeset in changesets), key=BUMP_ORDER.__getitem__)[-1]
-
-
-def plan_release(ownership: dict[str, Any], *, include_git_tags: bool = True) -> dict[str, Any]:
-    changesets = parse_changesets(ownership)
-    package_versions = current_package_versions(ownership)
-    tag_versions = existing_release_versions(ownership) if include_git_tags else []
-    floor = max([*package_versions, *tag_versions])
-
-    if not changesets:
-        return {
-            "kind": "agentic-workspace/coordinated-release-plan/v1",
-            "release_required": False,
-            "current_floor": str(floor),
-            "package_versions": sorted({str(version) for version in package_versions}),
-            "existing_release_floor": str(max(tag_versions)) if tag_versions else "",
-            "changesets": [],
-        }
-
-    bump = highest_bump(changesets)
-    version = floor.bump(bump)
-    if version == Version(1, 0, 0) and "release_candidate" in ownership:
-        return {
-            "kind": "agentic-workspace/coordinated-release-plan/v1",
-            "release_required": False,
-            "reason": "first-stable-requires-explicit-accepted-rc",
-            "changesets": [_repo_path(c.path) for c in changesets],
-        }
-    return {
-        "kind": "agentic-workspace/coordinated-release-plan/v1",
-        "release_required": True,
-        "bump": bump,
-        "version": str(version),
-        "tag": f"v{version}",
-        "current_floor": str(floor),
-        "package_versions": sorted({str(version) for version in package_versions}),
-        "existing_release_floor": str(max(tag_versions)) if tag_versions else "",
-        "changesets": [
-            {"path": _repo_path(changeset.path), "bump": changeset.bump, "summary": changeset.summary} for changeset in changesets
-        ],
-    }
 
 
 def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
@@ -751,21 +871,6 @@ def write_preview_metadata(ownership: dict[str, Any], *, tag: str, source_commit
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
-
-
-def prepare_release(ownership: dict[str, Any]) -> dict[str, Any]:
-    plan = plan_release(ownership)
-    if not plan["release_required"]:
-        return plan
-    version = str(plan["version"])
-    changesets = parse_changesets(ownership)
-    set_workspace_version(ownership, version)
-    set_workspace_payload_release_identity(ownership, version)
-    note_path = write_release_note(ownership, version=version, changesets=changesets)
-    for changeset in changesets:
-        changeset.path.unlink()
-    plan["release_note"] = _repo_path(note_path)
-    return plan
 
 
 def prepare_preview_release(ownership: dict[str, Any], *, tag: str, source_commit: str) -> dict[str, Any]:
@@ -966,14 +1071,6 @@ def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = No
             payload = json.loads((ROOT / package["payload_provenance"]).read_text(encoding="utf-8"))
             if payload != normalized_payload_provenance(payload, version):
                 raise SystemExit("Workspace payload version does not match coordinated package version")
-    release_versions = existing_release_versions(ownership)
-    target = Version.parse(version)
-    higher_or_equal = [release_version for release_version in release_versions if release_version >= target]
-    if tag is None and higher_or_equal:
-        raise SystemExit(
-            f"Workspace release version {version} must be greater than existing AW public release tags; "
-            f"highest existing AW release tag version is {max(release_versions)}"
-        )
     return {
         "kind": "agentic-workspace/coordinated-release-verification/v1",
         "version": version,
@@ -1001,119 +1098,12 @@ def _version_text_from_commit(commit: str, path: Path) -> str:
     return str(tomllib.loads(text)["project"]["version"])
 
 
-def _release_commit_for_version(ownership: dict[str, Any], version: str) -> str:
-    relative_paths = [_repo_path(path) for path in version_file_paths(ownership)]
-    result = _run(["git", "log", "--first-parent", "-n", "1", "--format=%H", "--", *relative_paths])
-    commit = result.stdout.strip()
-    if not commit:
-        raise SystemExit("Could not find a release commit that touched coordinated version files")
-    mismatches = [_repo_path(path) for path in version_file_paths(ownership) if _version_text_from_commit(commit, path) != version]
-    if mismatches:
-        raise SystemExit(f"Release commit {commit} does not declare {version} in {mismatches}")
-    note_path = release_note_path(ownership, version)
-    if _run(["git", "cat-file", "-e", f"{commit}:{_repo_path(note_path)}"], check=False).returncode != 0:
-        raise SystemExit(f"Release commit {commit} must include {_repo_path(note_path)}")
-    return commit
-
-
-def pending_tag_plan(ownership: dict[str, Any]) -> dict[str, Any]:
-    if parse_changesets(ownership):
-        return {
-            "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
-            "tag_needed": False,
-            "publish_candidate": False,
-            "reason": "pending-changesets-require-release-pr",
-        }
-    version = current_workspace_version(ownership)
-    target = Version.parse(version)
-    tag = f"v{version}"
-    existing = _run(["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"], check=False)
-    release_versions = existing_release_versions(ownership)
-    if existing.returncode != 0 and release_versions and target <= max(release_versions):
-        return {
-            "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
-            "tag_needed": False,
-            "publish_candidate": False,
-            "reason": f"version-not-newer-than-existing-tag-floor-{max(release_versions)}",
-            "version": version,
-            "tag": tag,
-        }
-    release_commit = _release_commit_for_version(ownership, version)
-    if version == "1.0.0" and "release_candidate" in ownership:
-        verify_rc_promotion(ownership, subject=release_commit)
-    if existing.returncode == 0:
-        tag_target = _tag_target(tag)
-        if tag_target != release_commit:
-            raise SystemExit(f"Release tag {tag} already exists at {tag_target}, not release commit {release_commit}")
-        return {
-            "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
-            "tag_needed": False,
-            "publish_candidate": True,
-            "reason": "tag-already-points-at-release-commit",
-            "version": version,
-            "tag": tag,
-            "release_commit": release_commit,
-            "release_note": _repo_path(release_note_path(ownership, version)),
-        }
-    if (
-        _commit_exists("origin/master")
-        and _run(
-            ["git", "merge-base", "--is-ancestor", release_commit, "origin/master"],
-            check=False,
-        ).returncode
-        != 0
-    ):
-        raise SystemExit(f"Release commit {release_commit} is not reachable from origin/master")
-    return {
-        "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
-        "tag_needed": True,
-        "publish_candidate": True,
-        "version": version,
-        "tag": tag,
-        "release_commit": release_commit,
-        "release_note": _repo_path(release_note_path(ownership, version)),
-    }
-
-
-def write_github_output(plan: dict[str, Any], output_path: Path) -> None:
-    lines = [
-        f"release_required={str(plan.get('release_required', False)).lower()}",
-        f"version={plan.get('version', '')}",
-        f"tag={plan.get('tag', '')}",
-        f"bump={plan.get('bump', '')}",
-    ]
-    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def write_tag_github_output(plan: dict[str, Any], output_path: Path) -> None:
-    lines = [
-        f"tag_needed={str(plan.get('tag_needed', False)).lower()}",
-        f"publish_candidate={str(plan.get('publish_candidate', False)).lower()}",
-        f"version={plan.get('version', '')}",
-        f"tag={plan.get('tag', '')}",
-        f"release_commit={plan.get('release_commit', '')}",
-        f"reason={plan.get('reason', '')}",
-    ]
-    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    plan_parser = subparsers.add_parser("plan")
-    plan_parser.add_argument("--github-output", type=Path)
-    plan_parser.add_argument("--ignore-git-tags", action="store_true")
-    plan_parser.add_argument("--from-rc")
-
-    prepare_parser = subparsers.add_parser("prepare")
-    prepare_parser.add_argument("--from-rc")
-
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--tag")
-
-    tag_parser = subparsers.add_parser("tag-plan")
-    tag_parser.add_argument("--github-output", type=Path)
 
     preview_prepare_parser = subparsers.add_parser("prepare-preview")
     preview_prepare_parser.add_argument("--tag", required=True)
@@ -1148,29 +1138,8 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, indent=2))
         return 0
 
-    if args.command == "plan":
-        if args.from_rc:
-            if parse_release_tag(args.from_rc)[0] != "release-candidate":
-                parser.error("--from-rc requires a canonical RC")
-            plan = plan_rc_promotion(ownership, rc_tag=args.from_rc)
-        else:
-            plan = plan_release(ownership, include_git_tags=not args.ignore_git_tags)
-        if args.github_output:
-            write_github_output(plan, args.github_output)
-        print(json.dumps(plan, indent=2, sort_keys=True))
-        return 0
-    if args.command == "prepare":
-        result = prepare_rc_promotion(ownership, rc_tag=args.from_rc) if args.from_rc else prepare_release(ownership)
-        print(json.dumps(result, indent=2, sort_keys=True))
-        return 0
     if args.command == "verify":
         print(json.dumps(verify_workspace_versions(ownership, tag=args.tag), indent=2, sort_keys=True))
-        return 0
-    if args.command == "tag-plan":
-        tag_plan = pending_tag_plan(ownership)
-        if args.github_output:
-            write_tag_github_output(tag_plan, args.github_output)
-        print(json.dumps(tag_plan, indent=2, sort_keys=True))
         return 0
     if args.command == "prepare-preview":
         print(

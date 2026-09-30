@@ -148,9 +148,18 @@ def test_preview_tag_versions_raise_the_later_stable_version_floor(tmp_path, mon
     monkeypatch.setattr(module, "ROOT", tmp_path)
     assert sorted(str(version) for version in module.existing_release_versions(ownership)) == ["0.51.0", "0.52.0"]
 
-    plan = module.plan_release(ownership)
-
-    assert plan["current_floor"] == "0.52.0"
+    (tmp_path / ".release/changes/new.toml").write_text(
+        'schema_version = "agentic-workspace/release-change/v1"\nbump = "patch"\nsummary = "New change"\n'
+    )
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "new intent")
+    plan = module.select_release(
+        ownership,
+        source=_git(tmp_path, "rev-parse", "HEAD"),
+        completed={"source_commit": source_commit, "tag": "v0.51.0", "version": "0.51.0"},
+        reserved=["0.52.0"],
+        partial=[],
+    )
     assert plan["version"] == "0.52.1"
     assert plan["tag"] == "v0.52.1"
 
@@ -577,7 +586,7 @@ def test_preview_version_reservation_survives_package_topology_changes(tmp_path,
     removed["typescript_packages"] = []
     for changed in (added, moved, removed):
         assert module.Version.parse("0.52.0") in module.existing_release_versions(changed)
-        assert module.plan_release(changed)["version"] == "0.52.1"
+        assert max(module.existing_release_versions(changed)).bump("patch") == module.Version.parse("0.52.1")
         with pytest.raises(SystemExit, match="must be greater than"):
             module.prepare_preview_release(changed, tag="preview-v0.52.0", source_commit=source)
 
@@ -585,7 +594,7 @@ def test_preview_version_reservation_survives_package_topology_changes(tmp_path,
     # legitimizes its mismatched subject. Stable tag admission stays unchanged.
     _git(tmp_path, "tag", "preview-v0.60.0")
     _git(tmp_path, "tag", "v0.70.0")
-    assert module.plan_release(added)["version"] == "0.60.1"
+    assert max(module.existing_release_versions(added)).bump("patch") == module.Version.parse("0.60.1")
     assert module.Version.parse("0.70.0") not in module.existing_release_versions(added)
     with pytest.raises(SystemExit, match="requires workspace version"):
         module.verify_preview_release(ownership, tag="preview-v0.60.0")

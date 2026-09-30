@@ -224,7 +224,8 @@ def safe_native_archive(archive: Path, destination: Path, subject: Subject, targ
             identity["rust_host"] != target
             or identity["source_head"] != subject.inventory["source_commit"]
             or identity["package_version"] != subject.inventory["version"]
-            or identity["source_dirty"]
+            or identity.get("source_staging") != subject.inventory.get("staging")
+            or (identity["source_dirty"] and not subject.inventory.get("staging"))
         ):
             raise ValueError("Native archive subject mismatch")
         destination.mkdir(parents=True, exist_ok=False)

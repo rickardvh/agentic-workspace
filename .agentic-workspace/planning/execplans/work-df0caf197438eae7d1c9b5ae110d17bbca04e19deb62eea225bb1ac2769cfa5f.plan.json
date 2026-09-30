@@ -1,0 +1,104 @@
+{
+  "blockers": [
+    "Independent acceptance must be externally initiated; do not self-review or direct a reviewer.",
+    "AW resource cleanup preserves three ignored cache directories outside its disposable-output lease; exact paths and prior deletion rejection are recorded in continuation.resources."
+  ],
+  "canonical_core": {
+    "source": "Issue #3719 acceptance and evidence requirements"
+  },
+  "continuation": {
+    "authority": "No production publication or master mutation. Independent acceptance must remain externally initiated. Earlier Assignment selected codex_astra:internal; revalidate current restrictions for completion claims.",
+    "findings": "Actual public observation verified completed v1.6.0 at e927470be18c89638fa724d825cbb14eb72bff04 with no partial release. Real Windows staging from development identity to 1.7.0 built native/wheel/npm/sdist/Cargo packages; isolated sdist and Cargo installs passed. Finite consumption, staging mutation, interrupted publication, uncertain registry retry and missing retained bundle cases pass. See docs/maintainer/release-validation.md for evidence scope and hosted attempts.",
+    "hosted_proof": "Reduced graph at ffe3189dac0b019cace46b58b79707e4ab338aca passed ordinary CI 36682138875 and Release qualify-only 36682133046. All six native builds/platform consumers, three runtime rows and final source-package/Node/security/staging proof passed; publishers skipped. Total 20m17s includes source/admission 6m28s; builds 1m46s–5m19s, assembly 34s, runtime 37–53s, platform consumers 24–84s, final package/security 6m09s. Bundle 11083082185 retained. Validation notes preserve the earlier graph and failed attempts. No broad source redispatch or repeated hosted run is needed for this evidence-only closeout; reobserve ordinary current PR checks.",
+    "implementation": "PR #3721 follow-up at 6b63b8020 repaired recovery and stale evidence; ordinary CI passed. New independent comment 5905782679 and updated #3719 require removing duplicate source proof after exact-source admission. Release now drops broad workspace/Planning/independent-owner branches and generic runtime source tests; the source-only import test moves to language-facade coverage. Exact artifact, platform/runtime, source-package reconstruction and security/publication barriers remain. The validation note maps retained checks to distinct release failure classes. Preserve unrelated proof receipts/index changes.",
+    "resources": "On 2026-09-30, AW worktree-remove for sibling ../aw-release-staging-3719 returned not-invoked: dirty/untracked/ignored material must be preserved or explicitly reconciled before teardown. Remaining paths are __pycache__/, src/tooling/model-cli-harness/__pycache__/, and src/tooling/release/__pycache__/. They are outside the creation lease. Earlier automatic approval review rejected shell cache deletion; no force cleanup was attempted. Tracked stamping is restored and HEAD is retained on the implementation branch. Cleanup requires authorised disposition of those exact caches followed by a fresh resource-owner removal proposal."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/02f9513a09bb99a81071567cd506a65015e46a64baabff2d795974baa2ff5e92.attempt.json",
+        "revision": "sha256:237b31bf3c7e0d0cbdb6d0ada76675ecaceac971f3b4f3f523b38c592b9e4fe8",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/02f9513a09bb99a81071567cd506a65015e46a64baabff2d795974baa2ff5e92.result.json",
+        "revision": "sha256:45f2555985c67ecf5ac1194bb095ebbef5493dc3cc5b56a084ee167dfa8e4816",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:61bbf27809492b125331adbf3f0d18528612ec321c582a834ed09646d14b3bda",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:ef030d92ade5f817d124d5ecceb3d85cdca7ffa5ab4f9382f7458e9b5bf9266d"
+  },
+  "id": "work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f",
+  "intent": {
+    "outcome": "Replace the release PR and two dispatch stable process with one pinned source, deterministic staged identity, tested retained bundle and exact-byte publication/recovery."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "live",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable",
+    "proof_observed": "observation"
+  },
+  "next_action": "Observe current ordinary PR checks and await externally initiated recheck of the reduced graph and its hosted evidence. Preserve the exact cache-disposition blocker; only resource-owner teardown follows authorised disposition. Do not repeat completed hosted qualification solely for the evidence/Planning update.",
+  "owner_level": "slice",
+  "parent": {
+    "issue": "https://github.com/rickardvh/agentic-workspace/issues/3719"
+  },
+  "phase": "closeout",
+  "proof": {
+    "remaining": [
+      "External independent acceptance and current ordinary PR checks"
+    ]
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/pull/3721",
+    "docs/maintainer/release-validation.md",
+    "https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905350463",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36632638924",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36632833911",
+    "https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905782679",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36682138875",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36682133046"
+  ],
+  "relationships": {},
+  "revision": 5,
+  "scope": {
+    "excluded": "No production release, master writeback, new installed workflow, self-review or agent-directed independent reviewer.",
+    "included": "Existing release workflow, changeset consumption, stamping, manifest/registry/Cargo/current-install consumers, recovery, focused and hosted proof."
+  },
+  "title": "Implement #3719: one dispatch coordinated stable release",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/a1f1f161dc037cc728d96704da904f074af2eac7391ba6cee5982b1205d7498d.attempt.json",
+        "revision": "sha256:4c4448947b1e41e574815439287b1cfe0560ef596085ef9bb993efcf76f9c3c9",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/a1f1f161dc037cc728d96704da904f074af2eac7391ba6cee5982b1205d7498d.result.json",
+        "revision": "sha256:ac69ebaefb2d152e5c03eee4a274788325302cf672d8104780202c7e683475e5",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:f12d7060d5be752b3a85db9c8cdf987bc9e1d3bdefe6e2ad56448071d569f9cf",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:d413db24debfb250e4718113873911c142bfc31d47e9b354708ec39bc94b3257",
+        "owner_id": "work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f",
+        "owner_path": ".agentic-workspace/planning/execplans/work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f.plan.json"
+      }
+    }
+  }
+}

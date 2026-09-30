@@ -1,6 +1,7 @@
 """Complete native inventory and compiler-free consumer admission boundaries."""
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -116,6 +117,20 @@ def test_publication_requires_complete_exact_platforms_and_compiler_free_proof(i
         selected = next(row for row in data["platforms"] if row["target"] == release.current_platform()["target"])
         assert native_artifact_consumers.artifacts(root) == tuple(
             (root / item["asset"]).resolve() for item in (selected["wheel"], data["npm"], selected["native_archive"])
+        )
+        subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); "
+                "import native_artifact_consumers; native_artifact_consumers.artifacts(Path(sys.argv[2]))",
+                str(ROOT / "tests"),
+                str(root),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
         )
 
 
