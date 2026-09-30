@@ -581,6 +581,11 @@ fn retained(root: &Dir, path: &str, invocation: &Value) -> Result<Option<Value>,
     }
     Ok(Some(run))
 }
+
+pub(crate) fn retained_attempt(target: &Path, invocation: &Value) -> Result<bool, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    Ok(retained(&root, &run_path(invocation)?, invocation)?.is_some())
+}
 /// Read a prior native producer's exact committed publication relationship.
 /// This is historical effect custody, never current proof or continuation.
 pub(crate) fn committed_publication(
@@ -729,6 +734,9 @@ pub(crate) fn execute(
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let path = run_path(invocation)?;
     let old = retained(&root, &path, invocation)?;
+    if old.is_none() {
+        crate::native_proof_retention::preparation_ready(target)?;
+    }
     if old.is_none() && read(&root, &format!("{path}.completed.json"))?.is_some() {
         return Err(err(
             "unowned proof completion carrier exists; preserved before launch",
