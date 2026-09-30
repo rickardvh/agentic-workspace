@@ -188,7 +188,7 @@
           "default": "repo-owned"
         },
         "upstream_dogfooding": {
-          "description": "Repository consent to publish anonymised AW product findings to rickardvh/agentic-workspace through an already authenticated host GitHub capability. Does not authorize disclosure of consumer material, credentials or automatic code changes.",
+          "description": "Standing repository eligibility and consent for anonymised AW product reporting to rickardvh/agentic-workspace. Creating, updating or commenting also requires an already authenticated host GitHub capability and current host/repository action authority; opt-in never overrides stricter write rules. Blocked, unresolved or unknown authority returns the safe report for handoff. Does not authorize disclosure of consumer material, credentials or automatic code changes.",
           "type": "boolean",
           "default": false
         },

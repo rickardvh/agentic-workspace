@@ -98,7 +98,7 @@
         "occasions": [
           "observation"
         ],
-        "outcome": "A safe report is published, existing coverage is confirmed, or the report is handed off with a precise capability or privacy gap; the original task continues when safe.",
+        "outcome": "A safe report is published under current host/repository action authority, existing coverage is confirmed, or the exact report is handed off with a precise authority, capability or privacy gap; the original task continues when safe.",
         "settled_by": [
           {
             "selector": "/configuration/upstream_dogfooding",
