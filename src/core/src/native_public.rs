@@ -763,6 +763,13 @@ fn resolve_selected(
     for request in planning["requests"].as_array_mut().into_iter().flatten() {
         request["capability_revision"] = contract["revision"].clone();
     }
+    for request in planning["legacy_aggregate"]["selection_requests"]
+        .as_array_mut()
+        .into_iter()
+        .flatten()
+    {
+        request["capability_revision"] = contract["revision"].clone();
+    }
     if let Some(request) = planning["selector_transfer"].get_mut("request") {
         request["capability_revision"] = contract["revision"].clone();
     }

@@ -8,7 +8,7 @@ For the broader long-horizon capability map behind that stance, see `docs/agent-
 
 For current shipped package behaviour, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This roadmap is supporting context, not an immediate product promise.
 
-When the current stance changes, update this page and move any concrete next work into `roadmap` in `.agentic-workspace/planning/state.toml` instead of accumulating latent backlog prose here.
+When the current stance changes, update this page and move any concrete next work into owner-scoped Planning records or linked issues instead of accumulating latent backlog prose here.
 Use a doctrine-refresh review when the current ecosystem stance may have drifted from actual shipped behaviour or extraction discipline.
 
 ## Role Boundary
@@ -28,7 +28,7 @@ It does not own:
 Route those concerns to:
 
 - `docs/agent-os-capabilities.md` for the capability map
-- `roadmap` in `.agentic-workspace/planning/state.toml` for bounded next candidates
+- owner-scoped Planning records or linked issues for bounded next candidates
 - `docs/maturity-model.md` for maturity framing
 
 ## Refresh Triggers

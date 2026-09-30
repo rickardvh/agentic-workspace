@@ -1015,3 +1015,65 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
         assert current["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] == subject["revision"]
         assert current["decision_packet"]["status"] != "terminal"
         assert "update_provenance" not in json.loads(path.read_bytes())["update_provenance"]
+
+
+def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+    context = {"target": str(tmp_path), "task": "Upgrade legacy Planning"}
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, value)
+
+    owners = []
+    for title in ["Current frontier", "Related continuing work"]:
+        context["task"] = title
+        create = call(context)["planning"]["creation_requests"][0]
+        create["arguments"] = {"material": {**material(), "title": title}}
+        ready = call({**context, "request": create})
+        made = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
+        owners.append(made["value"])
+    state = tmp_path / ".agentic-workspace/planning/state.toml"
+    state.write_text(
+        "kind='planning-state/v1'\n"
+        + "".join(
+            f"[[active.execplans]]\nid='{owner['owner_id']}'\nsurface='{owner['owner_path']}'\nrevision='stale-aggregate'\nstatus='active'\n"
+            for owner in owners
+        )
+    )
+    held = state.read_bytes()
+    ambiguous = call(context)["planning"]
+    assert ambiguous["selected_owner"] is None
+    assert ambiguous["legacy_aggregate"]["current_authority"] is False
+    assert len(ambiguous["legacy_aggregate"]["selection_requests"]) == 2
+    assert call(context)["planning"]["terminal_retention"]["status"] == "legacy-migration-required"
+    assert state.read_bytes() == held
+    request = ambiguous["legacy_aggregate"]["selection_requests"][0]
+    ready = call({**context, "request": request})
+    call({**context, "invocation": ready["decision_packet"]["primary_action"]})
+    before = call(context)
+    owner_body = (tmp_path / owners[0]["owner_path"]).read_bytes()
+    retire = before["planning"]["terminal_retention"]["requests"][0]
+    retire["arguments"].update(
+        sources=[state.relative_to(tmp_path).as_posix()],
+        terminal=True,
+        no_unresolved_intent=True,
+        no_continuing_value=True,
+        reason="Canonical owners retain all useful intent; stale aggregate has no continuing value.",
+    )
+    ready = call({**context, "request": retire})
+    action = ready["decision_packet"]["primary_action"]
+    state.write_bytes(held + b"\n")
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": action})
+    assert state.exists()
+    state.write_bytes(held)
+    call({**context, "invocation": action})
+    after = call(context)
+    assert not state.exists()
+    assert after["planning"]["legacy_aggregate"]["status"] == "absent"
+    assert after["planning"]["selected_owner"]["id"] == before["planning"]["selected_owner"]["id"]
+    assert after["planning"]["selected_owner"]["source"] == before["planning"]["selected_owner"]["source"]
+    assert (tmp_path / owners[0]["owner_path"]).read_bytes() == owner_body
+    assert (tmp_path / owners[1]["owner_path"]).exists()
+    state.write_text("[unfamiliar]\nintent='preserve'\n")
+    assert call(context)["planning"]["terminal_retention"]["status"] == "legacy-migration-required"
+    assert state.exists()

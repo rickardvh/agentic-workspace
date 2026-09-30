@@ -164,13 +164,21 @@ fn inventory_for(
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let mut sources = BTreeMap::new();
     files(&root, ".agentic-workspace/planning", &mut sources)?;
+    let aggregate = sources
+        .contains_key(crate::native_planning::STATE)
+        .then(|| crate::native_planning::legacy_disposition(target));
+    let aggregate_ready =
+        matches!(&aggregate, Some(Ok(value)) if value["status"] == "retirement-ready");
     // Ordinary reads need no cross-owner graph unless Planning has a terminal
     // candidate. Reuse this scan when group analysis is actually required.
-    if !sources
-        .iter()
-        .any(|(path, bytes)| terminal(path, bytes) && selected["ref"] != path.as_str())
+    if !aggregate_ready
+        && !sources
+            .iter()
+            .any(|(path, bytes)| terminal(path, bytes) && selected["ref"] != path.as_str())
     {
-        return Ok(json!({"sources":{},"required":{},"selected":selected["ref"],"protected":[]}));
+        return Ok(
+            json!({"sources":{},"required":{},"selected":selected["ref"],"protected":aggregate.as_ref().and_then(|r|r.as_ref().err()).map(|e|vec![json!({"source":crate::native_planning::STATE,"reason":e.to_string()})]).unwrap_or_default()}),
+        );
     }
     observe_consumers(&root, &mut sources)?;
     let mut eligible = BTreeSet::new();
@@ -178,7 +186,18 @@ fn inventory_for(
     let mut proof_subjects = BTreeMap::new();
     let mut aliases: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     let mut protected = Vec::new();
+    if let Some(Err(error)) = &aggregate {
+        protected.push(json!({"source":crate::native_planning::STATE,"reason":error.to_string()}));
+    }
     for (path, bytes) in &sources {
+        if path == crate::native_planning::STATE && aggregate_ready {
+            eligible.insert(path.clone());
+            aliases
+                .entry(path.clone())
+                .or_default()
+                .insert(path.clone());
+            continue;
+        }
         let Ok(body) = serde_json::from_slice::<Value>(bytes) else {
             continue;
         };
@@ -452,7 +471,9 @@ pub(crate) fn view(
         .flat_map(|o| o.keys().cloned())
         .collect();
     if !recovery && sources.is_empty() {
-        return Ok(json!({"status":"quiet","requests":[],"protected":binding["protected"]}));
+        return Ok(
+            json!({"status":if binding["protected"].as_array().is_some_and(|v|v.iter().any(|p|p["source"]==crate::native_planning::STATE)){"legacy-migration-required"}else{"quiet"},"requests":[],"protected":binding["protected"]}),
+        );
     }
     let kind = if recovery { RECOVER } else { REQUEST };
     let args = if recovery {

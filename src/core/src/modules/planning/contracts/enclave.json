@@ -137,7 +137,7 @@
       "path": ".agentic-workspace/planning/state.toml",
       "scope": "exact",
       "class": "mutable-state",
-      "lifetime": "durable"
+      "lifetime": "until-owner-migration-disposition"
     },
     {
       "path": ".agentic-workspace/planning/external-intent-evidence.json",
