@@ -122,13 +122,46 @@ including unrelated settings. No model session wrote repository files or invoked
 an AW runtime. The installed skill SHA-256 at the end of bridge controls was
 `9f3c337797d489d12af751557ae0f93ce656bd9c11447d1a8e438b0beab7203b`.
 
-This establishes selected Codex handoff and shared bridge controls on the
-provisioned host. It does not establish an isolated model-session exercise: that
-profile still needs native Windows sandbox provisioning. The issue's required
-isolated-profile host exercise remains outstanding, so the PR stays draft without
-a closing reference. Claude authenticated behaviour remains the user's accepted
-assumption. Ordinary non-activation remains a disclosed limit of the passive
-adapter, not a reason to add activation hooks.
+This established selected Codex handoff and shared bridge controls on the
+provisioned host. At that point the isolated-profile use observation remained
+outstanding, so the PR stayed draft without a closing reference. The following
+bounded exercise resolves that remaining observation. Claude authenticated
+behaviour remains the user's accepted assumption. Ordinary non-activation remains
+a disclosed limit of the passive adapter, not a reason to add activation hooks.
+
+## Completed isolated Codex use and removal
+
+The isolated profile's native `configRequirements/read` returned
+`requirements: null`. No managed elevated-only restriction was configured.
+After the elevated setup failure, this profile used the documented
+`[windows] sandbox = "unelevated"` fallback. The
+[Windows sandbox documentation](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+describes its restricted-token and ACL boundaries and its weaker network isolation
+than the elevated implementation. This exercise establishes behaviour under that
+supported fallback; it does not establish successful elevated provisioning.
+Read-only permissions and approval `never` remained unchanged. Inherited security
+metadata was preserved; no policy-bypass flag or adapter change was introduced.
+
+Codex CLI 0.159.0 natively installed the entry into the isolated profile's cache.
+The installed skill SHA-256 was again
+`9f3c337797d489d12af751557ae0f93ce656bd9c11447d1a8e438b0beab7203b`.
+Three fresh sessions using the configured model completed with exit zero. Their
+saved turn metadata confirms `sandbox_policy.type = "read-only"` and approval
+`never`; their completed command traces establish the following observations:
+
+| Isolated-profile control | Observed result |
+| --- | --- |
+| Selected entry from A subdirectory, no fence | Five successful commands read the installed cache skill, resolved A's Git root, read its canonical skill and relative `ENTRY-A2` reference, and read the sample. Exactly one bridge and one canonical read. |
+| Ordinary task with plugin installed, no fence | One successful sample read; zero bridge or canonical reads. Automatic activation remains unproven and was not forced. |
+| Native plugin and marketplace removal, fresh fence fallback | Three successful reads supplied the canonical skill, relative `ENTRY-F1` reference and sample; zero bridge reads. The generic repository entry remains usable after removal. |
+
+All six fixture working trees remained clean. Native removal left no AW entry
+registration in the isolated profile; the temporary authentication copy was
+removed and its absence verified. The default host profile was not modified in
+this exercise. Earlier isolated install/load/disable/enable/update observations
+and the shared target/currentness controls above are reused rather than repeating
+the host matrix. The required isolated Codex use observation is now supported;
+ordinary current CI and externally initiated independent recheck remain separate.
 
 ## Git update correction after independent review
 
