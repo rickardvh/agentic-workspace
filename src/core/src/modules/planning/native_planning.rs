@@ -226,13 +226,14 @@ fn text(value: &Value) -> String {
         }
     })
 }
-fn legacy_references(state: &Value) -> Result<Vec<Value>, CoreError> {
+fn legacy_references(state: &Value, retirement: bool) -> Result<Vec<Value>, CoreError> {
     let fields = state
         .as_object()
         .ok_or_else(|| error(STATE, "legacy aggregate must be an object"))?;
-    if fields
-        .keys()
-        .any(|k| !matches!(k.as_str(), "kind" | "schema_version" | "active" | "todo"))
+    if (retirement
+        && fields
+            .keys()
+            .any(|k| !matches!(k.as_str(), "kind" | "schema_version" | "active" | "todo")))
         || state.get("kind").is_some_and(|v| v != "planning-state/v1")
     {
         return Err(error(
@@ -247,7 +248,7 @@ fn legacy_references(state: &Value) -> Result<Vec<Value>, CoreError> {
         }
         if state[group]
             .as_object()
-            .is_none_or(|g| g.keys().any(|k| k != field))
+            .is_none_or(|g| retirement && g.keys().any(|k| k != field))
         {
             return Err(error(
                 STATE,
@@ -298,7 +299,7 @@ pub(crate) fn legacy_disposition(target: &Path) -> Result<Value, CoreError> {
         return Ok(json!({"status":"absent"}));
     };
     let state = parsed(STATE, &bytes)?;
-    let candidates = legacy_references(&state)?;
+    let candidates = legacy_references(&state, true)?;
     for candidate in &candidates {
         owner(&root, target, candidate, "legacy-upgrade-input", true)?;
         let body = parsed(
@@ -601,9 +602,13 @@ fn resolve_context(
     let legacy = load(STATE)?;
     let mut migration = json!({"status":"absent"});
     let legacy_candidates = if let Some(state) = &legacy {
-        match legacy_references(state) {
+        match legacy_references(state, false) {
             Ok(candidates) => {
                 migration = json!({"status":"migration-required","role":"legacy-migration-input","owner_candidates":candidates,"current_authority":false});
+                if let Err(error) = legacy_references(state, true) {
+                    migration["status"] = json!("unsupported-preserved");
+                    migration["reason"] = json!(error.to_string());
+                }
                 candidates
             }
             Err(e) => {
@@ -661,7 +666,7 @@ fn resolve_context(
             SELECTION,
             true,
         )?;
-    } else if legacy_candidates.len() == 1 {
+    } else if legacy_candidates.len() == 1 && migration["status"] != "unsupported-preserved" {
         selected = owner(
             &root,
             &target,
@@ -969,7 +974,13 @@ fn resolve_context(
                 );
             }
         }
-        blockers = json!([{"code":"legacy-planning-owner-choice-required","message":"Legacy aggregate is migration input, not current continuation. Select/reconcile a canonical owner with one exact legacy_aggregate.selection_requests entry, then retire the aggregate through Planning disposition. Unsupported material stays preserved.","affects":["task","claim:complete"]}]);
+        status = "legacy-choice-required";
+        planning_input = Value::Null;
+        blockers = if migration_requests.is_empty() {
+            json!([{"code":"legacy-planning-owner-resolution-unavailable","message":"Preserve the legacy aggregate: no safe existing canonical owner selection is available. Use Planning creation or explicit canonical-owner discovery for current work; no legacy selection or retirement request is supplied. Unfamiliar intent remains preserved.","affects":["claim:complete"]}])
+        } else {
+            json!([{"code":"legacy-planning-owner-choice-required","message":"Legacy aggregate is migration input, not current continuation. Select/reconcile a canonical owner with one exact legacy_aggregate.selection_requests entry. Unsupported material stays preserved; retirement is offered only for fully supported input.","affects":["task","claim:complete"]}])
+        };
     }
     if legacy.is_some() {
         migration["selection_requests"] = json!(migration_requests);
@@ -986,7 +997,9 @@ fn resolve_context(
     } else {
         json!([])
     };
-    let task_relation = if matches!(status, "current" | "reentry-required" | "custody-required") {
+    let task_relation = if status == "legacy-choice-required" {
+        "unresolved"
+    } else if matches!(status, "current" | "reentry-required" | "custody-required") {
         "continues"
     } else if request.is_some_and(|r| {
         matches!(
@@ -1008,6 +1021,7 @@ fn resolve_context(
         "current" => "continue",
         "reentry-required" => "reconcile",
         "custody-required" => "acquire-custody",
+        "legacy-choice-required" => "select-canonical-owner",
         _ => "determine-relation",
     };
     let admitted = if task_relation == "continues" {

@@ -1017,14 +1017,17 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
         assert "update_provenance" not in json.loads(path.read_bytes())["update_provenance"]
 
 
-def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+@pytest.mark.parametrize("unsupported", [False, True])
+def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, unsupported: bool
+) -> None:
     context = {"target": str(tmp_path), "task": "Upgrade legacy Planning"}
 
     def call(value):
         return consume("native", shared_core_binary, native_cli, value)
 
     owners = []
-    for title in ["Current frontier", "Related continuing work"]:
+    for title in ["Current frontier"] if unsupported else ["Current frontier", "Related continuing work"]:
         context["task"] = title
         create = call(context)["planning"]["creation_requests"][0]
         create["arguments"] = {"material": {**material(), "title": title}}
@@ -1038,12 +1041,15 @@ def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(tmp_path: Path, 
             f"[[active.execplans]]\nid='{owner['owner_id']}'\nsurface='{owner['owner_path']}'\nrevision='stale-aggregate'\nstatus='active'\n"
             for owner in owners
         )
+        + ("[roadmap]\nintent='preserve unfamiliar useful intent'\n" if unsupported else "")
     )
     held = state.read_bytes()
     ambiguous = call(context)["planning"]
     assert ambiguous["selected_owner"] is None
+    assert ambiguous["status"] == "legacy-choice-required"
+    assert ambiguous["task_relation"] == "unresolved"
     assert ambiguous["legacy_aggregate"]["current_authority"] is False
-    assert len(ambiguous["legacy_aggregate"]["selection_requests"]) == 2
+    assert len(ambiguous["legacy_aggregate"]["selection_requests"]) == len(owners)
     assert call(context)["planning"]["terminal_retention"]["status"] == "legacy-migration-required"
     assert state.read_bytes() == held
     request = ambiguous["legacy_aggregate"]["selection_requests"][0]
@@ -1051,6 +1057,26 @@ def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(tmp_path: Path, 
     call({**context, "invocation": ready["decision_packet"]["primary_action"]})
     before = call(context)
     owner_body = (tmp_path / owners[0]["owner_path"]).read_bytes()
+    if unsupported:
+        # Cold unknown material preserves safe discovery, but never authorizes
+        # retiring unknown bytes after selecting the useful canonical owner.
+        assert before["planning"]["selected_owner"]["id"] == owners[0]["owner_id"]
+        assert before["planning"]["terminal_retention"]["requests"] == []
+        assert state.read_bytes() == held
+        assert (tmp_path / owners[0]["owner_path"]).read_bytes() == owner_body
+        cold = tmp_path / "unfamiliar-only"
+        cold_state = cold / ".agentic-workspace/planning/state.toml"
+        cold_state.parent.mkdir(parents=True)
+        cold_state.write_text("[unfamiliar]\nintent='preserve'\n")
+        cold_bytes = cold_state.read_bytes()
+        preserved = call({"target": str(cold), "task": "Independent read"})
+        assert preserved["planning"]["legacy_aggregate"]["selection_requests"] == []
+        assert preserved["planning"]["creation_requests"]
+        blocker = next(b for b in preserved["decision_packet"]["blockers"] if b["code"] == "legacy-planning-owner-resolution-unavailable")
+        assert blocker["code"] == "legacy-planning-owner-resolution-unavailable"
+        assert "task" not in blocker["affects"]
+        assert cold_state.read_bytes() == cold_bytes
+        return
     retire = before["planning"]["terminal_retention"]["requests"][0]
     retire["arguments"].update(
         sources=[state.relative_to(tmp_path).as_posix()],
