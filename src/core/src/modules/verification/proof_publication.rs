@@ -208,7 +208,7 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
         }
     }
     Err(err(
-        "proof-publication-index-custody-required; existing index preserved; explicit owner transfer is required",
+        "proof-publication-index-custody-required; existing index preserved; resolve verification/retire-receipts/v1 through current start before new proof",
     ))
 }
 pub(crate) fn index_admitted(target: &Path, bytes: &[u8]) -> Result<bool, CoreError> {

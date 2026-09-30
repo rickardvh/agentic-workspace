@@ -234,23 +234,11 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
 
     # Repository bytes cannot acquire write custody. The fresh writer adopts the
     # exact index through the existing owner, establishing its own local custody.
-    next_request = call(fresh_context)["verification"]["execution_requests"][0]
-    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
-    next_local = call({**fresh_context, "invocation": next_action})["value"]
-    next_consumer = proof_consumer(
-        call, fresh_context, next_local["publication"]["repository_reference"], task="Retain the next repository proof"
-    )
-    next_request = call(fresh_context)["verification"]["execution_requests"][0]
-    next_request["arguments"]["promotion"] = {
-        "evidence_ref": next_local["publication"]["reference"],
-        "consumer": next_consumer.relative_to(fresh).as_posix(),
-        "reason": "Continue repository evidence from a fresh checkout",
-    }
-    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
-    with pytest.raises(AssertionError, match="index.*custody|owner transfer"):
-        call({**fresh_context, "invocation": next_action})
     transfer = call(fresh_context)["verification"]["retention"]
     assert transfer["index_transfer_required"] is True
+    assert transfer["legacy_index_disposition_required"] is False
+    blocked_request = call(fresh_context)["verification"]["execution_requests"][0]
+    assert call({**fresh_context, "request": blocked_request})["decision_packet"]["primary_action"] is None
     transfer_request = transfer["requests"][0]
     transfer_request["arguments"].update(sources=[], reason="Adopt the unchanged repository index in this checkout")
     transfer_action = call({**fresh_context, "request": transfer_request})["decision_packet"]["primary_action"]
@@ -265,6 +253,18 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
     original_consumer.write_bytes(original_consumer_bytes)
     call({**fresh_context, "invocation": transfer_action})
     assert call(fresh_context)["verification"]["retention"]["status"] == "quiet"
+    next_request = call(fresh_context)["verification"]["execution_requests"][0]
+    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
+    next_local = call({**fresh_context, "invocation": next_action})["value"]
+    next_consumer = proof_consumer(
+        call, fresh_context, next_local["publication"]["repository_reference"], task="Retain the next repository proof"
+    )
+    next_request = call(fresh_context)["verification"]["execution_requests"][0]
+    next_request["arguments"]["promotion"] = {
+        "evidence_ref": next_local["publication"]["reference"],
+        "consumer": next_consumer.relative_to(fresh).as_posix(),
+        "reason": "Continue repository evidence from a fresh checkout",
+    }
     next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
     fresh_index = fresh / ".agentic-workspace/proof/receipts/index.json"
     index_bytes = fresh_index.read_bytes()
@@ -928,3 +928,88 @@ def test_strategy_requirements_reuse_current_observations(tmp_path, shared_core_
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     (tmp_path / "a.txt").write_text("material subject drift")
     assert proof()["evidence"][0]["evidence_freshness"] == "stale"
+
+
+def test_unowned_multi_entry_index_resolves_before_new_local_proof(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    selected = call(context)["verification"]["execution_requests"][0]
+    old_action = call({**context, "request": selected})["decision_packet"]["primary_action"]
+    home = tmp_path / ".agentic-workspace/proof/receipts"
+    home.mkdir(parents=True)
+    ids = ["0123456789abcdef", "fedcba9876543210"]
+    for identity in ids:
+        (home / f"{identity}.json").write_text(
+            json.dumps(
+                {
+                    "kind": "agentic-workspace/proof-receipt/v1",
+                    "receipt_id": identity,
+                    "result": "passed",
+                    "proof_subject": {"runtime": {"implementation": "native-aw-proof"}},
+                }
+            )
+        )
+    index = home / "index.json"
+    index.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/trusted-producer-receipt-index/v1",
+                "receipts": {identity: {"path": f"{identity}.json"} for identity in ids},
+            }
+        )
+    )
+    historical = {path: path.read_bytes() for path in home.glob("*.json")}
+    unrelated = home / "user-notes.json"
+    unrelated.write_text('{"notes":"preserve unfamiliar user material"}')
+    blocked = call(context)
+    retention = blocked["verification"]["retention"]
+    assert retention["legacy_index_disposition_required"] is True
+    assert any(b["code"] == "proof-publication-owner-resolution-required" for b in blocked["decision_packet"]["blockers"])
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": old_action})
+    selected = blocked["verification"]["execution_requests"][0]
+    assert call({**context, "request": selected})["decision_packet"]["primary_action"] is None
+    assert not (tmp_path / "count.txt").exists()
+    assert all(path.read_bytes() == held for path, held in historical.items())
+    retire = retention["requests"][0]
+    retire["arguments"].update(sources=[], reason="Unsupported legacy locators have no continuing value; preserve historical receipts.")
+    assert call({**context, "request": retire})["decision_packet"]["primary_action"] is None
+    retire["arguments"].update(retire_legacy_index=True, superseded=True, no_unresolved_intent=True, no_continuing_value=True)
+    ready = call({**context, "request": retire})
+    action = ready["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "verification.retire-receipts"
+    # Current host/repository restrictions still deny this exact effect.
+    policy = tmp_path / ".agentic-workspace/config.local.toml"
+    policy.write_text("[workspace]\nenabled=false\n")
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": action})
+    assert index.read_bytes() == historical[index]
+    policy.unlink()
+    index.write_bytes(historical[index] + b" ")
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": action})
+    index.write_bytes(historical[index])
+    done = call({**context, "invocation": action})
+    assert done["effect_outcome"]["status"] == "committed"
+    assert done["value"]["legacy_index_retired"] is True
+    assert json.loads(index.read_bytes())["receipts"] == {}
+    assert all(path.read_bytes() == held for path, held in historical.items() if path != index)
+    assert unrelated.read_text() == '{"notes":"preserve unfamiliar user material"}'
+    # Retiring locators does not turn historical observations into admitted proof.
+    claim = call(context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [f"proof://receipts/{identity}" for identity in ids]
+    legacy = call({**context, "request": claim})
+    assert legacy["verification"]["judgment_request"]["admitted_automated_evidence"] == []
+    request = call(context)["verification"]["execution_requests"][0]
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    proof = call({**context, "invocation": action})
+    assert proof["value"]["publication"]["status"] == "local"
+    assert proof["value"]["process"]["status"] == "passed"
+    assert json.loads(index.read_bytes())["receipts"] == {}
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+    assert not any(
+        path.name not in {"index.json", "user-notes.json", *(f"{identity}.json" for identity in ids)} for path in home.glob("*.json")
+    )

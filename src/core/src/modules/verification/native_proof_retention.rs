@@ -56,7 +56,7 @@ pub(crate) fn declarations() -> Vec<Value> {
         "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"sources":{"type":"array","minItems":0,"maxItems":32,"uniqueItems":true,"items":{"type":"string"}},
         "superseded":{"type":"boolean"},"no_unresolved_intent":{"type":"boolean"},"no_continuing_value":{"type":"boolean"},
-        "retain_repository":{"type":"boolean"},"reason":{"type":"string","maxLength":2048}},
+        "retain_repository":{"type":"boolean"},"retire_legacy_index":{"type":"boolean"},"reason":{"type":"string","maxLength":2048}},
         "required":["sources","superseded","no_unresolved_intent","no_continuing_value","reason"]}}),
         json!({"kind":RECOVER,"result_kind":"agentic-workspace/proof-retirement/v1","input_schema":{
         "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
@@ -64,7 +64,7 @@ pub(crate) fn declarations() -> Vec<Value> {
     ]
 }
 pub(crate) fn operations() -> Vec<Value> {
-    [OP,RECOVERY].into_iter().map(|id| json!({"id":id,"semantic_revision":"proof-retirement-v1",
+    [OP,RECOVERY].into_iter().map(|id| json!({"id":id,"semantic_revision":"proof-retirement-v2",
         "input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"}},
         "required":["target","request","binding"]},"result_kind":"agentic-workspace/proof-retirement/v1",
@@ -77,7 +77,17 @@ fn candidate(path: &str, bytes: &[u8]) -> bool {
     path.starts_with(HOME)
         && path.ends_with(".json")
         && path != INDEX
-        && serde_json::from_slice::<Value>(bytes).is_ok()
+        && serde_json::from_slice::<Value>(bytes).is_ok_and(|body| {
+            body["receipt_id"].as_str().is_some_and(|id| {
+                (16..=64).contains(&id.len())
+                    && id.bytes().all(|byte| byte.is_ascii_hexdigit())
+                    && path == format!("{HOME}{id}.json")
+                    && matches!(
+                        body["result"].as_str(),
+                        Some("passed" | "failed" | "blocked" | "unproven")
+                    )
+            })
+        })
 }
 
 fn observe_sources(root: &Dir) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
@@ -135,6 +145,7 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
     let transfer = index_bytes.as_ref().is_some_and(|bytes| {
         !crate::proof_publication::index_admitted(target, bytes).unwrap_or(false)
     });
+    let mut legacy_index = transfer && !index["receipts"].as_object().unwrap().is_empty();
     // A fresh checkout must explicitly transfer this index through Verification.
     // The portable proof is readable source material, never a write grant. Its
     // named consumer must still be admitted by its current responsible owner.
@@ -154,7 +165,19 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
                     .as_str()
                     .unwrap_or(""),
             )?;
+            legacy_index = false;
         }
+    }
+    if legacy_index
+        && index
+            .as_object()
+            .unwrap()
+            .keys()
+            .any(|key| !matches!(key.as_str(), "kind" | "receipts" | "current_publication"))
+    {
+        return Err(err(
+            "Unfamiliar proof index fields preserved; legacy disposition cannot remove user material",
+        ));
     }
     let references: BTreeMap<_, _> = sources
         .iter()
@@ -241,12 +264,17 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
         .collect();
     Ok(
         json!({"sources":offered,"local_transfers":local_transfers,"repository_transfers":repository_transfers,"transfer_gaps":repository["gaps"],"guard_revision":digest(&json!(guards))?,"protected":protected,
-        "index":index,"index_transfer_required":transfer,"index_revision":index_bytes.as_ref().map(|b|revision(b)),
+        "publication_owner_resolution_required":transfer && !index["receipts"].as_object().unwrap().is_empty(),"index":index,"index_transfer_required":transfer,"legacy_index_disposition_required":legacy_index,"index_revision":index_bytes.as_ref().map(|b|revision(b)),
         "carrier_revision":read(&root,CARRIER)?.as_ref().map(|b|revision(b))}),
     )
 }
 
 fn next_index(invocation: &Value) -> Result<Value, CoreError> {
+    if invocation["arguments"]["request"]["arguments"]["retire_legacy_index"] == true {
+        return Ok(
+            json!({"kind":"agentic-workspace/trusted-producer-receipt-index/v1","receipts":{}}),
+        );
+    }
     let mut index = invocation["arguments"]["binding"]["index"].clone();
     let paths = invocation["arguments"]["request"]["arguments"]["sources"]
         .as_array()
@@ -349,7 +377,7 @@ fn outcome(invocation: &Value) -> Result<Value, CoreError> {
     Ok(
         json!({"status":"applied","effects":["proof-execution"],"value":{"kind":"agentic-workspace/proof-retirement/v1",
         "retired":invocation["arguments"]["request"]["arguments"]["sources"],"local_transfers":invocation["arguments"]["binding"]["local_transfers"],"repository_transfers":invocation["arguments"]["binding"]["repository_transfers"],"tracked_tombstone":false,"completion_authority":false,
-        "index_revision":revision(&bytes),"proof_authority":"unchanged; disposition grants no proof sufficiency"}}),
+        "index_revision":revision(&bytes),"legacy_index_retired":invocation["arguments"]["request"]["arguments"]["retire_legacy_index"] == true,"proof_authority":"unchanged; disposition grants no proof sufficiency"}}),
     )
 }
 
@@ -405,12 +433,12 @@ pub(crate) fn view(
     let args = if recovery {
         binding.clone()
     } else {
-        json!({"sources":sources,"superseded":false,"no_unresolved_intent":false,"no_continuing_value":false,"retain_repository":false,"reason":""})
+        json!({"sources":sources,"superseded":false,"no_unresolved_intent":false,"no_continuing_value":false,"retain_repository":false,"retire_legacy_index":false,"reason":""})
     };
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"verification","owner_revision":owner["revision"],
         "source_revision":digest(&binding)?,"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     let mut result = json!({"status":if recovery {"recovery-required"} else {"judgment-required"},"requests":[template],
-        "sources":binding["sources"],"local_transfers":binding["local_transfers"],"repository_transfers":binding["repository_transfers"],"index_transfer_required":binding["index_transfer_required"],"protected":binding["protected"],"authority":"Judge exact index adoption and continuing repository value. Empty sources transfers only the index into current local custody. retain_repository selects portable format transfers; local transfers preserve exact runs. Discovery grants no write, deletion or proof sufficiency."});
+        "sources":binding["sources"],"local_transfers":binding["local_transfers"],"repository_transfers":binding["repository_transfers"],"publication_owner_resolution_required":binding["publication_owner_resolution_required"],"index_transfer_required":binding["index_transfer_required"],"legacy_index_disposition_required":binding["legacy_index_disposition_required"],"protected":binding["protected"],"authority":"Judge exact index disposition and continuing repository value. An unowned nonempty legacy index requires retire_legacy_index and all three disposition judgments; this clears obsolete locators without granting old receipts current proof or deleting protected files. Empty authenticated/portable index transfer acquires only mutation custody. retain_repository selects portable format transfers; local transfers preserve exact runs. Discovery grants no write, deletion or proof sufficiency."});
     if let Some(request) = request {
         crate::prepare_request_value(
             json!({"request":request,"current_work":work,"capability_contract":contract}),
@@ -428,10 +456,23 @@ pub(crate) fn view(
                 return Err(err("Proof retirement recovery changed"));
             }
         } else {
+            if args["retire_legacy_index"] == true
+                && binding["legacy_index_disposition_required"] != true
+            {
+                return Err(err(
+                    "Legacy index disposition is not offered for current authenticated state",
+                ));
+            }
+            if binding["legacy_index_disposition_required"] == true
+                && args["retire_legacy_index"] != true
+            {
+                return Ok(result);
+            }
             if (args["superseded"] != true
                 || args["no_unresolved_intent"] != true
                 || args["no_continuing_value"] != true)
-                && !args["sources"].as_array().unwrap().is_empty()
+                && (!args["sources"].as_array().unwrap().is_empty()
+                    || binding["legacy_index_disposition_required"] == true)
                 || args["reason"].as_str().unwrap_or("").trim().is_empty()
             {
                 return Ok(result);
@@ -910,6 +951,26 @@ pub(crate) fn publication_ready(root: &Dir) -> Result<(), CoreError> {
     Ok(())
 }
 
+/// New execution cannot escape unresolved repository publication ownership by
+/// choosing local evidence. This check does not publish or acquire any state.
+pub(crate) fn preparation_ready(target: &Path) -> Result<(), CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    publication_ready(&root)?;
+    if let Some(bytes) = read(&root, INDEX)? {
+        let index: Value = serde_json::from_slice(&bytes).map_err(err)?;
+        if index["receipts"]
+            .as_object()
+            .is_none_or(|entries| !entries.is_empty())
+            && !crate::proof_publication::index_admitted(target, &bytes)?
+        {
+            return Err(err(
+                "proof-publication-index-custody-required; preserve existing state and resolve exact Verification retention request before new proof",
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -952,8 +1013,13 @@ mod tests {
             crate::native_public::start(input).unwrap()
         }
         fn ready(&self) -> Value {
-            let mut r = self.start(None)["verification"]["retention"]["requests"][0].clone();
+            let current = self.start(None);
+            let mut r = current["verification"]["retention"]["requests"][0].clone();
             if r["request_kind"] == REQUEST {
+                r["arguments"]["retire_legacy_index"] = json!(
+                    current["verification"]["retention"]["legacy_index_disposition_required"]
+                        == true
+                );
                 r["arguments"]["superseded"] = json!(true);
                 r["arguments"]["no_unresolved_intent"] = json!(true);
                 r["arguments"]["no_continuing_value"] = json!(true);
@@ -967,6 +1033,84 @@ mod tests {
     impl Drop for Fixture {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    #[test]
+    fn new_proof_rechecks_index_ownership_after_admission_without_blocking_replay() {
+        for late_legacy in [true, false] {
+            let f = Fixture::new();
+            std::fs::create_dir_all(f.0.join(".agentic-workspace/verification")).unwrap();
+            std::fs::write(f.0.join("a.txt"), "source").unwrap();
+            std::fs::write(f.0.join("count.txt"), "before\n").unwrap();
+            let command = if cfg!(windows) {
+                "Add-Content -Path count.txt -Value executed; Write-Output checked"
+            } else {
+                "echo executed >> count.txt; echo checked"
+            };
+            std::fs::write(f.0.join(".agentic-workspace/verification/manifest.toml"), format!("schema_version='agentic-workspace/verification-manifest/v1'\n[protocols.check]\napplies_to_paths=['a.txt']\n[proof_routes.check]\nprotocol_refs=['check']\ncommands=['{command}']\n")).unwrap();
+            let mut input = json!({"target":f.0,"task":"Check source","changed":["a.txt"]});
+            let initial = crate::native_public::start(input.clone()).unwrap();
+            input["request"] = initial["verification"]["execution_requests"][0].clone();
+            let selected = crate::native_public::start(input).unwrap();
+            let invocation = &selected["decision_packet"]["primary_action"];
+            assert_eq!(invocation["operation_id"], "proof.report");
+            let mut revalidations = 0;
+            let result = crate::native_proof::execute(&f.0, &selected, invocation, || {
+                revalidations += 1;
+                // The carrier already exists at this seam. Its existence must
+                // not turn the first command into recovery of a prior effect.
+                assert!(crate::native_proof::retained_attempt(&f.0, invocation)?);
+                if late_legacy {
+                    f.legacy();
+                }
+                Ok(())
+            });
+            if late_legacy {
+                assert!(
+                    result
+                        .unwrap_err()
+                        .to_string()
+                        .contains("index-custody-required")
+                );
+                assert_eq!(revalidations, 1);
+                assert_eq!(std::fs::read(f.0.join("count.txt")).unwrap(), b"before\n");
+                let index = std::fs::read(f.0.join(INDEX)).unwrap();
+                let receipt =
+                    std::fs::read(f.0.join(format!("{HOME}0123456789abcdef.json"))).unwrap();
+                let retry = crate::native_proof::execute(&f.0, &selected, invocation, || Ok(()));
+                assert!(
+                    retry
+                        .unwrap_err()
+                        .to_string()
+                        .contains("proof-execution-uncertain")
+                );
+                assert_eq!(std::fs::read(f.0.join(INDEX)).unwrap(), index);
+                assert_eq!(
+                    std::fs::read(f.0.join(format!("{HOME}0123456789abcdef.json"))).unwrap(),
+                    receipt
+                );
+                assert_eq!(std::fs::read(f.0.join("count.txt")).unwrap(), b"before\n");
+                let run = crate::native_proof::run_path(invocation).unwrap();
+                assert!(!f.0.join(format!("{run}.command.json")).exists());
+                assert!(!f.0.join(format!("{run}.completed.json")).exists());
+            } else {
+                let completed = result.unwrap();
+                assert_eq!(completed["value"]["process"]["status"], "passed");
+                let count = std::fs::read(f.0.join("count.txt")).unwrap();
+                assert_eq!(
+                    String::from_utf8_lossy(&count).lines().collect::<Vec<_>>(),
+                    ["before", "executed"]
+                );
+                f.legacy();
+                let index = std::fs::read(f.0.join(INDEX)).unwrap();
+                let replay = crate::native_proof::execute(&f.0, &selected, invocation, || {
+                    panic!("committed replay must not execute or revalidate")
+                })
+                .unwrap();
+                assert_eq!(replay["value"], completed["value"]);
+                assert_eq!(std::fs::read(f.0.join("count.txt")).unwrap(), count);
+                assert_eq!(std::fs::read(f.0.join(INDEX)).unwrap(), index);
+            }
         }
     }
     #[test]
@@ -1215,8 +1359,21 @@ mod tests {
         for stage in ["prepared", "index-replaced", "removed", "committed"] {
             let f = Fixture::new();
             let path = f.legacy();
+            let other = format!("{HOME}fedcba9876543210.json");
+            f.put(&other, json!({"receipt_id":"fedcba9876543210","result":"passed","authority":"legacy-unproven"}));
+            f.put(INDEX, json!({"kind":"agentic-workspace/trusted-producer-receipt-index/v1","receipts":{"0123456789abcdef":{"path":"0123456789abcdef.json"},"fedcba9876543210":{"path":"fedcba9876543210.json"}}}));
+            let user = format!("{HOME}user-notes.json");
+            f.put(&user, json!({"notes":"user-owned; preserve"}));
+            let user_bytes = std::fs::read(f.0.join(&user)).unwrap();
+            assert!(preparation_ready(&f.0).is_err());
             let ready = f.ready();
             let action = &ready["decision_packet"]["primary_action"];
+            assert!(
+                !action["arguments"]["request"]["arguments"]["sources"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!(user))
+            );
             let result = execute_checked(
                 &f.0,
                 &ready["decision_packet"],
@@ -1240,7 +1397,10 @@ mod tests {
             );
             execute(&f.0, &recovery["decision_packet"], action, || Ok(())).unwrap();
             assert!(!f.0.join(path).exists());
+            assert!(!f.0.join(other).exists());
+            assert_eq!(std::fs::read(f.0.join(&user)).unwrap(), user_bytes);
             crate::proof_publication::check(&f.0).unwrap();
+            preparation_ready(&f.0).unwrap();
         }
     }
 }

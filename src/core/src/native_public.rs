@@ -1186,6 +1186,31 @@ fn resolve_selected(
             .or_else(|| verification_request(crate::native_proof_retention::RECOVER));
         let retention =
             crate::native_proof_retention::view(target, &work, &contract, retirement_request)?;
+        let exact_proof_recovery = executing
+            && retention["status"] != "recovery-required"
+            && input.invocation.as_ref().is_some_and(|invocation| {
+                invocation["operation_id"] == "proof.report"
+                    && crate::native_proof::retained_attempt(target, invocation).unwrap_or(false)
+            });
+        if !exact_proof_recovery
+            && (retention["publication_owner_resolution_required"] == true
+                || retention["status"] == "recovery-required"
+                || retention["status"] == "preserved" && retention["reason"].is_string())
+        {
+            // Proof execution and repository disposition share an effect domain.
+            // Offer only the exact resolving disposition while ownership is open.
+            verification["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .retain(|action| action["operation_id"] != "proof.report");
+            if !retention["action"].is_object() {
+                verification["contribution"]["blockers"].as_array_mut().unwrap().push(json!({
+                    "code":"proof-publication-owner-resolution-required",
+                    "message":"Resolve the exact Verification retention request before new proof. Legacy history is preserved and grants no current claim authority.",
+                    "affects":["effect:proof-execution","claim:complete"]
+                }));
+            }
+        }
         if retention["action"].is_object() {
             verification["contribution"]["actions"]
                 .as_array_mut()

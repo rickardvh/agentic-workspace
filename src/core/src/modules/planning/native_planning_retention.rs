@@ -1127,15 +1127,10 @@ mod tests {
                 .push(assessed["verification"]["execution_requests"][0].clone());
             let proof = invoke(&context, &start(&context, assignment));
             assert_eq!(proof["effect_outcome"]["status"], "committed", "{proof}");
-            let proof_id = proof["value"]["publication"]["reference"]
-                .as_str()
-                .unwrap()
-                .rsplit('/')
-                .next()
-                .unwrap();
-            let proof_path =
-                f.0.join(format!(".agentic-workspace/proof/receipts/{proof_id}.json"));
-            let proof_bytes = std::fs::read(&proof_path).unwrap();
+            let proof_reference = proof["value"]["publication"]["reference"].as_str().unwrap();
+            assert!(proof_reference.starts_with("proof://local/"));
+            let proof_body = crate::native_proof::local_receipt(&f.0, proof_reference).unwrap();
+            assert!(!f.0.join(".agentic-workspace/proof/receipts").exists());
             let mut update =
                 start(&context, continuation.clone())["planning"]["update_requests"][0].clone();
             let mut closed = material.clone();
@@ -1156,18 +1151,11 @@ mod tests {
                 );
                 invoke(&context, &start(&context, disposition));
             }
-            let current = start(&context, Value::Null);
-            if n > 0 {
-                let mut retire = current["verification"]["retention"]["requests"][0].clone();
-                retire["arguments"]["superseded"] = json!(true);
-                retire["arguments"]["no_unresolved_intent"] = json!(true);
-                retire["arguments"]["no_continuing_value"] = json!(true);
-                retire["arguments"]["reason"] = json!(
-                    "The completed prior Planning subject no longer exists; current reusable proof remains protected."
-                );
-                invoke(&context, &start(&context, retire));
-            }
-            assert_eq!(std::fs::read(&proof_path).unwrap(), proof_bytes);
+            assert_eq!(
+                crate::native_proof::local_receipt(&f.0, proof_reference).unwrap(),
+                proof_body
+            );
+            assert!(!f.0.join(".agentic-workspace/proof/receipts").exists());
             assert_eq!(
                 std::fs::read(f.0.join(&unresolved)).unwrap(),
                 unresolved_bytes
