@@ -243,7 +243,7 @@ fn owner(
     if !path.starts_with(".agentic-workspace/planning/execplans/") || !path.ends_with(".json") {
         return Err(error(provenance, "owner ref outside canonical execplans"));
     }
-    let bytes = read(root, path)?.ok_or_else(|| error(path, "selected owner missing"))?;
+    let bytes = read(root, path)?.ok_or_else(|| error(path, format!("selected owner missing ({id}); this checkout/base cannot represent the remembered work. Return to the source checkout or use a Git seed containing {path}, then resolve the current task relation through fresh start. Preserve the selector; absence supplies no independence, completion or deletion authority")))?;
     let body = parsed(path, &bytes)?;
     if body["id"] != id {
         return Err(error(path, "owner identity mismatch"));
@@ -2114,12 +2114,10 @@ mod tests {
         );
         target.write(THREADS, "{}");
         fs::remove_file(target.0.join(PLAN)).unwrap();
-        assert!(
-            resolve(&target.0, &work(), None)
-                .unwrap_err()
-                .to_string()
-                .contains("selected owner missing")
-        );
+        let missing = resolve(&target.0, &work(), None).unwrap_err().to_string();
+        assert!(missing.contains("selected owner missing"));
+        assert!(missing.contains("checkout/base"));
+        assert!(missing.contains("Return to the source checkout"));
     }
     #[test]
     fn native_planning_identity_and_unsupported_authority_fail_at_source() {
