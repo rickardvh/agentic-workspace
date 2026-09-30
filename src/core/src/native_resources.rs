@@ -37,6 +37,8 @@ struct Request {
     operation: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     route_request: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    planning_request: Option<Value>,
     path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     selection: Option<String>,
@@ -436,6 +438,62 @@ fn build_environment(path: &Path, outputs: &[String]) -> Value {
     }
     env
 }
+fn planning_continuity(input: &Input, target: &Path, seed: &str) -> Result<Value, CoreError> {
+    if let Some(request) = &input.request.planning_request {
+        let requests = request
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or(std::slice::from_ref(request));
+        if requests.iter().any(|r| {
+            r["owner"] != "planning"
+                || !matches!(
+                    r["request_kind"].as_str(),
+                    Some("planning/continuation/v1" | "planning/posture/v1")
+                )
+        }) {
+            return Err(err(
+                "planning_request accepts only current Planning relation/posture requests",
+            ));
+        }
+    }
+    let current = crate::native_public::start(json!({"target":target,"task":input.task,
+        "changed":input.changed,"request":input.request.planning_request}))?;
+    let planning = &current["planning"];
+    let mut result = json!({"planning":planning,"seed":seed,"status":"admitted"});
+    if planning["task_relation"] == "unresolved"
+        || matches!(
+            planning["status"].as_str(),
+            Some("stale" | "custody-required" | "independent")
+        )
+    {
+        result["status"] = json!("relation-required");
+    } else if planning["task_relation"] == "continues" {
+        let owner = &planning["selected_owner"];
+        let reference = owner["ref"]
+            .as_str()
+            .ok_or_else(|| err("continuing Planning owner reference missing"))?;
+        crate::decision_source::relative(reference)?;
+        result["required_owner"] = owner.clone();
+        // Read the immutable seed, never copy local selectors or fabricate owner
+        // custody in the destination. JSON equality permits Git EOL conversion.
+        let entry = git(target, &["ls-tree", "--name-only", seed, "--", reference])?;
+        if entry.trim().is_empty() {
+            result["status"] = json!("owner-missing-from-seed");
+        } else {
+            let seed_text = git(target, &["show", &format!("{seed}:{reference}")])?;
+            let seed_owner: Value = serde_json::from_str(&seed_text).map_err(err)?;
+            let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+            let bytes = crate::native_planning::read(&root, reference)?
+                .ok_or_else(|| err("continuing Planning owner disappeared"))?;
+            let source_owner: Value = serde_json::from_slice(&bytes).map_err(err)?;
+            result["seed_owner_revision"] = json!(digest(&seed_owner)?);
+            if seed_owner != source_owner || seed_owner["id"] != owner["id"] {
+                result["status"] = json!("owner-differs-at-seed");
+            }
+        }
+    }
+    Ok(result)
+}
 /// Read-only proposal first; effects require the exact freshly rederived revision.
 /// No generic cache, session or resource registry is created.
 pub fn view(value: Value) -> Result<Value, CoreError> {
@@ -599,6 +657,12 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             snapshot =
                 json!({"registration":registration,"exists":path.exists(),"origin_head":seed});
             if request.operation == "worktree-create" {
+                snapshot["continuity"] = planning_continuity(&input, &target, &seed)?;
+                match snapshot["continuity"]["status"].as_str() {
+                    Some("relation-required") => blockers.push("resolve the current Planning relation/posture or custody before isolating this work; carry the returned Planning request as planning_request"),
+                    Some("owner-missing-from-seed" | "owner-differs-at-seed") => blockers.push("requested seed cannot represent the exact current Planning owner; use a commit containing that owner or establish independent work through Planning in the source checkout"),
+                    _ => (),
+                }
                 outputs = requested_outputs;
                 for output in &outputs {
                     if !git(&target, &["ls-tree", "--name-only", &seed, "--", output])?
@@ -767,6 +831,10 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         result["disposable_outputs"] = json!(outputs);
         result["build_environment"] = build_environment(&path, &outputs);
     }
+    if request.operation == "worktree-create" {
+        result["planning"] = snapshot["continuity"]["planning"].clone();
+        result["continuity"] = snapshot["continuity"].clone();
+    }
     if !blockers.is_empty() {
         return Ok(result);
     }
@@ -846,6 +914,11 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 .map_err(err)?;
         }
         "worktree-create" => {
+            if planning_continuity(&input, &target, &seed)? != snapshot["continuity"] {
+                return Err(err(
+                    "Planning continuity changed at worktree creation barrier; reobserve before effect",
+                ));
+            }
             fs::create_dir_all(path.parent().unwrap()).map_err(err)?;
             let reason = format!("aw-resource:{}:{seed}", digest(&json!(target))?);
             git(

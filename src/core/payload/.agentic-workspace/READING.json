@@ -44,10 +44,9 @@
       "concern": "bounded-planning-continuity",
       "owner": "planning",
       "refs": [
-        ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/"
       ],
-      "select": "Prefer a task-supplied owner ref; otherwise follow active.execplans.surface in the optional state file or enumerate only immediate *.plan.json names, excluding archive. Select the relevant owner by meaning. Read intent.outcome/non_goals, scope, proof/relationships, blockers, next_action and continuation from that record; recorded status is not fresh proof or local active selection.",
+      "select": "Prefer a task-supplied owner ref; otherwise enumerate only immediate *.plan.json names, excluding archive. Select the relevant owner by meaning. Legacy state.toml is migration input only: use native Planning to reconcile owner relations and retire the aggregate; it supplies no current continuation authority. Read intent.outcome/non_goals, scope, proof/relationships, blockers, next_action and continuation from that record; recorded status is not fresh proof or local active selection.",
       "unknown": [
         "local selected owner",
         "current custody",
@@ -98,7 +97,7 @@
   "kind": "agentic-workspace/repository-read-profile/v1",
   "recovery": "If kind/source identity is absent, incompatible or stale, or a selected ref is missing/malformed, keep only directly observed repository facts. Follow the exact owner ref in OWNERSHIP.toml; ask a runtime-capable maintainer to restore the generated profile or reconcile the source. Do not guess an operating decision.",
   "source": {
-    "git_blob_sha1": "921438f3937aad7e5df897bdb004d285b71dce33",
+    "git_blob_sha1": "5abbdb6f7c3c615deae1f4640b4c19b52c3aade6",
     "path": ".agentic-workspace/OWNERSHIP.toml"
   }
 }

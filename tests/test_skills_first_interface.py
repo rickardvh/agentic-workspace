@@ -237,7 +237,6 @@ def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():
     proof = ".agentic-workspace/verification/manifest.toml"
     files.update(
         {
-            ".agentic-workspace/planning/state.toml": f'[[active.execplans]]\nid="selected"\nsurface="{plan}"\n',
             plan: json.dumps(
                 {
                     "kind": "planning-execplan/v1",
@@ -273,8 +272,11 @@ def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():
     assert profile["source"]["git_blob_sha1"] == blob(fetch(profile["source"]["path"]))
     entries = {entry["concern"]: entry for entry in profile["entries"]}
     # Planning/shaping: choose the intended owner, not an inferred local selector.
-    state = tomllib.loads(fetch(entries["bounded-planning-continuity"]["refs"][0]))
-    selected = json.loads(fetch(state["active"]["execplans"][0]["surface"]))
+    owner_home = entries["bounded-planning-continuity"]["refs"][0]
+    immediate = [ref for ref in files if ref.startswith(owner_home) and "/" not in ref[len(owner_home) :] and ref.endswith(".plan.json")]
+    assert immediate == [plan]
+    selected = json.loads(fetch(immediate[0]))
+    assert ".agentic-workspace/planning/state.toml" not in fetched
     assert selected["intent"] == {"outcome": "Preserve the API", "non_goals": ["No release"]}
     assert selected["continuation"]["residual_intent"] == "Independent acceptance remains"
     # Review: metadata and the explicit task scope identify just these sources.

@@ -14,7 +14,7 @@ pub(crate) fn enclave() -> Value {
     serde_json::from_str(include_str!("contracts/enclave.json")).expect("Planning enclave contract")
 }
 
-const STATE: &str = ".agentic-workspace/planning/state.toml";
+pub(crate) const STATE: &str = ".agentic-workspace/planning/state.toml";
 const RETAINED: &str = "reconciliation";
 pub(crate) fn post_effect_paths() -> Value {
     json!([SELECTION])
@@ -226,6 +226,115 @@ fn text(value: &Value) -> String {
         }
     })
 }
+fn legacy_references(state: &Value, retirement: bool) -> Result<Vec<Value>, CoreError> {
+    let fields = state
+        .as_object()
+        .ok_or_else(|| error(STATE, "legacy aggregate must be an object"))?;
+    if (retirement
+        && fields
+            .keys()
+            .any(|k| !matches!(k.as_str(), "kind" | "schema_version" | "active" | "todo")))
+        || state.get("kind").is_some_and(|v| v != "planning-state/v1")
+    {
+        return Err(error(
+            STATE,
+            "unsupported legacy aggregate; unfamiliar material is preserved",
+        ));
+    }
+    let mut candidates = Vec::new();
+    for (group, field) in [("active", "execplans"), ("todo", "active_items")] {
+        if state[group].is_null() {
+            continue;
+        }
+        if state[group]
+            .as_object()
+            .is_none_or(|g| retirement && g.keys().any(|k| k != field))
+        {
+            return Err(error(
+                STATE,
+                "unsupported legacy aggregate group; preserved",
+            ));
+        }
+        let entries = state[group][field]
+            .as_array()
+            .ok_or_else(|| error(STATE, "legacy owner relations must be an array"))?;
+        for entry in entries {
+            let reference = entry.get("surface").or_else(|| entry.get("path"));
+            if matches!(
+                entry["status"].as_str().or(entry["maturity"].as_str()),
+                Some("closed" | "complete" | "completed" | "archived" | "done")
+            ) && reference.is_none()
+            {
+                continue;
+            }
+            let reference = reference.and_then(Value::as_str).ok_or_else(|| error(STATE, "legacy owner relation is incomplete; select a canonical current owner before migration"))?;
+            let id = entry["id"]
+                .as_str()
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| error(STATE, "legacy owner identity missing"))?;
+            let candidate = json!({"id":id,"ref":reference});
+            if candidates
+                .iter()
+                .any(|c: &Value| c["ref"] == candidate["ref"] && c["id"] != candidate["id"])
+            {
+                return Err(error(
+                    STATE,
+                    "conflicting legacy owner identities; preserved",
+                ));
+            }
+            if !candidates.contains(&candidate) {
+                candidates.push(candidate);
+            }
+        }
+    }
+    Ok(candidates)
+}
+
+/// Only migration input: aggregate status/revision/continuation never supplies
+/// substantive current meaning. All meaning must survive in canonical owners.
+pub(crate) fn legacy_disposition(target: &Path) -> Result<Value, CoreError> {
+    let root =
+        Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(|e| error(STATE, e))?;
+    let Some(bytes) = read(&root, STATE)? else {
+        return Ok(json!({"status":"absent"}));
+    };
+    let state = parsed(STATE, &bytes)?;
+    let candidates = legacy_references(&state, true)?;
+    for candidate in &candidates {
+        owner(&root, target, candidate, "legacy-upgrade-input", true)?;
+        let body = parsed(
+            candidate["ref"].as_str().unwrap(),
+            &read(&root, candidate["ref"].as_str().unwrap())?.unwrap(),
+        )?;
+        crate::schema_validator(
+            &crate::native_planning_create::canonical_schema(),
+            "legacy migration owner",
+        )?
+        .validate(&body)
+        .map_err(|e| error(STATE, e))?;
+    }
+    if !candidates.is_empty() {
+        let selection_bytes = read(&root, SELECTION)?.ok_or_else(|| {
+            error(
+                STATE,
+                "current owner selection must be reconciled before retiring legacy input",
+            )
+        })?;
+        let selection = parsed(SELECTION, &selection_bytes)?;
+        let held = inspect_carrier(target, &selection, true)?;
+        let current = owner(&root, target, &selection["selected_owner"], SELECTION, true)?;
+        if held["source"] != current["source"] {
+            return Err(error(
+                STATE,
+                "current owner selection is stale; reconcile it before migration",
+            ));
+        }
+    }
+    Ok(
+        json!({"status":"retirement-ready","role":"legacy-migration-input","owner_candidates":candidates,"authority":"No aggregate continuation authority; retire through exact Planning disposition after judging preserved owner intent."}),
+    )
+}
+
 fn owner(
     root: &Dir,
     target: &Path,
@@ -243,7 +352,7 @@ fn owner(
     if !path.starts_with(".agentic-workspace/planning/execplans/") || !path.ends_with(".json") {
         return Err(error(provenance, "owner ref outside canonical execplans"));
     }
-    let bytes = read(root, path)?.ok_or_else(|| error(path, "selected owner missing"))?;
+    let bytes = read(root, path)?.ok_or_else(|| error(path, format!("selected owner missing ({id}); this checkout/base cannot represent the remembered work. Return to the source checkout or use a Git seed containing {path}, then resolve the current task relation through fresh start. Preserve the selector; absence supplies no independence, completion or deletion authority")))?;
     let body = parsed(path, &bytes)?;
     if body["id"] != id {
         return Err(error(path, "owner identity mismatch"));
@@ -490,6 +599,26 @@ fn resolve_context(
         .filter(|s| !s.is_empty())
         .unwrap_or("default");
     let selection = load(SELECTION)?;
+    let legacy = load(STATE)?;
+    let mut migration = json!({"status":"absent"});
+    let legacy_candidates = if let Some(state) = &legacy {
+        match legacy_references(state, false) {
+            Ok(candidates) => {
+                migration = json!({"status":"migration-required","role":"legacy-migration-input","owner_candidates":candidates,"current_authority":false});
+                if let Err(error) = legacy_references(state, true) {
+                    migration["status"] = json!("unsupported-preserved");
+                    migration["reason"] = json!(error.to_string());
+                }
+                candidates
+            }
+            Err(e) => {
+                migration = json!({"status":"unsupported-preserved","role":"legacy-migration-input","reason":e.to_string(),"current_authority":false});
+                Vec::new()
+            }
+        }
+    } else {
+        Vec::new()
+    };
     let retained = selection
         .as_ref()
         .map(|s| s[RETAINED].clone())
@@ -537,48 +666,14 @@ fn resolve_context(
             SELECTION,
             true,
         )?;
-    } else if let Some(state) = load(STATE)? {
-        let mut candidates = Vec::new();
-        for (field, entries) in [
-            ("todo.active_items", &state["todo"]["active_items"]),
-            ("active.execplans", &state["active"]["execplans"]),
-        ] {
-            if entries.is_null() {
-                continue;
-            }
-            let entries = entries
-                .as_array()
-                .ok_or_else(|| error(STATE, format!("{field} must be an array")))?;
-            for entry in entries {
-                if matches!(
-                    entry["status"].as_str().or(entry["maturity"].as_str()),
-                    Some("closed" | "complete" | "completed" | "archived" | "done")
-                ) {
-                    continue;
-                }
-                let reference = entry
-                    .get("surface")
-                    .or_else(|| entry.get("path"))
-                    .cloned()
-                    .unwrap_or(Value::Null);
-                if reference.is_null() {
-                    return Err(error(STATE, format!("{field} live owner ref missing")));
-                }
-                let candidate =
-                    json!({"id":entry["id"],"ref":reference,"revision":entry["revision"]});
-                if !candidates
-                    .iter()
-                    .any(|c: &Value| c["ref"] == candidate["ref"])
-                {
-                    candidates.push(candidate);
-                }
-            }
-        }
-        // Preserve the canonical owner's declared order, not directory order or
-        // task keywords. Multiple references remain visible in source revision.
-        if let Some(candidate) = candidates.first() {
-            selected = owner(&root, &target, candidate, STATE, false)?;
-        }
+    } else if legacy_candidates.len() == 1 && migration["status"] != "unsupported-preserved" {
+        selected = owner(
+            &root,
+            &target,
+            &legacy_candidates[0],
+            "legacy-upgrade-input",
+            true,
+        )?;
     }
     if let Some(reference) = reference {
         if selected.is_null() {
@@ -857,7 +952,39 @@ fn resolve_context(
     }
     // The pending transfer decision itself constrains the task. A second
     // blocker would falsely promise a separate owner recovery for that choice.
-    let blockers = json!([]);
+    let mut blockers = json!([]);
+    let mut migration_requests = Vec::new();
+    if legacy.is_some()
+        && selected.is_null()
+        && (!legacy_candidates.is_empty() || migration["status"] == "unsupported-preserved")
+    {
+        for candidate_ref in &legacy_candidates {
+            if let Ok(candidate) = candidate(
+                &target,
+                current_work,
+                candidate_ref["ref"].as_str().unwrap(),
+                validation_contract,
+            ) {
+                migration_requests.extend(
+                    candidate["requests"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .cloned(),
+                );
+            }
+        }
+        status = "legacy-choice-required";
+        planning_input = Value::Null;
+        blockers = if migration_requests.is_empty() {
+            json!([{"code":"legacy-planning-owner-resolution-unavailable","message":"Preserve the legacy aggregate: no safe existing canonical owner selection is available. Use Planning creation or explicit canonical-owner discovery for current work; no legacy selection or retirement request is supplied. Unfamiliar intent remains preserved.","affects":["claim:complete"]}])
+        } else {
+            json!([{"code":"legacy-planning-owner-choice-required","message":"Legacy aggregate is migration input, not current continuation. Select/reconcile a canonical owner with one exact legacy_aggregate.selection_requests entry. Unsupported material stays preserved; retirement is offered only for fully supported input.","affects":["task","claim:complete"]}])
+        };
+    }
+    if legacy.is_some() {
+        migration["selection_requests"] = json!(migration_requests);
+    }
     let decisions = if custody_required {
         json!([{"id":"planning-selector-transfer","question":"Let native Planning maintain the existing saved plan selection?",
             "material":transfer["binding"],
@@ -870,7 +997,9 @@ fn resolve_context(
     } else {
         json!([])
     };
-    let task_relation = if matches!(status, "current" | "reentry-required" | "custody-required") {
+    let task_relation = if status == "legacy-choice-required" {
+        "unresolved"
+    } else if matches!(status, "current" | "reentry-required" | "custody-required") {
         "continues"
     } else if request.is_some_and(|r| {
         matches!(
@@ -892,6 +1021,7 @@ fn resolve_context(
         "current" => "continue",
         "reentry-required" => "reconcile",
         "custody-required" => "acquire-custody",
+        "legacy-choice-required" => "select-canonical-owner",
         _ => "determine-relation",
     };
     let admitted = if task_relation == "continues" {
@@ -901,7 +1031,7 @@ fn resolve_context(
     };
     let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
     Ok(
-        json!({"status":status,"source_revision":revision,"current_work_id":current_work["id"],"selection_scope":selection_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted,"requests":if selected.is_null(){json!([])}else{json!([template])},"selector_transfer":transfer,"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
+        json!({"status":status,"legacy_aggregate":migration,"source_revision":revision,"current_work_id":current_work["id"],"selection_scope":selection_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted,"requests":if selected.is_null(){json!([])}else{json!([template])},"selector_transfer":transfer,"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
     )
 }
 
@@ -2114,12 +2244,10 @@ mod tests {
         );
         target.write(THREADS, "{}");
         fs::remove_file(target.0.join(PLAN)).unwrap();
-        assert!(
-            resolve(&target.0, &work(), None)
-                .unwrap_err()
-                .to_string()
-                .contains("selected owner missing")
-        );
+        let missing = resolve(&target.0, &work(), None).unwrap_err().to_string();
+        assert!(missing.contains("selected owner missing"));
+        assert!(missing.contains("checkout/base"));
+        assert!(missing.contains("Return to the source checkout"));
     }
     #[test]
     fn native_planning_identity_and_unsupported_authority_fail_at_source() {
