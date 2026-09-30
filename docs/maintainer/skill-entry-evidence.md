@@ -1,8 +1,11 @@
 # Installed entry evidence
 
-Issue #3729 requires immediate installed-host behaviour as well as packaging.
-This is an unfinished local evidence record, dated 2026-09-30. It does not claim
-the issue's acceptance criteria are complete.
+This local record, dated 2026-09-30, separates observed checks from accepted
+assumptions for issue #3729. The user explicitly directed finishing the work and
+creating a PR while assuming Claude works. This supersedes the original
+authenticated Claude session gate for this delivery; it does not turn that
+assumption into observed host behaviour. The implementation and artifact checks
+are complete. The host-session limitations below remain disclosed for review.
 
 ## Established boundaries
 
@@ -32,7 +35,7 @@ the issue's acceptance criteria are complete.
   were unchanged. This proves local lifecycle preservation, not Git marketplace
   version movement or downstream use after removal.
 
-## Outstanding present proof
+## Host-session limits and accepted assumption
 
 Real Codex selected use from a synthetic repository subdirectory did not reach
 the canonical skill. The session reported environment policy blocking its
@@ -41,16 +44,21 @@ inherited application session identity did not resolve it. Account-connected
 remote plugin metadata was still visible, so these sessions cannot establish a
 minimal tool profile either. No runtime command or repository mutation was
 observed. A successful target-file trace is still required; recognition and a
-zero session exit code are not handoff evidence.
+zero session exit code are not handoff evidence. A final retry with the synthetic
+fixture inside the task workspace produced the same policy rejection; changing
+the fixture location did not establish handoff. No adapter workaround or hook
+was introduced to bypass that rejection.
 
-Claude's local authentication status is `loggedIn: false`; the user confirmed
-that no Claude subscription is available. Its selected session cannot run until
-an authenticated profile is available. Authentication is not
-copied into the deliverable or recorded here.
+Claude's local authentication status was `loggedIn: false`; the user has a free
+Claude account without Claude Code access. Selected Claude handoff and downstream
+use are accepted assumptions for this PR, following the user's explicit
+instruction. Native validation, discovery and lifecycle were observed separately.
+Authentication is not copied into the deliverable or recorded here.
 
 The two-repository revision/refresh, linked-worktree, absent/broken entry,
 coexisting-entry, ordinary-task activation observation and post-removal fallback
-controls remain outstanding. Synthetic fixture construction is not behavioural
+controls could not be observed in the blocked Codex sessions. Synthetic fixture
+construction is not behavioural
 proof. These controls must use the installed bridge independently of the fence
 where selected handoff is claimed. Native lifecycle operations are established
 above; a real task through the generic fence after removal remains outstanding.
@@ -63,19 +71,21 @@ temporary tool directory. Thirty new packages and their shims were added with
 `--no-save --ignore-scripts`; the existing declaration was unchanged. Corrected
 installation uses an ordinary absolute path, an explicit prefix and a private
 temporary package. Receipt- and creation-time-bounded removal of the accidental
-additions was rejected by automatic approval review as blocked by policy. Their
-cleanup remains unresolved; do not infer that the host was restored.
+additions was rejected by automatic approval review as blocked by policy. A short
+single-path removal received the same rejection, so command length does not
+explain it. The user removed `skills-npm`; 29 receipt-listed package directories
+remain. Their cleanup remains unresolved; do not infer that the host was restored.
 
 The temporary Claude optional native package required its own `install.cjs`
 activation after installation with scripts disabled. No such hook was added to
 AW. The first reused session harness omitted final text from its result, so raw
-JSONL traces were captured before interpreting behaviour. Traces, staged
-artifacts and isolated profiles remain in the task's owner-created scratch
-container pending these prerequisites. Its exact local resource is
-`.agentic-workspace/local/scratch/0d842f31c272e91e977eaf017debd2e95d143bcee207a62af0cc42b364d61bdc`;
-native `scratch-retain` committed its reason. The temporary Codex authentication
-copy was removed after the native lifecycle checks. Do not replay uncertain effects or claim
-the present proof will be supplied by future user adoption.
+JSONL traces were captured before interpreting behaviour. The task's scratch was
+initially retained while prerequisites were pending. After the user's submission
+instruction, this finite record preserved the useful conclusions and limitations;
+native `scratch-release` and `scratch-remove` both committed. Disposable staging,
+raw traces, isolated profiles and the temporary authentication copy were removed
+with that exact task container. No default host profile was changed. Do not claim
+that unobserved handoff or automatic activation was established by these checks.
 
 Formats were checked against the [OpenAI plugin format](https://developers.openai.com/plugins/build/plugins),
 [Claude plugin lifecycle](https://code.claude.com/docs/en/plugins) and

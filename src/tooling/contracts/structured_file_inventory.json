@@ -1863,6 +1863,46 @@
       "freshness_check": "uv run python src/tooling/generate/generate_agent_interface.py --check",
       "ordinary_agent_route": "canonical startup skill no-runtime branch; source refs only",
       "removal_or_demotion_path": "remove only when the supported repository-only reader has an equivalent selective source discovery surface"
+    },
+    {
+      "pattern": ".agents/plugins/marketplace.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
+    },
+    {
+      "pattern": ".claude-plugin/marketplace.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/plugin.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
+    },
+    {
+      "pattern": "plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python src/tooling/generate/generate_skill_entry.py",
+      "named_consumer": "native Codex and Claude plugin installation",
+      "checked_in_justification": "Git marketplace installation requires native host manifests before any AW runtime installation.",
+      "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
+      "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
+      "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
     }
   ],
   "kind": "agentic-workspace/structured-file-inventory/v1",
