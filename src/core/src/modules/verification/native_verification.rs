@@ -369,6 +369,13 @@ fn publication_admission(root: &Dir, id: &str, receipt: &Value) -> Value {
 }
 
 pub(crate) fn publication_identity(receipt: &Value) -> Result<String, CoreError> {
+    if crate::repository_proof::is_repository(receipt) {
+        crate::repository_proof::validate(receipt)?;
+        return receipt["receipt_id"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| CoreError::new("repository proof identity missing"));
+    }
     let identity = crate::proof_receipt::publication_identity(receipt);
     let rendered = publication_json(&identity).map_err(CoreError::new)?;
     Ok(sha(rendered.as_bytes())[..16].to_owned())
@@ -386,7 +393,14 @@ fn receipt_view(
     let work_ref = &work["id"];
     let work_revision = &work["revision"];
     let mut gaps = Vec::<String>::new();
-    let id = reference.strip_prefix("proof://receipts/").unwrap_or("");
+    let local = reference.starts_with("proof://local/");
+    let id = reference
+        .strip_prefix(if local {
+            "proof://local/"
+        } else {
+            "proof://receipts/"
+        })
+        .unwrap_or("");
     if id.is_empty()
         || !id
             .chars()
@@ -394,17 +408,25 @@ fn receipt_view(
     {
         return json!({"reference":reference,"status":"unadmitted","gaps":["invalid-receipt-reference"]});
     }
-    let receipt = match read(root, &format!("{RECEIPTS}/{id}.json")) {
-        Ok(Some(bytes)) => serde_json::from_slice::<Value>(
-            bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes),
-        )
-        .ok(),
-        _ => None,
+    let receipt = if local {
+        crate::native_proof::local_receipt(target, reference).ok()
+    } else {
+        match read(root, &format!("{RECEIPTS}/{id}.json")) {
+            Ok(Some(bytes)) => serde_json::from_slice::<Value>(
+                bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes),
+            )
+            .ok(),
+            _ => None,
+        }
     };
     let Some(receipt) = receipt else {
         return json!({"reference":reference,"status":"unadmitted","gaps":["receipt-unavailable-or-invalid"]});
     };
-    let publication = publication_admission(root, id, &receipt);
+    let publication = if local {
+        json!({"status":"admitted","reason":"exact-local-execution-custody","scope":"current-checkout","portable":false})
+    } else {
+        publication_admission(root, id, &receipt)
+    };
     let timestamp_valid = receipt["recorded_at"]
         .as_str()
         .and_then(|value| value.parse::<toml::value::Datetime>().ok())
@@ -441,14 +463,16 @@ fn receipt_view(
     if receipt["proof_subject"]["runtime"]["implementation"] == "native-aw-proof" {
         let artifact = &receipt["execution_artifact"];
         let current = publication["status"] == "admitted"
-            && artifact["path"].as_str().is_some_and(|path| {
-                path.starts_with(".agentic-workspace/local/proof-receipts/runs/native-")
-                    && path.ends_with("/run.json.command.json")
-                    && read(root, path)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|bytes| artifact["sha256"] == sha(&bytes))
-            });
+            && (crate::repository_proof::is_repository(&receipt)
+                && crate::repository_proof::validate(&receipt).is_ok()
+                || artifact["path"].as_str().is_some_and(|path| {
+                    path.starts_with(".agentic-workspace/local/proof-receipts/runs/native-")
+                        && path.ends_with("/run.json.command.json")
+                        && read(root, path)
+                            .ok()
+                            .flatten()
+                            .is_some_and(|bytes| artifact["sha256"] == sha(&bytes))
+                }));
         detail = json!({"status":if current {"current"} else {"unavailable-or-stale"},"artifact":artifact});
         if !current {
             freshness["status"] = json!("unproven");

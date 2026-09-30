@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -30,11 +33,45 @@ def fixture(root: Path) -> dict:
     return {"target": str(root), "task": "Check the current source", "changed": ["a.txt"]}
 
 
+def proof_consumer(call, context, reference, task="Retain the selected proof for repository continuation"):
+    from tests.test_native_planning_create import material
+
+    consumer_context = {**context, "task": task}
+    request = call(consumer_context)["planning"]["creation_requests"][0]
+    value = material()
+    value["references"] = [reference]
+    value["proof"] = {"observed": reference}
+    request["arguments"]["material"] = value
+    action = call({**consumer_context, "request": request})["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.create"
+    result = call({**consumer_context, "invocation": action})
+    return Path(context["target"]) / result["value"]["owner_path"]
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_native_selected_command_publishes_and_replays_without_task_claim(
+def test_native_selected_command_stays_local_and_replays_without_task_claim(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
     context = fixture(tmp_path)
+    if surface == "native":
+        (tmp_path / ".gitignore").write_text(".agentic-workspace/local/\ncount.txt\n")
+        subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+        subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True, capture_output=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(tmp_path),
+                "-c",
+                "user.name=Proof fixture",
+                "-c",
+                "user.email=proof@example.invalid",
+                "commit",
+                "-qm",
+                "consumer",
+            ],
+            check=True,
+        )
 
     def call(value: dict) -> dict:
         return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
@@ -55,7 +92,11 @@ def test_native_selected_command_publishes_and_replays_without_task_claim(
     assert applied["status"] == "applied"
     value = applied["value"]
     assert value["process"]["status"] == "passed"
-    assert value["publication"]["status"] == "published"
+    assert value["publication"]["status"] == "local"
+    if surface == "native":
+        assert subprocess.check_output(["git", "-C", str(tmp_path), "status", "--porcelain"]) == b""
+    assert not (tmp_path / ".agentic-workspace/proof/receipts").exists()
+    assert call({**context, "task": "Unrelated fresh task", "changed": []})["verification"]["retention"]["status"] == "quiet"
     retirement = call(context)["verification"]["retention"]
     assert retirement["status"] == "quiet"  # Current reusable proof is not a retirement candidate.
     assert value["claim_boundary"]["completion_claim_allowed"] is False
@@ -66,6 +107,7 @@ def test_native_selected_command_publishes_and_replays_without_task_claim(
     claim["arguments"]["evidence_refs"] = [value["publication"]["reference"]]
     evidence = call({**context, "request": claim})["verification"]["evidence"][0]
     assert evidence["publication_admission"]["status"] == "admitted"
+    assert evidence["publication_admission"]["portable"] is False
     assert evidence["evidence_freshness"] == "reusable"
     assert evidence["strategy_coverage"] == "selected-command-covered"
     assert evidence["task_judgment"]["current_judgment_count"] == 0
@@ -98,11 +140,198 @@ def test_native_proof_preserves_existing_index_and_rejects_command_injection(
     index.parent.mkdir(parents=True)
     index.write_text('{"kind":"agentic-workspace/trusted-producer-receipt-index/v1","receipts":{}}')
     before = index.read_bytes()
-    with pytest.raises(AssertionError, match="publication-index-custody-required"):
-        call({**context, "invocation": action})
+    assert call({**context, "invocation": action})["value"]["publication"]["status"] == "local"
     assert index.read_bytes() == before
-    assert not (tmp_path / "count.txt").exists()
-    assert not (tmp_path / ".agentic-workspace/local").exists()
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+
+
+def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    request = call(context)["verification"]["execution_requests"][0]
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    local = call({**context, "invocation": action})["value"]
+    arbitrary = tmp_path / ".agentic-workspace/memory/proof-use.md"
+    arbitrary.parent.mkdir(parents=True)
+    arbitrary.write_text(local["publication"]["repository_reference"])
+    request = call(context)["verification"]["execution_requests"][0]
+    request["arguments"]["promotion"] = {
+        "evidence_ref": local["publication"]["reference"],
+        "consumer": arbitrary.relative_to(tmp_path).as_posix(),
+        "reason": "Repository continuation needs this exact command observation",
+    }
+    with pytest.raises(AssertionError, match="admitted Planning owner"):
+        call({**context, "request": request})
+    arbitrary.unlink()
+    consumer = proof_consumer(call, context, local["publication"]["repository_reference"])
+    request["arguments"]["promotion"]["consumer"] = ".agentic-workspace/memory/../local/proof-use.md"
+    with pytest.raises(AssertionError, match="durable consumer"):
+        call({**context, "request": request})
+    request["arguments"]["promotion"]["consumer"] = consumer.relative_to(tmp_path).as_posix()
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    consumer_bytes = consumer.read_bytes()
+    changed_consumer = json.loads(consumer_bytes)
+    changed_consumer["next_action"] = "A changed owner declaration"
+    consumer.write_text(json.dumps(changed_consumer))
+    with pytest.raises(AssertionError, match="consumer|stale|Planning"):
+        call({**context, "invocation": action})
+    consumer.write_bytes(consumer_bytes)
+    promoted = call({**context, "invocation": action})["value"]
+    assert promoted["command_reexecuted"] is False
+    assert promoted["publication"]["reference"] == local["publication"]["repository_reference"]
+    assert promoted["proof_subject"] == local["proof_subject"]
+    assert call({**context, "invocation": action})["value"] == promoted
+    # Recreate the publication pre/post-index interruption boundaries. The
+    # portable receipt must recover through its exact local carrier, without
+    # starting the original command again.
+    receipt_path = tmp_path / ".agentic-workspace/proof/receipts" / (promoted["publication"]["reference"].rsplit("/", 1)[1] + ".json")
+    portable = json.loads(receipt_path.read_text())
+    publication = json.loads((tmp_path / portable["publication_custody"]["local_carrier"]).read_text())
+    committed_path = tmp_path / publication["publication_custody"]["custody"]["committed"]["path"]
+    local_run = portable["publication_custody"]["local_carrier"].removesuffix(".publication.json")
+    (tmp_path / (local_run + ".completed.json")).unlink()
+    index_path = receipt_path.parent / "index.json"
+    for before_index in (True, False):
+        committed_path.unlink()
+        if before_index:
+            index_path.unlink()
+        assert call({**context, "invocation": action})["value"] == promoted
+        assert committed_path.exists()
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+    retention = call(context)["verification"]["retention"]
+    assert retention["status"] == "quiet"
+    assert any(p["consumer_count"] for p in retention["protected"])
+    claim = call(context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [promoted["publication"]["reference"]]
+    assert call({**context, "request": claim})["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+
+    # Only repository-owned bytes cross the checkout boundary. No original
+    # attempt store, command detail, local selection or runtime path is copied.
+    fresh = tmp_path / "fresh-checkout"
+    fresh.mkdir()
+    shutil.copy2(tmp_path / "a.txt", fresh / "a.txt")
+    shutil.copytree(tmp_path / ".agentic-workspace", fresh / ".agentic-workspace", ignore=shutil.ignore_patterns("local"))
+    import runpy
+
+    find_matches = runpy.run_path(str(Path(__file__).resolve().parents[1] / "src/tooling/check/check_no_absolute_paths.py"))[
+        "_find_matches"
+    ]
+
+    for path in (fresh / ".agentic-workspace").rglob("*.json"):
+        assert not find_matches(path.read_text()), path
+    fresh_context = {**context, "target": str(fresh)}
+    fresh_claim = call(fresh_context)["verification"]["requests"][0]
+    fresh_claim["arguments"]["evidence_refs"] = [promoted["publication"]["reference"]]
+    assert call({**fresh_context, "request": fresh_claim})["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+    fresh_claim["arguments"]["evidence_refs"] = [local["publication"]["reference"]]
+    assert call({**fresh_context, "request": fresh_claim})["verification"]["evidence"][0]["gaps"] == ["receipt-unavailable-or-invalid"]
+    fresh_claim["arguments"]["evidence_refs"] = [promoted["publication"]["reference"]]
+    (fresh / "a.txt").write_text("changed source")
+    assert call({**fresh_context, "request": fresh_claim})["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
+
+    # Repository bytes cannot acquire write custody. The fresh writer adopts the
+    # exact index through the existing owner, establishing its own local custody.
+    next_request = call(fresh_context)["verification"]["execution_requests"][0]
+    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
+    next_local = call({**fresh_context, "invocation": next_action})["value"]
+    next_consumer = proof_consumer(
+        call, fresh_context, next_local["publication"]["repository_reference"], task="Retain the next repository proof"
+    )
+    next_request = call(fresh_context)["verification"]["execution_requests"][0]
+    next_request["arguments"]["promotion"] = {
+        "evidence_ref": next_local["publication"]["reference"],
+        "consumer": next_consumer.relative_to(fresh).as_posix(),
+        "reason": "Continue repository evidence from a fresh checkout",
+    }
+    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
+    with pytest.raises(AssertionError, match="index.*custody|owner transfer"):
+        call({**fresh_context, "invocation": next_action})
+    transfer = call(fresh_context)["verification"]["retention"]
+    assert transfer["index_transfer_required"] is True
+    transfer_request = transfer["requests"][0]
+    transfer_request["arguments"].update(sources=[], reason="Adopt the unchanged repository index in this checkout")
+    transfer_action = call({**fresh_context, "request": transfer_request})["decision_packet"]["primary_action"]
+    assert transfer_action["operation_id"] == "verification.retire-receipts"
+    original_consumer = fresh / consumer.relative_to(tmp_path)
+    original_consumer_bytes = original_consumer.read_bytes()
+    changed_consumer = json.loads(original_consumer_bytes)
+    changed_consumer["next_action"] = "Unadmitted consumer edit before index transfer"
+    original_consumer.write_text(json.dumps(changed_consumer))
+    with pytest.raises(AssertionError, match="source|consumer|Planning|changed"):
+        call({**fresh_context, "invocation": transfer_action})
+    original_consumer.write_bytes(original_consumer_bytes)
+    call({**fresh_context, "invocation": transfer_action})
+    assert call(fresh_context)["verification"]["retention"]["status"] == "quiet"
+    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
+    fresh_index = fresh / ".agentic-workspace/proof/receipts/index.json"
+    index_bytes = fresh_index.read_bytes()
+    changed_index = json.loads(index_bytes)
+    changed_index["unowned"] = "preserve this changed index"
+    fresh_index.write_text(json.dumps(changed_index))
+    previous_receipt = fresh / receipt_path.relative_to(tmp_path)
+    previous_bytes = previous_receipt.read_bytes()
+    for rebind_hash in (False, True):
+        if rebind_hash:
+            changed_receipt = json.loads(previous_bytes)
+            rebound = hashlib.sha256(fresh_index.read_bytes()).hexdigest()
+            changed_receipt["repository_proof"]["index_sha256"] = rebound
+            changed_receipt["publication_custody"]["index_sha256"] = rebound
+            # Recompute the exact ordinary Rust/serde digest, so the control
+            # cannot pass merely because the attack left a checksum stale.
+            payload = json.loads(json.dumps(changed_receipt))
+            payload.pop("publication_custody")
+            payload["repository_proof"].pop("revision")
+            revision = (
+                "sha256:"
+                + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+            )
+            changed_receipt["repository_proof"]["revision"] = revision
+            previous_receipt.write_text(json.dumps(changed_receipt))
+            # The edited repository observation remains readable and intact;
+            # its self-digest does not authenticate index write custody.
+            old_claim = call(fresh_context)["verification"]["requests"][0]
+            old_claim["arguments"]["evidence_refs"] = [promoted["publication"]["reference"]]
+            old_evidence = call({**fresh_context, "request": old_claim})["verification"]["evidence"][0]
+            assert old_evidence["publication_admission"]["status"] == "admitted"
+            assert "receipt-unavailable-or-invalid" not in old_evidence["gaps"]
+            assert "native-proof-detail-unavailable-or-stale" not in old_evidence["gaps"]
+        with pytest.raises(AssertionError, match="index|custody|stale|projection"):
+            call({**fresh_context, "invocation": next_action})
+        assert json.loads(fresh_index.read_text()) == changed_index
+    previous_receipt.write_bytes(previous_bytes)
+    fresh_index.write_bytes(index_bytes)
+    next_promoted = call({**fresh_context, "invocation": next_action})["value"]
+    assert next_promoted["publication"]["reference"] == next_local["publication"]["repository_reference"]
+    assert next_promoted["command_reexecuted"] is False
+    assert call({**fresh_context, "invocation": next_action})["value"] == next_promoted
+    assert (fresh / "count.txt").read_text().splitlines() == ["executed"]
+    assert (fresh / receipt_path.relative_to(tmp_path)).exists()
+    assert not (fresh / local_run).exists()
+    assert not (fresh / portable["publication_custody"]["local_carrier"]).exists()
+    for path in (fresh / ".agentic-workspace").rglob("*.json"):
+        if "local" not in path.relative_to(fresh).parts:
+            assert not find_matches(path.read_text()), path
+
+    consumer.unlink()
+    unrelated = tmp_path / "user-edit.txt"
+    unrelated.write_text("preserve user work")
+    retention = call(context)["verification"]["retention"]
+    assert retention["sources"]
+    request = retention["requests"][0]
+    request["arguments"].update(
+        superseded=True, no_unresolved_intent=True, no_continuing_value=True, reason="Repository consumer retired; retain execution locally"
+    )
+    disposition = call({**context, "request": request})["decision_packet"]["primary_action"]
+    call({**context, "invocation": disposition})
+    assert call(context)["verification"]["retention"]["status"] == "quiet"
+    assert unrelated.read_text() == "preserve user work"
+    claim = call(context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [local["publication"]["reference"]]
+    assert call({**context, "request": claim})["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
 
 
 def test_native_proof_actual_interruption_cannot_reexecute(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
@@ -252,8 +481,17 @@ def test_native_isolated_proof_preserves_protected_source(tmp_path: Path, shared
     request = call(context)["verification"]["execution_requests"][0]
     selected = call({**context, "request": request})
     if mode == "publication":
-        assert any(b["code"].endswith(":protected-proof-publication-write") for b in selected["decision_packet"]["blockers"])
-        assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+        local = call({**context, "invocation": selected["decision_packet"]["primary_action"]})["value"]
+        consumer = proof_consumer(call, context, local["publication"]["repository_reference"])
+        request = call(context)["verification"]["execution_requests"][0]
+        request["arguments"]["promotion"] = {
+            "evidence_ref": local["publication"]["reference"],
+            "consumer": consumer.relative_to(tmp_path).as_posix(),
+            "reason": "Retain this evidence for the repository consumer",
+        }
+        promotion = call({**context, "request": request})
+        assert any(b["code"].endswith(":protected-proof-publication-write") for b in promotion["decision_packet"]["blockers"])
+        assert not (tmp_path / ".agentic-workspace/proof/receipts/index.json").exists()
         return
     action = selected["decision_packet"]["primary_action"]
     assert action["operation_id"] == "proof.report"
@@ -329,7 +567,7 @@ def test_native_isolated_proof_preserves_protected_source(tmp_path: Path, shared
     result = applied["value"]
     assert result["process"]["status"] == ("failed" if mode == "write" else "passed")
     assert protected.read_text() == "preserved"
-    assert result["publication"]["status"] == "published"
+    assert result["publication"]["status"] == "local"
     assert call({**context, "invocation": action})["value"] == result
     claim = call(context)["verification"]["requests"][0]
     claim["arguments"]["evidence_refs"] = [result["publication"]["reference"]]
@@ -408,15 +646,13 @@ def test_native_large_output_has_compact_sealed_detail_and_tamper_gap(tmp_path: 
     request = call(context)["verification"]["requests"][0]
     request["arguments"]["evidence_refs"] = [value["publication"]["reference"]]
     assert call({**context, "request": request})["verification"]["evidence"][0]["detail"]["status"] == "current"
-    receipt_id = value["publication"]["reference"].rsplit("/", 1)[-1]
-    receipt_path = tmp_path / f".agentic-workspace/proof/receipts/{receipt_id}.json"
+    receipt_path = tmp_path / result["custody"]["committed"]["path"]
     original = receipt_path.read_bytes()
     receipt = json.loads(original)
-    receipt["execution_artifact"]["path"] = "../../unrelated-detail"
+    receipt["outcome"]["value"]["receipt"]["execution_artifact"]["path"] = "../../unrelated-detail"
     receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
     rejected = call({**context, "request": request})["verification"]["evidence"][0]
-    assert rejected["publication_admission"]["reason"] == "publication-content-identity-mismatch"
-    assert rejected["detail"]["status"] == "unavailable-or-stale"
+    assert "receipt-unavailable-or-invalid" in rejected["gaps"]
     receipt_path.write_bytes(original)
     detail.write_text("altered detail")
     evidence = call({**context, "request": request})["verification"]["evidence"][0]

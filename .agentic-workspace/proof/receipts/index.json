@@ -15,6 +15,13 @@
       "source_ref": "proof://receipts/5ae77eca70306629",
       "status": "current"
     },
+    "6fbf0a5eb9869bfa": {
+      "path": "6fbf0a5eb9869bfa.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-09-27T20:47:03+00:00",
+      "source_ref": ".agentic-workspace/local/proof-receipts/runs/native-sha256-44ad37667695342d481a8812dbb9e87fe45eb1cd1f9ca48ae59061cd1c6e5bb9/run.json",
+      "status": "current"
+    },
     "787aea064929d3e5": {
       "path": "787aea064929d3e5.json",
       "producer_class": "aw-proof",
@@ -36,6 +43,13 @@
       "source_ref": "proof://receipts/7d5cab5368c5fe4d",
       "status": "current"
     },
+    "800489c14b7a2846": {
+      "path": "800489c14b7a2846.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-09-27T16:37:15+00:00",
+      "source_ref": ".agentic-workspace/local/proof-receipts/runs/native-sha256-f08d73b1b3a920dbf2fad2f255cae41715d6344c4424b598df4731fcde826753/run.json",
+      "status": "current"
+    },
     "874cd7193ebccb2a": {
       "path": "874cd7193ebccb2a.json",
       "producer_class": "aw-proof",
@@ -43,11 +57,25 @@
       "source_ref": "proof://receipts/874cd7193ebccb2a",
       "status": "current"
     },
+    "925c777d386c0546": {
+      "path": "925c777d386c0546.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-09-27T20:36:29+00:00",
+      "source_ref": ".agentic-workspace/local/proof-receipts/runs/native-sha256-b76cfacfd49eb28f132ea9b0680ce62fa59c758f4f2fb218d34abf4910363e46/run.json",
+      "status": "current"
+    },
     "e04078e66b413942": {
       "path": "e04078e66b413942.json",
       "producer_class": "aw-proof",
       "revision": "2026-09-01T22:09:22+00:00",
       "source_ref": "proof://receipts/e04078e66b413942",
+      "status": "current"
+    },
+    "e5cb909ce979c191": {
+      "path": "e5cb909ce979c191.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-09-27T16:42:09+00:00",
+      "source_ref": ".agentic-workspace/local/proof-receipts/runs/native-sha256-44b855ca306a063743e785e0979b2c08f79d5ec0c3e032025acfbd3c319b893e/run.json",
       "status": "current"
     },
     "e65594576eed38f0": {

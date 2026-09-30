@@ -534,7 +534,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     )["decision_packet"]["primary_action"]
     assert proof_action["operation_id"] == "proof.report" and continuation in proof_action["source_requests"]
     checked = consume(surface, shared_core_binary, native_cli, {**proof_context, "invocation": proof_action}, host_path=os.environ["PATH"])
-    assert checked["value"]["process"]["status"] == "passed" and checked["value"]["publication"]["status"] == "published"
+    assert checked["value"]["process"]["status"] == "passed" and checked["value"]["publication"]["status"] == "local"
     assert checked["value"]["claim_boundary"]["completion_claim_allowed"] is False
 
     def proof_view(request=continuation, **updates):

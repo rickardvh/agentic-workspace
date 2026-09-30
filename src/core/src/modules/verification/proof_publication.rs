@@ -18,6 +18,9 @@ fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 pub(crate) fn retention_committed(target: &Path, receipt: &Value) -> Result<(), CoreError> {
+    if crate::repository_proof::is_repository(receipt) {
+        return crate::repository_proof::validate(receipt);
+    }
     retained(target, receipt)?;
     attempt_store::inspect_committed(
         &target.to_string_lossy(),
@@ -35,7 +38,15 @@ pub(crate) fn retention_reusable(target: &Path, receipt: &Value) -> Result<bool,
     {
         return Ok(false);
     }
-    let Some(committed) = crate::native_proof::committed_publication(target, receipt)? else {
+    let committed = if crate::repository_proof::is_repository(receipt) {
+        let Ok(selection) = crate::repository_proof::selection(target, receipt) else {
+            return Ok(false);
+        };
+        Some(json!({"invocation":{"arguments":{"selection":selection}}}))
+    } else {
+        crate::native_proof::committed_publication(target, receipt)?
+    };
+    let Some(committed) = committed else {
         return Ok(false);
     };
     let previous = &committed["invocation"]["arguments"]["selection"];
@@ -87,6 +98,18 @@ fn receipt_path(id: &str) -> Result<String, CoreError> {
     Ok(format!("{STORE}/{id}.json"))
 }
 fn retained(target: &Path, receipt: &Value) -> Result<Value, CoreError> {
+    if crate::repository_proof::is_repository(receipt) {
+        let original = crate::repository_proof::publication_original(target, receipt)?;
+        let prepared = retained(target, &original)?;
+        if crate::repository_proof::published(target, &original, &prepared["record"]["invocation"])?
+            != *receipt
+        {
+            return Err(err(
+                "repository publication differs from exact retained effect",
+            ));
+        }
+        return Ok(prepared);
+    }
     let held = &receipt[CUSTODY];
     if held["kind"] != "agentic-workspace/proof-publication-custody/v1"
         || held["outcome"]["value"]["publication"]["reference"]
@@ -114,10 +137,14 @@ fn retained(target: &Path, receipt: &Value) -> Result<Value, CoreError> {
         held["outcome"].clone(),
     )?;
     let invocation = &prepared["record"]["invocation"];
+    let mut original = receipt.clone();
+    original.as_object_mut().unwrap().remove(CUSTODY);
+    let promoted = invocation["arguments"]["selection"]["promotion"]["receipt"] == original
+        && crate::native_proof::committed_publication(target, &original)?.is_some();
     if prepared["custody"] != held["custody"]
         || invocation["source_owner"] != "verification"
         || invocation["operation_id"] != "proof.report"
-        || receipt["source_ref"] != crate::native_proof::run_path(invocation)?
+        || (!promoted && receipt["source_ref"] != crate::native_proof::run_path(invocation)?)
         || receipt["command"] != invocation["arguments"]["selection"]["choice"]["command"]
         || receipt["proof_subject"] != invocation["arguments"]["selection"]["proof_subject"]
         || receipt["changed_paths"] != invocation["arguments"]["changed"]
@@ -148,7 +175,8 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
     if crate::native_proof_retention::index_custody(target, bytes).unwrap_or(false) {
         return Ok(index);
     }
-    // A locator bounds IO; only the exact committed index hash grants custody.
+    // A locator bounds IO; admission requires exact current local owner custody.
+    // Portable observations cannot acquire write authority with self-digests.
     // The predecessor native format had one receipt. Multiple unlocated entries
     // require transfer rather than a historical receipt/attempt scan.
     let candidate = match index.get("current_publication") {
@@ -169,10 +197,10 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
         {
             return Ok(index);
         }
-        if retained(target, &receipt).is_ok()
+        if let Ok(prepared) = retained(target, &receipt)
             && let Ok(committed) = attempt_store::inspect_committed(
                 &target.to_string_lossy(),
-                receipt[CUSTODY]["custody"].clone(),
+                prepared["custody"].clone(),
             )
             && committed["outcome"]["value"]["publication"]["index_sha256"] == hash(bytes)
         {
@@ -182,6 +210,10 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
     Err(err(
         "proof-publication-index-custody-required; existing index preserved; explicit owner transfer is required",
     ))
+}
+pub(crate) fn index_admitted(target: &Path, bytes: &[u8]) -> Result<bool, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    Ok(owned_index(target, &root, Some(bytes)).is_ok())
 }
 fn require_capacity(index: &Value) -> Result<(), CoreError> {
     if index["receipts"].as_object().unwrap().len() >= 2048 {
@@ -327,7 +359,11 @@ fn publish_checked(
                 && old["changed_paths"] == receipt["changed_paths"]
                 && retention_committed(target, &old).is_ok()
             {
-                let old_attempt = retained(target, &old)?;
+                // A portable predecessor may have no local recovery custody.
+                // Preserve it; a new publication owns only its own local effect.
+                let Ok(old_attempt) = retained(target, &old) else {
+                    continue;
+                };
                 let previous = &old_attempt["record"]["invocation"]["arguments"]["selection"];
                 let current = &invocation["arguments"]["selection"];
                 let same_work = previous["work"]["id"] == current["work"]["id"]
@@ -366,6 +402,15 @@ fn publish_checked(
     }
     let mut receipt = receipt.clone();
     receipt[CUSTODY] = json!({"kind":"agentic-workspace/proof-publication-custody/v1","custody":prepared["custody"],"outcome":outcome,"before_sha256":before.as_ref().map(|b|hash(b)),"retention":plan});
+    if !invocation["arguments"]["selection"]["promotion"].is_null() {
+        let projected = crate::repository_proof::published(target, &receipt, invocation)?;
+        create(
+            &root,
+            projected[CUSTODY]["local_carrier"].as_str().unwrap(),
+            &serde_json::to_vec_pretty(&receipt).map_err(err)?,
+        )?;
+        receipt = projected;
+    }
     create(
         &root,
         &path,
@@ -438,6 +483,11 @@ pub(crate) fn recover(
         if retained(target, &receipt)?["record"]["invocation"] != *invocation {
             return Err(err("publication recovery invocation differs"));
         }
+        let receipt = if crate::repository_proof::is_repository(&receipt) {
+            crate::repository_proof::publication_original(target, &receipt)?
+        } else {
+            receipt
+        };
         if candidate.replace(receipt).is_some() {
             return Err(err(
                 "multiple publication carriers name this attempt; preserved",
@@ -699,14 +749,10 @@ mod tests {
         assert!(!repo.0.join(&paths[0]).exists());
         let mut input = context;
         input["invocation"] = action;
-        assert!(
-            crate::native_public::invoke_checked(input)
-                .unwrap_err()
-                .to_string()
-                .contains("index-capacity-reached")
-        );
-        assert!(!repo.0.join(&paths[0]).exists());
-        assert!(!repo.0.join("capacity-marker.txt").exists());
+        let local = crate::native_public::invoke_checked(input).unwrap();
+        assert_eq!(local["value"]["publication"]["status"], "local");
+        assert!(repo.0.join(&paths[0]).exists());
+        assert!(repo.0.join("capacity-marker.txt").exists());
         assert_eq!(fs::read(repo.0.join(INDEX)).unwrap(), bytes);
     }
     #[test]

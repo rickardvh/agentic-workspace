@@ -153,7 +153,7 @@ pub(crate) fn select_mode(
     }
     let Some(choice) = choice else {
         return Ok(
-            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"omitted_profile_command_count":omitted_profile_commands,"candidate_boundary":"Domain candidates are bounded; remaining exact commands stay at their current source-field reference. No automatic selection or proof sufficiency."}),
+            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"omitted_profile_command_count":omitted_profile_commands,"candidate_boundary":"Bounded candidates; other commands remain at source. Agent selection grants no proof sufficiency."}),
         );
     };
     let source_selected = strategy["proof_routes"]
@@ -266,7 +266,38 @@ pub(crate) fn select_mode(
             Err(error) => return Err(error),
         }
     };
-    let subject = proof_subject::build(target, changed, command, None, None, &[], &observed)?;
+    let mut subject = proof_subject::build(target, changed, command, None, None, &[], &observed)?;
+    let mut promotion = Value::Null;
+    if let Some(request) = choice.get("promotion") {
+        let reference = request["evidence_ref"].as_str().unwrap_or("");
+        let receipt = local_receipt(target, reference)?;
+        let consumer = request["consumer"].as_str().unwrap_or("");
+        if report.is_some()
+            || receipt["result"] != "passed"
+            || receipt["command"] != command
+            || receipt["changed_paths"] != json!(changed)
+            || consumer.contains('\\')
+            || consumer
+                .split('/')
+                .any(|part| matches!(part, "" | "." | ".."))
+            || !consumer.starts_with(".agentic-workspace/")
+            || consumer.starts_with(".agentic-workspace/local/")
+            || consumer.starts_with(".agentic-workspace/proof/receipts/")
+            || freshness(target, task, changed, work, strategy, &receipt)?["status"] != "reusable"
+        {
+            return Err(err(
+                "repository proof promotion requires current exact local proof and a durable consumer",
+            ));
+        }
+        let durable = format!(
+            "proof://receipts/{}",
+            receipt["receipt_id"].as_str().unwrap()
+        );
+        let admitted_consumer = crate::repository_proof::consumer(target, consumer, &durable)?;
+        subject = receipt["proof_subject"].clone();
+        promotion =
+            json!({"receipt":receipt,"consumer":admitted_consumer,"reason":request["reason"]});
+    }
     if subject["identity_complete"] != true {
         gaps.push("proof-subject-incomplete".into());
     }
@@ -287,7 +318,7 @@ pub(crate) fn select_mode(
     };
     Ok(
         json!({"status":"selected","selection":{"choice":choice,"task_identity":crate::direct_task::subject(task,changed)?,
-        "work":{"id":work["id"],"revision":work["revision"]},"strategy":semantic_strategy,"proof_subject":subject,"timeout_seconds":timeout,"reported_observation":report},"choices":available,
+        "work":{"id":work["id"],"revision":work["revision"]},"strategy":semantic_strategy,"proof_subject":subject,"timeout_seconds":timeout,"reported_observation":report,"promotion":promotion},"choices":available,
         "gaps":gaps,"environment_boundary":"Native producer and launched shell observed; nested tool environments remain unproven."}),
     )
 }
@@ -307,7 +338,15 @@ pub(crate) fn freshness(
     // The publication's authenticated native custody already identifies the
     // selected route and command. Revalidate that exact selection, never a
     // catalogue of hypothetical alternatives (including same-command aliases).
-    let Some(committed) = committed_publication(target, receipt)? else {
+    let repository = crate::repository_proof::is_repository(receipt);
+    let committed = if repository {
+        Some(
+            json!({"invocation":{"arguments":{"selection":crate::repository_proof::selection(target, receipt)?}}}),
+        )
+    } else {
+        committed_publication(target, receipt)?
+    };
+    let Some(committed) = committed else {
         return Ok(
             json!({"status":"unproven","strategy_coverage":"unproven","reason":"native-selected-receipt-custody-unavailable"}),
         );
@@ -320,7 +359,11 @@ pub(crate) fn freshness(
     if previous["work"]["id"]
         .as_str()
         .is_some_and(|id| !id.starts_with("direct-task:") && !id.is_empty())
-        && previous["work"] != *work
+        && if repository {
+            previous["work"]["revision"] != work["revision"]
+        } else {
+            previous["work"] != *work
+        }
     {
         return Ok(
             json!({"status":"stale","strategy_coverage":"unproven","reason":"planning-proof-subject-changed"}),
@@ -336,6 +379,9 @@ pub(crate) fn freshness(
     };
     observed["strategy_revision"] =
         receipt["proof_subject"]["runtime"]["strategy_revision"].clone();
+    if repository {
+        observed = crate::repository_proof::runtime(&observed);
+    }
     let current_subject = proof_subject::build(
         target,
         changed,
@@ -497,11 +543,13 @@ pub(crate) fn run_path(invocation: &Value) -> Result<String, CoreError> {
 pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
     let mut writes =
         crate::attempt_store::write_paths(&json!({"idempotency_key":action["logical_effect_id"]}))?;
-    writes.extend([
-        ".agentic-workspace/proof/receipts/**".into(),
-        format!("{RUNS}/**"),
-        ".agentic-workspace/local/effects/source-reconciliation.lock".into(),
-    ]);
+    writes.push(format!("{RUNS}/**"));
+    if !action["arguments"]["selection"]["promotion"].is_null() {
+        writes.extend([
+            ".agentic-workspace/proof/receipts/**".into(),
+            ".agentic-workspace/local/effects/source-reconciliation.lock".into(),
+        ]);
+    }
     Ok(writes)
 }
 /// A retained carrier only supplies exact attempt references. The common store
@@ -570,15 +618,84 @@ pub(crate) fn committed_publication(
     )?;
     if committed["invocation"] != *invocation
         || committed["outcome"]["value"]["proof_subject"] != receipt["proof_subject"]
-        || committed["outcome"]["value"]["publication"]["reference"]
+        || (committed["outcome"]["value"]["publication"]["reference"]
             != format!(
                 "proof://receipts/{}",
                 receipt["receipt_id"].as_str().unwrap_or("")
             )
+            && committed["outcome"]["value"]["publication"]["reference"]
+                != local_reference(receipt)?)
     {
         return Ok(None);
     }
     Ok(Some(committed))
+}
+
+pub(crate) fn local_reference(receipt: &Value) -> Result<String, CoreError> {
+    let path = receipt["source_ref"]
+        .as_str()
+        .ok_or_else(|| err("missing local proof custody"))?;
+    let id = path
+        .strip_prefix(&format!("{RUNS}/native-sha256-"))
+        .and_then(|s| s.strip_suffix("/run.json"))
+        .filter(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+        .ok_or_else(|| err("invalid local proof custody"))?;
+    Ok(format!("proof://local/{id}"))
+}
+
+pub(crate) fn local_receipt(target: &Path, reference: &str) -> Result<Value, CoreError> {
+    let id = reference
+        .strip_prefix("proof://local/")
+        .filter(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+        .ok_or_else(|| err("invalid local proof reference"))?;
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let path = format!("{RUNS}/native-sha256-{id}/run.json");
+    let initial: Value =
+        serde_json::from_slice(&read(&root, &path)?.ok_or_else(|| err("local proof unavailable"))?)
+            .map_err(err)?;
+    let held = retained(&root, &path, &initial["invocation"])?
+        .ok_or_else(|| err("local proof custody unavailable"))?;
+    let committed = crate::attempt_store::inspect_committed(
+        &target.to_string_lossy(),
+        held["custody"].clone(),
+    )?;
+    let receipt = if committed["outcome"]["value"]["receipt"].is_object() {
+        committed["outcome"]["value"]["receipt"].clone()
+    } else {
+        serde_json::from_slice(
+            &read(&root, &format!("{path}.receipt.json"))?
+                .ok_or_else(|| err("local proof receipt unavailable"))?,
+        )
+        .map_err(err)?
+    };
+    if local_reference(&receipt)? != reference
+        || crate::native_verification::publication_identity(&receipt)? != receipt["receipt_id"]
+        || committed_publication(target, &receipt)?.is_none()
+        || committed["outcome"]["value"]["source_current"] != true
+    {
+        return Err(err("local proof custody or content mismatch"));
+    }
+    Ok(receipt)
+}
+
+/// Preserve a legacy execution in its existing run carrier before retiring its
+/// repository copy. This never grants new proof authority or rewrites execution.
+pub(crate) fn retain_local(target: &Path, receipt: &Value) -> Result<(), CoreError> {
+    if committed_publication(target, receipt)?.is_none() {
+        return Err(err(
+            "local transfer requires exact committed producer custody",
+        ));
+    }
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let path = format!("{}.receipt.json", receipt["source_ref"].as_str().unwrap());
+    if let Some(bytes) = read(&root, &path)? {
+        if serde_json::from_slice::<Value>(&bytes).map_err(err)? != *receipt {
+            return Err(err("local proof transfer conflicts with retained bytes"));
+        }
+    } else {
+        create(&root, &path, receipt)?;
+    }
+    Ok(())
 }
 fn process(
     command: &str,
@@ -617,7 +734,7 @@ pub(crate) fn execute(
             "unowned proof completion carrier exists; preserved before launch",
         ));
     }
-    if old.is_none() {
+    if old.is_none() && !invocation["arguments"]["selection"]["promotion"].is_null() {
         crate::proof_publication::check(target)?;
     }
     let admission = crate::attempt_store::admit(
@@ -644,6 +761,26 @@ pub(crate) fn execute(
     create(&root, &path, &run)?;
     revalidate()?;
     let selection = &invocation["arguments"]["selection"];
+    if let Some(receipt) = selection["promotion"].get("receipt") {
+        let outcome = json!({"status":"applied","effects":["proof-execution"],"value":{
+            "kind":"agentic-workspace/proof-execution-result/v1","proof_subject":receipt["proof_subject"],
+            "source_current":true,"process":receipt["execution"],"promotion":selection["promotion"],
+            "claim_boundary":{"completion_claim_allowed":false},"command_reexecuted":false}});
+        let committed = crate::proof_publication::publish(
+            target,
+            receipt,
+            invocation,
+            &admission["custody"],
+            outcome,
+            &mut revalidate,
+        )?;
+        let mut final_run = run;
+        final_run["custody"] = committed["custody"].clone();
+        create(&root, &format!("{path}.completed.json"), &final_run)?;
+        return Ok(
+            json!({"status":"applied","effects":["proof-execution"],"value":committed["record"]["outcome"]["value"],"custody":committed["custody"],"post_effect_changed_paths":[]}),
+        );
+    }
     let command = selection["choice"]["command"]
         .as_str()
         .ok_or_else(|| err("missing selected command"))?;
@@ -711,21 +848,14 @@ pub(crate) fn execute(
         "producer_admission":if manual {"unproven-interoperability-observation"}else{"retained-native-execution"},
         "strategy_coverage":selection["strategy"]["strategy_coverage"],
         "environment_scope":selection["proof_subject"]["runtime"]["environment_scope"],"nested_tool_runtime":selection["proof_subject"]["runtime"]["nested_tool_runtime"]});
-    let outcome = json!({"status":"applied","effects":["proof-execution"],"value":value});
-    let committed = if still_current {
-        crate::proof_publication::publish(
-            target,
-            &receipt,
-            invocation,
-            &admission["custody"],
-            outcome,
-            &mut revalidate,
-        )?
-    } else {
-        crate::attempt_store::commit(
-            json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
-        )?
-    };
+    let mut outcome = json!({"status":"applied","effects":["proof-execution"],"value":value});
+    outcome["value"]["receipt"] = receipt.clone();
+    if still_current {
+        outcome["value"]["publication"] = json!({"status":"local","reference":local_reference(&receipt)?,"scope":"current-checkout","repository_reference":format!("proof://receipts/{id}")});
+    }
+    let committed = crate::attempt_store::commit(
+        json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
+    )?;
     let value = committed["record"]["outcome"]["value"].clone();
     let mut final_run = run;
     final_run["custody"] = committed["custody"].clone();

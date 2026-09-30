@@ -56,7 +56,7 @@ pub(crate) fn declarations() -> Vec<Value> {
         "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"sources":{"type":"array","minItems":0,"maxItems":32,"uniqueItems":true,"items":{"type":"string"}},
         "superseded":{"type":"boolean"},"no_unresolved_intent":{"type":"boolean"},"no_continuing_value":{"type":"boolean"},
-        "reason":{"type":"string","maxLength":2048}},
+        "retain_repository":{"type":"boolean"},"reason":{"type":"string","maxLength":2048}},
         "required":["sources","superseded","no_unresolved_intent","no_continuing_value","reason"]}}),
         json!({"kind":RECOVER,"result_kind":"agentic-workspace/proof-retirement/v1","input_schema":{
         "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
@@ -130,13 +130,32 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
             "Unrecognised proof index preserved; exact owner transfer unavailable",
         ));
     }
-    let carrier = read(&root, CARRIER)?;
-    let transfer = index_bytes.is_some()
-        && index.get("current_publication").is_none()
-        && carrier.as_ref().is_none_or(|bytes| {
-            serde_json::from_slice::<Value>(bytes)
-                .is_ok_and(|value| value.get("target_revision").is_none())
-        });
+    let repository = crate::repository_proof::transfers(target, &sources)?;
+    let repository_transfers = &repository["transfers"];
+    let transfer = index_bytes.as_ref().is_some_and(|bytes| {
+        !crate::proof_publication::index_admitted(target, bytes).unwrap_or(false)
+    });
+    // A fresh checkout must explicitly transfer this index through Verification.
+    // The portable proof is readable source material, never a write grant. Its
+    // named consumer must still be admitted by its current responsible owner.
+    if transfer
+        && let Some(id) = index["current_publication"].as_str()
+        && let Some(bytes) = sources.get(&format!("{HOME}{id}.json"))
+    {
+        let receipt: Value = serde_json::from_slice(bytes).map_err(err)?;
+        if crate::repository_proof::is_repository(&receipt) {
+            crate::repository_proof::validate(&receipt)?;
+            crate::repository_proof::consumer(
+                target,
+                receipt["repository_proof"]["consumer"]["path"]
+                    .as_str()
+                    .unwrap_or(""),
+                receipt["repository_proof"]["consumer"]["reference"]
+                    .as_str()
+                    .unwrap_or(""),
+            )?;
+        }
+    }
     let references: BTreeMap<_, _> = sources
         .iter()
         .filter(|(p, _)| p.as_str() != INDEX && p.as_str() != CARRIER)
@@ -151,6 +170,7 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
         })
         .collect();
     let mut offered = serde_json::Map::new();
+    let mut local_transfers = serde_json::Map::new();
     let mut protected = Vec::new();
     for (path, bytes) in &sources {
         if !candidate(path, bytes) {
@@ -159,7 +179,9 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
         let body: Value = serde_json::from_slice(bytes).map_err(err)?;
         // Native carriers require a committed producer. Legacy shape supplies no
         // custody; exact agent disposition below transfers only removal authority.
-        let uncertain = if body.get("publication_custody").is_some() {
+        let uncertain = if crate::repository_proof::is_repository(&body) {
+            crate::repository_proof::validate(&body).is_err()
+        } else if body.get("publication_custody").is_some() {
             crate::proof_publication::retention_committed(target, &body).is_err()
         } else if body["invocation"]["operation_id"] == crate::native_source_reconciliation::OP {
             !crate::native_source_reconciliation::retention_committed(target, path, &body)?
@@ -185,19 +207,40 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
             })
             .map(|(p, _)| (*p).clone())
             .collect();
-        if !uncertain && !reusable && consumers.is_empty() && offered.len() < LIMIT {
+        // An authenticated local execution is not a durable repository consumer.
+        // Preserve its exact local custody before disposition of the repository
+        // copy; current repository references still protect that copy.
+        let local_transfer = !uncertain
+            && consumers.is_empty()
+            && matches!(
+                crate::native_proof::committed_publication(target, &body),
+                Ok(Some(_))
+            );
+        if !uncertain
+            && (!reusable || local_transfer)
+            && consumers.is_empty()
+            && offered.len() < LIMIT
+        {
             offered.insert(path.clone(), json!(revision(bytes)));
+            if local_transfer {
+                local_transfers.insert(path.clone(), json!({"reference":crate::native_proof::local_reference(&body)?,"path":format!("{}.receipt.json",body["source_ref"].as_str().unwrap())}));
+            }
         } else if (uncertain || reusable || !consumers.is_empty()) && protected.len() < LIMIT {
             protected.push(json!({"source":path,"uncertain_producer":uncertain,"reusable":reusable,"consumer_count":consumers.len(),"consumers":consumers.into_iter().take(8).collect::<Vec<_>>()}));
         }
     }
     let guards: BTreeMap<_, _> = sources
         .iter()
-        .filter(|(p, _)| !offered.contains_key(*p) && p.as_str() != INDEX && p.as_str() != CARRIER)
+        .filter(|(p, _)| {
+            !offered.contains_key(*p)
+                && repository_transfers.get(*p).is_none()
+                && p.as_str() != INDEX
+                && p.as_str() != CARRIER
+        })
         .map(|(p, b)| (p.clone(), revision(b)))
         .collect();
     Ok(
-        json!({"sources":offered,"guard_revision":digest(&json!(guards))?,"protected":protected,
+        json!({"sources":offered,"local_transfers":local_transfers,"repository_transfers":repository_transfers,"transfer_gaps":repository["gaps"],"guard_revision":digest(&json!(guards))?,"protected":protected,
         "index":index,"index_transfer_required":transfer,"index_revision":index_bytes.as_ref().map(|b|revision(b)),
         "carrier_revision":read(&root,CARRIER)?.as_ref().map(|b|revision(b))}),
     )
@@ -305,7 +348,7 @@ fn outcome(invocation: &Value) -> Result<Value, CoreError> {
     let bytes = serde_json::to_vec_pretty(&next_index(invocation)?).map_err(err)?;
     Ok(
         json!({"status":"applied","effects":["proof-execution"],"value":{"kind":"agentic-workspace/proof-retirement/v1",
-        "retired":invocation["arguments"]["request"]["arguments"]["sources"],"tracked_tombstone":false,"completion_authority":false,
+        "retired":invocation["arguments"]["request"]["arguments"]["sources"],"local_transfers":invocation["arguments"]["binding"]["local_transfers"],"repository_transfers":invocation["arguments"]["binding"]["repository_transfers"],"tracked_tombstone":false,"completion_authority":false,
         "index_revision":revision(&bytes),"proof_authority":"unchanged; disposition grants no proof sufficiency"}}),
     )
 }
@@ -347,19 +390,27 @@ pub(crate) fn view(
         .into_iter()
         .flat_map(|o| o.keys().cloned())
         .collect();
-    if !recovery && sources.is_empty() && binding["index_transfer_required"] != true {
-        return Ok(json!({"status":"quiet","requests":[],"protected":binding["protected"]}));
+    if !recovery
+        && sources.is_empty()
+        && binding["index_transfer_required"] != true
+        && binding["repository_transfers"]
+            .as_object()
+            .is_none_or(|v| v.is_empty())
+    {
+        return Ok(
+            json!({"status":if binding["transfer_gaps"].as_array().is_some_and(|v|!v.is_empty()) {"preserved"} else {"quiet"},"requests":[],"protected":binding["protected"],"transfer_gaps":binding["transfer_gaps"]}),
+        );
     }
     let kind = if recovery { RECOVER } else { REQUEST };
     let args = if recovery {
         binding.clone()
     } else {
-        json!({"sources":sources,"superseded":false,"no_unresolved_intent":false,"no_continuing_value":false,"reason":""})
+        json!({"sources":sources,"superseded":false,"no_unresolved_intent":false,"no_continuing_value":false,"retain_repository":false,"reason":""})
     };
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"verification","owner_revision":owner["revision"],
         "source_revision":digest(&binding)?,"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     let mut result = json!({"status":if recovery {"recovery-required"} else {"judgment-required"},"requests":[template],
-        "sources":binding["sources"],"index_transfer_required":binding["index_transfer_required"],"protected":binding["protected"],"authority":"Read the exact sources and judge supersession and future value; discovery grants no deletion authority."});
+        "sources":binding["sources"],"local_transfers":binding["local_transfers"],"repository_transfers":binding["repository_transfers"],"index_transfer_required":binding["index_transfer_required"],"protected":binding["protected"],"authority":"Judge exact index adoption and continuing repository value. Empty sources transfers only the index into current local custody. retain_repository selects portable format transfers; local transfers preserve exact runs. Discovery grants no write, deletion or proof sufficiency."});
     if let Some(request) = request {
         crate::prepare_request_value(
             json!({"request":request,"current_work":work,"capability_contract":contract}),
@@ -377,15 +428,20 @@ pub(crate) fn view(
                 return Err(err("Proof retirement recovery changed"));
             }
         } else {
-            if args["superseded"] != true
+            if (args["superseded"] != true
                 || args["no_unresolved_intent"] != true
-                || args["no_continuing_value"] != true
+                || args["no_continuing_value"] != true)
+                && !args["sources"].as_array().unwrap().is_empty()
                 || args["reason"].as_str().unwrap_or("").trim().is_empty()
             {
                 return Ok(result);
             }
             if args["sources"].as_array().unwrap().is_empty()
                 && binding["index_transfer_required"] != true
+                && !(args["retain_repository"] == true
+                    && binding["repository_transfers"]
+                        .as_object()
+                        .is_some_and(|v| !v.is_empty()))
             {
                 return Err(err("Proof index transfer is not required"));
             }
@@ -457,6 +513,23 @@ fn verify(root: &Dir, invocation: &Value, allow_absent: bool) -> Result<(), Core
             }
         }
     }
+    for (path, transfer) in binding["repository_transfers"]
+        .as_object()
+        .into_iter()
+        .flatten()
+    {
+        let before = &transfer["before_revision"];
+        let after = revision(&serde_json::to_vec_pretty(&transfer["receipt"]).map_err(err)?);
+        match observed.remove(path) {
+            Some(current)
+                if before == &current
+                    || (allow_absent
+                        && invocation["arguments"]["request"]["arguments"]["retain_repository"]
+                            == true
+                        && current == after) => {}
+            _ => return Err(err("Repository proof transfer source changed; preserved")),
+        }
+    }
     if binding["guard_revision"] != digest(&json!(observed))? {
         return Err(err(
             "Proof retirement consumer changed; preserve remaining sources",
@@ -479,6 +552,26 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
     ]);
     paths.push(temporary(action)?);
     if action["operation_id"] == OP {
+        if action["arguments"]["request"]["arguments"]["retain_repository"] == true {
+            for (path, transfer) in action["arguments"]["binding"]["repository_transfers"]
+                .as_object()
+                .into_iter()
+                .flatten()
+            {
+                paths.extend([
+                    path.clone(),
+                    format!("{path}.retirement.tmp"),
+                    transfer["local_path"].as_str().unwrap().to_owned(),
+                ]);
+            }
+        }
+        if let Some(transfers) = action["arguments"]["binding"]["local_transfers"].as_object() {
+            paths.extend(
+                transfers
+                    .values()
+                    .filter_map(|v| v["path"].as_str().map(str::to_owned)),
+            );
+        }
         paths.extend(
             action["arguments"]["request"]["arguments"]["sources"]
                 .as_array()
@@ -562,8 +655,42 @@ fn execute_checked(
         record
     };
     observe("prepared")?;
+    if record["invocation"]["arguments"]["request"]["arguments"]["retain_repository"] == true {
+        for (path, transfer) in record["invocation"]["arguments"]["binding"]["repository_transfers"]
+            .as_object()
+            .into_iter()
+            .flatten()
+        {
+            verify(&root, &record["invocation"], true)?;
+            let bytes =
+                read(&root, path)?.ok_or_else(|| err("Repository proof transfer missing"))?;
+            if revision(&bytes) == transfer["before_revision"] {
+                let receipt: Value = serde_json::from_slice(&bytes).map_err(err)?;
+                crate::native_proof::retain_local(target, &receipt)?;
+            }
+            // Exact postimage recovery never re-runs proof or loses its origin.
+            if read(&root, transfer["local_path"].as_str().unwrap())?.is_none() {
+                return Err(err("Repository transfer original custody missing"));
+            }
+            let next = serde_json::to_vec_pretty(&transfer["receipt"]).map_err(err)?;
+            replace_exact(&root, path, &next, &transfer["before_revision"])?;
+            observe("repository-transferred")?;
+        }
+    }
+    if let Some(transfers) =
+        record["invocation"]["arguments"]["binding"]["local_transfers"].as_object()
+    {
+        for (path, transfer) in transfers {
+            if let Some(bytes) = read(&root, path)? {
+                let receipt: Value = serde_json::from_slice(&bytes).map_err(err)?;
+                crate::native_proof::retain_local(target, &receipt)?;
+            }
+            // Interrupted removal must retain the same usable execution carrier.
+            crate::native_proof::local_receipt(target, transfer["reference"].as_str().unwrap())?;
+        }
+    }
     let next = serde_json::to_vec_pretty(&next_index(&record["invocation"])?).map_err(err)?;
-    verify(&root, &record["invocation"], recovery)?;
+    verify(&root, &record["invocation"], true)?;
     replace_exact(
         &root,
         INDEX,
@@ -615,9 +742,20 @@ fn execute_checked(
         (record["outcome"].clone(), original["custody"].clone())
     };
     root.remove_file(PENDING).map_err(err)?;
-    Ok(
-        json!({"outcome":out,"custody":custody,"post_effect_changed_paths":record["outcome"]["value"]["retired"]}),
-    )
+    let mut changed = record["outcome"]["value"]["retired"]
+        .as_array()
+        .unwrap()
+        .clone();
+    if record["invocation"]["arguments"]["request"]["arguments"]["retain_repository"] == true {
+        changed.extend(
+            record["invocation"]["arguments"]["binding"]["repository_transfers"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|(path, _)| json!(path)),
+        );
+    }
+    Ok(json!({"outcome":out,"custody":custody,"post_effect_changed_paths":changed}))
 }
 
 fn replace_exact(root: &Dir, path: &str, bytes: &[u8], before: &Value) -> Result<(), CoreError> {
@@ -821,6 +959,7 @@ mod tests {
                 r["arguments"]["no_continuing_value"] = json!(true);
                 r["arguments"]["reason"] =
                     json!("Fixture producer retired; no reusable evidence or unresolved claims.");
+                r["arguments"]["retain_repository"] = json!(true);
             }
             self.start(Some(r))
         }
@@ -860,6 +999,154 @@ mod tests {
             f.start(None)["verification"]["retention"]["status"],
             "quiet"
         );
+    }
+    #[test]
+    fn committed_legacy_execution_moves_into_its_existing_local_run() {
+        for with_consumer in [false, true] {
+            let f = Fixture::new();
+            std::fs::create_dir_all(f.0.join(".agentic-workspace/verification")).unwrap();
+            std::fs::write(f.0.join("a.txt"), "source").unwrap();
+            std::fs::write(f.0.join(".agentic-workspace/verification/manifest.toml"), "schema_version='agentic-workspace/verification-manifest/v1'\n[protocols.check]\napplies_to_paths=['a.txt']\n[proof_routes.check]\nprotocol_refs=['check']\ncommands=['echo checked']\n").unwrap();
+            let mut input = json!({"target":f.0,"task":"Check source","changed":["a.txt"]});
+            let initial = crate::native_public::start(input.clone()).unwrap();
+            input["request"] = initial["verification"]["execution_requests"][0].clone();
+            let selected = crate::native_public::start(input).unwrap();
+            let invocation = &selected["decision_packet"]["primary_action"];
+            let admission = crate::attempt_store::admit(
+            json!({"target":f.0,"decision":selected["decision_packet"],"invocation":invocation}),
+        )
+        .unwrap();
+            let run_path = crate::native_proof::run_path(invocation).unwrap();
+            let mut run = json!({"kind":"agentic-workspace/proof-execution-run/v1","invocation":invocation,"custody":admission["custody"]});
+            f.put(&run_path, run.clone());
+            // Reproduce the former automatic-publication format: the committed
+            // outcome has no embedded receipt; the only copy is repository-visible.
+            let mut receipt = json!({"kind":"agentic-workspace/proof-receipt/v1","command":"echo checked","result":"passed","changed_paths":["a.txt"],"proof_subject":invocation["arguments"]["selection"]["proof_subject"],"producer_class":"aw-proof","authority":"aw-proof","recorded_at":"2026-09-08T00:00:00Z","source_ref":run_path});
+            let detail_path = format!("{run_path}.command.json");
+            f.put(
+                &detail_path,
+                json!({"status":"passed","exit_code":0,"timed_out":false}),
+            );
+            let detail = std::fs::read(f.0.join(&detail_path)).unwrap();
+            receipt["execution_artifact"] =
+                json!({"path":detail_path,"sha256":&revision(&detail)[7..]});
+            let id = crate::native_verification::publication_identity(&receipt).unwrap();
+            receipt["receipt_id"] = json!(id);
+            receipt["publication_id"] = json!(id);
+            let outcome = json!({"status":"applied","effects":["proof-execution"],"value":{"proof_subject":receipt["proof_subject"],"source_current":true}});
+            let committed = crate::proof_publication::publish(
+                &f.0,
+                &receipt,
+                invocation,
+                &admission["custody"],
+                outcome,
+                &mut || Ok(()),
+            )
+            .unwrap();
+            run["custody"] = committed["custody"].clone();
+            f.put(&format!("{run_path}.completed.json"), run);
+            let local_ref = crate::native_proof::local_reference(&receipt).unwrap();
+            assert!(crate::native_proof::local_receipt(&f.0, &local_ref).is_err());
+            let mut owner_path = String::new();
+            if with_consumer {
+                let mut context =
+                    json!({"target":f.0,"task":"Retain proof for repository continuation"});
+                let initial = crate::native_public::start(context.clone()).unwrap();
+                let body: Value = serde_json::from_str(include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../tests/fixtures/native_planning/delegation-lane-sweep.plan.json"
+                )))
+                .unwrap();
+                let mut material = serde_json::Map::new();
+                for key in crate::native_planning_create::MATERIAL {
+                    material.insert(key.to_string(), body[key].clone());
+                }
+                material.insert("material_lifetimes".into(), json!({"next_action":"durable","external_posture":"observation","continuation_frontier":"durable"}));
+                material.insert(
+                    "references".into(),
+                    json!([format!("proof://receipts/{id}")]),
+                );
+                material.insert("relationships".into(), json!({}));
+                let mut request = initial["planning"]["creation_requests"][0].clone();
+                request["arguments"]["material"] = json!(material);
+                context["request"] = request;
+                let selected = crate::native_public::start(context.clone()).unwrap();
+                context.as_object_mut().unwrap().remove("request");
+                context["invocation"] = selected["decision_packet"]["primary_action"].clone();
+                let result = crate::native_public::invoke(context).unwrap();
+                owner_path = result["value"]["owner_path"].as_str().unwrap().into();
+                let canonical = std::fs::canonicalize(&f.0).unwrap();
+                let owner = crate::repository_proof::consumer(
+                    &canonical,
+                    &owner_path,
+                    &format!("proof://receipts/{id}"),
+                )
+                .unwrap();
+                let published: Value = serde_json::from_slice(
+                    &std::fs::read(f.0.join(format!("{HOME}{id}.json"))).unwrap(),
+                )
+                .unwrap();
+                crate::repository_proof::project(&canonical, &published, &owner).unwrap();
+            }
+            let ready = f.ready();
+            let action = &ready["decision_packet"]["primary_action"];
+            assert_eq!(
+                action["operation_id"], OP,
+                "{}",
+                ready["verification"]["retention"]
+            );
+            let ready = if with_consumer {
+                let failure = execute_checked(
+                    &f.0,
+                    &ready["decision_packet"],
+                    action,
+                    &mut || Ok(()),
+                    &mut |stage| {
+                        if stage == "repository-transferred" {
+                            Err(err("interrupted portable transfer"))
+                        } else {
+                            Ok(())
+                        }
+                    },
+                );
+                assert!(failure.is_err());
+                f.ready()
+            } else {
+                ready
+            };
+            let action = &ready["decision_packet"]["primary_action"];
+            let result = crate::native_public::invoke(
+                json!({"target":f.0,"task":"Retire superseded proof history","invocation":action}),
+            )
+            .unwrap();
+            assert_eq!(result["effect_outcome"]["status"], "committed", "{result}");
+            assert_eq!(f.0.join(format!("{HOME}{id}.json")).exists(), with_consumer);
+            let retained = crate::native_proof::local_receipt(&f.0, &local_ref).unwrap();
+            assert_eq!(retained["proof_subject"], receipt["proof_subject"]);
+            assert_eq!(retained["receipt_id"], id);
+            assert_eq!(
+                f.start(None)["verification"]["retention"]["status"],
+                "quiet"
+            );
+            if with_consumer {
+                let fresh = Fixture::new();
+                for path in [format!("{HOME}{id}.json"), INDEX.into(), owner_path] {
+                    let body =
+                        serde_json::from_slice(&std::fs::read(f.0.join(&path)).unwrap()).unwrap();
+                    fresh.put(&path, body);
+                }
+                let projected: Value = serde_json::from_slice(
+                    &std::fs::read(fresh.0.join(format!("{HOME}{id}.json"))).unwrap(),
+                )
+                .unwrap();
+                crate::repository_proof::selection(&fresh.0, &projected).unwrap();
+                assert!(!fresh.0.join(".agentic-workspace/local").exists());
+                assert_eq!(
+                    projected["repository_proof"]["origin"]["subject_fingerprint"],
+                    receipt["proof_subject"]["fingerprint"]
+                );
+            }
+        }
     }
     #[test]
     fn empty_index_transfer_has_relative_but_target_bound_custody() {
