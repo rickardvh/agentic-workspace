@@ -1,0 +1,77 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "source": "Current issue bodies and SYSTEM_INTENT.md; no narrowing of acceptance."
+  },
+  "continuation": {
+    "implementation": "Existing checkout only. PR #3728 uses codex/dogfooding-write-authority; current branch codex/planning-worktree-continuity from origin/master 9c12474dd. Native resources now derive current Planning continuity and check exact owner JSON at immutable seed before effects.",
+    "remaining": "Create separate #3726 and #3727 branches from master (stack only if a real dependency requires it). Preserve #3722 local proof lifetime and unknown/user files; no second archive. Do not direct an independent reviewer.",
+    "transport": "Temporary AW carriage and issue bodies are in .git/issues-*.json; .git/issues-work.py reacquires exact current envelopes and admits local Assignment. It is transport only, never authority. Use JSON string timestamps."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/1cce2f8362d4646062ed904f57561d4a53d6d3cebcec9e6021916ca3d8ff9d73.attempt.json",
+        "revision": "sha256:ea55be5855d95e7fbb21afec952647da5fdd4b531bab5e54a54135a26a860dd9",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/1cce2f8362d4646062ed904f57561d4a53d6d3cebcec9e6021916ca3d8ff9d73.result.json",
+        "revision": "sha256:4d6b1d0a356ecfeecb7e645120ac950117d835af8e7c1270c7cc49604bf038bf",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:31732dece4951d274861ab265cc6b6da4ea90d22b1c636a15f1b9b4440009fc9",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:d9c02ae969a484fd82d764ed639992e5255ce6a43bc79b53cf853ac90d19e525"
+  },
+  "id": "work-f3e79bcf08aafec5144750511624b8a45146b83af05d8c5688357d663e41adbc",
+  "intent": {
+    "non_goals": "No merge, independent review or new legacy compatibility framework.",
+    "outcome": "Implement #3720, #3724, #3726 and #3727 in separate complete PRs; #3722 is already merged and #3725 closed by disposition."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Finish #3720 shared startup composition proof, commit and create its PR. Then implement #3726 and #3727 with focused migration and custody controls.",
+  "owner_level": "lane",
+  "parent": {
+    "closure_boundary": "Four implementation PRs, with independent acceptance pending.",
+    "issues": "#3720 #3724 #3726 #3727"
+  },
+  "phase": "shaping",
+  "proof": {
+    "observed": [
+      "#3724: 4 focused tests and commit hooks passed; PR #3728 all required CI passed.",
+      "#3720: 26 native resource tests passed before final shared-startup composition extension; 23 Rust Planning owner tests passed.",
+      "Broader Planning retention test still expects repository receipt despite #3722 local lifetime; disposition during proof lifetime/custody follow-through."
+    ],
+    "remaining": [
+      "#3720 final composition test, #3726 migration controls, #3727 legacy custody controls, commit hooks and required CI for remaining PRs."
+    ]
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3720",
+    "https://github.com/rickardvh/agentic-workspace/issues/3724",
+    "https://github.com/rickardvh/agentic-workspace/issues/3726",
+    "https://github.com/rickardvh/agentic-workspace/issues/3727",
+    "https://github.com/rickardvh/agentic-workspace/pull/3728"
+  ],
+  "relationships": {
+    "dependencies": {
+      "refs": []
+    }
+  },
+  "revision": 1,
+  "scope": {
+    "effects": "Code, source/payload/generated reconciliation, bounded tests, commits and PR publication.",
+    "owned": "Planning/resource continuity, dogfooding authority guidance, legacy Planning convergence and legacy proof index disposition."
+  },
+  "title": "Implement the remaining issues from #3720 onwards"
+}

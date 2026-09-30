@@ -173,7 +173,7 @@
       "modules": [
         "planning"
       ],
-      "degraded_behavior": "Treat active Planning state as absent until an owner is selected."
+      "degraded_behavior": "Legacy migration input only; select canonical owner meaning and use exact Planning reconciliation and disposition. Absence needs no aggregate recreation."
     },
     {
       "source": ".agentic-workspace/OWNERSHIP.toml",

@@ -58,6 +58,7 @@ pub(crate) fn view(
     work: &Value,
     contract: &Value,
     request: Option<&Value>,
+    planning_request: Option<&Value>,
 ) -> Result<Value, CoreError> {
     let rev = revision()?;
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":REQUEST,
@@ -76,7 +77,20 @@ pub(crate) fn view(
             "resource request identity or source is stale",
         ));
     }
-    let args = &request["arguments"]["request"];
+    let mut args = request["arguments"]["request"].clone();
+    if args["operation"] == "worktree-create"
+        && let Some(planning_request) = planning_request
+    {
+        if args
+            .get("planning_request")
+            .is_some_and(|r| r != planning_request)
+        {
+            return Err(CoreError::new(
+                "resource Planning relation differs from current work; reobserve",
+            ));
+        }
+        args["planning_request"] = planning_request.clone();
+    }
     if args.get("expected_revision").is_some() {
         return Err(CoreError::new(
             "resource proposal cannot execute; invoke the exact returned action",

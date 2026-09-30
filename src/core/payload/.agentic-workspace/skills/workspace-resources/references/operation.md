@@ -20,6 +20,15 @@ For isolation, supply the concrete `need`, `reason`, returned `policy_revision`
 and `policy_answer: permits-isolation` only when current instructions permit it.
 Missing judgment, stale policy or protection yields rather than executing.
 
+Before creation, the owner checks the seed against current Planning continuity.
+If the task relation or posture is unresolved, answer the returned Planning
+request through ordinary startup carriage. The shared owner carries that answer
+into the resource action. On the direct resources primitive, carry it as
+`planning_request`; retain both relation and posture answers when needed.
+Continuing work requires the exact current owner at the
+seed. Use a commit containing it, or establish independent work in the source
+checkout. Never copy local selectors or infer independence from a missing file.
+
 On the direct primitive path, when the owner returns an `action`, carry that
 exact object to the same resources primitive. For the CLI, pass it unchanged
 with `resources --input <action.json>` (or `--input -`); omit context flags to

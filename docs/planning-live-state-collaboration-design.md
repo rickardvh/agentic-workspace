@@ -1,5 +1,11 @@
 # Planning Live-State Collaboration Design
 
+This historical design predates owner-scoped Planning. Current continuation lives
+in canonical owner records. Legacy `state.toml` is upgrade input only; native
+Planning selects and reconciles the owner relation, then retires that aggregate
+through its guarded disposition. The design below does not define current reads.
+
+
 This note records the current design choice for #804. It is a design boundary, not an implemented migration.
 
 ## Current Model

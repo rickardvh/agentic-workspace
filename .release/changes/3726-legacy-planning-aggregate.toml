@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Retire legacy Planning aggregate through canonical owner migration and guarded disposition."

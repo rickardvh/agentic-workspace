@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:f09d195741dd9500fe433bdb93e40bae5b48125b4d253e03c16d21bd59d537ee`
+- Contract digest: `sha256:6a9eec305190da6355ea6bbcbbe465b8f09031ecb6519bcee2a69762e947f8b7`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -76,6 +76,8 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/planning/skills/planning-work/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/README.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/REGISTRY.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/skills/workspace-dogfooding/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-dogfooding/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden.
 
@@ -148,6 +150,8 @@ Portable source promotions:
 - `.agentic-workspace/planning/skills/planning-work/SKILL.md`
 - `.agentic-workspace/planning/skills/README.md`
 - `.agentic-workspace/planning/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-dogfooding/SKILL.md`
+- `.agentic-workspace/skills/workspace-dogfooding/procedure.md`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 
