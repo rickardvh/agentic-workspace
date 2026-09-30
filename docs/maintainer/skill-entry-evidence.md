@@ -35,15 +35,15 @@ are complete. The host-session limitations below remain disclosed for review.
   were unchanged. This proves local lifecycle preservation, not Git marketplace
   version movement or downstream use after removal.
 
-## Host-session limits and accepted assumption
+## Initial host-session limits and accepted assumption
 
-Real Codex selected use from a synthetic repository subdirectory did not reach
+Initial Codex selected use from a synthetic repository subdirectory did not reach
 the canonical skill. The session reported environment policy blocking its
 read-only cache read. Explicit access to the isolated profile and removing
 inherited application session identity did not resolve it. Account-connected
 remote plugin metadata was still visible, so these sessions cannot establish a
 minimal tool profile either. No runtime command or repository mutation was
-observed. A successful target-file trace is still required; recognition and a
+observed. A successful target-file trace was still required; recognition and a
 zero session exit code are not handoff evidence. A final retry with the synthetic
 fixture inside the task workspace produced the same policy rejection; changing
 the fixture location did not establish handoff. No adapter workaround or hook
@@ -77,13 +77,58 @@ use are accepted assumptions for this PR, following the user's explicit
 instruction. Native validation, discovery and lifecycle were observed separately.
 Authentication is not copied into the deliverable or recorded here.
 
-The two-repository revision/refresh, linked-worktree, absent/broken entry,
-coexisting-entry, ordinary-task activation observation and post-removal fallback
-controls could not be observed in the blocked Codex sessions. Synthetic fixture
-construction is not behavioural
-proof. These controls must use the installed bridge independently of the fence
-where selected handoff is claimed. Native lifecycle operations are established
-  above; a real task through the generic fence after removal remains outstanding.
+## Windows harness investigation and observed Codex handoff
+
+Direct native `codex sandbox -P :read-only` reads failed with Windows access
+denied in the original temporary fixture but succeeded for the checkout's
+`LICENSE`. Both the original `.git` fixture and a subsequent ordinary-root
+fixture created with Python `tempfile.mkdtemp()` had protected directory ACLs
+granting only owner, SYSTEM and Administrators. The normal checkout also grants
+`CodexSandboxUsers` access. Fresh disposable fixtures created with ordinary
+directory inheritance allowed the sandbox to read their input and installed
+skill. The authentication copy retained the original authentication file's ACL;
+no existing fixture or repository ACL was broadened.
+
+Model-driven reads still rejected before launch until the isolated profile
+explicitly selected `[windows] sandbox = "elevated"`. That change reached native
+sandbox startup, which reported a missing or incompatible setup marker and
+raised UAC. The bounded attempt ended with
+`orchestrator_helper_launch_canceled: ShellExecuteExW failed to launch setup helper: 1223`.
+Using the host's already provisioned sandbox then completed the same model-driven
+read with exit zero. These checks identify two harness prerequisites; unrestricted
+model command access was not needed and no rejection was bypassed.
+
+Codex CLI 0.159.0 then installed the marketplace and entry through native commands
+in that provisioned host profile. Both registrations were absent before the test.
+Each model session explicitly set `sandbox_mode="read-only"`, retained approval
+`never`, and used the configured model. Completed command traces, rather than
+model claims or session exit codes alone, establish these results:
+
+| Control | Observed result |
+| --- | --- |
+| Selected bridge from A subdirectory, no fence | Installed cache skill read, Git root A resolved, canonical skill and its relative reference read, `ENTRY-A1`, then sample summarized. |
+| Different repository B, same installed bridge | B's canonical reference supplied `ENTRY-B1`. |
+| Refresh A alone | A supplied `ENTRY-A2`; a fresh B session still supplied `ENTRY-B1`. |
+| Linked-worktree subdirectory | Linked `.git` file resolved its own root and `ENTRY-A1`, while main A already had `ENTRY-A2`. An initial harness attempt used an absent empty subdirectory; it was created before the successful retry. |
+| Absent AW | Checked local context, summarized the sample quietly; no install, setup or runtime probe. |
+| Broken entry | Reported the target's missing canonical skill path without claiming successful entry or attempting repair. |
+| Coexisting fence and selected bridge | Both entries were used; one canonical skill read supplied `ENTRY-F1`. |
+| Ordinary prompt, plugin installed, no fence | `Summarize sample.txt. Keep the task read-only.` read only the sample. Neither bridge nor canonical entry was activated. |
+| Native plugin and marketplace removal, fence fallback | Fresh session read canonical skill and relative reference via repository instructions, supplied `ENTRY-F1`, and summarized the sample without reading the removed bridge. |
+
+All six synthetic Git working trees remained clean after the controlled A refresh
+was committed. Native removal restored the host configuration semantically,
+including unrelated settings. No model session wrote repository files or invoked
+an AW runtime. The installed skill SHA-256 at the end of bridge controls was
+`9f3c337797d489d12af751557ae0f93ce656bd9c11447d1a8e438b0beab7203b`.
+
+This establishes selected Codex handoff and shared bridge controls on the
+provisioned host. It does not establish an isolated model-session exercise: that
+profile still needs native Windows sandbox provisioning. The issue's required
+isolated-profile host exercise remains outstanding, so the PR stays draft without
+a closing reference. Claude authenticated behaviour remains the user's accepted
+assumption. Ordinary non-activation remains a disclosed limit of the passive
+adapter, not a reason to add activation hooks.
 
 ## Git update correction after independent review
 
@@ -139,6 +184,16 @@ review rejected recursive removal of its temporary Git fixture directory with
 the generic reason `blocked by policy`. That disposable fixture remains under
 `.git/ep-bzv601k8`; its authentication file is confirmed absent. No specific
 rejection rule was supplied.
+
+The permission investigation also removed both new isolated plugins and their
+authentication copies. Recursive cleanup of `entry-probe-1g_tf9x3/` and
+`entry-check-aea64171/` was rejected by automatic approval review with only
+`blocked by policy`; both directories remain. Their authentication files are
+confirmed absent, and the failed elevated setup's `.sandbox-secrets` directory
+is empty. The provisioned host's test plugin and marketplace were removed through
+native lifecycle commands, and its configuration equals the pre-test semantic
+snapshot. The evidence above preserves the finite trace conclusions; native
+scratch removal for this investigation also committed.
 
 Formats were checked against the [OpenAI plugin format](https://developers.openai.com/plugins/build/plugins),
 [Claude plugin lifecycle](https://code.claude.com/docs/en/plugins) and
