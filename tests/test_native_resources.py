@@ -211,6 +211,49 @@ def test_worktree_seed_preserves_current_planning_relation(tmp_path, shared_core
     resource("native", shared_core_binary, native_cli, removal["action"])
 
 
+def test_legacy_migration_blocks_direct_resource_seed(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_planning_create import material
+    from tests.test_native_public_cli import consume
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    seed = git(repo, "rev-parse", "HEAD")
+    context = {"target": str(repo), "task": "Continue legacy work in isolation"}
+    owners = []
+    for title in ("First owner", "Second owner"):
+        context["task"] = title
+        create = consume("native", shared_core_binary, native_cli, context)["planning"]["creation_requests"][0]
+        create["arguments"] = {"material": {**material(), "title": title}}
+        ready = consume("native", shared_core_binary, native_cli, {**context, "request": create})
+        made = consume("native", shared_core_binary, native_cli, {**context, "invocation": ready["decision_packet"]["primary_action"]})
+        owners.append(made["value"])
+    context["task"] = "Continue legacy work in isolation"
+    state = repo / ".agentic-workspace/planning/state.toml"
+    state.write_text(
+        "kind='planning-state/v1'\n"
+        + "".join(f"[[active.execplans]]\nid='{owner['owner_id']}'\nsurface='{owner['owner_path']}'\n" for owner in owners)
+    )
+    before = {p: p.read_bytes() for p in [state, *(repo / owner["owner_path"] for owner in owners)]}
+    path = tmp_path / "isolated"
+    request = {"operation": "worktree-create", "path": str(path), "base": seed}
+    initial = resource("native", shared_core_binary, native_cli, {**context, "request": request})
+    assert initial["continuity"]["status"] == "relation-required"
+    assert initial["planning"]["status"] == "legacy-choice-required"
+    assert initial["planning"]["task_relation"] == "unresolved"
+    assert len(initial["planning"]["legacy_aggregate"]["selection_requests"]) == 2
+    request.update(
+        need="destructive-validation",
+        reason="Separate mutable fixtures",
+        policy_revision=initial["policy_revision"],
+        policy_answer="permits-isolation",
+    )
+    blocked = resource("native", shared_core_binary, native_cli, {**context, "request": request})
+    assert blocked["continuity"]["status"] == "relation-required"
+    assert "action" not in blocked and not path.exists()
+    assert all(p.read_bytes() == held for p, held in before.items())
+
+
 def test_resource_exact_actions_scratch_and_fresh_recovery(tmp_path, shared_core_binary, native_cli):
     context = {"target": str(tmp_path), "task": "Scratch owner sequence"}
 

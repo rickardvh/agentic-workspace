@@ -22,8 +22,12 @@ An incumbent selection alone does not establish the current task relation.
 `state.toml` supplies legacy owner relations, never current status, revision or
 continuation. Read the canonical owner body and use the exact Planning selection
 request to establish the task relation, then invoke `planning.reconcile`. With
-several owner candidates, choose one of `legacy_aggregate.selection_requests`;
-absence or ambiguity does not authorise deletion.
+several owner candidates, or unfamiliar material alongside a safe owner reference,
+choose one of `legacy_aggregate.selection_requests`. Pending choice remains an
+unresolved task relation, including at worktree creation. If no safe selection
+exists, preserve the reported owner-resolution gap; current work can use ordinary
+Planning creation or explicit canonical-owner discovery. No nonexistent selection
+or retirement request resolves unfamiliar material.
 
 Preserve useful aggregate-only intent in the appropriate canonical owner through
 Planning's update operation. Unfamiliar aggregate material stays preserved until
