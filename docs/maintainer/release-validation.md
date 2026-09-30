@@ -63,7 +63,29 @@ The extra standalone package smoke invocation is removed: exact-package
 conformance already runs that suite and binds its receipt to the artifact digests.
 No supported platform/runtime row or publication barrier is removed. The prior
 28m15s run below establishes the earlier graph; it does not measure this reduced
-graph. A no-publication hosted exercise will establish the changed handoffs.
+graph. The no-publication exercise below establishes the changed handoffs.
+
+### Reduced graph hosted result
+
+At `ffe3189dac0b019cace46b58b79707e4ab338aca`, ordinary source CI
+[36682138875](https://github.com/rickardvh/agentic-workspace/actions/runs/36682138875)
+and Release qualification
+[36682133046](https://github.com/rickardvh/agentic-workspace/actions/runs/36682133046)
+passed. All six builds and compiler-free platform consumers, all three runtime
+rows, source-package install proof, Node conformance, security composition and
+final staging verification passed. Publication jobs were skipped.
+
+The run took **20m17s** from creation to completion, including **6m28s** in
+source/version while waiting for concurrent PR admission. Platform builds took
+1m46s–5m19s, assembly 34s, runtime rows 37–53s, platform consumers 24–84s, and
+final package/security qualification 6m09s. These are observed job timings,
+not a fixed performance target or an estimate of production publication time.
+The generic workspace/Planning/independent-owner branches did not run in Release.
+
+The retained bundle is artifact `11083082185` (121,839,399 bytes), digest
+`sha256:26d99a7798d5fd8f3ab8c21bf90a3c01d732d05385bb48383f2d9ea81e0a2ed4`.
+The subsequent evidence/Planning update does not change the qualified workflow
+or artifact tests. External independent acceptance remains outstanding.
 
 ## Evidence and stop condition
 

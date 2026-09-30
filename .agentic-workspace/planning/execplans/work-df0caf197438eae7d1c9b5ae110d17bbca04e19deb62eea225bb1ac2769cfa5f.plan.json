@@ -9,7 +9,7 @@
   "continuation": {
     "authority": "No production publication or master mutation. Independent acceptance must remain externally initiated. Earlier Assignment selected codex_astra:internal; revalidate current restrictions for completion claims.",
     "findings": "Actual public observation verified completed v1.6.0 at e927470be18c89638fa724d825cbb14eb72bff04 with no partial release. Real Windows staging from development identity to 1.7.0 built native/wheel/npm/sdist/Cargo packages; isolated sdist and Cargo installs passed. Finite consumption, staging mutation, interrupted publication, uncertain registry retry and missing retained bundle cases pass. See docs/maintainer/release-validation.md for evidence scope and hosted attempts.",
-    "hosted_proof": "At 5ca807c1f3a618e018d533b94c2f422cb5ae3e24, full CI 36632638924 passed in 11m56s and Release qualification 36632833911 attempt 2 passed in 28m15s with retained verified bundle 11064966084. Six platform builds/consumers, three runtime rows, broad/Planning/independent-owner and final package/security checks passed. Publication was disabled. The validation note retains exact evidence and earlier failed attempts. Review comment 5905350463 accepts this hosted scope and calls for focused follow-up delta/current checks, not another broad qualification. This evidence describes the earlier graph. The reduced release graph requires a fresh qualify-only hosted exercise for changed handoffs; no broad source redispatch is required when current exact-source PR checks suffice.",
+    "hosted_proof": "Reduced graph at ffe3189dac0b019cace46b58b79707e4ab338aca passed ordinary CI 36682138875 and Release qualify-only 36682133046. All six native builds/platform consumers, three runtime rows and final source-package/Node/security/staging proof passed; publishers skipped. Total 20m17s includes source/admission 6m28s; builds 1m46s–5m19s, assembly 34s, runtime 37–53s, platform consumers 24–84s, final package/security 6m09s. Bundle 11083082185 retained. Validation notes preserve the earlier graph and failed attempts. No broad source redispatch or repeated hosted run is needed for this evidence-only closeout; reobserve ordinary current PR checks.",
     "implementation": "PR #3721 follow-up at 6b63b8020 repaired recovery and stale evidence; ordinary CI passed. New independent comment 5905782679 and updated #3719 require removing duplicate source proof after exact-source admission. Release now drops broad workspace/Planning/independent-owner branches and generic runtime source tests; the source-only import test moves to language-facade coverage. Exact artifact, platform/runtime, source-package reconstruction and security/publication barriers remain. The validation note maps retained checks to distinct release failure classes. Preserve unrelated proof receipts/index changes.",
     "resources": "On 2026-09-30, AW worktree-remove for sibling ../aw-release-staging-3719 returned not-invoked: dirty/untracked/ignored material must be preserved or explicitly reconciled before teardown. Remaining paths are __pycache__/, src/tooling/model-cli-harness/__pycache__/, and src/tooling/release/__pycache__/. They are outside the creation lease. Earlier automatic approval review rejected shell cache deletion; no force cleanup was attempted. Tracked stamping is restored and HEAD is retained on the implementation branch. Cleanup requires authorised disposition of those exact caches followed by a fresh resource-owner removal proposal."
   },
@@ -44,16 +44,15 @@
     "next_action": "durable",
     "proof_observed": "observation"
   },
-  "next_action": "Push the reduced graph, observe ordinary exact-source PR admission, and run Release qualify_only to prove changed artifact handoffs. Record the actual result and timing without treating earlier graph evidence as current. Then await external independent recheck. Preserve the existing resource cleanup blocker.",
+  "next_action": "Observe current ordinary PR checks and await externally initiated recheck of the reduced graph and its hosted evidence. Preserve the exact cache-disposition blocker; only resource-owner teardown follows authorised disposition. Do not repeat completed hosted qualification solely for the evidence/Planning update.",
   "owner_level": "slice",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3719"
   },
-  "phase": "validation",
+  "phase": "closeout",
   "proof": {
     "remaining": [
-      "Hosted no-publication exercise of the reduced release graph and current exact-source PR checks",
-      "External independent acceptance"
+      "External independent acceptance and current ordinary PR checks"
     ]
   },
   "references": [
@@ -62,10 +61,12 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905350463",
     "https://github.com/rickardvh/agentic-workspace/actions/runs/36632638924",
     "https://github.com/rickardvh/agentic-workspace/actions/runs/36632833911",
-    "https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905782679"
+    "https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905782679",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36682138875",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36682133046"
   ],
   "relationships": {},
-  "revision": 4,
+  "revision": 5,
   "scope": {
     "excluded": "No production release, master writeback, new installed workflow, self-review or agent-directed independent reviewer.",
     "included": "Existing release workflow, changeset consumption, stamping, manifest/registry/Cargo/current-install consumers, recovery, focused and hosted proof."
@@ -75,18 +76,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/d74b23e9901f11f6b621eab1382b75c1f7363a6a5750759e6c3b6dad3a4cc9cf.attempt.json",
-        "revision": "sha256:f664ce192f90d48e03fbd88558e0c3d2f27e6e5ae78819feeac486b792134306",
+        "path": ".agentic-workspace/local/effects/a1f1f161dc037cc728d96704da904f074af2eac7391ba6cee5982b1205d7498d.attempt.json",
+        "revision": "sha256:4c4448947b1e41e574815439287b1cfe0560ef596085ef9bb993efcf76f9c3c9",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/d74b23e9901f11f6b621eab1382b75c1f7363a6a5750759e6c3b6dad3a4cc9cf.result.json",
-        "revision": "sha256:73d6fedd2c9799893db26db07d5e7241d04084001ca5666dd9b23bb78596b8ed",
+        "path": ".agentic-workspace/local/effects/a1f1f161dc037cc728d96704da904f074af2eac7391ba6cee5982b1205d7498d.result.json",
+        "revision": "sha256:ac69ebaefb2d152e5c03eee4a274788325302cf672d8104780202c7e683475e5",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:0de7391c7650540d30ed624b25b869686d6ae59ec87377dda7e335a53a5ce29b",
+    "invocation_revision": "sha256:f12d7060d5be752b3a85db9c8cdf987bc9e1d3bdefe6e2ad56448071d569f9cf",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -94,7 +95,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:267c8595239478fb4a1921b1fa12b7c0c1f82cd79f7045cf3ce77375d4ba1e8b",
+        "document_revision": "sha256:d413db24debfb250e4718113873911c142bfc31d47e9b354708ec39bc94b3257",
         "owner_id": "work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f",
         "owner_path": ".agentic-workspace/planning/execplans/work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f.plan.json"
       }
