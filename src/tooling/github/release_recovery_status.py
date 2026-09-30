@@ -1,4 +1,4 @@
-"""Build compact release recovery status packets for release PRs and release runs."""
+"""Build compact recovery status packets for product PRs and Release runs."""
 
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
             "changesets": changesets,
             "changed_file_count": len(changed_files),
             "next_action": (
-                "This PR can repair release blockers, but merge does not publish packages; add a changeset-backed package-affecting PR if publication is still needed."
+                "Merge a changeset-backed package-affecting PR if publication is still needed, then dispatch Release on master with the default inputs."
                 if semver_labels
                 else "No release action is expected because no package-affecting paths changed."
             ),
@@ -116,6 +116,19 @@ def local_publisher_retry_status(*, repo_root: Path) -> dict[str, Any]:
             "kind": "agentic-workspace/release-publisher-retry/v1",
             "status": "unavailable",
             "reason": "Retained release identity is incomplete.",
+        }
+    observed = subprocess.run(
+        ["git", "rev-parse", "--verify", "--end-of-options", f"refs/tags/{tag}^{{commit}}"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if observed.returncode or observed.stdout.strip() != source:
+        return {
+            "kind": "agentic-workspace/release-publisher-retry/v1",
+            "status": "unavailable",
+            "reason": f"No matching immutable tag {tag} is observed locally for retained source {source}; the original run must reobserve remote identity.",
         }
     return {
         "kind": "agentic-workspace/release-publisher-retry/v1",
@@ -365,9 +378,22 @@ def recovery_packet(
     )
     recovery_needed = semver["status"] == "repair-only-semver-pr" or active_failed_release or publication_recovery_required
     publisher_retry = local_publisher_retry_status(repo_root=repo_root) if active_failed_release else {}
-    version_paths = [package["pyproject"] for package in ownership.get("packages", []) if isinstance(package, dict)] + [
-        package["package_json"] for package in ownership.get("typescript_packages", []) if isinstance(package, dict)
-    ]
+    if active_failed_release:
+        if publisher_retry.get("status") == "ready":
+            route, next_action = "existing-tag", publisher_retry["command"]
+        else:
+            run = release_failure.get("run_url") or release_failure.get("run_id") or "the original Release run"
+            route = "rerun-failed-jobs"
+            next_action = f"Use Re-run failed jobs for {run}. {publisher_retry.get('reason', '')}".strip()
+    elif publication_recovery_required:
+        route = "inspect-publication"
+        next_action = (
+            release_publication.get("next_action") or "Inspect the original Release run for the exact retained-identity or bundle gap."
+        )
+    elif semver["status"] == "repair-only-semver-pr":
+        route, next_action = "product-release", semver["next_action"]
+    else:
+        route, next_action = "none", "No failed-release recovery action is active in this packet."
     publication_status = _text(release_publication.get("status")) if release_publication else "not-checked"
     publication_status_value = publication_status if publication_status != "not-checked" else ""
     return {
@@ -392,30 +418,12 @@ def recovery_packet(
             "publication_status": publication_status_value,
             "publication": release_publication,
             "publisher_retry": publisher_retry,
-            "rule": "Repair-only PRs can fix blockers but do not open a release PR; an active failed Release workflow should be retried for the existing verified tag unless a newer successful publisher run has verified publication state.",
+            "rule": "Retry failed jobs in their original Release run. Later recovery may dispatch Release with an observed existing tag; the workflow verifies the retained identity and bundle before writes.",
         },
         "coordinated_recovery": {
             "status": "required" if recovery_needed else "not-required",
-            "next_action": (
-                publisher_retry["command"]
-                if active_failed_release and publisher_retry.get("status") == "ready"
-                else "Rerun Prepare Coordinated Release to create the verified release tag before dispatching the publisher."
-                if active_failed_release
-                else "Create or merge a package-affecting PR with a release changeset, then let the generated release PR carry the version bump."
-                if semver["status"] == "repair-only-semver-pr"
-                else "Repair release publication state; successful no-op workflow runs do not clear version/tag/release disagreement."
-                if publication_recovery_required
-                else "No failed-release recovery action is active in this packet."
-            ),
-            "pr_shape": {
-                "required_paths": version_paths,
-                "proof": [
-                    "uv lock",
-                    "make test-workspace",
-                    "make lint-workspace",
-                    "uv run pytest tests/test_release_workflows.py -q",
-                ],
-            },
+            "route": route,
+            "next_action": next_action,
         },
         "write_safety": {
             "github_writes_performed": False,

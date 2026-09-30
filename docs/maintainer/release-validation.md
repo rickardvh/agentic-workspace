@@ -2,8 +2,8 @@
 
 Issue [#3719](https://github.com/rickardvh/agentic-workspace/issues/3719) replaces
 release-only Git history with a source commit, deterministic stamping inputs and
-an admitted artifact inventory. Independent review and hosted evidence remain
-required before closure.
+an admitted artifact inventory. The hosted evidence below is established;
+external independent acceptance remains required before closure.
 
 ## Execution graph
 
@@ -100,8 +100,34 @@ all six compiler-free platform consumers passed in
 The staged broad and Planning jobs exposed an import dependency in the test
 artifact selector. Moving the first-contact import to its actual smoke-test
 caller fixes that dependency; the inventory fixture now also exercises selection
-in a fresh isolated Python process. Final run observations are linked from the PR.
+in a fresh isolated Python process.
 
-Final hosted handoffs, timings and external independent acceptance remain
-required before completion. No production release is required solely for
-validation.
+At `5ca807c1f3a618e018d533b94c2f422cb5ae3e24`,
+[full CI](https://github.com/rickardvh/agentic-workspace/actions/runs/36632638924)
+passed in 11m56s. The
+[Release qualification](https://github.com/rickardvh/agentic-workspace/actions/runs/36632833911)
+passed on attempt 2, retaining verified bundle `11064966084` with SHA-256
+`3637aceefa9f0b8aa224e74c97279f0442f6ad604584b94aacc5c7757f3a0563`.
+All six builds and compiler-free consumers, three runtime rows, broad workspace,
+Planning handoff, independent-owner ingress, source-package and security checks
+passed. The staged transformation was reverified after build and proof.
+Publication jobs were skipped by `qualify_only`; no public delivery is claimed.
+
+Attempt 1 stopped while observing completed `v1.6.0`. Fresh verification confirmed
+all public package bytes and both completion receipts; a bounded failed-job retry
+passed the unchanged admission check. The earlier failure remains in run history.
+
+The successful attempt took 28m15s: source/version 1m19s; parallel platform builds
+1m47s–5m56s; assembly 43s; longest staged consumer branch 12m59s; final package,
+security and bundle qualification 6m57s. This records the bounded exercise, not a
+historical speed ratio or production upload estimate. Three runtime replacement
+builds are removed; those rows consume the six platform outputs. The two prepare
+qualification passes and generated candidate dispatch are replaced by one staged
+release qualification with exact-source merge admission reused.
+
+Independent review identified recovery-guidance and current-continuation fixes
+in [comment 5905350463](https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905350463).
+The follow-up is limited to that recovery helper, focused regression tests and
+Planning/evidence reconciliation. The recorded hosted proof belongs to the exact
+head above; the review calls for focused follow-up checks rather than repeating
+the broad qualification. External independent acceptance remains outstanding.

@@ -1,6 +1,7 @@
 {
   "blockers": [
-    "Independent acceptance must be externally initiated; do not self-review or direct a reviewer."
+    "Independent acceptance must be externally initiated; do not self-review or direct a reviewer.",
+    "AW resource cleanup preserves three ignored cache directories outside its disposable-output lease; exact paths and prior deletion rejection are recorded in continuation.resources."
   ],
   "canonical_core": {
     "source": "Issue #3719 acceptance and evidence requirements"
@@ -8,8 +9,9 @@
   "continuation": {
     "authority": "No production publication or master mutation. Independent acceptance must remain externally initiated. Earlier Assignment selected codex_astra:internal; revalidate current restrictions for completion claims.",
     "findings": "Actual public observation verified completed v1.6.0 at e927470be18c89638fa724d825cbb14eb72bff04 with no partial release. Real Windows staging from development identity to 1.7.0 built native/wheel/npm/sdist/Cargo packages; isolated sdist and Cargo installs passed. Finite consumption, staging mutation, interrupted publication, uncertain registry retry and missing retained bundle cases pass. See docs/maintainer/release-validation.md for evidence scope and hosted attempts.",
-    "implementation": "Implemented on codex/one-dispatch-release in draft PR #3721. The single dispatch path, deterministic stamping, stable consumption boundary and exact bundle recovery replace the normal release PR flow. Preserve unrelated main-checkout proof receipts/index changes.",
-    "resources": "AW-managed sibling checkout ../aw-release-staging-3719 contains disposable build outputs from the completed local exercise. Generated stamping has been restored after retaining its identity in task scratch. Remove the checkout through AW resources; preserve any returned cleanup blocker."
+    "hosted_proof": "At 5ca807c1f3a618e018d533b94c2f422cb5ae3e24, full CI 36632638924 passed in 11m56s and Release qualification 36632833911 attempt 2 passed in 28m15s with retained verified bundle 11064966084. Six platform builds/consumers, three runtime rows, broad/Planning/independent-owner and final package/security checks passed. Publication was disabled. The validation note retains exact evidence and earlier failed attempts. Review comment 5905350463 accepts this hosted scope and calls for focused follow-up delta/current checks, not another broad qualification.",
+    "implementation": "Implemented in non-draft PR #3721 on codex/one-dispatch-release. Independent review found two follow-up blockers: obsolete recovery instructions and stale continuation/evidence. The follow-up removes the old recovery routes and version-file repair template, adds focused fallback tests, and reconciles this record and validation notes. Preserve unrelated main-checkout proof receipts/index changes.",
+    "resources": "On 2026-09-30, AW worktree-remove for sibling ../aw-release-staging-3719 returned not-invoked: dirty/untracked/ignored material must be preserved or explicitly reconciled before teardown. Remaining paths are __pycache__/, src/tooling/model-cli-harness/__pycache__/, and src/tooling/release/__pycache__/. They are outside the creation lease. Earlier automatic approval review rejected shell cache deletion; no force cleanup was attempted. Tracked stamping is restored and HEAD is retained on the implementation branch. Cleanup requires authorised disposition of those exact caches followed by a fresh resource-owner removal proposal."
   },
   "creation_provenance": {
     "custody": {
@@ -35,32 +37,33 @@
     "outcome": "Replace the release PR and two dispatch stable process with one pinned source, deterministic staged identity, tested retained bundle and exact-byte publication/recovery."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "planned",
+  "lifecycle": "live",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable",
     "proof_observed": "observation"
   },
-  "next_action": "Finish trusted hosted qualification, repair any evidenced failure, record timings and final validation scope, clean task resources, then leave independent acceptance outstanding until externally supplied.",
+  "next_action": "Await externally initiated recheck of the recovery/continuation follow-up and current PR checks. Resolve the recorded cache-disposition blocker before resource-owner teardown. Do not repeat accepted broad hosted qualification solely because the continuation previously called it pending.",
   "owner_level": "slice",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3719"
   },
-  "phase": "shaping",
+  "phase": "closeout",
   "proof": {
     "remaining": [
-      "Trusted hosted qualify-only staged handoffs on candidate",
-      "Required repository checks",
-      "External independent acceptance"
+      "External independent acceptance of the follow-up delta and current PR checks"
     ]
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/pull/3721",
-    "docs/maintainer/release-validation.md"
+    "docs/maintainer/release-validation.md",
+    "https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905350463",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36632638924",
+    "https://github.com/rickardvh/agentic-workspace/actions/runs/36632833911"
   ],
   "relationships": {},
-  "revision": 2,
+  "revision": 3,
   "scope": {
     "excluded": "No production release, master writeback, new installed workflow, self-review or agent-directed independent reviewer.",
     "included": "Existing release workflow, changeset consumption, stamping, manifest/registry/Cargo/current-install consumers, recovery, focused and hosted proof."
@@ -70,18 +73,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4c718262187a89db31de5dad7722b26d093bfa0d976072edf67f124deaf61ca5.attempt.json",
-        "revision": "sha256:412976977b7851db19d6c768380c6ed64e8f232e414306fc9249518b324807a0",
+        "path": ".agentic-workspace/local/effects/dc97aaf51aaffe52193d162d62aa73350513538c5b33d79e4473e4edaf6f83f0.attempt.json",
+        "revision": "sha256:beed1d24477d26dc6d30a2495251867f2bf68075572f3258537f026b32d701ea",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4c718262187a89db31de5dad7722b26d093bfa0d976072edf67f124deaf61ca5.result.json",
-        "revision": "sha256:ea7af1924d264df81c7810fa20f60e2cb1cf8cb2004e75a62c495a1c6d13d8cc",
+        "path": ".agentic-workspace/local/effects/dc97aaf51aaffe52193d162d62aa73350513538c5b33d79e4473e4edaf6f83f0.result.json",
+        "revision": "sha256:cf9c8b9a513b63c3840eb0236c242c3eca099ba2632fa4c69957e56c5310c064",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:cd6c9ac4a88577ce9c70399eb8b043b80381afdb21f0cb3227622abbefb645ab",
+    "invocation_revision": "sha256:2b8a86f3de9a2a861151431d176e12b7ed571b2bcc779a3c37f32bad7d25b00e",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -89,7 +92,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:ba146b62bd530cf158c332bb85f4a7011b42ee47aa9471a87608407dcebf5ece",
+        "document_revision": "sha256:4fcac3e62d0ed5a6b22131395062d81bf3c75c45fe23557c35cb32bba226f7c6",
         "owner_id": "work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f",
         "owner_path": ".agentic-workspace/planning/execplans/work-df0caf197438eae7d1c9b5ae110d17bbca04e19deb62eea225bb1ac2769cfa5f.plan.json"
       }

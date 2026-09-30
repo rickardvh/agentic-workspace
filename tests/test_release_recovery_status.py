@@ -394,3 +394,48 @@ def test_failed_release_recovery_retries_existing_verified_tag(monkeypatch) -> N
     assert packet["release_publication_state"]["publisher_retry"]["status"] == "ready"
     assert packet["coordinated_recovery"]["status"] == "required"
     assert packet["coordinated_recovery"]["next_action"] == ('gh workflow run release.yml --ref master -f tag="v0.34.1"')
+
+
+@pytest.mark.parametrize(
+    "identity,tag_source",
+    [
+        (None, None),
+        ({}, None),
+        ({"tag": "v1.7.0", "source_commit": "abc"}, None),
+        ({"tag": "v1.7.0", "source_commit": "abc"}, "other"),
+        ({"tag": "v1.7.0", "source_commit": "abc"}, "abc"),
+    ],
+)
+def test_recovery_routes_follow_run_and_observed_tag(tmp_path, monkeypatch, identity, tag_source):
+    module = _load_module()
+    monkeypatch.setattr(module, "_ownership_payload", lambda root: module._load_json(REPO_ROOT / ".github/release-ownership.json"))
+    if identity is not None:
+        (tmp_path / "release-identity.json").write_text(json.dumps(identity))
+    monkeypatch.setattr(
+        module.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args, 0 if tag_source else 1, tag_source or "", "")
+    )
+    recovery = module.recovery_packet(
+        repo_root=tmp_path,
+        labels=[],
+        changed_files=[],
+        release_failure={"status": "failed-release-run", "run_id": "301"},
+    )["coordinated_recovery"]
+    assert "pr_shape" not in recovery
+    if tag_source == "abc":
+        assert recovery["route"] == "existing-tag"
+        assert recovery["next_action"] == 'gh workflow run release.yml --ref master -f tag="v1.7.0"'
+    else:
+        assert recovery["route"] == "rerun-failed-jobs"
+        assert "Re-run failed jobs" in recovery["next_action"]
+        assert "301" in recovery["next_action"]
+
+
+def test_repair_only_packet_routes_to_changeset_backed_manual_release():
+    module = _load_module()
+    recovery = module.recovery_packet(repo_root=REPO_ROOT, labels=["semver:patch"], changed_files=["docs/reviews/repair.md"])[
+        "coordinated_recovery"
+    ]
+    assert recovery["route"] == "product-release"
+    assert "changeset" in recovery["next_action"]
+    assert "dispatch Release on master" in recovery["next_action"]
+    assert "pr_shape" not in recovery
