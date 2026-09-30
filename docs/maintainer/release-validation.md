@@ -21,7 +21,6 @@ Now:
 source/version → platform builds → assembled packages
                                   ├─ platform consumers
                                   ├─ runtime consumers
-                                  └─ source and installed-owner checks
               → Cargo source packages and package/security checks
               → retained verified bundle → source tag and GitHub upload
                                         ├─ PyPI/npm publication and verification
@@ -29,16 +28,42 @@ source/version → platform builds → assembled packages
               → coordinated completion receipts
 ```
 
-One broad qualification path replaces the prepare/candidate/post-merge cycles.
+Exact-source merge/security admission is reused before any release build.
 The generated branch, release commit, release PR and follow-up dispatches are
 removed. Runtime rows consume assembled artifacts instead of rebuilding wheels
 and npm packages. Cargo publication sends the admitted archive through the
 [registry API](https://doc.rust-lang.org/cargo/reference/registry-web-api.html#publish).
 
 The platform rows, Python runtime rows, Node semantic majors, source-package
-rebuilds, installed-owner tests, isolated consumers and security checks remain.
+rebuilds, isolated installed-owner consumers and security checks remain.
 Staging is checked before packaging and after qualification. Build jobs have
 read-only permissions. Publishing jobs hold their own destination authority.
+
+### Post-admission proof audit
+
+The follow-up to [review comment 5905782679](https://github.com/rickardvh/agentic-workspace/pull/3721#issuecomment-5905782679)
+removes the broad workspace, Planning handoff and independent-owner branches from
+Release. Their source semantics remain covered by source CI. Runtime rows also
+drop whole-workspace Cargo builds/tests, shared semantics, source adapters,
+logging concurrency and source installation tests. Version staging does not add
+a distinct failure class for those checks. The source-only Python import case
+moves from release topology to the existing language-facade suite.
+
+| Retained work | Distinct release failure it detects |
+| --- | --- |
+| Closed staging and final staging recheck | Wrong version or an unapproved source/dependency edit before or during packaging |
+| Six native builds and compiler-free platform consumers | Missing host binaries, wrong architecture, or platform loader/install failures |
+| Three Python/runtime artifact rows | Retained wheel/binding/subprocess incompatibility on supported interpreters; missing paired core and installed mutation transport |
+| Node 20/24/25 exact-package conformance | Retained npm package import, CLI and subprocess incompatibility on supported Node versions |
+| Cargo archive and sdist reconstruction/install | Missing build inputs or dependence on Git/repository state in published source packages |
+| Package identity, SBOM, Rust dependency scan and evidence composition | Mismatched staged identities, missing or changed artifacts, or inadmissible packaged dependencies |
+| Retained bundle and destination verification | Publication substitutes bytes or leaves coordinated destinations incomplete |
+
+The extra standalone package smoke invocation is removed: exact-package
+conformance already runs that suite and binds its receipt to the artifact digests.
+No supported platform/runtime row or publication barrier is removed. The prior
+28m15s run below establishes the earlier graph; it does not measure this reduced
+graph. A no-publication hosted exercise will establish the changed handoffs.
 
 ## Evidence and stop condition
 

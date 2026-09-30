@@ -73,10 +73,11 @@ Exhaustive pre-merge proof is an explicit escalation. Dispatch `ci.yml` at the
 intended ref with its exact `expected_head_sha` and a visible `reason` describing
 the cross-cutting or high-risk claim. Only that event allocates the broad suites,
 package builds/install proof, packed conformance, runtime matrix, and aggregate.
-The coordinated release preparer supplies its release-candidate reason through
-the same entrypoint. Preview and stable publishers independently prove their
-actual candidate artefacts before publication; earlier PR checks cannot stand
-in for that evidence.
+Stable Release reuses current exact-source merge/security admission, then proves
+staging, retained artifacts, platform/runtime consumers, source-package installs
+and supply-chain composition. It does not redispatch broad source qualification.
+Earlier PR checks establish source claims; they cannot substitute for the
+artifact-specific evidence required before publication.
 
 Use setup-bearing public targets for ordinary local entrypoints and setup-free
 `*-nosync` targets when a caller has already synchronised the environment.

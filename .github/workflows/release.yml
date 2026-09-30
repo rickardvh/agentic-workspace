@@ -248,17 +248,6 @@ jobs:
           uv lock --check
           uv sync --locked --all-groups
           uv run python src/tooling/check/check_native_release_topology.py --artifact-dir dist --receipt-out runtime-proof.json --execution-context hosted-ci
-      - name: Prove path, subprocess, install, and semantic behavior
-        run: |
-          cargo build --locked --workspace --bins
-          cargo test --locked --workspace
-          uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
-          uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
-          uv run pytest tests/test_native_maintainer_logging.py::test_native_logging_concurrent_append_preserves_valid_sequence tests/test_native_maintainer_logging.py::test_native_logging_concurrent_registration_preserves_existing_identities -q
-      - name: Prove source-maintenance adapter conformance
-        env:
-          AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
-        run: uv run python src/tooling/check/check_native_sources.py
       - name: Write runtime support receipt
         shell: bash
         run: |
@@ -284,15 +273,11 @@ jobs:
       AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
   agentic-workspace-package:
     if: ${{ !cancelled() && needs.source-version.outputs.build_required == 'true' && needs.release-runtime-matrix.result == 'success' && needs.platform-consumer.result
-      == 'success' && needs.workspace-checks.result == 'success' && needs.planning-handoff-checks.result == 'success' && needs.independent-owner-ingress.result ==
-      'success' }}
+      == 'success' }}
     needs:
       - source-version
       - release-runtime-matrix
       - platform-consumer
-      - workspace-checks
-      - planning-handoff-checks
-      - independent-owner-ingress
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -347,10 +332,6 @@ jobs:
           merge-multiple: true
       - name: Build Agentic Workspace package artifacts
         run: python src/tooling/release/release_lifecycle.py build
-      - name: Run built package smoke tests
-        env:
-          AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
-        run: uv run pytest tests/test_native_release_topology.py -q
       - name: Generate release SBOM
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26
         with:
@@ -385,168 +366,6 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 90
-  workspace-checks:
-    needs:
-      - source-version
-      - platform-assemble
-    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ needs.source-version.outputs.source_commit }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: '3.13'
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: release-identity
-          path: .
-      - name: Stamp the pinned release identity
-        run: python src/tooling/release/release_lifecycle.py stamp
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: '24'
-      - name: Download the exact candidate artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: complete-platform-packages
-          path: dist
-      - name: Admit the repository Rust toolchain
-        run: rustup show active-toolchain
-      - name: Verify lock without rewriting it
-        run: uv lock --check
-      - name: Sync the workspace once
-        run: make sync-all
-      - name: Run native root CLI and thin-launcher admission
-        run: uv run pytest tests/test_native_public_cli.py -q
-      - name: Preserve real Planning custody through public consumers
-        run: uv run pytest tests/test_native_planning_create.py -k "public_creation_then_separate_selection or quiescent_selected_owner" -q
-      - name: Admit exact current source reconciliation through public consumers
-        run: uv run pytest tests/test_native_source_reconciliation.py -q
-      - name: Prove compact operating projection and exact carriage
-        run: uv run pytest tests/test_native_operating_carriage.py tests/test_native_invoke_continuation.py -q
-      - name: Preserve stronger and fallback decision ownership through public consumers
-        run: uv run pytest tests/test_native_repository_decisions.py tests/test_native_memory_capture.py -q
-      - name: Preserve owner admission, proof, custody and removal on installed artifacts
-        run: uv run pytest tests/test_native_assignment_judgment.py tests/test_native_assignment_policy.py tests/test_native_advisory_config.py tests/test_native_config_admission.py
-          tests/test_native_configuration_write.py tests/test_native_execution_configurations.py tests/test_native_instruction_write.py tests/test_native_instruction_verification.py
-          tests/test_native_claim_review.py tests/test_native_domain_proof.py tests/test_native_proof_producer.py tests/test_native_verification_strategy.py tests/test_native_planning_lifetime.py
-          tests/test_native_memory_disposition.py tests/test_native_resources.py tests/test_native_system_intent.py tests/test_native_transport.py -q
-      - name: Run shared operating-decision core proof
-        run: |
-          cargo build --locked --workspace --bins
-          cargo test --locked --workspace
-          uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
-      - name: Run workspace lint
-        run: make lint-workspace
-      - name: Run workspace typecheck without another sync
-        run: make typecheck-nosync
-      - name: Run workspace release proof
-        run: make verify-workspace
-      - name: Verify native source boundaries
-        env:
-          AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
-        run: uv run python src/tooling/check/check_native_sources.py
-    permissions:
-      contents: read
-  planning-handoff-checks:
-    needs:
-      - source-version
-      - platform-assemble
-    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ needs.source-version.outputs.source_commit }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: '3.13'
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: release-identity
-          path: .
-      - name: Stamp the pinned release identity
-        run: python src/tooling/release/release_lifecycle.py stamp
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: '24'
-      - name: Download the exact candidate artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: complete-platform-packages
-          path: dist
-      - name: Admit the repository Rust toolchain
-        run: rustup show active-toolchain
-      - name: Verify lock without rewriting it
-        run: uv lock --check
-      - name: Sync the workspace once
-        run: make sync-all
-      - name: Preserve Planning handoff continuation through public consumers
-        run: uv run pytest tests/test_native_readonly_handoff.py tests/test_native_delegation_lifecycle.py -vv -o faulthandler_timeout=120
-    permissions:
-      contents: read
-  independent-owner-ingress:
-    needs:
-      - source-version
-      - platform-assemble
-    if: ${{ !cancelled() && needs.platform-assemble.result == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ needs.source-version.outputs.source_commit }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: '3.13'
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: release-identity
-          path: .
-      - name: Stamp the pinned release identity
-        run: python src/tooling/release/release_lifecycle.py stamp
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: '24'
-      - name: Admit the repository Rust toolchain
-        run: rustup show active-toolchain
-      - name: Verify lock without rewriting it
-        run: uv lock --check
-      - name: Sync the workspace once
-        run: make sync-all
-      - name: Prove independently linked native owner admission through public consumers
-        run: uv run pytest tests/test_native_independent_owner.py -vv -o faulthandler_timeout=120
-    permissions:
-      contents: read
   publish-github:
     name: Publish retained GitHub artifacts
     needs:
