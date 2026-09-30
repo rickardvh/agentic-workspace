@@ -49,6 +49,17 @@ fixture inside the task workspace produced the same policy rejection; changing
 the fixture location did not establish handoff. No adapter workaround or hook
 was introduced to bypass that rejection.
 
+The user identified that the original installed skill path was 266 characters,
+above the traditional Windows maximum path length. Two further selected-use
+retries used an isolated profile with a 173-character installed skill path.
+This task read that exact file successfully. The child CLI still rejected
+PowerShell and `cmd` reads before process launch with `blocked by policy`.
+The second retry also removed inherited application task-identity metadata,
+while preserving the permission profile and approval settings, with the same
+result. The original long path was a valid concern, but shortening it did not
+resolve the remaining failure. The tool supplied no specific policy rule or
+evidence that path length caused that rejection.
+
 Claude's local authentication status was `loggedIn: false`; the user has a free
 Claude account without Claude Code access. Selected Claude handoff and downstream
 use are accepted assumptions for this PR, following the user's explicit
@@ -110,6 +121,13 @@ native `scratch-release` and `scratch-remove` both committed. Disposable staging
 raw traces, isolated profiles and the temporary authentication copy were removed
 with that exact task container. No default host profile was changed. Do not claim
 that unobserved handoff or automatic activation was established by these checks.
+
+The subsequent short-path check also removed its native plugin and temporary
+authentication copy, and native scratch removal committed. Automatic approval
+review rejected recursive removal of its temporary Git fixture directory with
+the generic reason `blocked by policy`. That disposable fixture remains under
+`.git/ep-bzv601k8`; its authentication file is confirmed absent. No specific
+rejection rule was supplied.
 
 Formats were checked against the [OpenAI plugin format](https://developers.openai.com/plugins/build/plugins),
 [Claude plugin lifecycle](https://code.claude.com/docs/en/plugins) and
