@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -270,6 +271,48 @@ def test_redistributable_receipt_binds_exact_artifact_names_and_hashes(
         ]
     finally:
         first_artifact.write_bytes(original)
+
+
+@pytest.mark.parametrize("include_entry", [False, True])
+def test_readiness_writer_and_verifier_agree_with_optional_entry(tmp_path: Path, include_entry: bool) -> None:
+    root = tmp_path / "source"
+    _copy_source_fixture(root)
+    pyproject = root / "pyproject.toml"
+    original_version = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+    version = "1.7.0"
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8").replace(f'version = "{original_version}"', f'version = "{version}"', 1), encoding="utf-8"
+    )
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    ownership = json.loads((root / CHECKER.OWNERSHIP_PATH).read_text(encoding="utf-8"))
+    for package in ownership["packages"]:
+        (dist / f"{package['wheel_prefix']}-{version}-py3-none-any.whl").write_bytes(b"wheel")
+        (dist / f"{package['sdist_prefix']}-{version}.tar.gz").write_bytes(b"sdist")
+    for package in ownership["typescript_packages"]:
+        (dist / f"{package['tarball_prefix']}-{version}.tgz").write_bytes(b"npm")
+    (dist / f"agentic-workspace-native-{version}-linux-x64.zip").write_bytes(b"native")
+    if include_entry:
+        spec = importlib.util.spec_from_file_location("stage_entry_under_test", ROOT / "src/tooling/release/stage_skill_entry.py")
+        assert spec is not None and spec.loader is not None
+        staging = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(staging)
+        entry = staging.stage(dist, version)
+
+    CHECKER.write_readiness_receipts(root, dist)
+    assert CHECKER.redistributable_receipt_errors(root, dist) == []
+    receipt = json.loads((dist / "redistributable-package-readiness.json").read_text(encoding="utf-8"))
+    assert (
+        receipt["artifact_count"]
+        == len(receipt["artifacts"])
+        == len(list(dist.glob("*.whl"))) * 2 + len(ownership["typescript_packages"]) + 1 + include_entry
+    )
+    if include_entry:
+        assert {"name": entry.name, "sha256": hashlib.sha256(entry.read_bytes()).hexdigest()} in receipt["artifacts"]
+        entry.write_bytes(entry.read_bytes() + b"tampered")
+        assert CHECKER.redistributable_receipt_errors(root, dist) == [
+            "redistributable-package-readiness.json does not bind the exact artifact names and sha256 digests"
+        ]
 
 
 def test_install_survives_into_fresh_second_process(

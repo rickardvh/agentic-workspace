@@ -341,6 +341,7 @@ def write_readiness_receipts(root: Path, dist: Path) -> list[Path]:
     for package in ownership["typescript_packages"]:
         release_artifacts.append(_find_one(dist, f"{package['tarball_prefix']}-{version}.tgz"))
     release_artifacts.extend(dist.glob(f"agentic-workspace-native-{version}-*.zip"))
+    release_artifacts.extend(dist.glob(f"agentic-workspace-entry-{npm_version(version)}.zip"))
     artifacts = [
         {"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()}
         for artifact in sorted(release_artifacts, key=lambda item: item.name)
