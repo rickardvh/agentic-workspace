@@ -386,7 +386,14 @@ fn receipt_view(
     let work_ref = &work["id"];
     let work_revision = &work["revision"];
     let mut gaps = Vec::<String>::new();
-    let id = reference.strip_prefix("proof://receipts/").unwrap_or("");
+    let local = reference.starts_with("proof://local/");
+    let id = reference
+        .strip_prefix(if local {
+            "proof://local/"
+        } else {
+            "proof://receipts/"
+        })
+        .unwrap_or("");
     if id.is_empty()
         || !id
             .chars()
@@ -394,17 +401,25 @@ fn receipt_view(
     {
         return json!({"reference":reference,"status":"unadmitted","gaps":["invalid-receipt-reference"]});
     }
-    let receipt = match read(root, &format!("{RECEIPTS}/{id}.json")) {
-        Ok(Some(bytes)) => serde_json::from_slice::<Value>(
-            bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes),
-        )
-        .ok(),
-        _ => None,
+    let receipt = if local {
+        crate::native_proof::local_receipt(target, reference).ok()
+    } else {
+        match read(root, &format!("{RECEIPTS}/{id}.json")) {
+            Ok(Some(bytes)) => serde_json::from_slice::<Value>(
+                bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes),
+            )
+            .ok(),
+            _ => None,
+        }
     };
     let Some(receipt) = receipt else {
         return json!({"reference":reference,"status":"unadmitted","gaps":["receipt-unavailable-or-invalid"]});
     };
-    let publication = publication_admission(root, id, &receipt);
+    let publication = if local {
+        json!({"status":"admitted","reason":"exact-local-execution-custody","scope":"current-checkout","portable":false})
+    } else {
+        publication_admission(root, id, &receipt)
+    };
     let timestamp_valid = receipt["recorded_at"]
         .as_str()
         .and_then(|value| value.parse::<toml::value::Datetime>().ok())

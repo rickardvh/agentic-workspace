@@ -302,6 +302,17 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "promotion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evidence_ref", "consumer", "reason"],
+          "properties": {
+            "evidence_ref": {"type": "string", "pattern": "^proof://local/[a-f0-9]{64}$"},
+            "consumer": {"type": "string", "minLength": 1},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 2048}
+          },
+          "description": "Promote an exact retained execution without rerunning it. The current repository consumer must reference the resulting repository receipt; its bytes and the proof are revalidated before publication."
+        },
         "route_id": {
           "type": "string",
           "minLength": 1,
@@ -496,7 +507,7 @@
           "type": "array",
           "maxItems": 16,
           "uniqueItems": true,
-          "items": {"type": "string", "pattern": "^proof://receipts/[A-Za-z0-9_.-]+$"}
+          "items": {"type": "string", "pattern": "^proof://(receipts/[A-Za-z0-9_.-]+|local/[a-f0-9]{64})$"}
         }
       }
     },

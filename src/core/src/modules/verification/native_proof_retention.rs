@@ -151,6 +151,7 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
         })
         .collect();
     let mut offered = serde_json::Map::new();
+    let mut local_transfers = serde_json::Map::new();
     let mut protected = Vec::new();
     for (path, bytes) in &sources {
         if !candidate(path, bytes) {
@@ -185,8 +186,24 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
             })
             .map(|(p, _)| (*p).clone())
             .collect();
-        if !uncertain && !reusable && consumers.is_empty() && offered.len() < LIMIT {
+        // An authenticated local execution is not a durable repository consumer.
+        // Preserve its exact local custody before disposition of the repository
+        // copy; current repository references still protect that copy.
+        let local_transfer = !uncertain
+            && consumers.is_empty()
+            && matches!(
+                crate::native_proof::committed_publication(target, &body),
+                Ok(Some(_))
+            );
+        if !uncertain
+            && (!reusable || local_transfer)
+            && consumers.is_empty()
+            && offered.len() < LIMIT
+        {
             offered.insert(path.clone(), json!(revision(bytes)));
+            if local_transfer {
+                local_transfers.insert(path.clone(), json!({"reference":crate::native_proof::local_reference(&body)?,"path":format!("{}.receipt.json",body["source_ref"].as_str().unwrap())}));
+            }
         } else if (uncertain || reusable || !consumers.is_empty()) && protected.len() < LIMIT {
             protected.push(json!({"source":path,"uncertain_producer":uncertain,"reusable":reusable,"consumer_count":consumers.len(),"consumers":consumers.into_iter().take(8).collect::<Vec<_>>()}));
         }
@@ -197,7 +214,7 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
         .map(|(p, b)| (p.clone(), revision(b)))
         .collect();
     Ok(
-        json!({"sources":offered,"guard_revision":digest(&json!(guards))?,"protected":protected,
+        json!({"sources":offered,"local_transfers":local_transfers,"guard_revision":digest(&json!(guards))?,"protected":protected,
         "index":index,"index_transfer_required":transfer,"index_revision":index_bytes.as_ref().map(|b|revision(b)),
         "carrier_revision":read(&root,CARRIER)?.as_ref().map(|b|revision(b))}),
     )
@@ -305,7 +322,7 @@ fn outcome(invocation: &Value) -> Result<Value, CoreError> {
     let bytes = serde_json::to_vec_pretty(&next_index(invocation)?).map_err(err)?;
     Ok(
         json!({"status":"applied","effects":["proof-execution"],"value":{"kind":"agentic-workspace/proof-retirement/v1",
-        "retired":invocation["arguments"]["request"]["arguments"]["sources"],"tracked_tombstone":false,"completion_authority":false,
+        "retired":invocation["arguments"]["request"]["arguments"]["sources"],"local_transfers":invocation["arguments"]["binding"]["local_transfers"],"tracked_tombstone":false,"completion_authority":false,
         "index_revision":revision(&bytes),"proof_authority":"unchanged; disposition grants no proof sufficiency"}}),
     )
 }
@@ -359,7 +376,7 @@ pub(crate) fn view(
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"verification","owner_revision":owner["revision"],
         "source_revision":digest(&binding)?,"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     let mut result = json!({"status":if recovery {"recovery-required"} else {"judgment-required"},"requests":[template],
-        "sources":binding["sources"],"index_transfer_required":binding["index_transfer_required"],"protected":binding["protected"],"authority":"Read the exact sources and judge supersession and future value; discovery grants no deletion authority."});
+        "sources":binding["sources"],"local_transfers":binding["local_transfers"],"index_transfer_required":binding["index_transfer_required"],"protected":binding["protected"],"authority":"Judge continuing repository value. Listed local transfers preserve authenticated execution in its existing local run before repository disposition; live repository consumers remain protected. Discovery grants no deletion authority."});
     if let Some(request) = request {
         crate::prepare_request_value(
             json!({"request":request,"current_work":work,"capability_contract":contract}),
@@ -479,6 +496,13 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
     ]);
     paths.push(temporary(action)?);
     if action["operation_id"] == OP {
+        if let Some(transfers) = action["arguments"]["binding"]["local_transfers"].as_object() {
+            paths.extend(
+                transfers
+                    .values()
+                    .filter_map(|v| v["path"].as_str().map(str::to_owned)),
+            );
+        }
         paths.extend(
             action["arguments"]["request"]["arguments"]["sources"]
                 .as_array()
@@ -562,6 +586,18 @@ fn execute_checked(
         record
     };
     observe("prepared")?;
+    if let Some(transfers) =
+        record["invocation"]["arguments"]["binding"]["local_transfers"].as_object()
+    {
+        for (path, transfer) in transfers {
+            if let Some(bytes) = read(&root, path)? {
+                let receipt: Value = serde_json::from_slice(&bytes).map_err(err)?;
+                crate::native_proof::retain_local(target, &receipt)?;
+            }
+            // Interrupted removal must retain the same usable execution carrier.
+            crate::native_proof::local_receipt(target, transfer["reference"].as_str().unwrap())?;
+        }
+    }
     let next = serde_json::to_vec_pretty(&next_index(&record["invocation"])?).map_err(err)?;
     verify(&root, &record["invocation"], recovery)?;
     replace_exact(
@@ -856,6 +892,61 @@ mod tests {
         assert!(!f.0.join(path).exists());
         assert!(!f.0.join(PENDING).exists());
         crate::proof_publication::check(&f.0).unwrap();
+        assert_eq!(
+            f.start(None)["verification"]["retention"]["status"],
+            "quiet"
+        );
+    }
+    #[test]
+    fn committed_legacy_execution_moves_into_its_existing_local_run() {
+        let f = Fixture::new();
+        std::fs::create_dir_all(f.0.join(".agentic-workspace/verification")).unwrap();
+        std::fs::write(f.0.join("a.txt"), "source").unwrap();
+        std::fs::write(f.0.join(".agentic-workspace/verification/manifest.toml"), "schema_version='agentic-workspace/verification-manifest/v1'\n[protocols.check]\napplies_to_paths=['a.txt']\n[proof_routes.check]\nprotocol_refs=['check']\ncommands=['echo checked']\n").unwrap();
+        let mut input = json!({"target":f.0,"task":"Check source","changed":["a.txt"]});
+        let initial = crate::native_public::start(input.clone()).unwrap();
+        input["request"] = initial["verification"]["execution_requests"][0].clone();
+        let selected = crate::native_public::start(input).unwrap();
+        let invocation = &selected["decision_packet"]["primary_action"];
+        let admission = crate::attempt_store::admit(
+            json!({"target":f.0,"decision":selected["decision_packet"],"invocation":invocation}),
+        )
+        .unwrap();
+        let run_path = crate::native_proof::run_path(invocation).unwrap();
+        let mut run = json!({"kind":"agentic-workspace/proof-execution-run/v1","invocation":invocation,"custody":admission["custody"]});
+        f.put(&run_path, run.clone());
+        // Reproduce the former automatic-publication format: the committed
+        // outcome has no embedded receipt; the only copy is repository-visible.
+        let mut receipt = json!({"kind":"agentic-workspace/proof-receipt/v1","command":"echo checked","result":"passed","changed_paths":["a.txt"],"proof_subject":invocation["arguments"]["selection"]["proof_subject"],"producer_class":"aw-proof","authority":"aw-proof","recorded_at":"2026-09-08T00:00:00Z","source_ref":run_path});
+        let id = crate::native_verification::publication_identity(&receipt).unwrap();
+        receipt["receipt_id"] = json!(id);
+        receipt["publication_id"] = json!(id);
+        let outcome = json!({"status":"applied","effects":["proof-execution"],"value":{"proof_subject":receipt["proof_subject"],"source_current":true}});
+        let committed = crate::proof_publication::publish(
+            &f.0,
+            &receipt,
+            invocation,
+            &admission["custody"],
+            outcome,
+            &mut || Ok(()),
+        )
+        .unwrap();
+        run["custody"] = committed["custody"].clone();
+        f.put(&format!("{run_path}.completed.json"), run);
+        let local_ref = crate::native_proof::local_reference(&receipt).unwrap();
+        assert!(crate::native_proof::local_receipt(&f.0, &local_ref).is_err());
+        let ready = f.ready();
+        let action = &ready["decision_packet"]["primary_action"];
+        assert_eq!(action["operation_id"], OP, "{ready}");
+        let result = crate::native_public::invoke(
+            json!({"target":f.0,"task":"Retire superseded proof history","invocation":action}),
+        )
+        .unwrap();
+        assert_eq!(result["effect_outcome"]["status"], "committed", "{result}");
+        assert!(!f.0.join(format!("{HOME}{id}.json")).exists());
+        let retained = crate::native_proof::local_receipt(&f.0, &local_ref).unwrap();
+        assert_eq!(retained["proof_subject"], receipt["proof_subject"]);
+        assert_eq!(retained["receipt_id"], id);
         assert_eq!(
             f.start(None)["verification"]["retention"]["status"],
             "quiet"

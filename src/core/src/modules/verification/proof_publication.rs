@@ -114,10 +114,14 @@ fn retained(target: &Path, receipt: &Value) -> Result<Value, CoreError> {
         held["outcome"].clone(),
     )?;
     let invocation = &prepared["record"]["invocation"];
+    let mut original = receipt.clone();
+    original.as_object_mut().unwrap().remove(CUSTODY);
+    let promoted = invocation["arguments"]["selection"]["promotion"]["receipt"] == original
+        && crate::native_proof::committed_publication(target, &original)?.is_some();
     if prepared["custody"] != held["custody"]
         || invocation["source_owner"] != "verification"
         || invocation["operation_id"] != "proof.report"
-        || receipt["source_ref"] != crate::native_proof::run_path(invocation)?
+        || (!promoted && receipt["source_ref"] != crate::native_proof::run_path(invocation)?)
         || receipt["command"] != invocation["arguments"]["selection"]["choice"]["command"]
         || receipt["proof_subject"] != invocation["arguments"]["selection"]["proof_subject"]
         || receipt["changed_paths"] != invocation["arguments"]["changed"]
@@ -699,14 +703,10 @@ mod tests {
         assert!(!repo.0.join(&paths[0]).exists());
         let mut input = context;
         input["invocation"] = action;
-        assert!(
-            crate::native_public::invoke_checked(input)
-                .unwrap_err()
-                .to_string()
-                .contains("index-capacity-reached")
-        );
-        assert!(!repo.0.join(&paths[0]).exists());
-        assert!(!repo.0.join("capacity-marker.txt").exists());
+        let local = crate::native_public::invoke_checked(input).unwrap();
+        assert_eq!(local["value"]["publication"]["status"], "local");
+        assert!(repo.0.join(&paths[0]).exists());
+        assert!(repo.0.join("capacity-marker.txt").exists());
         assert_eq!(fs::read(repo.0.join(INDEX)).unwrap(), bytes);
     }
     #[test]

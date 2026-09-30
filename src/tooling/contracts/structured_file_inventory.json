@@ -923,13 +923,13 @@
         ],
         "routed_to": "#2448"
       },
-      "notes": "Native custody and current subject govern reuse. Authenticated supersession and exact owner disposition bound receipt history without granting proof sufficiency.",
+      "notes": "Repository evidence requires a durable consumer/promotion decision; ordinary execution stays in its existing local run carrier. Native custody and current subject govern reuse. Exact owner disposition can preserve consumer-free legacy executions locally before retiring their repository copies.",
       "owner": "verification",
       "pattern": ".agentic-workspace/proof/receipts/*.json",
       "schema_or_validator": "validator: src/core/src/modules/verification/proof_publication.rs::owned_index / retained; src/core/src/modules/verification/native_source_reconciliation.rs::retained",
       "status": "typed-validator-backed",
       "storage_class": "historical-audit-distillation",
-      "lifetime": "Verification automatically supersedes authenticated non-reusable evidence; explicit guarded disposition retires legacy evidence. No event-count history requirement."
+      "lifetime": "Durable repository consumer lifetime; source-reconciliation current groups retain their existing contract. Verification supersession and guarded disposition preserve live consumers and exact recovery. No event-count history requirement."
     },
     {
       "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
