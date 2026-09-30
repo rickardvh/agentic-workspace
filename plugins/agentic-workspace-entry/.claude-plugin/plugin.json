@@ -1,6 +1,5 @@
 {
   "name": "agentic-workspace-entry",
-  "version": "0.0.0-dev.0",
   "description": "A passive entry to the current target repository's agentic-workspace procedure.",
   "author": {
     "name": "Rickard von Haugwitz"

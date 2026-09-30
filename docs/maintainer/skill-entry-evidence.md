@@ -61,7 +61,31 @@ controls could not be observed in the blocked Codex sessions. Synthetic fixture
 construction is not behavioural
 proof. These controls must use the installed bridge independently of the fence
 where selected handoff is claimed. Native lifecycle operations are established
-above; a real task through the generic fence after removal remains outstanding.
+  above; a real task through the generic fence after removal remains outstanding.
+
+## Git update correction after independent review
+
+The original source manifests pinned Claude's Git cache to `0.0.0-dev.0`.
+The checked-in Claude manifest and marketplace entry now omit their version.
+Coordinated release staging still stamps both with the explicit release version;
+the portable Codex manifest retains its required distribution identity.
+
+Claude Code 2.1.285 installed a native Git marketplace at fixture commit
+`e081fd7598ab5426eb9be95284ef3743e923fbd2`, then refreshed the marketplace and
+updated the plugin after the bridge bytes changed at
+`b33d875a1a423d435db97531969f40c9deb13f24`. Its installed cache identity advanced
+from `e081fd7598ab` to `b33d875a1a42`, and the installed skill bytes equalled
+revision B. Native uninstall and marketplace removal succeeded. No authenticated
+model session was required for this cache check.
+
+The fixture used a Git-source HTTPS URL with subprocess-only Git `insteadOf`
+transport to a local bare remote. This exercised native cloning, fetching and
+Git cache identity, rather than local-directory marketplace behaviour. The CLI
+rejected a direct `file:` marketplace URL. A profile under the scratch path then
+hit Windows Git path limits; the successful fixture used a shorter isolated
+profile inside its temporary Git fixture. No user's Git configuration or default
+Claude profile was changed. Source/release projection tests now guard both the
+absent Git version overrides and explicit archive versions.
 
 ## Interventions and retained work
 

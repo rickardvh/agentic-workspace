@@ -183,6 +183,8 @@ def test_entry_archive_uses_existing_release_inventory_and_identity(inventory, t
         for name in ["plugin.json", ".claude-plugin/plugin.json"]:
             manifest = json.loads(bundle.read(f"plugins/agentic-workspace-entry/{name}"))
             assert manifest["version"] == "1.0.0-rc.3"
+        marketplace = json.loads(bundle.read(".claude-plugin/marketplace.json"))
+        assert marketplace["plugins"][0]["version"] == "1.0.0-rc.3"
         assert bundle.read("plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md") == (
             ROOT / "src/adapters/skill-entry/SKILL.md"
         ).read_bytes().replace(b"\r\n", b"\n")

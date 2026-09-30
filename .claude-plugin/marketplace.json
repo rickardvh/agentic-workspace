@@ -7,8 +7,7 @@
   "plugins": [
     {
       "name": "agentic-workspace-entry",
-      "source": "./plugins/agentic-workspace-entry",
-      "version": "0.0.0-dev.0"
+      "source": "./plugins/agentic-workspace-entry"
     }
   ]
 }

@@ -88,8 +88,12 @@ catalogues refer to the same self-contained bundle. Select
 For Codex Git updates, run `codex plugin marketplace upgrade agentic-workspace`,
 then `codex plugin add agentic-workspace-entry@agentic-workspace`. Disable it in
 the host's plugin settings or remove it with
-`codex plugin remove agentic-workspace-entry@agentic-workspace`. Claude Code
-provides `plugin update`, `plugin disable`, `plugin enable` and `plugin uninstall`
+`codex plugin remove agentic-workspace-entry@agentic-workspace`. For Claude Git
+updates, run `claude plugin marketplace update agentic-workspace`, then
+`claude plugin update agentic-workspace-entry@agentic-workspace --scope user`.
+The Git projection omits Claude's explicit version so its cache identity follows
+the source commit; release ZIPs use the coordinated explicit release version.
+Claude Code also provides `plugin disable`, `plugin enable` and `plugin uninstall`
 with that selector and `--scope user`. Restart the host after lifecycle changes.
 For an extracted release, replace the marketplace directory with the chosen
 release before updating. These operations affect host storage, not repository

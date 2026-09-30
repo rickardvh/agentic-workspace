@@ -28,10 +28,11 @@ def release_version(root: Path) -> str:
 
 def render(root: Path = ROOT, *, version: str | None = None) -> dict[str, str]:
     body = (root / SOURCE).read_text(encoding="utf-8").replace("\r\n", "\n")
-    version = version or release_version(root)
+    # Source Git installations use Claude's native commit identity. Only staged
+    # coordinated artifacts supply an explicit release version.
+    portable_version = version or release_version(root)
     metadata = {
         "name": NAME,
-        "version": version,
         "description": "A passive entry to the current target repository's agentic-workspace procedure.",
         "author": {"name": "Rickard von Haugwitz"},
         "repository": "https://github.com/rickardvh/agentic-workspace",
@@ -44,8 +45,10 @@ def render(root: Path = ROOT, *, version: str | None = None) -> dict[str, str]:
     return {
         NPM_SKILL: body,
         f"{BUNDLE}/skills/{NAME}/SKILL.md": body,
-        f"{BUNDLE}/plugin.json": encoded({"$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json", **metadata}),
-        f"{BUNDLE}/.claude-plugin/plugin.json": encoded(metadata),
+        f"{BUNDLE}/plugin.json": encoded(
+            {"$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json", **metadata, "version": portable_version}
+        ),
+        f"{BUNDLE}/.claude-plugin/plugin.json": encoded({**metadata, **({"version": version} if version else {})}),
         ".agents/plugins/marketplace.json": encoded(
             {
                 "name": "agentic-workspace",
@@ -64,7 +67,7 @@ def render(root: Path = ROOT, *, version: str | None = None) -> dict[str, str]:
                 "name": "agentic-workspace",
                 "description": metadata["description"],
                 "owner": metadata["author"],
-                "plugins": [{"name": NAME, "source": f"./{BUNDLE}", "version": version}],
+                "plugins": [{"name": NAME, "source": f"./{BUNDLE}", **({"version": version} if version else {})}],
             }
         ),
     }
