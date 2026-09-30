@@ -1,0 +1,389 @@
+{
+  "authority": "aw-proof",
+  "changed_paths": [
+    ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json",
+    ".agentic-workspace/proof/receipts/800489c14b7a2846.json",
+    ".agentic-workspace/proof/receipts/index.json",
+    ".agentic-workspace/verification/manifest.toml",
+    ".github/workflows/ci.yml",
+    "Cargo.lock",
+    "src/core/Cargo.toml",
+    "src/core/contracts/schemas/workspace_local_override.schema.json",
+    "src/core/src/lib.rs",
+    "src/core/src/modules/verification/contracts/manifest.schema.json",
+    "src/core/src/modules/verification/native_proof.rs",
+    "src/core/src/modules/verification/native_verification.rs",
+    "src/core/src/modules/verification/proof_executor.rs",
+    "src/core/src/native_config_write.rs",
+    "src/core/src/native_instructions.rs",
+    "src/core/src/process_execution.rs",
+    "tests/test_native_proof_producer.py"
+  ],
+  "command": "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
+  "execution_artifact": {
+    "scope": "repository-summary",
+    "sha256": "c59ed7fc3803b02c1f0c3000ee927fb10fa24e2e146e65afbafe64f707b0e74c"
+  },
+  "kind": "agentic-workspace/proof-receipt/v1",
+  "producer_class": "aw-proof",
+  "proof_subject": {
+    "claim_classes": [
+      "executable-validation"
+    ],
+    "command_sha256": "a1fe7065967c06cd6f87046707def20ed31bf6f46b9798ed290622f5bdc5d8e1",
+    "dependency_roles": [
+      {
+        "owner": "claim",
+        "path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "canonical-proof-receipt-publication",
+        "path": ".agentic-workspace/proof/receipts/800489c14b7a2846.json",
+        "reason": "proof-owned-publication-output",
+        "role": "evidence-output"
+      },
+      {
+        "owner": "canonical-proof-receipt-publication",
+        "path": ".agentic-workspace/proof/receipts/index.json",
+        "reason": "proof-owned-publication-output",
+        "role": "evidence-output"
+      },
+      {
+        "owner": "claim",
+        "path": ".agentic-workspace/verification/manifest.toml",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": ".github/workflows/ci.yml",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "Cargo.lock",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/Cargo.toml",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/contracts/schemas/workspace_local_override.schema.json",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/lib.rs",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/modules/verification/contracts/manifest.schema.json",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/modules/verification/native_proof.rs",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/modules/verification/native_verification.rs",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/modules/verification/proof_executor.rs",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/native_config_write.rs",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/native_instructions.rs",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "src/core/src/process_execution.rs",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      },
+      {
+        "owner": "claim",
+        "path": "tests/test_native_proof_producer.py",
+        "reason": "declared-proof-subject-input",
+        "role": "semantic-input"
+      }
+    ],
+    "dependency_scope": "declared-path-and-command",
+    "effect_scope": [
+      ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json",
+      ".agentic-workspace/verification/manifest.toml",
+      ".github/workflows/ci.yml",
+      "Cargo.lock",
+      "src/core/Cargo.toml",
+      "src/core/contracts/schemas/workspace_local_override.schema.json",
+      "src/core/src/lib.rs",
+      "src/core/src/modules/verification/contracts/manifest.schema.json",
+      "src/core/src/modules/verification/native_proof.rs",
+      "src/core/src/modules/verification/native_verification.rs",
+      "src/core/src/modules/verification/proof_executor.rs",
+      "src/core/src/native_config_write.rs",
+      "src/core/src/native_instructions.rs",
+      "src/core/src/process_execution.rs",
+      "tests/test_native_proof_producer.py"
+    ],
+    "evidence_outputs": [
+      {
+        "owner": "canonical-proof-receipt-publication",
+        "path": ".agentic-workspace/proof/receipts/800489c14b7a2846.json",
+        "reason": "proof-owned-publication-output",
+        "role": "evidence-output"
+      },
+      {
+        "owner": "canonical-proof-receipt-publication",
+        "path": ".agentic-workspace/proof/receipts/index.json",
+        "reason": "proof-owned-publication-output",
+        "role": "evidence-output"
+      }
+    ],
+    "fallback": "not-required",
+    "fingerprint": "01eb2901f06fd067e3770335c7af7faf110865001df8937c9ce3d02b9fd32643",
+    "id": "proof-subject:01eb2901f06fd067e377",
+    "identity_complete": true,
+    "kind": "agentic-workspace/proof-subject/v1",
+    "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs.",
+    "runtime": {
+      "environment_scope": "isolated-image-and-readonly-source",
+      "executor": {
+        "configuration": {
+          "environment": {
+            "RUSTUP_TOOLCHAIN": "1.98.1"
+          },
+          "image": "sha256:0bf9b5a06269f6fcddc550e733983f10d7b07bc3d52b02a54c94a757ad59242d",
+          "inputs": [
+            "src",
+            "tests",
+            "Cargo.toml",
+            "Cargo.lock",
+            "rust-toolchain.toml",
+            "pyproject.toml",
+            "uv.lock",
+            "README.md",
+            "LICENSE",
+            ".agentic-workspace/skills",
+            ".agentic-workspace/planning/skills"
+          ],
+          "kind": "docker-readonly-source-v1",
+          "scratch_paths": [
+            "target"
+          ]
+        },
+        "host_mounts": false,
+        "image": "sha256:0bf9b5a06269f6fcddc550e733983f10d7b07bc3d52b02a54c94a757ad59242d",
+        "kind": "docker-readonly-source-v1",
+        "max_processes": 128,
+        "network": "none",
+        "source_access": "read-only",
+        "source_revision": "sha256:6c53509eb0fd6a3785b9c9b35cc621b07b77327809dc01f6012429c9a4c88e6e",
+        "temporary_storage_bytes": 2684354560,
+        "transport": {
+          "sha256": "8f6dea04cf35515b6d6de5bfc3f5ba54c827fc4532996922eccc29d362585620"
+        }
+      },
+      "implementation": "native-aw-proof",
+      "nested_tool_runtime": "image-bound",
+      "producer": {
+        "sha256": "1b2cdaea5f54ef725bc0ffb3c89b0d6bfd07daf6d54e3c9ec5b6a28d5946a64e"
+      },
+      "producer_contract": "native-selected-proof-v1",
+      "shell": null,
+      "shell_dialect": "posix-sh",
+      "strategy_revision": "sha256:eb1b8e37bbc11d90bde3cafe75dd367aff34b6d7351fdc3947b86be161e7fa99"
+    },
+    "source_inputs": [
+      {
+        "path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json",
+        "sha256": "51f13c4932fcc992319ba4e88e1d5ab6ff2e251d281a73fd6c716e5408fb2773"
+      },
+      {
+        "path": ".agentic-workspace/verification/manifest.toml",
+        "sha256": "42f125b551d271d840fa8395bd2daf3e92c20b9b56a2d8716bc9bc205417f0f5"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha256": "8a4b5bd7c0d1bc2164f88da8b7f60a2f06cdaa3bddee7a7360546b52f1339206"
+      },
+      {
+        "path": "Cargo.lock",
+        "sha256": "4d9a63bb6e8c949d6b324e45a807b4b8c2f8f8374941c7002a0b7b1329d3b39d"
+      },
+      {
+        "path": "src/core/Cargo.toml",
+        "sha256": "77581b751f5b3f8d8a85f14ed1af6a99730bbe3b0101cd8dc343a2d2887b7f18"
+      },
+      {
+        "path": "src/core/contracts/schemas/workspace_local_override.schema.json",
+        "sha256": "b1e5799c8064f3e99067c228bc601a3e686eca9aa430e9abba2516ffaaf10c76"
+      },
+      {
+        "path": "src/core/src/lib.rs",
+        "sha256": "2825498c2877497a64f02977178cd2980811eb3fd9d087f94efff1d87c4a38c2"
+      },
+      {
+        "path": "src/core/src/modules/verification/contracts/manifest.schema.json",
+        "sha256": "adebc64c6357ffc5a67c962eb301b21e8b8e93f964402ad30327ad6b1f8ce3d7"
+      },
+      {
+        "path": "src/core/src/modules/verification/native_proof.rs",
+        "sha256": "1af1707f512cc50c5bcd65f482ffd491f475ebb0b433b5380af1939255245d63"
+      },
+      {
+        "path": "src/core/src/modules/verification/native_verification.rs",
+        "sha256": "4e258997437429331cacf341524dfeddc3fb7bb9fa3fea733623cd2807eec02e"
+      },
+      {
+        "path": "src/core/src/modules/verification/proof_executor.rs",
+        "sha256": "070afb1ae6cde16ddf5ea30dc2f7c0adbf621183cd861bbf260b4aca167f6998"
+      },
+      {
+        "path": "src/core/src/native_config_write.rs",
+        "sha256": "ab5ff2202711ea3f0f9039c7f524b2806810059306799799cd96dce97bdf8700"
+      },
+      {
+        "path": "src/core/src/native_instructions.rs",
+        "sha256": "1740e16f42c2b025a77cd0d8f53af5b61711ef2bcd85c0f4ebeaa2f05ac72baf"
+      },
+      {
+        "path": "src/core/src/process_execution.rs",
+        "sha256": "471551bece821a1c1a193e2892d5ef09a30a13420ed2c13d95d87cd1353f2184"
+      },
+      {
+        "path": "tests/test_native_proof_producer.py",
+        "sha256": "cde580f62a879d2c7fc451e85a504595b4a1a20f926bbae9a03dc191995b4e26"
+      }
+    ],
+    "unavailable_inputs": []
+  },
+  "publication_id": "e5cb909ce979c191",
+  "receipt_id": "e5cb909ce979c191",
+  "recorded_at": "2026-09-27T16:42:09+00:00",
+  "repository_proof": {
+    "authority": "repository-owned observation; no independent review or local effect recovery",
+    "consumer": {
+      "dependencies": [
+        "e5cb909ce979c191"
+      ],
+      "id": "work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f",
+      "owner": "planning",
+      "path": ".agentic-workspace/planning/execplans/work-5ca693423a3917d42ae51da2dabc0354349cfd1abb0a2152c0350cfd7534e79f.plan.json",
+      "reference": "proof://receipts/6fbf0a5eb9869bfa",
+      "revision": "sha256:f56999ff46614fea334ec9d287bf1f8856f8311d5c5a834ac2ecdbac26f83453"
+    },
+    "kind": "agentic-workspace/repository-proof/v1",
+    "origin": {
+      "receipt_id": "e5cb909ce979c191",
+      "receipt_revision": "sha256:7010f902019909cef933f7e2c67ac2f6d7f442fdfac9278ef0eb55be3dab4949",
+      "runtime_revision": "sha256:7e17cd159b54c74835af709ee9e680b42f5e4db76d4ae6d70ee217d1a135b5eb",
+      "subject_fingerprint": "48ce1599668586b31efa653ca16464c7ce06f66debbcddee55e1ccaf4b75ecde"
+    },
+    "owner": "verification",
+    "process": {
+      "exit_code": 1,
+      "status": "failed",
+      "timed_out": null
+    },
+    "producer": {
+      "invocation_revision": "sha256:37f576bd9674bbfe9712a663600ee451ef01c2940535ab29b61eb19ccce25a28",
+      "outcome_revision": "sha256:b574bf0c26d18fb75157f98e9603ed5b5231fbaa9bb646b0628f5bc7ff52fe93"
+    },
+    "revision": "sha256:b29b828952f3baa4342b7e4f40190e6c842339086ab83cc664a3d1e44834f6f8",
+    "selection": {
+      "choice": {
+        "command": "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
+        "route_id": "profile:test_evidence_change"
+      },
+      "strategy": {
+        "assessment": null,
+        "assurance_request": null,
+        "dependencies": {},
+        "execution": {
+          "environment": {
+            "RUSTUP_TOOLCHAIN": "1.98.1"
+          },
+          "image": "sha256:0bf9b5a06269f6fcddc550e733983f10d7b07bc3d52b02a54c94a757ad59242d",
+          "inputs": [
+            "src",
+            "tests",
+            "Cargo.toml",
+            "Cargo.lock",
+            "rust-toolchain.toml",
+            "pyproject.toml",
+            "uv.lock",
+            "README.md",
+            "LICENSE",
+            ".agentic-workspace/skills",
+            ".agentic-workspace/planning/skills"
+          ],
+          "kind": "docker-readonly-source-v1",
+          "scratch_paths": [
+            "target"
+          ]
+        },
+        "protocols": {},
+        "route": {
+          "commands": [
+            "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q"
+          ],
+          "required_commands": [
+            "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q"
+          ],
+          "review_aids": [
+            "Record or inspect the Verification proof-decision route when ordinary tests grow, shrink, or move."
+          ],
+          "source_kind": "config-proof-profile",
+          "source_ref": ".agentic-workspace/verification/manifest.toml#assurance.proof_profiles.test_evidence_change",
+          "source_revision": "sha256:527ea8847aefd9730adf1b03731afa3cdc325fa5fc66972e968448e9fd1ff1ec"
+        },
+        "route_id": "profile:test_evidence_change",
+        "source_strategy_revision": "sha256:be4f50bffbe675c0da63fec304e6e48718240e38f42df014f62f343cc3bb7a99",
+        "strategy_coverage": "selected-command-covered",
+        "task_identity": {
+          "id": "direct-task:sha256:dbe5afcf262209a61f8bf8b2c3a4faea9ab9c90704e214efe4bb584a89f532b7",
+          "revision": "direct-task:sha256:dbe5afcf262209a61f8bf8b2c3a4faea9ab9c90704e214efe4bb584a89f532b7"
+        },
+        "work": {
+          "id": "planning:sha256:8b8a95fedbb322a5fefe7413b4438980756cfedee4f472ef03ca7054ba01a702",
+          "revision": "sha256:79d7297f85420882318855e08667f0bd88fe62fc1a0b949430dacf7baf863c60"
+        }
+      },
+      "work": {
+        "id": "planning:sha256:8b8a95fedbb322a5fefe7413b4438980756cfedee4f472ef03ca7054ba01a702",
+        "revision": "sha256:79d7297f85420882318855e08667f0bd88fe62fc1a0b949430dacf7baf863c60"
+      }
+    }
+  },
+  "result": "failed",
+  "revision": "2026-09-27T16:42:09+00:00",
+  "source_ref": ".agentic-workspace/local/proof-receipts/runs/native-sha256-44b855ca306a063743e785e0979b2c08f79d5ec0c3e032025acfbd3c319b893e/run.json"
+}

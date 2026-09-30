@@ -24,7 +24,7 @@ from another route, stale source or unrelated task does not count.
 This establishes only the configured command obligation. Task judgement,
 independent/domain review and other assurance obligations remain with their
 owners; no completion claim follows from command discharge. There is no new
-receipt format, evidence store or producer.
+evidence store or producer for profile discharge.
 
 Profile discovery is bounded to 32 descriptors and 16 command candidates. Selected profile metadata uses the existing 32 KiB selected-route bound; unselected profiles are not copied into the public strategy forest. Full source remains the current owner. Verification reads and validates the shared configuration once per owner view, then reuses that observation for applicability, domain candidates and strategy policy; no durable cache is added.
 
@@ -39,10 +39,22 @@ Local references do not promise portability to another checkout.
 When a durable repository consumer needs the execution, use the current
 `verification/execute-selected/v1` request with its `promotion` material:
 the local `evidence_ref`, repository `consumer` path and reason for retention.
-The consumer must reference the returned `repository_reference`. Verification
-binds its bytes and checks the original exact successful execution before
+The consumer must be a current Planning-owned execplan, created or updated through
+its owner, whose `references` or `proof` material names the returned
+`repository_reference`. An arbitrary file containing that string cannot authorize
+publication. Verification binds the admitted owner material and checks the original exact successful execution before
 publishing; it does not rerun the command. A missing or changed consumer, stale
 proof, failed result or unproven manual report cannot gain repository authority.
+
+The published receipt carries a bounded repository observation. It preserves the
+original receipt ID, subject fingerprint and producer/outcome digests alongside
+the portable subject and selected-command result. Runtime executable content
+hashes, image/configuration and source hashes remain exact; machine paths and
+daemon locators remain in local custody. Fresh repository claims validate the
+owner consumer, projection integrity, current runtime content and source inputs
+without opening the original local run or command output. Raw output and derived
+measurements remain local. Repository provenance does not grant local effect
+replay or independent acceptance; modified source/runtime/consumer fails closed.
 
 The 2048-entry publication capacity check still protects repository promotion.
 It does not prevent ordinary local execution. Existing source-reconciliation
@@ -54,5 +66,12 @@ run carrier before retiring the repository copy and its index entry. Unknown
 custody stays protected. Exact interrupted-retirement recovery and a quiet second
 pass use the existing retention owner. Process success, storage lifetime and
 publication do not establish task completion or independent acceptance.
+
+For authenticated legacy receipts with an admitted Planning consumer, the same
+disposition request offers `repository_transfers`. Its bounded `retain_repository`
+decision preserves the consumer's historical dependency closure in the portable
+format under the existing stable references, retaining original bytes in the
+original local runs. This is a representation change, not fresh proof: stale
+evidence remains stale. Interrupted conversion resumes from exact pre/postimages.
 
 No provider calls or monetary estimates were used. Implementation friction included an initially incorrect object wrapper around the existing request-set array and a stale-source fixture expecting a diagnostic where the canonical contract correctly raises a capability-currentness error. Both fixtures now use the actual public contract. These checks are implementation proof, not independent acceptance; #2334/#2613/#2981 remain open for the stated owner and evidence gaps.

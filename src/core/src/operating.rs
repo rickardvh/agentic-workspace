@@ -493,7 +493,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         retention["status"].as_str(),
         Some("judgment-required" | "recovery-required")
     ) {
-        result["proof_retention"] = json!({"status":retention["status"],"candidate_count":retention["sources"].as_object().map_or(0,|s|s.len()),"reference":result["detail_refs"]["/verification"],"authority":"Current Verification disposition required; discovery grants no deletion or proof authority."});
+        result["proof_retention"] = json!({"status":retention["status"],"candidate_count":retention["sources"].as_object().map_or(0,|s|s.len()) + retention["repository_transfers"].as_object().map_or(0,|s|s.len()),"reference":result["detail_refs"]["/verification"],"authority":"Current Verification disposition required; discovery grants no deletion or proof authority."});
     }
     let recovery = consequence_recovery(full, context)?;
     if !recovery.is_empty() {

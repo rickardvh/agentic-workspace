@@ -81,6 +81,8 @@ mod process_execution;
 mod proof_executor;
 pub mod proof_receipt;
 pub mod proof_subject;
+#[path = "modules/verification/repository_proof.rs"]
+mod repository_proof;
 pub mod review_authentication;
 pub mod semantic_routes;
 pub mod separation_of_duty;

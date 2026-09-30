@@ -18,6 +18,9 @@ fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 pub(crate) fn retention_committed(target: &Path, receipt: &Value) -> Result<(), CoreError> {
+    if crate::repository_proof::is_repository(receipt) {
+        return crate::repository_proof::validate(receipt);
+    }
     retained(target, receipt)?;
     attempt_store::inspect_committed(
         &target.to_string_lossy(),
@@ -35,7 +38,15 @@ pub(crate) fn retention_reusable(target: &Path, receipt: &Value) -> Result<bool,
     {
         return Ok(false);
     }
-    let Some(committed) = crate::native_proof::committed_publication(target, receipt)? else {
+    let committed = if crate::repository_proof::is_repository(receipt) {
+        let Ok(selection) = crate::repository_proof::selection(target, receipt) else {
+            return Ok(false);
+        };
+        Some(json!({"invocation":{"arguments":{"selection":selection}}}))
+    } else {
+        crate::native_proof::committed_publication(target, receipt)?
+    };
+    let Some(committed) = committed else {
         return Ok(false);
     };
     let previous = &committed["invocation"]["arguments"]["selection"];
@@ -87,6 +98,18 @@ fn receipt_path(id: &str) -> Result<String, CoreError> {
     Ok(format!("{STORE}/{id}.json"))
 }
 fn retained(target: &Path, receipt: &Value) -> Result<Value, CoreError> {
+    if crate::repository_proof::is_repository(receipt) {
+        let original = crate::repository_proof::publication_original(target, receipt)?;
+        let prepared = retained(target, &original)?;
+        if crate::repository_proof::published(target, &original, &prepared["record"]["invocation"])?
+            != *receipt
+        {
+            return Err(err(
+                "repository publication differs from exact retained effect",
+            ));
+        }
+        return Ok(prepared);
+    }
     let held = &receipt[CUSTODY];
     if held["kind"] != "agentic-workspace/proof-publication-custody/v1"
         || held["outcome"]["value"]["publication"]["reference"]
@@ -370,6 +393,15 @@ fn publish_checked(
     }
     let mut receipt = receipt.clone();
     receipt[CUSTODY] = json!({"kind":"agentic-workspace/proof-publication-custody/v1","custody":prepared["custody"],"outcome":outcome,"before_sha256":before.as_ref().map(|b|hash(b)),"retention":plan});
+    if !invocation["arguments"]["selection"]["promotion"].is_null() {
+        let projected = crate::repository_proof::published(target, &receipt, invocation)?;
+        create(
+            &root,
+            projected[CUSTODY]["local_carrier"].as_str().unwrap(),
+            &serde_json::to_vec_pretty(&receipt).map_err(err)?,
+        )?;
+        receipt = projected;
+    }
     create(
         &root,
         &path,
@@ -442,6 +474,11 @@ pub(crate) fn recover(
         if retained(target, &receipt)?["record"]["invocation"] != *invocation {
             return Err(err("publication recovery invocation differs"));
         }
+        let receipt = if crate::repository_proof::is_repository(&receipt) {
+            crate::repository_proof::publication_original(target, &receipt)?
+        } else {
+            receipt
+        };
         if candidate.replace(receipt).is_some() {
             return Err(err(
                 "multiple publication carriers name this attempt; preserved",

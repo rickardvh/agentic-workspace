@@ -369,6 +369,13 @@ fn publication_admission(root: &Dir, id: &str, receipt: &Value) -> Value {
 }
 
 pub(crate) fn publication_identity(receipt: &Value) -> Result<String, CoreError> {
+    if crate::repository_proof::is_repository(receipt) {
+        crate::repository_proof::validate(receipt)?;
+        return receipt["receipt_id"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| CoreError::new("repository proof identity missing"));
+    }
     let identity = crate::proof_receipt::publication_identity(receipt);
     let rendered = publication_json(&identity).map_err(CoreError::new)?;
     Ok(sha(rendered.as_bytes())[..16].to_owned())
@@ -456,14 +463,16 @@ fn receipt_view(
     if receipt["proof_subject"]["runtime"]["implementation"] == "native-aw-proof" {
         let artifact = &receipt["execution_artifact"];
         let current = publication["status"] == "admitted"
-            && artifact["path"].as_str().is_some_and(|path| {
-                path.starts_with(".agentic-workspace/local/proof-receipts/runs/native-")
-                    && path.ends_with("/run.json.command.json")
-                    && read(root, path)
-                        .ok()
-                        .flatten()
-                        .is_some_and(|bytes| artifact["sha256"] == sha(&bytes))
-            });
+            && (crate::repository_proof::is_repository(&receipt)
+                && crate::repository_proof::validate(&receipt).is_ok()
+                || artifact["path"].as_str().is_some_and(|path| {
+                    path.starts_with(".agentic-workspace/local/proof-receipts/runs/native-")
+                        && path.ends_with("/run.json.command.json")
+                        && read(root, path)
+                            .ok()
+                            .flatten()
+                            .is_some_and(|bytes| artifact["sha256"] == sha(&bytes))
+                }));
         detail = json!({"status":if current {"current"} else {"unavailable-or-stale"},"artifact":artifact});
         if !current {
             freshness["status"] = json!("unproven");

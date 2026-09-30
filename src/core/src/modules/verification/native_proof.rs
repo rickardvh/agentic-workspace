@@ -289,19 +289,14 @@ pub(crate) fn select_mode(
                 "repository proof promotion requires current exact local proof and a durable consumer",
             ));
         }
-        let bytes =
-            read(&root, consumer)?.ok_or_else(|| err("repository proof consumer missing"))?;
         let durable = format!(
             "proof://receipts/{}",
             receipt["receipt_id"].as_str().unwrap()
         );
-        if !String::from_utf8_lossy(&bytes).contains(&durable) {
-            return Err(err(
-                "repository proof consumer does not reference the exact receipt",
-            ));
-        }
+        let admitted_consumer = crate::repository_proof::consumer(target, consumer, &durable)?;
         subject = receipt["proof_subject"].clone();
-        promotion = json!({"receipt":receipt,"consumer":consumer,"consumer_revision":sha(&bytes),"reason":request["reason"]});
+        promotion =
+            json!({"receipt":receipt,"consumer":admitted_consumer,"reason":request["reason"]});
     }
     if subject["identity_complete"] != true {
         gaps.push("proof-subject-incomplete".into());
@@ -343,7 +338,15 @@ pub(crate) fn freshness(
     // The publication's authenticated native custody already identifies the
     // selected route and command. Revalidate that exact selection, never a
     // catalogue of hypothetical alternatives (including same-command aliases).
-    let Some(committed) = committed_publication(target, receipt)? else {
+    let repository = crate::repository_proof::is_repository(receipt);
+    let committed = if repository {
+        Some(
+            json!({"invocation":{"arguments":{"selection":crate::repository_proof::selection(target, receipt)?}}}),
+        )
+    } else {
+        committed_publication(target, receipt)?
+    };
+    let Some(committed) = committed else {
         return Ok(
             json!({"status":"unproven","strategy_coverage":"unproven","reason":"native-selected-receipt-custody-unavailable"}),
         );
@@ -356,7 +359,11 @@ pub(crate) fn freshness(
     if previous["work"]["id"]
         .as_str()
         .is_some_and(|id| !id.starts_with("direct-task:") && !id.is_empty())
-        && previous["work"] != *work
+        && if repository {
+            previous["work"]["revision"] != work["revision"]
+        } else {
+            previous["work"] != *work
+        }
     {
         return Ok(
             json!({"status":"stale","strategy_coverage":"unproven","reason":"planning-proof-subject-changed"}),
@@ -372,6 +379,9 @@ pub(crate) fn freshness(
     };
     observed["strategy_revision"] =
         receipt["proof_subject"]["runtime"]["strategy_revision"].clone();
+    if repository {
+        observed = crate::repository_proof::runtime(&observed);
+    }
     let current_subject = proof_subject::build(
         target,
         changed,
