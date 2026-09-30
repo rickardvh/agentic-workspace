@@ -10,8 +10,10 @@ in AW itself. Preserve the assigned task and continue it when safe. Cosmetic
 preferences, expected failures and consumer-repository defects need no AW report.
 
 First check repository-owned `.agentic-workspace/config.toml`:
-`workspace.upstream_dogfooding = true` permits this reporting procedure. Absent or
-false means stop quietly. Improvement latitude alone grants no publication consent.
+`workspace.upstream_dogfooding = true` supplies standing eligibility and consent
+for this reporting procedure. Absent or false means stop quietly. This opt-in
+never overrides stricter current host/repository action authority. Improvement
+latitude alone grants no publication consent.
 
 Prepare a short anonymised report: affected public AW operation, sanitised symptom,
 whether an effect occurred, expected behaviour, and a minimal synthetic or abstract
@@ -35,11 +37,17 @@ is available, search open and closed issues in `rickardvh/agentic-workspace` for
 same failure. Update the smallest matching issue with new evidence; avoid duplicate
 reports or comments when the current issue already covers the finding.
 
-Publish the prepared report only when the opt-in is current, safe anonymisation is
-established, and that host capability supports issue writes. If search, writing or
-safe anonymisation is unavailable, return the exact safe report for maintainer
-handoff. Do not discover alternative credentials, use browser automation or switch
-to shell publication. This procedure grants no credentials, consumer mutations,
+Create, update or comment only when the opt-in is current, safe anonymisation is
+established, the host capability supports issue writes, and current host/repository
+action authority allows that write. An authenticated capability supplies ability,
+not authority. If current authority blocks the write, requires an unanswered
+current-task decision, or is unknown, return the exact anonymised report for
+handoff without writing upstream. Current-task authorization can satisfy a rule
+that requires it without changing durable dogfooding config. Where current policy
+already permits the scoped write, publish directly without a new mandatory prompt.
+If search, writing or safe anonymisation is unavailable, return the exact safe
+report for maintainer handoff. Do not discover alternative credentials, use browser
+automation or switch to shell publication. This procedure grants no credentials, consumer mutations,
 upstream code changes, proof, review or completion authority.
 
 Stop after confirming the report/update and its issue link, confirming existing

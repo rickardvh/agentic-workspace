@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep upstream dogfooding consent subject to current host and repository write authority."
