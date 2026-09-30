@@ -153,7 +153,7 @@ pub(crate) fn select_mode(
     }
     let Some(choice) = choice else {
         return Ok(
-            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"omitted_profile_command_count":omitted_profile_commands,"candidate_boundary":"Domain candidates are bounded; remaining exact commands stay at their current source-field reference. No automatic selection or proof sufficiency."}),
+            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"omitted_profile_command_count":omitted_profile_commands,"candidate_boundary":"Bounded candidates; other commands remain at source. Agent selection grants no proof sufficiency."}),
         );
     };
     let source_selected = strategy["proof_routes"]

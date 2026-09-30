@@ -391,7 +391,21 @@ pub(crate) fn published(
     projected["publication_custody"] = json!({"kind":"agentic-workspace/proof-publication-custody/v2",
         "custody":custody,"local_carrier":local,"local_revision":digest(original)?,
         "index_sha256":original["publication_custody"]["outcome"]["value"]["publication"]["index_sha256"]});
+    // Repository admission binds the exact index postimage. The local recovery
+    // carrier still supplies effect custody, separately from this observation.
+    projected["repository_proof"]["index_sha256"] =
+        projected["publication_custody"]["index_sha256"].clone();
+    projected["repository_proof"]["revision"] = json!(digest(&payload(&projected))?);
     Ok(projected)
+}
+
+pub(crate) fn index_postimage(receipt: &Value, index_sha256: &str) -> Result<bool, CoreError> {
+    validate(receipt)?;
+    Ok(
+        receipt["publication_custody"]["kind"] == "agentic-workspace/proof-publication-custody/v2"
+            && receipt["repository_proof"]["index_sha256"] == index_sha256
+            && receipt["publication_custody"]["index_sha256"] == index_sha256,
+    )
 }
 
 pub(crate) fn publication_original(target: &Path, receipt: &Value) -> Result<Value, CoreError> {

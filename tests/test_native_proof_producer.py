@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -32,10 +33,10 @@ def fixture(root: Path) -> dict:
     return {"target": str(root), "task": "Check the current source", "changed": ["a.txt"]}
 
 
-def proof_consumer(call, context, reference):
+def proof_consumer(call, context, reference, task="Retain the selected proof for repository continuation"):
     from tests.test_native_planning_create import material
 
-    consumer_context = {**context, "task": "Retain the selected proof for repository continuation"}
+    consumer_context = {**context, "task": task}
     request = call(consumer_context)["planning"]["creation_requests"][0]
     value = material()
     value["references"] = [reference]
@@ -230,6 +231,52 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
     fresh_claim["arguments"]["evidence_refs"] = [promoted["publication"]["reference"]]
     (fresh / "a.txt").write_text("changed source")
     assert call({**fresh_context, "request": fresh_claim})["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
+
+    # The next writer admits the portable index postimage, then establishes its
+    # own local execution/publication custody. The predecessor's files stay absent.
+    next_request = call(fresh_context)["verification"]["execution_requests"][0]
+    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
+    next_local = call({**fresh_context, "invocation": next_action})["value"]
+    next_consumer = proof_consumer(
+        call, fresh_context, next_local["publication"]["repository_reference"], task="Retain the next repository proof"
+    )
+    next_request = call(fresh_context)["verification"]["execution_requests"][0]
+    next_request["arguments"]["promotion"] = {
+        "evidence_ref": next_local["publication"]["reference"],
+        "consumer": next_consumer.relative_to(fresh).as_posix(),
+        "reason": "Continue repository evidence from a fresh checkout",
+    }
+    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
+    fresh_index = fresh / ".agentic-workspace/proof/receipts/index.json"
+    index_bytes = fresh_index.read_bytes()
+    changed_index = json.loads(index_bytes)
+    changed_index["unowned"] = "preserve this changed index"
+    fresh_index.write_text(json.dumps(changed_index))
+    previous_receipt = fresh / receipt_path.relative_to(tmp_path)
+    previous_bytes = previous_receipt.read_bytes()
+    for rebind_hash in (False, True):
+        if rebind_hash:
+            changed_receipt = json.loads(previous_bytes)
+            rebound = hashlib.sha256(fresh_index.read_bytes()).hexdigest()
+            changed_receipt["repository_proof"]["index_sha256"] = rebound
+            changed_receipt["publication_custody"]["index_sha256"] = rebound
+            previous_receipt.write_text(json.dumps(changed_receipt))
+        with pytest.raises(AssertionError, match="index|custody|stale|projection"):
+            call({**fresh_context, "invocation": next_action})
+        assert json.loads(fresh_index.read_text()) == changed_index
+    previous_receipt.write_bytes(previous_bytes)
+    fresh_index.write_bytes(index_bytes)
+    next_promoted = call({**fresh_context, "invocation": next_action})["value"]
+    assert next_promoted["publication"]["reference"] == next_local["publication"]["repository_reference"]
+    assert next_promoted["command_reexecuted"] is False
+    assert call({**fresh_context, "invocation": next_action})["value"] == next_promoted
+    assert (fresh / "count.txt").read_text().splitlines() == ["executed"]
+    assert (fresh / receipt_path.relative_to(tmp_path)).exists()
+    assert not (fresh / local_run).exists()
+    assert not (fresh / portable["publication_custody"]["local_carrier"]).exists()
+    for path in (fresh / ".agentic-workspace").rglob("*.json"):
+        if "local" not in path.relative_to(fresh).parts:
+            assert not find_matches(path.read_text()), path
 
     consumer.unlink()
     unrelated = tmp_path / "user-edit.txt"

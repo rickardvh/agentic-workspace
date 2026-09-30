@@ -311,20 +311,18 @@
             "consumer": {"type": "string", "minLength": 1},
             "reason": {"type": "string", "minLength": 1, "maxLength": 2048}
           },
-          "description": "Promote an exact retained execution without rerunning it. The current repository consumer must reference the resulting repository receipt; its bytes and the proof are revalidated before publication."
+          "description": "Retain exact local proof for a current admitted Planning consumer."
         },
         "route_id": {
           "type": "string",
-          "minLength": 1,
-          "description": "Current manifest proof route identity."
+          "minLength": 1
         },
         "command": {
           "type": "string",
-          "minLength": 1,
-          "description": "Exact source-declared command text, validated against the selected route before effects."
+          "minLength": 1
         }
       },
-      "description": "Choose one exact command already offered by the current Verification strategy; this request supplies no command or proof authority."
+      "description": "Choose an offered route/command; Verification revalidates before effects."
     },
     "verification_record_request": {
       "type": "object",
@@ -338,13 +336,13 @@
         "route_id": {
           "type": "string",
           "minLength": 1,
-          "description": "Reported route hint or unresolved; only matching current source declarations establish strategy coverage."
+          "description": "Route hint; source declarations determine coverage."
         },
         "command": {
           "type": "string",
           "minLength": 1,
           "maxLength": 8192,
-          "description": "Bounded reported command text; retaining it does not authorise execution."
+          "description": "Reported command, without execution authority."
         },
         "result": {
           "enum": [
@@ -355,10 +353,10 @@
         },
         "reported_observation": {
           "type": "object",
-          "description": "Preserved interoperability receipt fields, unproven by native producer admission."
+          "description": "Unproven interoperability fields."
         }
       },
-      "description": "Record an explicit interoperability observation against the exact current task and proof subject. The observation supplies no native execution, proof sufficiency or independent-review authority."
+      "description": "Record a task/subject observation; grants no execution, sufficiency or independent review."
     },
     "native_proof_arguments": {
       "type": "object",
@@ -388,15 +386,15 @@
         },
         "execute_selected": {
           "const": true,
-          "description": "Explicitly selects the effectful execution and publication behaviour of proof.report."
+          "description": "Execute the selected proof."
         },
         "selection": {
           "type": "object",
-          "description": "Current owner-derived command, strategy, subject, work, runtime observations and bounded timeout; public clients cannot supply selection authority."
+          "description": "Verification-derived command, strategy, subject, work, runtime and timeout."
         },
         "record_receipt": {
           "const": true,
-          "description": "Publish the current owner-derived interoperability observation without executing a command."
+          "description": "Retain an interoperability observation."
         }
       },
       "description": "Owner-derived selected proof process and receipt publication effect, sealed to the current native subject and strategy.",

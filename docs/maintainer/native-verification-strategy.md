@@ -56,6 +56,12 @@ without opening the original local run or command output. Raw output and derived
 measurements remain local. Repository provenance does not grant local effect
 replay or independent acceptance; modified source/runtime/consumer fails closed.
 
+The portable publication also binds the exact index postimage in its validated
+repository observation. A fresh checkout can admit that index for the next
+promotion, which establishes its own local attempt and recovery custody. Altered
+index bytes fail admission. The predecessor's absent local carrier is not recreated;
+its repository receipt remains protected during automatic supersession.
+
 The 2048-entry publication capacity check still protects repository promotion.
 It does not prevent ordinary local execution. Existing source-reconciliation
 current groups remain repository-owned evidence through their own producer.
