@@ -876,6 +876,7 @@ fn resolve_selected(
         &work,
         &contract,
         request_for(crate::native_resource_owner::OWNER),
+        planning_request,
     )?;
     let mut contributions = vec![
         resources["contribution"].clone(),

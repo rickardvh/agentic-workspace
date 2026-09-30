@@ -109,6 +109,108 @@ def resource_skill(root):
         path.write_bytes((ROOT / reference).read_bytes())
 
 
+def test_worktree_seed_preserves_current_planning_relation(tmp_path, shared_core_binary, native_cli):
+    from tests.native_planning_fixtures import fixture_source
+    from tests.test_native_public_cli import consume
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    before_owner = git(repo, "rev-parse", "HEAD")
+    reference = ".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json"
+    owner = repo / reference
+    owner.parent.mkdir(parents=True)
+    owner.write_bytes(fixture_source(reference).read_bytes())
+    state = repo / ".agentic-workspace/planning/state.toml"
+    state.write_text(f'[[active.execplans]]\nid="delegation-lane-sweep"\nsurface="{reference}"\nstatus="active"\n')
+    git(repo, "add", ".")
+    git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "current owner")
+    containing_owner = git(repo, "rev-parse", "HEAD")
+    path = tmp_path / "isolated"
+    context = {"target": str(repo), "task": "Continue current implementation in destructive validation"}
+
+    def propose(**extra):
+        return resource(
+            "native",
+            shared_core_binary,
+            native_cli,
+            {**context, "request": {"operation": "worktree-create", "path": str(path), "base": before_owner, **extra}},
+        )
+
+    unresolved = propose()
+    assert unresolved["continuity"]["status"] == "relation-required" and "action" not in unresolved
+    continuation = unresolved["planning"]["requests"][0]
+    judgment = {
+        "need": "destructive-validation",
+        "reason": "Validation rewrites tracked fixtures",
+        "policy_revision": unresolved["policy_revision"],
+        "policy_answer": "permits-isolation",
+    }
+    missing = propose(**judgment, planning_request=continuation)
+    assert missing["continuity"]["status"] == "owner-missing-from-seed"
+    assert missing["continuity"]["required_owner"]["ref"] == reference
+    assert "action" not in missing and not path.exists()
+    ready = propose(**judgment, planning_request=continuation, base=containing_owner)
+    assert ready["continuity"]["status"] == "admitted"
+    # A changed immutable base cannot reuse the earlier admitted action.
+    changed = json.loads(json.dumps(ready["action"]))
+    changed["request"]["base"] = before_owner
+    blocked = resource("native", shared_core_binary, native_cli, changed)
+    assert blocked["blockers"] and not path.exists()
+    changed = json.loads(json.dumps(ready["action"]))
+    changed["request"]["planning_request"]["arguments"] = {"answer": "independent", "task_posture": "direct"}
+    with pytest.raises(AssertionError, match="changed"):
+        resource("native", shared_core_binary, native_cli, changed)
+    assert not path.exists()
+    original = owner.read_bytes()
+    body = json.loads(original)
+    body["next_action"] = "Changed current continuation"
+    owner.write_text(json.dumps(body))
+    rejected = resource("native", shared_core_binary, native_cli, ready["action"])
+    assert rejected["blockers"] and not path.exists()
+    owner.write_bytes(original)
+    created = resource("native", shared_core_binary, native_cli, ready["action"])
+    assert created["effect_outcome"] == "committed"
+    assert not (path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+    fresh_context = {"target": str(path), "task": context["task"]}
+    fresh = consume("native", shared_core_binary, native_cli, fresh_context)
+    continued = consume("native", shared_core_binary, native_cli, {**fresh_context, "request": fresh["planning"]["requests"][0]})
+    assert continued["planning"]["selected_owner"]["ref"] == reference
+    removal = resource(
+        "native", shared_core_binary, native_cli, {**context, "request": {"operation": "worktree-remove", "path": str(path)}}
+    )
+    resource("native", shared_core_binary, native_cli, removal["action"])
+
+    for posture in ["direct", "planned"]:
+        independent = {**continuation, "arguments": {"answer": "independent", "task_posture": posture}}
+        proposal = propose(**judgment, planning_request=independent)
+        assert proposal["planning"]["task_relation"] == "independent"
+        assert proposal["planning"]["status"] == posture
+        resource("native", shared_core_binary, native_cli, proposal["action"])
+        assert not (path / reference).exists()
+        removal = resource(
+            "native", shared_core_binary, native_cli, {**context, "request": {"operation": "worktree-remove", "path": str(path)}}
+        )
+        resource("native", shared_core_binary, native_cli, removal["action"])
+
+    # Ordinary start/invoke composes the same relation automatically; callers
+    # need not reconstruct a second nested Planning answer.
+    initial = consume("native", shared_core_binary, native_cli, context)
+    proposal_request = initial["resources"]["requests"][0]
+    proposal_request["arguments"]["request"] = {"operation": "worktree-create", "path": str(path), "base": before_owner, **judgment}
+    ready = consume(
+        "native", shared_core_binary, native_cli, {**context, "request": [independent, proposal_request]}, host_path=os.environ["PATH"]
+    )
+    action = next(a for a in ready["decision_packet"]["ready_actions"] if a["operation_id"] == "workspace.resources.worktree-create")
+    assert action["arguments"]["request"]["planning_request"] == independent
+    created = consume("native", shared_core_binary, native_cli, {**context, "invocation": action}, host_path=os.environ["PATH"])
+    assert created["value"]["effect_outcome"] == "committed"
+    removal = resource(
+        "native", shared_core_binary, native_cli, {**context, "request": {"operation": "worktree-remove", "path": str(path)}}
+    )
+    resource("native", shared_core_binary, native_cli, removal["action"])
+
+
 def test_resource_exact_actions_scratch_and_fresh_recovery(tmp_path, shared_core_binary, native_cli):
     context = {"target": str(tmp_path), "task": "Scratch owner sequence"}
 
