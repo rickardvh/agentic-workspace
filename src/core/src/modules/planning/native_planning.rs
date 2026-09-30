@@ -599,7 +599,7 @@ fn resolve_context(
         .unwrap_or("default");
     let selection = load(SELECTION)?;
     let legacy = load(STATE)?;
-    let mut migration = json!({"status":"absent","role":"legacy-migration-input"});
+    let mut migration = json!({"status":"absent"});
     let legacy_candidates = if let Some(state) = &legacy {
         match legacy_references(state) {
             Ok(candidates) => {
@@ -971,7 +971,9 @@ fn resolve_context(
         }
         blockers = json!([{"code":"legacy-planning-owner-choice-required","message":"Legacy aggregate is migration input, not current continuation. Select/reconcile a canonical owner with one exact legacy_aggregate.selection_requests entry, then retire the aggregate through Planning disposition. Unsupported material stays preserved.","affects":["task","claim:complete"]}]);
     }
-    migration["selection_requests"] = json!(migration_requests);
+    if legacy.is_some() {
+        migration["selection_requests"] = json!(migration_requests);
+    }
     let decisions = if custody_required {
         json!([{"id":"planning-selector-transfer","question":"Let native Planning maintain the existing saved plan selection?",
             "material":transfer["binding"],
