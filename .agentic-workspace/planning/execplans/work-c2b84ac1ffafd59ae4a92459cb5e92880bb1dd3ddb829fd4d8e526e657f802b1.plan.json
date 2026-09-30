@@ -6,8 +6,8 @@
     "source": "Refined #3722 acceptance and testing-strategy.md; preserve exact custody, currentness and unrelated changes."
   },
   "continuation": {
-    "delivery": "PR #3723 is ready for review on codex/local-proof-lifetime. Commit 776950a8d includes all five protected receipts and completed index reconciliation; checkout was clean. Review 5908441332 accepts the prior three blockers but finds fresh-checkout next-promotion index admission and capability-contract size blockers. Both now repaired with focused local evidence; publish the new commit and obtain CI. Preserve the separate #3719 sibling checkout. Issue closure and independent acceptance remain unclaimed.",
-    "evidence": "Promotion requires a current admitted Planning owner. Repository evidence contains a bounded portable subject, process result and exact original identity digests; fresh checkout consumes it without original local run/detail/custody. Unknown provenance remains protected. Historical failure results remain failures and stale evidence receives no freshness upgrade. Portable publications now bind the exact index hash inside the validated repository observation. This admits the predecessor postimage for a new local publication; effect replay still needs original local custody. Absent predecessor local custody preserves its receipt during automatic supersession. Interface prose shortened with validation constraints and all size budgets unchanged.",
+    "delivery": "PR #3723 is ready for review on codex/local-proof-lifetime. Commit 776950a8d includes all protected receipt/index reconciliation; fa6e8322a passed Merge proof, security, Merge sufficiency and Semver. Review 5909096810 accepts previous blockers but rejects automatic write admission from recomputable repository hashes. That path is removed; fresh checkouts now explicitly adopt an exact index through existing Verification disposition with empty sources and an agent reason, committing new local custody. Focused proof passes; publish and obtain current CI. Preserve the separate #3719 sibling checkout. Issue closure and independent acceptance remain unclaimed.",
+    "evidence": "Repository observations remain portable readable evidence, without originating local files. Self-digests cannot grant index-write custody. Missing current index custody is offered through existing Verification disposition, which validates current Planning consumer, binds exact index and guarded sources, and commits new local effect custody. Mutated index with both hashes and payload digest recomputed fails publication; edited observation itself passes detail admission. Untouched source supports second promotion after explicit transfer. Original local carriers are never recreated. Consumer drift stales transfer; unknown provenance remains protected. Historical conversion does not upgrade freshness. No schema limits or validation constraints changed.",
     "implementation": "Branch codex/local-proof-lifetime from origin/master 194704682. Ordinary proof result embeds exact receipt in the existing local committed run. proof://local references validate committed custody and detail. execute-selected promotion binds a durable consumer reference and reuses receipt without command execution. Existing retention offers local transfer for authenticated consumer-free execution before retiring repository copy. Source-reconciliation retains repository lifetime.",
     "resources": "Task scratch .agentic-workspace/local/scratch/cdff5c93c23b702a2e022925ba924a8154b32fae8b6efafc0d803331f9d4fb28 is AW-created for Implement #3722. Existing sibling staging resource belongs to #3719 and remains outside scope.",
     "transport": "Use Python JSON or PowerShell ConvertFrom-Json -DateKind String when carrying exact envelopes: automatic date conversion alters receipt timestamps and fails admission."
@@ -42,7 +42,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish the second PR #3723 review repair; require CI on the new commit, external independent acceptance and task-bound Verification completion judgment.",
+  "next_action": "Publish the third PR #3723 review repair; require CI on the new commit, external independent acceptance and task-bound Verification completion judgment.",
   "owner_level": "slice",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3722"
@@ -57,7 +57,10 @@
       "Actual Verification disposition converted four protected execution receipts to portable repository observations, preserving original authenticated local bytes; fifth source-reconciliation receipt retained unchanged; fresh inventory quiet with no transfer gaps",
       "Second promotion from a fresh checkout passed without originating local files; altered index and rebound hash rejected; predecessor receipt preserved; no command reexecution",
       "All four former-selection public surfaces pass unchanged contract and current-state size budgets",
-      "9 Rust publication recovery/control tests passed for the index-admission repair"
+      "9 Rust publication recovery/control tests passed for the index-admission repair",
+      "Full adversarial index/hash/payload-digest recomputation remains readable evidence but refuses positive index-write admission; unchanged fresh checkout second promotion succeeds after explicit Verification index transfer with new local custody, without originating files",
+      "Changed Planning consumer rejects pending index transfer; restored exact source permits guarded transfer",
+      "All four former-selection public surfaces pass unchanged contract and current-state size budgets; all 5 Rust retention and 9 publication recovery/control tests passed"
     ],
     "remaining": [
       "Required commit hooks and CI on the repair commit",
@@ -68,10 +71,11 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3722",
     "https://github.com/rickardvh/agentic-workspace/pull/3723",
     "https://github.com/rickardvh/agentic-workspace/pull/3723#issuecomment-5907626588",
-    "https://github.com/rickardvh/agentic-workspace/pull/3723#issuecomment-5908441332"
+    "https://github.com/rickardvh/agentic-workspace/pull/3723#issuecomment-5908441332",
+    "https://github.com/rickardvh/agentic-workspace/pull/3723#issuecomment-5909096810"
   ],
   "relationships": {},
-  "revision": 5,
+  "revision": 6,
   "scope": {
     "excluded": "No blanket ignore/delete/stash, no second ledger or cleanup subsystem, no broad enclave audit or external repository investigation.",
     "included": "Native Verification execution, claim receipt admission, explicit promotion, existing retention transition, public tests, installed consumer and actual residue disposition."
@@ -81,18 +85,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/5bf0d364674e4a7f4e654ee55527f3250481975b00c887ae4135c232bfee8eeb.attempt.json",
-        "revision": "sha256:449193a18a0f285643dfd4528074a31954ef105db6bbc8422c278a4f82e9845c",
+        "path": ".agentic-workspace/local/effects/64167d29834c3e9d0564c05cff43604223134d9c727c4e2ba0fa472b0ef0aa2f.attempt.json",
+        "revision": "sha256:588bbe6f5d4928a24f9e3797c8caebd935e28a5a1b59a170c597ca3da4647b33",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/5bf0d364674e4a7f4e654ee55527f3250481975b00c887ae4135c232bfee8eeb.result.json",
-        "revision": "sha256:243c4391863cb79ae837fff483afbba528c28094f972bd1a7c5f92f0f57c67f2",
+        "path": ".agentic-workspace/local/effects/64167d29834c3e9d0564c05cff43604223134d9c727c4e2ba0fa472b0ef0aa2f.result.json",
+        "revision": "sha256:906ea4036a7b9dd88f430afd6871336c19e400125f1d3d62c8b22bb905c592f5",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:382dbcd2ef4a43f72afa94acd10c15b8ae22407c747d339100785d6ea2f20477",
+    "invocation_revision": "sha256:6b7588ec729e321062cdc6f0c07145f7de05b8f788ed8a07d5949987e316d195",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -100,7 +104,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:060325e8942c04e6cf6f34475445ec26dfcf5742f35ee4aa899238cffb61407f",
+        "document_revision": "sha256:b5c3c995dedde6cc43db83b51942239501b2e646b1f4af5fe82f08c70e2df9d2",
         "owner_id": "work-c2b84ac1ffafd59ae4a92459cb5e92880bb1dd3ddb829fd4d8e526e657f802b1",
         "owner_path": ".agentic-workspace/planning/execplans/work-c2b84ac1ffafd59ae4a92459cb5e92880bb1dd3ddb829fd4d8e526e657f802b1.plan.json"
       }

@@ -130,15 +130,32 @@ fn inventory(target: &Path) -> Result<Value, CoreError> {
             "Unrecognised proof index preserved; exact owner transfer unavailable",
         ));
     }
-    let carrier = read(&root, CARRIER)?;
     let repository = crate::repository_proof::transfers(target, &sources)?;
     let repository_transfers = &repository["transfers"];
-    let transfer = index_bytes.is_some()
-        && index.get("current_publication").is_none()
-        && carrier.as_ref().is_none_or(|bytes| {
-            serde_json::from_slice::<Value>(bytes)
-                .is_ok_and(|value| value.get("target_revision").is_none())
-        });
+    let transfer = index_bytes.as_ref().is_some_and(|bytes| {
+        !crate::proof_publication::index_admitted(target, bytes).unwrap_or(false)
+    });
+    // A fresh checkout must explicitly transfer this index through Verification.
+    // The portable proof is readable source material, never a write grant. Its
+    // named consumer must still be admitted by its current responsible owner.
+    if transfer
+        && let Some(id) = index["current_publication"].as_str()
+        && let Some(bytes) = sources.get(&format!("{HOME}{id}.json"))
+    {
+        let receipt: Value = serde_json::from_slice(bytes).map_err(err)?;
+        if crate::repository_proof::is_repository(&receipt) {
+            crate::repository_proof::validate(&receipt)?;
+            crate::repository_proof::consumer(
+                target,
+                receipt["repository_proof"]["consumer"]["path"]
+                    .as_str()
+                    .unwrap_or(""),
+                receipt["repository_proof"]["consumer"]["reference"]
+                    .as_str()
+                    .unwrap_or(""),
+            )?;
+        }
+    }
     let references: BTreeMap<_, _> = sources
         .iter()
         .filter(|(p, _)| p.as_str() != INDEX && p.as_str() != CARRIER)
@@ -393,7 +410,7 @@ pub(crate) fn view(
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"verification","owner_revision":owner["revision"],
         "source_revision":digest(&binding)?,"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     let mut result = json!({"status":if recovery {"recovery-required"} else {"judgment-required"},"requests":[template],
-        "sources":binding["sources"],"local_transfers":binding["local_transfers"],"repository_transfers":binding["repository_transfers"],"index_transfer_required":binding["index_transfer_required"],"protected":binding["protected"],"authority":"Judge continuing repository value. Local transfers preserve exact local runs. retain_repository authorizes the offered portable format transfer for existing admitted owner consumer closures, without granting new proof sufficiency. Discovery grants no write or deletion authority."});
+        "sources":binding["sources"],"local_transfers":binding["local_transfers"],"repository_transfers":binding["repository_transfers"],"index_transfer_required":binding["index_transfer_required"],"protected":binding["protected"],"authority":"Judge exact index adoption and continuing repository value. Empty sources transfers only the index into current local custody. retain_repository selects portable format transfers; local transfers preserve exact runs. Discovery grants no write, deletion or proof sufficiency."});
     if let Some(request) = request {
         crate::prepare_request_value(
             json!({"request":request,"current_work":work,"capability_contract":contract}),

@@ -232,8 +232,8 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
     (fresh / "a.txt").write_text("changed source")
     assert call({**fresh_context, "request": fresh_claim})["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
 
-    # The next writer admits the portable index postimage, then establishes its
-    # own local execution/publication custody. The predecessor's files stay absent.
+    # Repository bytes cannot acquire write custody. The fresh writer adopts the
+    # exact index through the existing owner, establishing its own local custody.
     next_request = call(fresh_context)["verification"]["execution_requests"][0]
     next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
     next_local = call({**fresh_context, "invocation": next_action})["value"]
@@ -246,6 +246,25 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
         "consumer": next_consumer.relative_to(fresh).as_posix(),
         "reason": "Continue repository evidence from a fresh checkout",
     }
+    next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
+    with pytest.raises(AssertionError, match="index.*custody|owner transfer"):
+        call({**fresh_context, "invocation": next_action})
+    transfer = call(fresh_context)["verification"]["retention"]
+    assert transfer["index_transfer_required"] is True
+    transfer_request = transfer["requests"][0]
+    transfer_request["arguments"].update(sources=[], reason="Adopt the unchanged repository index in this checkout")
+    transfer_action = call({**fresh_context, "request": transfer_request})["decision_packet"]["primary_action"]
+    assert transfer_action["operation_id"] == "verification.retire-receipts"
+    original_consumer = fresh / consumer.relative_to(tmp_path)
+    original_consumer_bytes = original_consumer.read_bytes()
+    changed_consumer = json.loads(original_consumer_bytes)
+    changed_consumer["next_action"] = "Unadmitted consumer edit before index transfer"
+    original_consumer.write_text(json.dumps(changed_consumer))
+    with pytest.raises(AssertionError, match="source|consumer|Planning|changed"):
+        call({**fresh_context, "invocation": transfer_action})
+    original_consumer.write_bytes(original_consumer_bytes)
+    call({**fresh_context, "invocation": transfer_action})
+    assert call(fresh_context)["verification"]["retention"]["status"] == "quiet"
     next_action = call({**fresh_context, "request": next_request})["decision_packet"]["primary_action"]
     fresh_index = fresh / ".agentic-workspace/proof/receipts/index.json"
     index_bytes = fresh_index.read_bytes()
@@ -260,7 +279,25 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
             rebound = hashlib.sha256(fresh_index.read_bytes()).hexdigest()
             changed_receipt["repository_proof"]["index_sha256"] = rebound
             changed_receipt["publication_custody"]["index_sha256"] = rebound
+            # Recompute the exact ordinary Rust/serde digest, so the control
+            # cannot pass merely because the attack left a checksum stale.
+            payload = json.loads(json.dumps(changed_receipt))
+            payload.pop("publication_custody")
+            payload["repository_proof"].pop("revision")
+            revision = (
+                "sha256:"
+                + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+            )
+            changed_receipt["repository_proof"]["revision"] = revision
             previous_receipt.write_text(json.dumps(changed_receipt))
+            # The edited repository observation remains readable and intact;
+            # its self-digest does not authenticate index write custody.
+            old_claim = call(fresh_context)["verification"]["requests"][0]
+            old_claim["arguments"]["evidence_refs"] = [promoted["publication"]["reference"]]
+            old_evidence = call({**fresh_context, "request": old_claim})["verification"]["evidence"][0]
+            assert old_evidence["publication_admission"]["status"] == "admitted"
+            assert "receipt-unavailable-or-invalid" not in old_evidence["gaps"]
+            assert "native-proof-detail-unavailable-or-stale" not in old_evidence["gaps"]
         with pytest.raises(AssertionError, match="index|custody|stale|projection"):
             call({**fresh_context, "invocation": next_action})
         assert json.loads(fresh_index.read_text()) == changed_index

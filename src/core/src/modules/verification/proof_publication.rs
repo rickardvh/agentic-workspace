@@ -175,8 +175,8 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
     if crate::native_proof_retention::index_custody(target, bytes).unwrap_or(false) {
         return Ok(index);
     }
-    // A locator bounds IO. An owner-published repository observation can admit
-    // its exact index postimage; it never reconstructs prior local effect custody.
+    // A locator bounds IO; admission requires exact current local owner custody.
+    // Portable observations cannot acquire write authority with self-digests.
     // The predecessor native format had one receipt. Multiple unlocated entries
     // require transfer rather than a historical receipt/attempt scan.
     let candidate = match index.get("current_publication") {
@@ -189,12 +189,6 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
         && entry["path"] == format!("{id}.json")
         && let Some(receipt) = read(root, &path)?.and_then(|b| parse(&b).ok())
     {
-        if crate::repository_proof::is_repository(&receipt)
-            && receipt["receipt_id"] == *id
-            && crate::repository_proof::index_postimage(&receipt, &hash(bytes))?
-        {
-            return Ok(index);
-        }
         if receipt.get(CUSTODY).is_none()
             && crate::native_verification::publication_identity(&receipt)? == *id
             && let Ok(Some(committed)) =
@@ -203,10 +197,10 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
         {
             return Ok(index);
         }
-        if retained(target, &receipt).is_ok()
+        if let Ok(prepared) = retained(target, &receipt)
             && let Ok(committed) = attempt_store::inspect_committed(
                 &target.to_string_lossy(),
-                receipt[CUSTODY]["custody"].clone(),
+                prepared["custody"].clone(),
             )
             && committed["outcome"]["value"]["publication"]["index_sha256"] == hash(bytes)
         {
@@ -216,6 +210,10 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
     Err(err(
         "proof-publication-index-custody-required; existing index preserved; explicit owner transfer is required",
     ))
+}
+pub(crate) fn index_admitted(target: &Path, bytes: &[u8]) -> Result<bool, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    Ok(owned_index(target, &root, Some(bytes)).is_ok())
 }
 fn require_capacity(index: &Value) -> Result<(), CoreError> {
     if index["receipts"].as_object().unwrap().len() >= 2048 {

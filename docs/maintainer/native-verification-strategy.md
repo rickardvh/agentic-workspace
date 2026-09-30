@@ -56,11 +56,15 @@ without opening the original local run or command output. Raw output and derived
 measurements remain local. Repository provenance does not grant local effect
 replay or independent acceptance; modified source/runtime/consumer fails closed.
 
-The portable publication also binds the exact index postimage in its validated
-repository observation. A fresh checkout can admit that index for the next
-promotion, which establishes its own local attempt and recovery custody. Altered
-index bytes fail admission. The predecessor's absent local carrier is not recreated;
-its repository receipt remains protected during automatic supersession.
+Portable publication records include an index checksum for observation. That
+checksum grants no write admission, even when an editor recomputes it. A fresh
+checkout uses the existing Verification disposition request with empty `sources`
+and an explicit reason to adopt the exact index. Verification validates the current
+Planning consumer, binds the index and guarded sources, and commits fresh local
+custody. The next promotion uses that custody; changes to the adopted index fail
+admission. The predecessor's local carrier is not recreated, and its repository
+receipt remains protected during automatic supersession. Proof reading remains
+portable without performing this write-authority transfer.
 
 The 2048-entry publication capacity check still protects repository promotion.
 It does not prevent ordinary local execution. Existing source-reconciliation
