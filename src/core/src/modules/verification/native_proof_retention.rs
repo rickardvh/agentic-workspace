@@ -1036,6 +1036,84 @@ mod tests {
         }
     }
     #[test]
+    fn new_proof_rechecks_index_ownership_after_admission_without_blocking_replay() {
+        for late_legacy in [true, false] {
+            let f = Fixture::new();
+            std::fs::create_dir_all(f.0.join(".agentic-workspace/verification")).unwrap();
+            std::fs::write(f.0.join("a.txt"), "source").unwrap();
+            std::fs::write(f.0.join("count.txt"), "before\n").unwrap();
+            let command = if cfg!(windows) {
+                "Add-Content -Path count.txt -Value executed; Write-Output checked"
+            } else {
+                "echo executed >> count.txt; echo checked"
+            };
+            std::fs::write(f.0.join(".agentic-workspace/verification/manifest.toml"), format!("schema_version='agentic-workspace/verification-manifest/v1'\n[protocols.check]\napplies_to_paths=['a.txt']\n[proof_routes.check]\nprotocol_refs=['check']\ncommands=['{command}']\n")).unwrap();
+            let mut input = json!({"target":f.0,"task":"Check source","changed":["a.txt"]});
+            let initial = crate::native_public::start(input.clone()).unwrap();
+            input["request"] = initial["verification"]["execution_requests"][0].clone();
+            let selected = crate::native_public::start(input).unwrap();
+            let invocation = &selected["decision_packet"]["primary_action"];
+            assert_eq!(invocation["operation_id"], "proof.report");
+            let mut revalidations = 0;
+            let result = crate::native_proof::execute(&f.0, &selected, invocation, || {
+                revalidations += 1;
+                // The carrier already exists at this seam. Its existence must
+                // not turn the first command into recovery of a prior effect.
+                assert!(crate::native_proof::retained_attempt(&f.0, invocation)?);
+                if late_legacy {
+                    f.legacy();
+                }
+                Ok(())
+            });
+            if late_legacy {
+                assert!(
+                    result
+                        .unwrap_err()
+                        .to_string()
+                        .contains("index-custody-required")
+                );
+                assert_eq!(revalidations, 1);
+                assert_eq!(std::fs::read(f.0.join("count.txt")).unwrap(), b"before\n");
+                let index = std::fs::read(f.0.join(INDEX)).unwrap();
+                let receipt =
+                    std::fs::read(f.0.join(format!("{HOME}0123456789abcdef.json"))).unwrap();
+                let retry = crate::native_proof::execute(&f.0, &selected, invocation, || Ok(()));
+                assert!(
+                    retry
+                        .unwrap_err()
+                        .to_string()
+                        .contains("proof-execution-uncertain")
+                );
+                assert_eq!(std::fs::read(f.0.join(INDEX)).unwrap(), index);
+                assert_eq!(
+                    std::fs::read(f.0.join(format!("{HOME}0123456789abcdef.json"))).unwrap(),
+                    receipt
+                );
+                assert_eq!(std::fs::read(f.0.join("count.txt")).unwrap(), b"before\n");
+                let run = crate::native_proof::run_path(invocation).unwrap();
+                assert!(!f.0.join(format!("{run}.command.json")).exists());
+                assert!(!f.0.join(format!("{run}.completed.json")).exists());
+            } else {
+                let completed = result.unwrap();
+                assert_eq!(completed["value"]["process"]["status"], "passed");
+                let count = std::fs::read(f.0.join("count.txt")).unwrap();
+                assert_eq!(
+                    String::from_utf8_lossy(&count).lines().collect::<Vec<_>>(),
+                    ["before", "executed"]
+                );
+                f.legacy();
+                let index = std::fs::read(f.0.join(INDEX)).unwrap();
+                let replay = crate::native_proof::execute(&f.0, &selected, invocation, || {
+                    panic!("committed replay must not execute or revalidate")
+                })
+                .unwrap();
+                assert_eq!(replay["value"], completed["value"]);
+                assert_eq!(std::fs::read(f.0.join("count.txt")).unwrap(), count);
+                assert_eq!(std::fs::read(f.0.join(INDEX)).unwrap(), index);
+            }
+        }
+    }
+    #[test]
     fn exact_legacy_disposition_transfers_index_only_and_repeats_quietly() {
         let f = Fixture::new();
         let path = f.legacy();

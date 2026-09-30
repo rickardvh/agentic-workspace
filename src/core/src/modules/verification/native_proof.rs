@@ -789,6 +789,10 @@ pub(crate) fn execute(
             json!({"status":"applied","effects":["proof-execution"],"value":committed["record"]["outcome"]["value"],"custody":committed["custody"],"post_effect_changed_paths":[]}),
         );
     }
+    // Admission created a carrier, but that alone cannot exempt a new command
+    // from ownership checks. Genuine replay/recovery returned above; check the
+    // live publication state again after revalidation, before any new execution.
+    crate::native_proof_retention::preparation_ready(target)?;
     let command = selection["choice"]["command"]
         .as_str()
         .ok_or_else(|| err("missing selected command"))?;
