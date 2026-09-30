@@ -60,6 +60,17 @@ result. The original long path was a valid concern, but shortening it did not
 resolve the remaining failure. The tool supplied no specific policy rule or
 evidence that path length caused that rejection.
 
+Inspection prompted by the user's permission question found a harness mismatch.
+Both short-path rollouts recorded an effective managed `read-only` policy with
+root read access, restricted network and approval `never`, despite the launch
+argument `--sandbox workspace-write`. The isolated config explicitly selected
+`read-only`; it also omitted the default host's `[windows] sandbox = "elevated"`
+setting. The parent task had `danger-full-access`, so inherited permission
+metadata did not establish identical effective permissions. Read-only access
+should still permit the attempted read. `codex doctor` reported the isolated
+restricted sandbox as healthy and supplied no specific launch-failure cause.
+The effective-policy mismatch is a diagnostic lead, not a proven explanation.
+
 Claude's local authentication status was `loggedIn: false`; the user has a free
 Claude account without Claude Code access. Selected Claude handoff and downstream
 use are accepted assumptions for this PR, following the user's explicit
