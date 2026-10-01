@@ -20,6 +20,12 @@ After context loss, recover only missing or invalidated facts needed by this tas
 
 ## Follow the result for the affected action
 
+If `start` returns `status: inactive` with `configuration.enabled: false`, end AW
+startup and continue repository work under the existing repository, user and host
+rules. Do not retry unchanged startup or ask the user to enable AW. This opt-out
+supplies no repository permissions and waives no repository requirements. Explicit
+AW setup, diagnostics and recovery remain available through their existing paths.
+
 If `start` reports a restriction, read its `affects` field and the supplied request
 for resolving it. Keep that action blocked until the responsible component returns
 a result that allows it; continue authorised work outside that scope. Having a

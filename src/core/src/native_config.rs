@@ -105,6 +105,25 @@ pub(crate) fn disabled_owner(
     )
 }
 
+/// Establish effective enablement without interpreting ordinary owner state.
+pub(crate) fn enabled(target: &Path) -> Result<bool, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let shared = load(
+        &root,
+        SHARED,
+        include_str!("../contracts/schemas/workspace_config.schema.json"),
+    )
+    .map_err(CoreError::new)?
+    .map(|(value, _)| value)
+    .unwrap_or(json!({}));
+    let local = crate::native_assignment_policy::load(target)?.effective;
+    Ok(local["workspace"]["enabled"]
+        .as_bool()
+        .or_else(|| shared["workspace"]["enabled"].as_bool())
+        .unwrap_or(true))
+}
+
 /// Read current owner selectors and independent safety constraints.
 pub fn view(target: &Path) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority())
@@ -186,9 +205,6 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     let human_review = local["safety"]["requires_human_verification_on_pr"]
         .as_bool()
         .unwrap_or(false);
-    if !enabled {
-        blockers.push(json!({"code":"workspace-disabled","message":"Current workspace configuration disables ordinary operation; diagnostics and owner recovery remain available.","affects":["task"]}));
-    }
     if safe == Some(false) {
         blockers.push(json!({"code":"local-command-safety-ceiling","message":"Local safety forbids automatic configured command execution.","affects":["effect:execute-command"]}));
     }
@@ -454,7 +470,7 @@ mod tests {
         let second = view(&repo.0).unwrap();
         assert_eq!(second["enabled"], false);
         assert!(
-            second["contribution"]["blockers"]
+            !second["contribution"]["blockers"]
                 .as_array()
                 .unwrap()
                 .iter()
