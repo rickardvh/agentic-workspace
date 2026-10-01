@@ -8,7 +8,7 @@ Use the documentation and packages for the same AW release. A newer source check
 
 ## Choose a release
 
-A **stable release** carries the project's supported compatibility and installation claims for its stated platforms. The [stable install reference](reference/support-bearing-install.md) identifies that release.
+A **stable release** carries the project's supported compatibility and installation claims for its stated platforms. Select the current stable version from [GitHub Releases](https://github.com/rickardvh/agentic-workspace/releases/latest) or the language package registry you use. The selected release's attached receipts and checksums describe its exact files and platform support.
 
 A **release candidate** or **preview** is available for testing, not stable support. Passing its tests does not turn it into a stable release. Use the selected release's platform declaration and receipts for its runtime requirements.
 

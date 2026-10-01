@@ -89,47 +89,16 @@ def test_surface_catalogue_separates_public_footprint_from_maintenance_profiles(
 @pytest.mark.parametrize("line_ending", [b"\n", b"\r\n"], ids=["lf-checkout", "crlf-checkout"])
 def test_checked_in_catalogues_are_fresh(tmp_path: Path, line_ending: bytes) -> None:
     module = _module()
-    for path in [module.CLI_PATH, module.SURFACES_PATH, module.SUPPORT_INSTALL_PATH]:
+    for path in [module.CLI_PATH, module.SURFACES_PATH]:
         target = tmp_path / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((REPO_ROOT / path).read_bytes().replace(b"\r\n", b"\n").replace(b"\n", line_ending))
     module.REPO_ROOT = tmp_path
     assert (REPO_ROOT / module.CLI_OUTPUT).read_text(encoding="utf-8") == module.render_cli_catalogue()
     assert (REPO_ROOT / module.SURFACES_OUTPUT).read_text(encoding="utf-8") == module.render_surface_catalogue()
-    assert (REPO_ROOT / module.SUPPORT_INSTALL_OUTPUT).read_text(encoding="utf-8") == module.render_support_install()
     content = module.render_surface_catalogue()
     module._write_or_check(module.SURFACES_OUTPUT, content, check=False)
     assert (tmp_path / module.SURFACES_OUTPUT).read_bytes() == content.encode("utf-8")
     source = tmp_path / module.SURFACES_PATH
     source.write_bytes(source.read_bytes().replace(b"adopted-host", b"changed-lifetime"))
     assert module.render_surface_catalogue() != content
-
-
-def test_support_install_projection_is_immutable_and_hash_bound() -> None:
-    text = _module().render_support_install()
-    assert "uv tool install" in text
-    # Renderer parity is distinct from the maintainer's live release-currentness check.
-    projection = json.loads((REPO_ROOT / _module().SUPPORT_INSTALL_PATH).read_text(encoding="utf-8"))
-    artifact = projection["artifact"]
-    assert projection["install_command"] in text
-    assert f"{artifact['url']}#sha256={artifact['sha256']}" in text
-    assert f"Receipt digest: `sha256:{projection['receipt']['sha256']}`" in text
-    assert f"/releases/tag/v{projection['version']}" in text
-    assert f"/releases/download/v{projection['version']}/{artifact['name']}" in artifact["url"]
-    spec = importlib.util.spec_from_file_location("current_install", REPO_ROOT / "src/tooling/release/current_install.py")
-    current = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(current)
-    current.check_current(projection, projection)
-    assert "matches" in current.observe_current(projection, projection)
-    followup = current.observe_current({**projection, "version": "0.0.1"}, projection)
-    assert "refresh needed" in followup and "--refresh" in followup
-    assert "generate_contract_catalogues.py" in followup
-    with pytest.raises(ValueError, match="stale"):
-        current.check_current({**projection, "version": "0.0.1"}, projection)
-    with pytest.raises(ValueError, match="mismatch"):
-        current.projection(
-            {"tag_name": "v1.2.3", "draft": False, "prerelease": False},
-            b'{"kind":"agentic-workspace/distribution-install-readiness/v1","status":"passed","version":"1.2.3"}',
-            {"kind": "agentic-workspace/support-bearing-promotion/v1", "status": "passed", "source_commit": "source", "artifacts": {}},
-            "source",
-        )

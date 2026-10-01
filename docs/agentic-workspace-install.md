@@ -9,16 +9,19 @@ Pin AW per repository when repositories need independent versions; otherwise a
 shared installation is fine. Choose npm, Python/uv, Cargo or a standalone archive
 according to your tooling. Keep using that installation when running AW.
 
-Replace `<stable-version>` below with the exact version from the
-[current stable reference](reference/support-bearing-install.md). That reference
-also provides platform-specific assets, checksums and installation details.
+Package registries resolve the current stable release. A repository-local npm
+install can record the resolved version exactly; for other package managers, add
+an explicit version when your repository needs the same version on every machine.
+Standalone downloads are available from the
+[latest stable GitHub release](https://github.com/rickardvh/agentic-workspace/releases/latest),
+whose attached receipts and checksums describe the exact release files.
 
 | Distribution | Install |
 | --- | --- |
-| npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli@<stable-version>` in the repository; use `--global` instead of `--save-dev --save-exact` for a shared tool |
-| Python/uv | `uv pip install 'agentic-workspace==<stable-version>'` in your repository's virtual environment, or `uv tool install 'agentic-workspace==<stable-version>'` for a shared tool |
-| Cargo | `cargo install --locked agentic-workspace-core --version '=<stable-version>'`, then `cargo install --locked agentic-workspace-cli --version '=<stable-version>'`; use the same `--root` for both if choosing a repository-specific location |
-| Standalone | Extract the exact platform archive from the stable reference into your chosen location, keeping both executables together |
+| npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli` in the repository; use `--global` instead of `--save-dev --save-exact` for a shared tool |
+| Python/uv | `uv pip install agentic-workspace` in your repository's virtual environment, or `uv tool install agentic-workspace` for a shared tool; use `agentic-workspace==<version>` when pinning |
+| Cargo | `cargo install --locked agentic-workspace-core`, then `cargo install --locked agentic-workspace-cli`; when pinning, pass the same `--version` to both crates and use the same `--root` for a repository-specific location |
+| Standalone | Open the latest stable GitHub release, choose the archive for your platform and keep both executables together |
 
 Run `--help` using that installation: `npm exec --no -- agentic-workspace` for
 repository-local npm, `agentic-workspace` in the selected environment or on PATH,

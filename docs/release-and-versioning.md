@@ -54,8 +54,9 @@ original verified bundle and publishes only missing items. Missing retained
 material, conflicting digests and uncertain remote responses stop recovery.
 
 A GitHub release alone does not establish coordinated completion. Both registry
-receipts must pass before completion is reported. The current-install projection
-uses a completed release, so a partial newer release cannot become its boundary.
+receipts must pass before completion is reported. A partial newer release remains
+an interrupted publication to recover; it does not replace the most recent
+completed stable release.
 
 See [native release topology](maintainer/native-release-topology.md) for package
 layouts and platform requirements, and [release validation](maintainer/release-validation.md)
