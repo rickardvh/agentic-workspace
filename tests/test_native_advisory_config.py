@@ -99,8 +99,7 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     def call(**extra):
         nonlocal continuation
         if continuation is not None and not extra:
-            continuation = consume(surface, shared_core_binary, native_cli, context)["planning"]["requests"][0]
-            continuation["arguments"]["answer"] = "continue-selected"
+            continuation = consume(surface, shared_core_binary, native_cli, context)["planning"]["selection_requests"][0]
         if continuation is not None and "invocation" not in extra:
             extra["request"] = [continuation, *([extra["request"]] if "request" in extra else [])]
         return consume(surface, shared_core_binary, native_cli, {**context, **extra})
@@ -118,8 +117,7 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
         (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
             f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
         )
-        continuation = call()["decision_packet"]["decision_request"]["response_request"]
-        continuation["arguments"]["answer"] = "continue-selected"
+        continuation = call()["planning"]["selection_requests"][0]
         call(invocation=call()["decision_packet"]["primary_action"])
         continuation = None
         continuation = call()["planning"]["requests"][0]

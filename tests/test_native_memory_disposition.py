@@ -42,8 +42,7 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
         (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
             f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
         )
-        continuation = call()["decision_packet"]["decision_request"]["response_request"]
-        continuation["arguments"]["answer"] = "continue-selected"
+        continuation = call()["planning"]["selection_requests"][0]
         call({**context, "invocation": call()["decision_packet"]["primary_action"]})
         continuation = None
         continuation = call()["planning"]["requests"][0]

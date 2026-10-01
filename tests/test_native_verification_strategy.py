@@ -285,8 +285,7 @@ def test_planning_profile_source_gap_and_subject_reentry_are_explicit(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{ref.as_posix()}"\nstatus="active"\n'
     )
     initial = call(context)
-    request = initial["decision_packet"]["decision_request"]["response_request"]
-    request["arguments"]["answer"] = "continue-selected"
+    request = initial["planning"]["selection_requests"][0]
     selected = call({**context, "request": request})
     action = selected["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.reconcile"

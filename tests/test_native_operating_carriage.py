@@ -49,12 +49,20 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
     path = tmp_path / created["value"]["owner_path"]
     before = path.read_bytes()
 
-    fresh = call({**context, "task": "Finish the approved rollout", "projection": "carried"})
+    fresh = call(
+        {
+            **context,
+            "task": "Finish the approved rollout",
+            "reference": "owner:request:planning:planning/select-owner/v1",
+            "projection": "carried",
+        }
+    )
     related = call(
         {
-            "request": fresh["carriage"],
-            "reference": fresh["view"]["decision_packet"]["decision_request"]["reference"],
-            "answer": "continue-selected",
+            **context,
+            "task": "Finish the approved rollout",
+            "reference": fresh["reference"],
+            "answer": {},
             "projection": "carried",
         }
     )
@@ -77,7 +85,7 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
     )
     assert path.read_bytes() == before
     requests = proposed["carriage"]["context"]["request"]
-    assert {r["request_kind"] for r in requests} == {"planning/continuation/v1", "planning/update/v1"}
+    assert {r["request_kind"] for r in requests} == {"planning/select-owner/v1", "planning/update/v1"}
     updated_request = next(r for r in requests if r["request_kind"] == "planning/update/v1")
     assert {k: v for k, v in updated_request.items() if k != "arguments"} == {k: v for k, v in request["value"].items() if k != "arguments"}
     assert updated_request["arguments"]["owner_ref"] == request["value"]["arguments"]["owner_ref"]

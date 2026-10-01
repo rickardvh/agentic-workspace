@@ -135,8 +135,7 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
     )
     context = {"target": str(tmp_path), "task": "Inspect the current delegation contract", "changed": ["docs/policy.md"]}
     initial = consume(surface, shared_core_binary, native_cli, context)
-    continuation = initial["decision_packet"]["decision_request"]["response_request"]
-    continuation["arguments"]["answer"] = "continue-selected"
+    continuation = initial["planning"]["selection_requests"][0]
     continued = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation})
     compact = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation, "projection": "compact"})
     assert compact["decision_packet"]["blockers"] == continued["decision_packet"]["blockers"]
@@ -335,9 +334,7 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
     initial = consume(surface, shared_core_binary, native_cli, context)
     if selection_source == "shared":
         assert not selection.parent.exists(), "read-only discovery must not acquire local custody"
-    question = initial["decision_packet"]["decision_request"]
-    request = question["response_request"]
-    request["arguments"]["answer"] = "continue-selected"
+    request = initial["planning"]["selection_requests"][0]
     continued = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     if selection_source == "shared":
         assert not selection.parent.exists(), "constructing intention must not mutate state"
@@ -402,8 +399,8 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
         return {r["status"] for r in value["verification"]["assurance_applicability"]["requirements"]}
 
     initial = call(context)
-    assert statuses(initial) == {"unresolved"}
-    continuation = initial["planning"]["requests"][0]
+    assert statuses(initial) == {"not-applicable"}
+    continuation = initial["planning"]["selection_requests"][0]
     continued = call({**context, "request": continuation})
     assert statuses(continued) == {"applicable"}
     assert continued["planning"]["current_owner"]["reconciliation"]["coverage"]["complete"] is True
@@ -429,7 +426,7 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
     body["adaptive_assurance"]["proof_profiles"].append("missing-current-profile")
     path.write_text(json.dumps(body))
     missing = call(context)
-    missing = call({**context, "request": missing["planning"]["requests"][0]})
+    missing = call({**context, "request": missing["planning"]["selection_requests"][0]})
     assert "selected-proof-profile-unavailable:missing-current-profile" in missing["verification"]["strategy_control"]["gaps"]
     assert missing["verification"]["strategy_control"]["execution_blocked"] is True
     body["adaptive_assurance"]["proof_profiles"] = []
@@ -439,7 +436,7 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
     stale = call({**context, "request": old_claim})
     assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
     current = call(context)
-    request = current["planning"]["requests"][0]
+    request = current["planning"]["selection_requests"][0]
     revised = call({**context, "request": request})
     rows = {r["id"]: r["status"] for r in revised["verification"]["assurance_applicability"]["requirements"]}
     assert rows == {"profile": "not-applicable", "risk": "not-applicable", "invariant": "unresolved"}
@@ -450,7 +447,7 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
     path.write_text(json.dumps(body))
     preserved = path.read_bytes()
     with pytest.raises(AssertionError, match="invalid Planning assurance"):
-        call({**context, "request": call(context)["planning"]["requests"][0]})
+        call({**context, "request": call(context)["planning"]["selection_requests"][0]})
     assert path.read_bytes() == preserved
 
 
@@ -481,8 +478,7 @@ def test_real_former_planning_returned_continuation_preserves_semantic_owner(
 
     def reconcile():
         initial = call(context)
-        answer = initial["decision_packet"]["decision_request"]["response_request"]
-        answer["arguments"]["answer"] = "continue-selected"
+        answer = initial["planning"]["selection_requests"][0]
         action = call({**context, "request": answer})["decision_packet"]["primary_action"]
         assert action["operation_id"] == "planning.reconcile"
         call({**context, "invocation": action})
@@ -543,11 +539,9 @@ def test_unrelated_claim_request_keeps_planning_quiet_without_chat_state(
     )
     context = {"target": str(tmp_path), "task": "Explain the spelling in an unrelated document", "changed": ["notes.txt"]}
     initial = consume(surface, shared_core_binary, native_cli, context)
-    planning_request = initial["decision_packet"]["decision_request"]["response_request"]
-    planning_request["arguments"]["answer"] = "unrelated-direct"
     claim_request = initial["verification"]["requests"][0]
     before = {path.relative_to(tmp_path): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
-    result = consume(surface, shared_core_binary, native_cli, {**context, "request": [planning_request, claim_request]})
+    result = consume(surface, shared_core_binary, native_cli, {**context, "request": claim_request})
     assert result["planning"]["current_owner"] is None
     assert result["verification"]["judgment_request"]["planning_subject"] is None
     assert result["verification"]["status"] == "unresolved"
@@ -706,8 +700,7 @@ def test_instruction_protection_reaches_actual_planning_writes(
     )
     context = {"target": str(tmp_path), "task": "Continue the selected documentation outcome", "changed": ["docs/notes.md"]}
     first = consume(surface, shared_core_binary, native_cli, context)
-    request = first["decision_packet"]["decision_request"]["response_request"]
-    request["arguments"]["answer"] = "continue-selected"
+    request = first["planning"]["selection_requests"][0]
     before_policy = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     action = before_policy["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.reconcile"
@@ -747,8 +740,7 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
             f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
         )
         discovered = consume(surface, shared_core_binary, native_cli, context)
-        continuation = discovered["decision_packet"]["decision_request"]["response_request"]
-        continuation["arguments"]["answer"] = "continue-selected"
+        continuation = discovered["planning"]["selection_requests"][0]
         continued = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation})
         consume(surface, shared_core_binary, native_cli, {**context, "invocation": continued["decision_packet"]["primary_action"]})
     initial = consume(surface, shared_core_binary, native_cli, context)
@@ -783,8 +775,7 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
     if planning:
         other_context = {**context, "task": "Establish a different requested outcome in the same plan"}
         discovered = consume(surface, shared_core_binary, native_cli, other_context)
-        continuation = discovered["decision_packet"]["decision_request"]["response_request"]
-        continuation["arguments"]["answer"] = "continue-selected"
+        continuation = discovered["planning"]["selection_requests"][0]
         continued = consume(surface, shared_core_binary, native_cli, {**other_context, "request": continuation})
         other_request = continued["verification"]["requests"][0]
         other_request["arguments"]["evidence_refs"] = [reference]
@@ -938,8 +929,7 @@ def test_native_enablement_change_stales_planning_request_and_action(
     config.write_text('[modules]\nenabled=["planning"]\n')
     context = {"target": str(tmp_path), "task": "Continue this owner"}
     current = consume(surface, shared_core_binary, native_cli, context)
-    request = current["decision_packet"]["decision_request"]["response_request"]
-    request["arguments"]["answer"] = "continue-selected"
+    request = current["planning"]["selection_requests"][0]
     selected = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     action = selected["decision_packet"]["primary_action"]
     config.write_text('[modules]\nenabled=["planning","memory"]\n')
@@ -954,8 +944,7 @@ def test_native_enablement_change_stales_planning_request_and_action(
     assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
     config.write_text('[modules]\nenabled=["planning"]\n')
     restored = consume(surface, shared_core_binary, native_cli, context)
-    fresh = restored["decision_packet"]["decision_request"]["response_request"]
-    fresh["arguments"]["answer"] = "continue-selected"
+    fresh = restored["planning"]["selection_requests"][0]
     current_action = consume(surface, shared_core_binary, native_cli, {**context, "request": fresh})["decision_packet"]["primary_action"]
     applied = consume(surface, shared_core_binary, native_cli, {**context, "invocation": current_action})
     assert applied["status"] == "applied"

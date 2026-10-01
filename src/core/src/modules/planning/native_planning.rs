@@ -9,6 +9,10 @@ use std::path::{Path, PathBuf};
 
 const SELECTION: &str = ".agentic-workspace/local/planning/owner-selection.json";
 const THREADS: &str = ".agentic-workspace/local/work-threads/index.json";
+pub(crate) fn explicit_continuation(request: &Value) -> bool {
+    request["request_kind"] == "planning/select-owner/v1"
+        || request["arguments"]["answer"] == "continue-selected"
+}
 inventory::submit! { crate::native_enclave::Registration { declarations: enclave } }
 pub(crate) fn enclave() -> Value {
     serde_json::from_str(include_str!("contracts/enclave.json")).expect("Planning enclave contract")
@@ -71,6 +75,14 @@ fn inspect_carrier(
     let retained = &selection[RETAINED];
     validate_retained(retained)?;
     let invocation = &retained["invocation"];
+    if let Some(work) = invocation["arguments"].get("current_work")
+        && *work != retained["current_work"]
+    {
+        return Err(error(
+            SELECTION,
+            "current work differs from its retained Planning producer",
+        ));
+    }
     if invocation["source_owner"] != "planning"
         || invocation["operation_id"] != "planning.reconcile"
         || invocation["arguments"]["reconciliation"]["former_source"] != retained["source"]
@@ -456,7 +468,14 @@ pub(crate) fn compose_answers<'a>(
             .find(|r| r["owner"] == "planning" && r["request_kind"] == kind)
     };
     let continuation = find("planning/continuation/v1");
+    let selection = find("planning/select-owner/v1");
     let posture = find("planning/posture/v1");
+    if selection.is_some() && (continuation.is_some() || posture.is_some()) {
+        return Err(error(
+            "request",
+            "conflicting Planning selection and relation/posture answers",
+        ));
+    }
     if let (Some(relation), Some(posture)) = (continuation, posture) {
         for request in [relation, posture] {
             let current = resolve_with_contract(target, work, Some(request), Some(contract))?;
@@ -482,7 +501,7 @@ pub(crate) fn compose_answers<'a>(
             ));
         }
     }
-    Ok(posture.or(continuation))
+    Ok(selection.or(posture).or(continuation))
 }
 
 /// Existing artifact-profile intent is realized by this bounded Planning owner.
@@ -540,6 +559,19 @@ pub(crate) fn resolve_with_contract(
     request: Option<&Value>,
     current_full_contract: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    if let Some(request) = request.filter(|r| r["request_kind"] == "planning/select-owner/v1") {
+        let quiet = resolve_context(target, current_work, None, current_full_contract, None)?;
+        let contract = current_full_contract.unwrap_or(&quiet["capability_contract"]);
+        prepare_request_value(
+            json!({"request":request,"current_work":current_work,"capability_contract":contract}),
+        )?;
+        if request["source_revision"] != quiet["source_revision"] {
+            return Err(error(
+                "selection request",
+                "stale current-work selection request",
+            ));
+        }
+    }
     resolve_context(
         target,
         current_work,
@@ -593,13 +625,43 @@ fn resolve_context(
         sources.push(json!({"path":path,"revision":revision}));
         Ok(value)
     };
-    let threads = load(THREADS)?.unwrap_or(json!({}));
+    // The local cursor is a resume hint. Only an exact retained work binding or
+    // an explicit current request makes its sources dependencies of this task.
+    // Malformed unrelated hints are preserved, never repaired or admitted.
+    let hint = read(&root, SELECTION)
+        .ok()
+        .flatten()
+        .and_then(|bytes| parsed(SELECTION, &bytes).ok());
+    let bound = reference.is_some()
+        || request.is_some_and(|r| {
+            matches!(
+                r["request_kind"].as_str(),
+                Some(
+                    "planning/select-owner/v1" | "planning/continuation/v1" | "planning/posture/v1"
+                )
+            ) || matches!(
+                r["arguments"]["answer"].as_str(),
+                Some("continue-selected" | "authorize-selector-transfer")
+            )
+        })
+        || hint.as_ref().is_some_and(|s| {
+            s[RETAINED]["invocation"]["arguments"]["current_work"] == *current_work
+                || s[RETAINED]["current_work"] == *current_work
+                    && s[RETAINED]["invocation"]["arguments"]
+                        .get("current_work")
+                        .is_some()
+        });
+    let threads = if bound {
+        load(THREADS)?.unwrap_or(json!({}))
+    } else {
+        json!({})
+    };
     let selection_scope = threads["selected_thread_id"]
         .as_str()
         .filter(|s| !s.is_empty())
         .unwrap_or("default");
-    let selection = load(SELECTION)?;
-    let legacy = load(STATE)?;
+    let selection = if bound { load(SELECTION)? } else { None };
+    let legacy = if bound { load(STATE)? } else { None };
     let mut migration = json!({"status":"absent"});
     let legacy_candidates = if let Some(state) = &legacy {
         match legacy_references(state, false) {
@@ -659,13 +721,15 @@ fn resolve_context(
                 return Err(error(SELECTION, "local selection target mismatch"));
             }
         }
-        selected = owner(
-            &root,
-            &target,
-            &selection["selected_owner"],
-            SELECTION,
-            true,
-        )?;
+        if reference.is_none_or(|r| selection["selected_owner"]["ref"] == r) {
+            selected = owner(
+                &root,
+                &target,
+                &selection["selected_owner"],
+                SELECTION,
+                true,
+            )?;
+        }
     } else if legacy_candidates.len() == 1 && migration["status"] != "unsupported-preserved" {
         selected = owner(
             &root,
@@ -676,7 +740,7 @@ fn resolve_context(
         )?;
     }
     if let Some(reference) = reference {
-        if selected.is_null() {
+        if selected.is_null() && selection.is_none() {
             let bytes = read(&root, reference)?
                 .ok_or_else(|| error(reference, "requested owner missing"))?;
             let body = parsed(reference, &bytes)?;
@@ -745,8 +809,12 @@ fn resolve_context(
     let recovery_declaration = crate::native_planning_update::recovery_declaration();
     let adoption_declaration = crate::native_planning_update::adoption_declaration();
     let handoff_declaration = crate::native_planning_update::handoff_declaration();
+    let mut selection_shape = schema["$defs"]["selection_request"].clone();
+    selection_shape["$schema"] = schema["$schema"].clone();
+    let selection_declaration = json!({"kind":"planning/select-owner/v1","result_kind":"agentic-workspace/planning-continuation-result/v1","input_schema":selection_shape});
     let owner_revision = digest(&json!([
         declaration,
+        selection_declaration,
         posture_declaration,
         creation_declaration,
         update_declaration,
@@ -756,7 +824,7 @@ fn resolve_context(
         crate::native_planning_retention::declarations(),
         crate::native_planning_retention::operations()
     ]))?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,posture_declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task","effect:planning-state","claim:complete"]}]});
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,selection_declaration,posture_declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task","effect:planning-state","claim:complete"]}]});
     {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);
@@ -771,6 +839,7 @@ fn resolve_context(
             "update_recovery_request",
             "operation_arguments",
             "posture_request",
+            "selection_request",
         ] {
             arguments["$defs"].as_object_mut().unwrap().remove(unused);
         }
@@ -859,7 +928,8 @@ fn resolve_context(
         if request["owner"] != "planning" {
             return Err(error("request", "another owner requested"));
         }
-        if request["source_revision"] != revision
+        if request["request_kind"] != "planning/select-owner/v1"
+            && request["source_revision"] != revision
             && !crate::native_planning_update::retained_continuation_current(
                 &target, &selected, request,
             )?
@@ -902,7 +972,14 @@ fn resolve_context(
             };
             planning_input = Value::Null;
         } else if selected.is_null() {
-            return Err(error("request", "no currently selected owner to continue"));
+            if request["request_kind"] == "planning/select-owner/v1" && legacy.is_some() {
+                status = "planned";
+            } else {
+                return Err(error(
+                    "request",
+                    "no currently selected owner to continue; name owner_ref or return to the source checkout",
+                ));
+            }
         } else {
             status = "current";
             if planning_input.is_null() {
@@ -923,8 +1000,8 @@ fn resolve_context(
         }
     }
     if (quiescent || selected["blocked"] == true) && status != "stale" && !transfer_authorized {
-        let continuing = retained["current_work"] == *current_work
-            || request.is_some_and(|r| r["arguments"]["answer"] == "continue-selected");
+        let continuing =
+            retained["current_work"] == *current_work || request.is_some_and(explicit_continuation);
         let unrelated = request.is_some_and(|r| {
             matches!(
                 r["arguments"]["answer"].as_str(),
@@ -1030,8 +1107,12 @@ fn resolve_context(
         Value::Null
     };
     let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
+    let mut selection_request = template.clone();
+    selection_request["id"] = json!("planning/select-owner/v1");
+    selection_request["request_kind"] = json!("planning/select-owner/v1");
+    selection_request["arguments"] = json!({});
     Ok(
-        json!({"status":status,"legacy_aggregate":migration,"source_revision":revision,"current_work_id":current_work["id"],"selection_scope":selection_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted,"requests":if selected.is_null(){json!([])}else{json!([template])},"selector_transfer":transfer,"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
+        json!({"status":status,"legacy_aggregate":migration,"source_revision":revision,"current_work_id":current_work["id"],"selection_scope":selection_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted,"requests":if selected.is_null(){json!([])}else{json!([template])},"selection_requests":[selection_request],"selector_transfer":transfer,"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
     )
 }
 
@@ -1337,7 +1418,10 @@ fn execute_checked(
             if !transition.is_null() {
                 selection = transition["selection"].clone();
             }
-            let retained = json!({"kind":"agentic-planning/reconciliation-custody/v1","current_work":current_work,"source":source,"invocation":invocation,"custody":custody});
+            let producer_work = invocation["arguments"]
+                .get("current_work")
+                .unwrap_or(current_work);
+            let retained = json!({"kind":"agentic-planning/reconciliation-custody/v1","current_work":producer_work,"source":source,"invocation":invocation,"custody":custody});
             validate_retained(&retained)?;
             selection[RETAINED] = retained;
             let bytes = serde_json::to_vec_pretty(&selection).map_err(|e| error(SELECTION, e))?;
@@ -1443,8 +1527,14 @@ mod tests {
         json!({"kind":"current-work","id":"ordinary-task"})
     }
     fn continued(target: &Target) -> Value {
-        let initial = resolve(&target.0, &work(), None).unwrap();
+        let initial = selected_fixture(target);
         resolve(&target.0, &work(), Some(&initial["requests"][0])).unwrap()
+    }
+    // These controls deliberately select the named fixture before exercising
+    // continuation, custody or mutation. Ordinary startup uses resolve(None).
+    fn selected_fixture(target: &Target) -> Value {
+        let quiet = resolve(&target.0, &work(), None).unwrap();
+        candidate(&target.0, &work(), PLAN, &quiet["capability_contract"]).unwrap()
     }
     fn action(target: &Target) -> (Value, Value) {
         let view = continued(target);
@@ -1529,7 +1619,12 @@ mod tests {
                 assert_eq!(selection["selected_owner"]["ref"], next);
                 let reworded = json!({"kind":"current-work","id":"same-owner-reworded-task"});
                 let initial = resolve(&target.0, &reworded, None).unwrap();
-                let current = resolve(&target.0, &reworded, Some(&initial["requests"][0])).unwrap();
+                let current = resolve(
+                    &target.0,
+                    &reworded,
+                    Some(&initial["selection_requests"][0]),
+                )
+                .unwrap();
                 let mut input = current["planning_input"].clone();
                 input["capability_contract"] = contract.clone();
                 assert_eq!(
@@ -1739,7 +1834,7 @@ mod tests {
     fn native_planning_shared_continuation_acquires_selection_in_one_reconciliation() {
         let target = shared_target();
         let original = fs::read(target.0.join(PLAN)).unwrap();
-        let initial = resolve(&target.0, &work(), None).unwrap();
+        let initial = selected_fixture(&target);
         assert_eq!(initial["status"], "unresolved");
         assert!(!target.0.join(".agentic-workspace/local").exists());
         let mut unrelated = initial["requests"][0].clone();
@@ -1840,35 +1935,19 @@ mod tests {
             target.plan();
             target.select();
             if explicit_thread {
-                target.write(
-                    THREADS,
-                    &json!({"selected_thread_id":"thread-a"}).to_string(),
-                );
-                let mut selector: Value =
-                    serde_json::from_slice(&fs::read(target.0.join(SELECTION)).unwrap()).unwrap();
-                selector["current_work_id"] = json!("thread-a");
-                target.write(SELECTION, &selector.to_string());
+                target.write(THREADS, "{\"selected_thread_id\":\"thread-a\"}");
             }
             let before = fs::read(target.0.join(SELECTION)).unwrap();
-            let initial = resolve(&target.0, &work(), None).unwrap();
-            assert!(initial["selected_owner"].is_null());
-            assert_eq!(initial["incumbent_owner"]["ref"], PLAN);
-            assert_eq!(initial["current_work_id"], work()["id"]);
-            assert_ne!(initial["selection_scope"], initial["current_work_id"]);
-            assert_eq!(initial["task_relation"], "unresolved");
-            let mut request = initial["requests"][0].clone();
-            request["arguments"] = json!({"answer":"independent"});
-            let independent = resolve(&target.0, &work(), Some(&request)).unwrap();
-            assert_eq!(independent["required_transition"], "determine-posture");
-            for (posture, transition) in
-                [("direct", "direct"), ("planned", "create-or-select-owner")]
-            {
-                request["arguments"]["task_posture"] = json!(posture);
-                let result = resolve(&target.0, &work(), Some(&request)).unwrap();
-                assert_eq!(result["task_relation"], "independent");
-                assert_eq!(result["required_transition"], transition);
-                assert!(result["selected_owner"].is_null());
-                assert!(result["planning_input"].is_null());
+            for absent in [false, true] {
+                if absent {
+                    fs::remove_file(target.0.join(PLAN)).unwrap();
+                }
+                let initial = resolve(&target.0, &work(), None).unwrap();
+                assert_eq!(initial["status"], "direct");
+                assert_eq!(initial["task_relation"], "no-incumbent");
+                assert!(initial["incumbent_owner"].is_null());
+                assert!(initial["planning_input"].is_null());
+                assert_eq!(initial["contribution"]["decisions"], json!([]));
                 assert_eq!(fs::read(target.0.join(SELECTION)).unwrap(), before);
             }
         }
@@ -1878,7 +1957,7 @@ mod tests {
         let target = Target::new();
         target.plan();
         target.share();
-        let before = resolve(&target.0, &work(), None).unwrap();
+        let before = selected_fixture(&target);
         let (invocation, contract) = action(&target);
         let result = execute(&target.0, &work(), &invocation, &contract).unwrap();
         assert!(!result["custody"]["committed"].is_null());
@@ -1942,16 +2021,17 @@ mod tests {
         let result = execute(&target.0, &work(), &invocation, &contract).unwrap();
         let reworded = json!({"kind":"current-work","id":"same-owner-reworded-task"});
         let initial = resolve(&target.0, &reworded, None).unwrap();
-        assert_eq!(initial["status"], "unresolved");
+        assert_eq!(initial["status"], "direct");
         assert!(initial["planning_input"].is_null());
-        let mut unrelated = initial["requests"][0].clone();
-        unrelated["arguments"]["answer"] = json!("unrelated-direct");
-        assert!(
-            resolve(&target.0, &reworded, Some(&unrelated)).unwrap()["planning_input"].is_null()
-        );
-        let current = resolve(&target.0, &reworded, Some(&initial["requests"][0])).unwrap();
+        let current = resolve(
+            &target.0,
+            &reworded,
+            Some(&initial["selection_requests"][0]),
+        )
+        .unwrap();
         assert_eq!(current["planning_input"]["custody"], result["custody"]);
-        let execution = resolve_for_execution(&target.0, &reworded, &contract).unwrap();
+        let execution =
+            resolve_for_invocation(&target.0, &reworded, &contract, &invocation).unwrap();
         let (_, detail) =
             crate::planning::compose_input(execution["planning_input"].clone()).unwrap();
         assert_eq!(detail["current"], true);
@@ -2136,7 +2216,7 @@ mod tests {
         let target = Target::new();
         let body = target.plan();
         target.share();
-        let initial = resolve(&target.0, &work(), None).unwrap();
+        let initial = selected_fixture(&target);
         assert_eq!(initial["status"], "unresolved");
         assert!(initial["planning_input"].is_null());
         let current = continued(&target);
@@ -2162,7 +2242,7 @@ mod tests {
         let target = Target::new();
         target.plan();
         target.share();
-        let initial = resolve(&target.0, &work(), None).unwrap();
+        let initial = selected_fixture(&target);
         let mut contract = initial["capability_contract"].clone();
         contract["owners"]
             .as_array_mut()
@@ -2212,7 +2292,7 @@ mod tests {
         let target = Target::new();
         let mut body = target.plan();
         target.share();
-        let initial = resolve(&target.0, &work(), None).unwrap();
+        let initial = selected_fixture(&target);
         body["canonical_core"]["hard_constraints"] = json!("Require independent domain review");
         target.write(PLAN, &body.to_string());
         let stale = resolve(&target.0, &work(), Some(&initial["requests"][0])).unwrap();
@@ -2237,14 +2317,22 @@ mod tests {
         target.select();
         target.write(THREADS, "{\"selected_thread_id\":\"other-work\"}");
         assert!(
-            resolve(&target.0, &work(), None)
-                .unwrap_err()
-                .to_string()
-                .contains("selection scope mismatch")
+            candidate(
+                &target.0,
+                &work(),
+                PLAN,
+                &resolve(&target.0, &work(), None).unwrap()["capability_contract"]
+            )
+            .unwrap_err()
+            .to_string()
+            .contains("selection scope mismatch")
         );
         target.write(THREADS, "{}");
         fs::remove_file(target.0.join(PLAN)).unwrap();
-        let missing = resolve(&target.0, &work(), None).unwrap_err().to_string();
+        let quiet = resolve(&target.0, &work(), None).unwrap();
+        let missing = resolve(&target.0, &work(), Some(&quiet["selection_requests"][0]))
+            .unwrap_err()
+            .to_string();
         assert!(missing.contains("selected owner missing"));
         assert!(missing.contains("checkout/base"));
         assert!(missing.contains("Return to the source checkout"));
@@ -2257,15 +2345,23 @@ mod tests {
         body["id"] = json!("different-owner");
         target.write(PLAN, &body.to_string());
         assert!(
-            resolve(&target.0, &work(), None)
-                .unwrap_err()
-                .to_string()
-                .contains("owner identity mismatch")
+            candidate(
+                &target.0,
+                &work(),
+                PLAN,
+                &resolve(&target.0, &work(), None).unwrap()["capability_contract"]
+            )
+            .unwrap_err()
+            .to_string()
+            .contains("owner identity mismatch")
         );
         body["id"] = json!("delegation-lane-sweep");
         body["planning_revision"] = json!("old-global-revision");
         target.write(PLAN, &body.to_string());
-        let failure = resolve(&target.0, &work(), None).unwrap_err().to_string();
+        let quiet = resolve(&target.0, &work(), None).unwrap();
+        let failure = candidate(&target.0, &work(), PLAN, &quiet["capability_contract"])
+            .unwrap_err()
+            .to_string();
         assert!(failure.contains(PLAN));
         assert!(failure.contains("planning_revision current authority projection"));
         body.as_object_mut().unwrap().remove("planning_revision");
@@ -2273,10 +2369,15 @@ mod tests {
         let other = Target::new();
         target.write(SELECTION, &json!({"kind":"agentic-planning/owner-selection/v1","current_work_id":"default","target_root":other.0,"selected_owner":{"id":"delegation-lane-sweep","ref":PLAN}}).to_string());
         assert!(
-            resolve(&target.0, &work(), None)
-                .unwrap_err()
-                .to_string()
-                .contains("target mismatch")
+            candidate(
+                &target.0,
+                &work(),
+                PLAN,
+                &resolve(&target.0, &work(), None).unwrap()["capability_contract"]
+            )
+            .unwrap_err()
+            .to_string()
+            .contains("target mismatch")
         );
     }
     #[test]

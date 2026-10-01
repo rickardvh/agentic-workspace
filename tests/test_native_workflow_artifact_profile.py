@@ -27,9 +27,8 @@ def test_repo_owned_profile_preserves_real_planning_custody(
     profile = current["workflow_artifact_profile"]
     assert profile["canonical_owner"] == "planning"
     assert profile["current_owner"]["status"] == current["planning"]["status"]
-    assert current["decision_packet"]["decision_request"]
-    request = current["decision_packet"]["decision_request"]["response_request"]
-    request["arguments"]["answer"] = "continue-selected"
+    assert current["decision_packet"]["decision_request"] is None
+    request = current["planning"]["selection_requests"][0]
     action = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["decision_packet"]["primary_action"]
     config.write_text(config.read_text().replace('"repo-owned"', '"gemini"'))
     with pytest.raises(AssertionError, match="stale"):
@@ -37,8 +36,7 @@ def test_repo_owned_profile_preserves_real_planning_custody(
     with pytest.raises(AssertionError, match="stale"):
         consume(surface, shared_core_binary, native_cli, {**context, "invocation": action})
     gemini = consume(surface, shared_core_binary, native_cli, context)
-    gemini_request = gemini["decision_packet"]["decision_request"]["response_request"]
-    gemini_request["arguments"]["answer"] = "continue-selected"
+    gemini_request = gemini["planning"]["selection_requests"][0]
     gemini_action = consume(surface, shared_core_binary, native_cli, {**context, "request": gemini_request})["decision_packet"][
         "primary_action"
     ]

@@ -20,8 +20,9 @@ def test_resource_action_carries_selected_planning_answer(tmp_path, shared_core_
 
     creation = call()["planning"]["creation_requests"][0]
     creation["arguments"] = {"material": material()}
-    call(invocation=call(request=creation)["decision_packet"]["primary_action"])
-    selection = call()["planning"]["created_owner"]["selection_request"]
+    created = call(invocation=call(request=creation)["decision_packet"]["primary_action"])
+    context = created["value"]["selection_context"]
+    selection = created["value"]["selection_request"]
     call(invocation=call(request=selection)["decision_packet"]["primary_action"])
 
     current = call()

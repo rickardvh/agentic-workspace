@@ -19,7 +19,7 @@ request through the public reference:
 Resolve an owner reference with ordinary `start --target . --task "<actual task>"`
 and `--reference owner:request:planning:planning/create/v1`. Fill only its requested
 `arguments.material` using the returned schema/current Planning detail. For an
-existing owner, first establish the current task relation, then use its update
+existing owner, first explicitly select or resume it for this task, then use its update
 request below. Supply the complete proposed record and preserve all unchanged fields and
 relationships. Submit the filled
 request through `start`, invoke only the returned admitted action, and inspect the
@@ -76,14 +76,17 @@ Start from the selected record and keep the fields admitted by that schema.
 An update includes the current `lifecycle` and `phase`; creation material alone
 is incomplete. Preserve their actual values unless the task changes them.
 
-On fresh entry, use the supplied issue/owner pointer or current selected-owner
-reference, establish its relation to today's task, and recover only that owner's
+On fresh entry, use the supplied issue/owner pointer and explicitly select it for
+today's task, then recover only that owner's
 intent, continuation, blockers, next action and proof references. Follow the exact
 Planning detail route or read that named record; do not scan all plans/history.
-An incumbent identity alone does not establish assignment. The exact continuation
-request is `owner:request:planning:planning/continuation/v1`; answer the current
-relation/posture questions separately when work is independent.
-For the same work, answer `continue-selected` and keep that answer in the returned
+The exact selection request is `owner:request:planning:planning/select-owner/v1`.
+Fill `arguments.owner_ref` to select a named plan, or leave arguments empty only
+when explicitly resuming the local remembered hint. Planning revalidates its
+real source and custody. Several unfinished plans may coexist; unrelated work
+does not need to reject or release any of them. An exact retained current-work
+binding still restores the bound owner's continuity requirements.
+Keep the explicit selection or `continue-selected` answer in the returned
 JSON transport (carriage) when requesting and submitting the update. Repeating only task flags
 starts fresh resolution and can lose the relation answer. A missing update
 request is a reason to inspect the current relation and continuation, not to

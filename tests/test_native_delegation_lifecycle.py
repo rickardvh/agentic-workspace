@@ -276,8 +276,7 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
                 host_path=os.environ["PATH"],
             )
 
-        continuation = proof_view()["planning"]["requests"][0]
-        continuation["arguments"]["answer"] = "continue-selected"
+        continuation = proof_view()["planning"]["selection_requests"][0]
         assert proof_view(continuation)["task_requirements"]["bounded_outcome_evidence"] == []
         proof_request = next(
             request
@@ -307,8 +306,7 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         assert all(a["contextual_evidence"] == [] for a in comparison["result"]["alternatives"])
         complete_scope = proof_context["changed"]
         proof_context["changed"] = [plan_ref, "src/main.txt", "verify_patch.py"]
-        partial_continuation = proof_view()["planning"]["requests"][0]
-        partial_continuation["arguments"]["answer"] = "continue-selected"
+        partial_continuation = proof_view()["planning"]["selection_requests"][0]
         partial_request = next(
             request
             for request in proof_view(partial_continuation)["verification"]["execution_requests"]

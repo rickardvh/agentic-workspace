@@ -93,7 +93,13 @@ def test_real_former_owner_can_evolve_after_native_custody(
     def call(value):
         return consume(surface, shared_core_binary, native_cli, value)
 
-    first = call(context)
+    def resume(value):
+        quiet = call(value)
+        request = quiet["planning"]["selection_requests"][0]
+        request["arguments"] = {"owner_ref": ref.as_posix()}
+        return call({**value, "request": request})
+
+    first = resume(context)
     assert first["planning"]["update_requests"] == [], "source recognition is not mutation custody"
     continuation = first["planning"]["requests"][0]
     selected = call({**context, "request": continuation})
@@ -122,12 +128,11 @@ def test_real_former_owner_can_evolve_after_native_custody(
     if selector_mode == "legacy-local":
         policy = tmp_path / ".agentic-workspace/config.local.toml"
         policy.write_text("[workspace]\nenabled=false\n")
-        restricted = call(context)
-        current_answer = restricted["planning"]["selector_transfer"]["request"]
+        call(context)
+        current_answer = transfer.copy()
         current_answer["arguments"]["answer"] = "authorize-selector-transfer"
-        denied = call({**context, "request": current_answer})
-        assert denied["decision_packet"]["status"] == "blocked"
-        assert denied["decision_packet"]["primary_action"] is None
+        with pytest.raises(AssertionError, match="workspace.enabled=false"):
+            call({**context, "request": current_answer})
         with pytest.raises(AssertionError):
             call({**context, "invocation": action})
         assert selector.read_bytes() == before_selector
@@ -145,7 +150,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
         assert selector.read_bytes() == json.dumps(transferred, indent=2).encode()
         with pytest.raises(AssertionError):
             call({**context, "request": transfer})
-    before = call(context)
+    before = resume(context)
     subject = before["planning"]["current_owner"]["reconciliation"]["subject"]
     update = before["planning"]["update_requests"][0]
     value = {key: original[key] for key in [*material(), "lifecycle", "phase"] if key in original}
@@ -183,19 +188,19 @@ def test_real_former_owner_can_evolve_after_native_custody(
     clone_state = clone / state.relative_to(tmp_path)
     clone_state.write_bytes(state.read_bytes())
     clone_context = {**context, "target": str(clone)}
-    observed = call(clone_context)
+    observed = resume(clone_context)
     assert observed["planning"]["update_requests"] == []
     changed = {**updated, "next_action": "Unadmitted observation drift"}
     clone_path.write_text(json.dumps(changed))
     with pytest.raises(AssertionError, match="portable Planning"):
-        changed_view = call(clone_context)
+        changed_view = resume(clone_context)
         call({**clone_context, "request": changed_view["planning"]["requests"][0]})
     clone_path.write_bytes(path.read_bytes())
     malformed = json.loads(path.read_bytes())
     malformed["update_provenance"]["outcome"] = "not-an-outcome"
     clone_path.write_text(json.dumps(malformed))
     with pytest.raises(AssertionError, match="invalid portable Planning"):
-        malformed_view = call(clone_context)
+        malformed_view = resume(clone_context)
         call({**clone_context, "request": malformed_view["planning"]["requests"][0]})
     clone_path.write_bytes(path.read_bytes())
     evidence = clone / updated["update_provenance"]["custody"]["attempt"]["path"]
@@ -207,7 +212,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     clone_action = call({**clone_context, "request": observed["planning"]["requests"][0]})["decision_packet"]["primary_action"]
     assert clone_action["operation_id"] == "planning.reconcile"
     call({**clone_context, "invocation": clone_action})
-    admitted_clone = call(clone_context)
+    admitted_clone = resume(clone_context)
     assert admitted_clone["planning"]["update_requests"]
     assert admitted_clone["planning"]["selected_owner"]["id"] == original["id"]
     assert admitted_clone["planning"]["current_owner"]["reconciliation"]["subject"]["id"] != subject["id"], (
@@ -234,7 +239,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     (tmp_path / applied["custody"]["committed"]["path"]).unlink()
     context = {**context, "task": "Resume the same reconstruction owner after interruption"}
     pending = call(context)
-    continuation = pending["planning"]["requests"][0]
+    continuation = pending["planning"]["selection_requests"][0]
     assert not pending["planning"]["update_requests"]
     assert not pending["planning"]["update_recovery_requests"]
     admitted = call({**context, "request": continuation})
@@ -249,7 +254,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     recovered = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
     assert recovered["value"]["material_written"] is False
     assert json.loads(path.read_bytes()) == updated
-    fresh = call(context)
+    fresh = resume(context)
     reentry = call({**context, "request": fresh["planning"]["requests"][0]})
     call({**context, "invocation": reentry["decision_packet"]["primary_action"]})
     current = call(context)
@@ -271,19 +276,16 @@ def test_real_former_owner_can_evolve_after_native_custody(
     # Fresh unrelated task can stay direct without reactivating historical work.
     other = {**context, "task": "Explain this unrelated function"}
     quiet = call(other)
-    answer = quiet["planning"]["requests"][0]
-    answer["arguments"].update(answer="independent", task_posture="direct")
-    assert call({**other, "request": answer})["planning"]["status"] == "direct"
+    assert quiet["planning"]["status"] == "direct"
+    assert quiet["planning"]["incumbent_owner"] is None
     if surface == "native" and selector_mode == "legacy-local":
         # The acquired former selector can later select a new native owner.
         # Historical annotations stay in prior custody, not the successor shape.
         next_context = {**context, "task": "Create a separate follow-through owner"}
         current = call(next_context)
-        relation = current["planning"]["requests"][0]
-        relation["arguments"] = {"answer": "independent", "task_posture": "planned"}
         create = current["planning"]["creation_requests"][0]
         create["arguments"] = {"material": {**material(), "title": "Separate follow-through owner"}}
-        ready = call({**next_context, "request": [relation, create]})
+        ready = call({**next_context, "request": create})
         created = call({**next_context, "invocation": ready["decision_packet"]["primary_action"]})
         next_context = created["value"]["selection_context"]
         ready = call({**next_context, "request": created["value"]["selection_request"]})
@@ -319,7 +321,7 @@ def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared
     (tmp_path / result["custody"]["committed"]["path"]).unlink()
     current = {**context, "task": "Continue the same bounded owner revision after restart"}
     fresh = call(current)
-    continuation = fresh["planning"]["requests"][0]
+    continuation = fresh["planning"]["selection_requests"][0] if not fresh["planning"]["requests"] else fresh["planning"]["requests"][0]
     assert not fresh["planning"]["update_requests"]
     assert not fresh["planning"]["update_recovery_requests"]
     admitted = call({**current, "request": continuation})
@@ -409,7 +411,7 @@ def test_public_creation_then_separate_selection(tmp_path: Path, shared_core_bin
         new_context = {"target": str(clone), "task": "Continue the repository-owned outcome with no parent chat"}
         discovered = call(new_context)
         assert discovered["planning"]["update_requests"] == []
-        choice = discovered["planning"]["requests"][0]
+        choice = discovered["planning"]["selection_requests"][0]
         selected = call({**new_context, "request": choice})
         portable = selected["planning"]["portable_continuation"]
         assert portable["semantic_subject"] == fresh["planning"]["portable_continuation"]["semantic_subject"]
@@ -546,11 +548,10 @@ def test_creation_preserves_existing_selected_owner(tmp_path: Path, shared_core_
     )
     context = {"target": str(tmp_path), "task": "Create another unselected bounded owner"}
     initial = consume("native", shared_core_binary, native_cli, context)
-    continuation = initial["decision_packet"]["decision_request"]["response_request"]
-    continuation["arguments"].update(answer="independent", task_posture="planned")
+    assert initial["planning"]["status"] == "direct"
     creation = initial["planning"]["creation_requests"][0]
     creation["arguments"] = {"material": material()}
-    ready = consume("native", shared_core_binary, native_cli, {**context, "request": [continuation, creation]})
+    ready = consume("native", shared_core_binary, native_cli, {**context, "request": creation})
     # A separate owner may be created, but no current selection is transferable.
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.create", ready
@@ -601,80 +602,26 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     context["task"] = "Create a distinct bounded owner"
     current = call(context)
     assert current["planning"]["selected_owner"] is None
-    assert current["planning"]["incumbent_owner"]["ref"] == first["value"]["owner_path"]
-    assert current["planning"]["current_work_id"] == current["current_work"]["id"]
-    assert current["planning"]["selection_scope"] == "default"
-    unrelated = current["decision_packet"]["decision_request"]["response_request"]
-    unrelated["arguments"]["answer"] = "independent"
-    independent = call({**context, "request": unrelated})
-    assert independent["planning"]["required_transition"] == "determine-posture"
-    posture = independent["decision_packet"]["decision_request"]
-    assert {choice["id"] for choice in posture["choices"]} == {"direct", "planned"}
-    direct = {**posture["response_request"], "arguments": {**posture["response_request"]["arguments"], "answer": "direct"}}
-    assert call({**context, "request": direct})["planning"]["status"] == "direct"
+    assert current["planning"]["incumbent_owner"] is None
+    assert current["planning"]["status"] == "direct"
+    assert current["decision_packet"]["decision_request"] is None
     if surface == "native":
-        # One fresh-process CLI journey covers serialized carriage; the native
-        # request matrix covers composition, currentness and owner preservation.
         import copy
 
-        carried = call({**context, "projection": "carried"})
-        for answer in ("independent", "direct"):
-            carried = call(
-                {
-                    **context,
-                    "projection": "carried",
-                    "request": carried["carriage"],
-                    "reference": carried["view"]["decision_packet"]["decision_request"]["reference"],
-                    "answer": answer,
-                }
-            )
-            if answer == "independent":
-                assert carried["view"]["decision_packet"]["decision_request"]["id"] == "planning-posture"
-        combined = copy.deepcopy(unrelated)
-        combined["arguments"]["task_posture"] = "direct"
-        control = call({**context, "request": combined})
-        assert carried["view"]["decision_packet"]["decision_request"] is None
-        sequential = call(carried["carriage"]["context"])
-        for result in (sequential, call({**context, "request": [direct, unrelated]}), call({**context, "request": [unrelated, direct]})):
-            for field in ("status", "task_relation", "required_transition", "selected_owner", "custody_status"):
-                assert result["planning"][field] == control["planning"][field]
-            for field in ("blockers", "claim_boundary", "ready_actions", "decision_request"):
-                assert result["decision_packet"][field] == control["decision_packet"][field]
-        for index in (0, 1):
-            for field in ("source_revision", "capability_revision", "owner_revision", "task_identity"):
-                pair = copy.deepcopy([unrelated, direct])
-                pair[index][field] = {"kind": "current-work", "id": "wrong"} if field == "task_identity" else "stale"
-                with pytest.raises(AssertionError):
-                    call({**context, "request": pair})
-        for answer, posture_answer in (("continue-selected", None), ("independent", "planned"), ("unrelated-direct", "planned")):
-            pair = copy.deepcopy([unrelated, direct])
-            pair[0]["arguments"]["answer"] = answer
-            if posture_answer:
-                if answer == "unrelated-direct":
-                    pair[1]["arguments"]["answer"] = posture_answer
-                else:
-                    pair[0]["arguments"]["task_posture"] = posture_answer
-            for ordered in (pair, pair[::-1]):
-                with pytest.raises(AssertionError, match="conflicting Planning"):
-                    call({**context, "request": ordered})
+        selection = current["planning"]["selection_requests"][0]
+        for field in ("source_revision", "capability_revision", "owner_revision", "task_identity"):
+            forged = copy.deepcopy(selection)
+            forged[field] = {"kind": "current-work", "id": "wrong"} if field == "task_identity" else "stale"
+            with pytest.raises(AssertionError):
+                call({**context, "request": forged})
         for changed_context in ({"task": "Other task"}, {"changed": ["different.rs"]}, {"target": str(tmp_path.parent)}):
             with pytest.raises(AssertionError):
-                call({**context, **changed_context, "request": [unrelated, direct]})
-        planned_pair = copy.deepcopy([unrelated, direct])
-        planned_pair[1]["arguments"]["answer"] = "planned"
-        assert call({**context, "request": planned_pair})["planning"]["required_transition"] == "create-or-select-owner"
+                call({**context, **changed_context, "request": selection})
         assert selector.read_bytes() == before
         assert first_path.read_bytes() == first_bytes
-    unrelated = posture["response_request"]
-    unrelated["arguments"]["answer"] = "planned"
     request = current["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
-    false_direct = direct
-    with pytest.raises(AssertionError, match="Direct task posture"):
-        call({**context, "request": [false_direct, request]})
-    planned = call({**context, "request": [unrelated, request]})
-    assert planned["planning"]["task_relation"] == "independent"
-    assert planned["planning"]["required_transition"] == "create-or-select-owner"
+    planned = call({**context, "request": request})
     assert planned["planning"]["selected_owner"] is None
     action = planned["decision_packet"]["primary_action"]
     second = call({**context, "invocation": action})
@@ -840,7 +787,7 @@ def test_quiescent_selected_owner_preserves_task_and_allows_unrelated_work(
     quiet = call(other)
     assert quiet["planning"]["status"] == "direct"
     assert quiet["decision_packet"]["status"] != "terminal"
-    explicit = quiet["planning"]["requests"][0]
+    explicit = quiet["planning"]["selection_requests"][0]
     assert call({**other, "request": explicit})["planning"]["status"] == "reentry-required"
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     # New owner creation remains separate, and a native-owned closed selector
@@ -885,13 +832,14 @@ def test_quiescent_disposition_never_acquires_historical_selector(
     def call(value: dict) -> dict:
         return consume("native", shared_core_binary, native_cli, value)
 
+    view = call(context)
+    assert view["planning"]["status"] == "direct"
+    request = view["planning"]["selection_requests"][0]
     if state == "unknown":
         with pytest.raises(AssertionError, match="not live"):
-            call(context)
+            call({**context, "request": request})
     else:
-        view = call(context)
-        assert view["planning"]["status"] == ("direct" if state == "closed" else "unresolved")
-        continued = call({**context, "request": view["planning"]["requests"][0]})
+        continued = call({**context, "request": request})
         assert continued["planning"]["status"] == ("reentry-required" if state == "closed" else "custody-required")
         assert continued["decision_packet"]["status"] != "terminal"
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
@@ -928,9 +876,9 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
     # A remembered native owner is advisory until this task admits continuation.
     unrelated = {**context, "task": "Explain an unrelated helper"}
     unresolved = call(unrelated)
-    assert unresolved["planning"]["task_relation"] == "unresolved"
+    assert unresolved["planning"]["task_relation"] == "no-incumbent"
     assert unresolved["planning"]["selected_owner"] is None
-    assert unresolved["planning"]["incumbent_owner"]
+    assert unresolved["planning"]["incumbent_owner"] is None
     assert not unresolved["planning"]["update_requests"]
     assert not unresolved["planning"]["update_recovery_requests"]
     assert not unresolved["planning"]["adoption_requests"]
@@ -1044,13 +992,14 @@ def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(
         + ("[roadmap]\nintent='preserve unfamiliar useful intent'\n" if unsupported else "")
     )
     held = state.read_bytes()
-    ambiguous = call(context)["planning"]
+    selection = call(context)["planning"]["selection_requests"][0]
+    ambiguous = call({**context, "request": selection})["planning"]
     assert ambiguous["selected_owner"] is None
     assert ambiguous["status"] == "legacy-choice-required"
     assert ambiguous["task_relation"] == "unresolved"
     assert ambiguous["legacy_aggregate"]["current_authority"] is False
     assert len(ambiguous["legacy_aggregate"]["selection_requests"]) == len(owners)
-    assert call(context)["planning"]["terminal_retention"]["status"] == "legacy-migration-required"
+    assert call(context)["planning"]["status"] == "direct"
     assert state.read_bytes() == held
     request = ambiguous["legacy_aggregate"]["selection_requests"][0]
     ready = call({**context, "request": request})
@@ -1070,11 +1019,8 @@ def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(
         cold_state.write_text("[unfamiliar]\nintent='preserve'\n")
         cold_bytes = cold_state.read_bytes()
         preserved = call({"target": str(cold), "task": "Independent read"})
-        assert preserved["planning"]["legacy_aggregate"]["selection_requests"] == []
-        assert preserved["planning"]["creation_requests"]
-        blocker = next(b for b in preserved["decision_packet"]["blockers"] if b["code"] == "legacy-planning-owner-resolution-unavailable")
-        assert blocker["code"] == "legacy-planning-owner-resolution-unavailable"
-        assert "task" not in blocker["affects"]
+        assert preserved["planning"]["status"] == "direct"
+        assert preserved["planning"]["terminal_retention"]["status"] == "quiet"
         assert cold_state.read_bytes() == cold_bytes
         return
     retire = before["planning"]["terminal_retention"]["requests"][0]

@@ -370,7 +370,7 @@ def test_planning_reentry_preserves_pending_obligation(tmp_path, shared_core_bin
         return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
 
     first = call()
-    continuation = first["planning"]["requests"][0]
+    continuation = first["planning"]["selection_requests"][0]
     selected = call({"request": continuation})
     assert selected["planning"]["source_reconciliation"]["obligations"] == ["docs/guide.md"]
     action = selected["decision_packet"]["primary_action"]
@@ -539,7 +539,7 @@ def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_
     (plan.parent.parent / "state.toml").write_text(
         f'[[active.execplans]]\nid="{original["id"]}"\npath="{ref.as_posix()}"\nstatus="active"\n'
     )
-    continuation = call()["planning"]["requests"][0]
+    continuation = call()["planning"]["selection_requests"][0]
     selected = call({"request": continuation})
     selection_action = selected["decision_packet"]["primary_action"]
     assert selection_action["operation_id"] == "planning.reconcile"
