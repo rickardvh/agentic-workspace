@@ -2311,6 +2311,12 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
                     .keys()
                     .map(move |id| (owner, capability, id))
             })
+            .filter(|(_, _, id)| {
+                id.as_str() != native_plugin_exposure::OP
+                    || available_actions
+                        .iter()
+                        .any(|action| action.action.operation_id == id.as_str())
+            })
             .map(|(owner, capability, id)| {
                 Ok((id.clone(), operation_revision(owner, id, capability)?))
             })

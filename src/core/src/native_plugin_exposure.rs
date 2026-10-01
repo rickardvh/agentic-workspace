@@ -362,24 +362,32 @@ fn observe(target: &Path, host: &str, mode: &str) -> Result<Value, CoreError> {
         let before = text(&root, path)?;
         let mut settings = object(before.as_deref())?;
         {
-            let (group, key, value) = ("enabledPlugins", selector.as_str(), json!(true));
-            if settings.get(group).is_none() {
-                settings[group] = json!({});
-            }
-            if !settings[group].is_object() {
-                return Err(err("Claude settings group must be an object"));
-            }
-            field(
-                &mut settings[group],
-                key,
-                &old[group],
-                if removing { None } else { Some(value.clone()) },
-            )?;
-            if !removing {
-                fragments[group] = value;
-            }
-            if removing && settings[group] == json!({}) {
-                settings.as_object_mut().unwrap().remove(group);
+            for (group, key, value) in [
+                ("enabledPlugins", selector.as_str(), json!(true)),
+                (
+                    "extraKnownMarketplaces",
+                    marketplace.as_str(),
+                    json!({"source":{"source":"directory","path":"./.agentic-workspace/plugins"}}),
+                ),
+            ] {
+                if settings.get(group).is_none() {
+                    settings[group] = json!({});
+                }
+                if !settings[group].is_object() {
+                    return Err(err("Claude settings group must be an object"));
+                }
+                field(
+                    &mut settings[group],
+                    key,
+                    &old[group],
+                    if removing { None } else { Some(value.clone()) },
+                )?;
+                if !removing {
+                    fragments[group] = value;
+                }
+                if removing && settings[group] == json!({}) {
+                    settings.as_object_mut().unwrap().remove(group);
+                }
             }
         }
         add(
@@ -448,7 +456,7 @@ fn host_actions(host: &str, marketplace: &str, refresh_needed: bool) -> Value {
         ])
     } else {
         json!([
-            "claude plugin marketplace add ./.agentic-workspace/plugins --scope local",
+            "Start Claude Code in this repository and trust its settings to register the declared repository marketplace. Plugin bytes remain per-machine.",
             format!("claude plugin install {selector} --scope {scope}"),
             "Start a new Claude session or run /reload-plugins. Each collaborator installs plugin bytes on their own machine."
         ])

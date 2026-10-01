@@ -295,3 +295,39 @@ packages remain protected. The owner committed this checkout's reassessment and
 its separate exact provenance reconciliation. Deterministic coverage exercises
 both repository and machine-local assessment scopes, stale observations and
 preservation guards.
+
+### Review repair: repository Claude marketplace declarations
+
+The initial Claude observation above used manual local marketplace registration.
+The reviewed implementation now owns both `extraKnownMarketplaces` and
+`enabledPlugins` in the selected project/local settings file, with directory
+source `./.agentic-workspace/plugins`. This replaces the manual registration step
+in the ordinary repository path; no scoped marketplace command is returned.
+
+On 2026-10-01, isolated profiles and new adopted repositories exercised Claude
+Code 2.1.285 for the initial project startup and 2.1.286 for the fresh collaborator
+and local checks. Interactive startup accepted each disposable repository's trust
+dialog and registered its relative directory declaration without `marketplace
+add`. No model prompt was submitted; a synthetic API-key fixture allowed startup
+without copying account credentials. These observations establish settings and
+plugin lifecycle, not model-selected use or remote policy readiness.
+
+The fresh collaborator initially listed no installed plugins. After trusted
+startup, marketplace listing resolved the shared relative declaration to that
+collaborator's checkout, while installed-plugin listing remained empty. Explicit
+`plugin install <selector> --scope project` then reported project scope, enabled
+and projectEnabled. The original profile also reported project enablement. Local
+startup read the declaration from ignored `.claude/settings.local.json`; explicit
+`--scope local` installation was enabled only in that repository, with no shared
+settings file. The profile's other repository entry was disabled there, and both
+profiles reported every AW entry disabled in the unrelated repository. Neither
+profile had user-level AW marketplace declarations or enablement.
+
+Shared and local settings retained the relative source after host installation.
+Authenticated Configuration removal deleted both owned settings fragments and
+native listing reported disabled entries in the removed repositories; host cache
+bytes remained. Deterministic coverage additionally preserves unrelated
+marketplace declarations and rejects matching unowned or edited owned declarations
+in both scopes. Full API introspection has a bounded, named plugin-schema
+allowance; optional discovery and effect revision appear only in selected setup
+or an actual proposal, preserving the existing ordinary-response budgets.

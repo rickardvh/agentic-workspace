@@ -76,7 +76,7 @@ Use repository integration by default. After adoption, ask your agent:
 > scope. Show the Configuration proposal and preserve unrelated host settings.
 
 Configuration installs the canonical bundle under `.agentic-workspace/plugins/`
-and offers `configuration/read-plugin-exposure/v1`. Choose `codex`,
+and offers `configuration/read-plugin-exposure/v1` in selected setup detail. Choose `codex`,
 `claude-project` or the explicit single-user `claude-local` option. Review and
 authorise the exact exposure proposal. Installation alone never enables a plugin.
 
@@ -88,20 +88,22 @@ source marketplace or user-level enablement is needed. The current CLI's
 `plugin list` omits repository context; use the app's repository plugin view to
 check discovery and installation.
 
-For Claude, project scope adds shared enablement to `.claude/settings.json` and
-a repository catalogue under `.agentic-workspace/plugins/.claude-plugin/`.
-Each collaborator registers their own checkout locally and installs its bytes:
+For Claude, project scope adds shared `extraKnownMarketplaces` and
+`enabledPlugins` fragments to `.claude/settings.json`, with a relative directory
+source pointing to the repository catalogue under
+`.agentic-workspace/plugins/.claude-plugin/`. Start Claude Code from the repository
+root and trust its settings to register that marketplace. Each collaborator then
+installs the plugin bytes on their own machine:
 
 ```sh
-claude plugin marketplace add ./.agentic-workspace/plugins --scope local
 claude plugin install agentic-workspace-entry@<repository-marketplace> --scope project
 ```
 
-Use the exact marketplace name and commands returned by Configuration. Local
-registration keeps the checkout's absolute path in `.claude/settings.local.json`,
-outside shared settings. Committed enablement does not download plugin bytes on
-a collaborator's machine. For single-user enablement, select `claude-local` and
-use `--scope local` for installation too. Exclude `.claude/settings.local.json`
+Use the exact marketplace name and commands returned by Configuration. Shared
+settings contain no machine-specific checkout path. Committed enablement does
+not download plugin bytes on a collaborator's machine. For single-user enablement,
+select `claude-local`: both declaration and enablement fragments go in ignored
+`.claude/settings.local.json`; use `--scope local` for installation. Exclude that file
 through the checkout's existing local Git ignore policy before local exposure;
 never commit or promote that file into project/user scope.
 
@@ -119,9 +121,9 @@ start a new session or run `/reload-plugins`. Ordinary AW entry never runs plugi
 managers. Before removing the canonical bundle, remove its owned exposure through
 Configuration. Edited/unowned entries stop removal; unrelated settings survive.
 Plugin removal leaves the `AGENTS.md` fallback and canonical startup skill usable.
-Inactive host caches and host-owned local marketplace declarations may remain;
-remove a local declaration separately with `claude plugin marketplace remove
-<repository-marketplace> --scope local` when no longer needed.
+Inactive host caches may remain after Configuration removes both owned settings
+fragments. A separately registered host marketplace can be removed with
+`claude plugin marketplace remove <repository-marketplace>` when no longer needed.
 
 ### Deliberate global installation
 

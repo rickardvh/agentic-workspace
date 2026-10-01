@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Offer repository-scoped Codex and Claude entry plugins with collision-safe exposure, refresh and removal."

@@ -123,13 +123,16 @@ Native entry plugins are optional repository integration. Their generated bundle
 lives under `.agentic-workspace/plugins/agentic-workspace-entry/` and refreshes
 with the repository's package files. Configuration owns only the added Codex
 marketplace entry and project enablement, or Claude catalogue and selected-scope
-enablement. It preserves unrelated host settings and refuses unowned collisions.
+marketplace declaration and enablement. It preserves unrelated host settings and
+refuses unowned collisions.
 
 Commit Codex's `.agents/plugins/marketplace.json` and `.codex/config.toml` changes,
 or Claude's `.claude/settings.json` and repository catalogue. Claude's
 `.claude/settings.local.json` is local-only; exclude it before local exposure.
-Each collaborator's local marketplace registration and plugin cache belong to the
-host, and shared enablement does not install their bytes. Repository removal
+Claude reads the relative directory source from `extraKnownMarketplaces` in the
+selected settings file after project trust. Each collaborator's registration/cache
+material belongs to the host; shared enablement does not install their bytes.
+Repository removal
 requires removing owned plugin exposure before deleting its bundle. Removing
 only plugin exposure preserves the generic `AGENTS.md` entry. See the
 [installation guide](../agentic-workspace-install.md#optional-installed-entry-skill)

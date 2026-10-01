@@ -33,9 +33,12 @@ def plugin_host(target, core, cli):
         return next(r for r in view["adoption_requests"] if r["arguments"]["mode"] == mode)
 
     def row(host):
+        initial = call()
+        assert "plugin_exposure_request" not in initial["configuration_write"]
+        setup = call(request=initial["configuration_write"]["setup_assessment"]["request"])
         return next(
             r
-            for r in call(request=call()["configuration_write"]["plugin_exposure_request"])["configuration_write"]["plugin_exposure"]
+            for r in call(request=setup["configuration_write"]["plugin_exposure_request"])["configuration_write"]["plugin_exposure"]
             if r["state"]["host"] == host
         )
 
@@ -70,7 +73,15 @@ def test_repository_lifecycle_fragment_custody_and_fallback(tmp_path, shared_cor
         settings.parent.mkdir()
         if host == "claude-local":
             (tmp_path / ".git/info/exclude").write_text(".claude/settings.local.json\n")
-        settings.write_text(json.dumps({"permissions": {"allow": ["Read"]}, "enabledPlugins": {"other@team": True}}))
+        settings.write_text(
+            json.dumps(
+                {
+                    "permissions": {"allow": ["Read"]},
+                    "enabledPlugins": {"other@team": True},
+                    "extraKnownMarketplaces": {"team": {"source": {"source": "github", "repo": "team/plugins"}}},
+                }
+            )
+        )
     state = row(host)
     stale = state["expose_request"]
     apply(stale)
@@ -84,6 +95,9 @@ def test_repository_lifecycle_fragment_custody_and_fallback(tmp_path, shared_cor
         assert "# Keep this comment" in settings.read_text()
     else:
         data = json.loads(settings.read_text())
+        assert data["extraKnownMarketplaces"][state["state"]["marketplace"]] == {
+            "source": {"source": "directory", "path": "./.agentic-workspace/plugins"}
+        }
         data["newUserSetting"] = "preserved"
         settings.write_text(json.dumps(data))
         assert not (tmp_path / (".claude/settings.json" if host == "claude-local" else ".claude/settings.local.json")).exists()
@@ -103,7 +117,7 @@ def test_repository_lifecycle_fragment_custody_and_fallback(tmp_path, shared_cor
         data = json.loads(settings.read_text())
         assert data["enabledPlugins"] == {"other@team": True}
         assert data["newUserSetting"] == "preserved"
-        assert not data.get("extraKnownMarketplaces")
+        assert data["extraKnownMarketplaces"] == {"team": {"source": {"source": "github", "repo": "team/plugins"}}}
         assert not (tmp_path / ".agentic-workspace/plugins/.claude-plugin/marketplace.json").exists()
     apply(adoption("remove"))
     assert not bundle.joinpath("plugin.json").exists()
@@ -128,6 +142,29 @@ def test_unowned_matching_and_modified_plugin_fields_fail_closed(tmp_path, share
 
 def bundle_exists(root):
     return (root / ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json").is_file()
+
+
+@pytest.mark.parametrize("host", ["claude-project", "claude-local"])
+def test_claude_marketplace_fragment_collision_is_preserved(tmp_path, shared_core_binary, native_cli, host):
+    call, apply, adoption, row = plugin_host(tmp_path, shared_core_binary, native_cli)
+    (tmp_path / ".git/info/exclude").write_text(".claude/settings.local.json\n")
+    planned = row(host)["state"]
+    path = tmp_path / (".claude/settings.local.json" if host == "claude-local" else ".claude/settings.json")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    declaration = {"source": {"source": "directory", "path": "./.agentic-workspace/plugins"}}
+    path.write_text(json.dumps({"extraKnownMarketplaces": {planned["marketplace"]: declaration}}))
+    before = path.read_bytes()
+    assert row(host)["state"]["status"] == "preserved-blocked"
+    assert path.read_bytes() == before
+    path.unlink()
+    apply(row(host)["expose_request"])
+    data = json.loads(path.read_text())
+    data["extraKnownMarketplaces"][planned["marketplace"]]["source"]["path"] = "./user-customized"
+    path.write_text(json.dumps(data))
+    before = path.read_bytes()
+    assert row(host)["state"]["status"] == "preserved-blocked"
+    assert call(request=adoption("remove"))["configuration_write"]["status"] == "remove-owned-plugin-exposures-first"
+    assert path.read_bytes() == before and bundle_exists(tmp_path)
 
 
 def test_local_scope_requires_checkout_ignore_and_never_promotes(tmp_path, shared_core_binary, native_cli):

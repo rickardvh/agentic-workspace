@@ -13,11 +13,14 @@ mixed-reader pointer. Reconcile moved Windows checkout junctions explicitly;
 remove only authenticated matching exposure, preferably before payload teardown.
 Retired owned links remain removable. Discovery/selection grants no authority.
 
-Optional repository plugins use `plugin_exposure_request`. Choose `codex`,
-`claude-project` or explicit ignored `claude-local` scope, then carry the exact
+Optional repository plugins use `plugin_exposure_request` from selected setup
+detail. Choose `codex`, `claude-project` or explicit ignored `claude-local`
+scope, then carry the exact
 proposal. Configuration owns only repository references; run the returned host
-cache steps explicitly. Remove authenticated plugin exposure before its canonical
-bundle. Ordinary entry never runs host plugin managers.
+cache steps explicitly. Claude's selected settings scope holds both marketplace
+declaration and enablement; each machine still installs its own plugin bytes. Remove
+authenticated plugin exposure before its canonical bundle. Ordinary entry never
+runs host plugin managers.
 
 For repository adoption or removal, use Configuration's current
 `repository_adoption_request`. Inspect its exact footprint and preservation gaps.
