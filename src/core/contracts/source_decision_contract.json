@@ -214,7 +214,7 @@
       },
       {
         "name": "worker",
-        "description": "Project bounded worker entry, expand an exact captured input, or assemble unproven return re-entry from a sealed Assignment packet.",
+        "description": "Present worker entry or a complete manual snapshot, expand an exact captured input, or wrap new return material with host-held Assignment identity.",
         "input_field": "request",
         "input_required": true
       },

@@ -77,7 +77,7 @@ standing override authority.
 | Path | Supported result and boundary |
 | --- | --- |
 | Retained current host | Current eligible Assignment; execution stays with the acting agent. |
-| Manual export | Bounded read-only packet and typed unproven return; no automatic launch. |
+| Manual export | Complete read-only recipient snapshot, retained owner continuation and explicitly reported unproven return; no automatic launch or authenticated execution identity. |
 | Process CLI/stdout | One sealed invocation, read-only material or an unapplied UTF-8 patch, committed custody and exact re-entry. |
 | Codex app-server bridge | The same sealed invocation through `agentic_workspace.sealed_codex_transport`; one fresh read-only provider turn and typed material return. |
 | API, JSON-file result, undeclared native command | No native automatic execution claim. |

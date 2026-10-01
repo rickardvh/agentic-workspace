@@ -47,8 +47,38 @@ and implementation to a separate repair decision. The fixture receiver checks
 that boundary before returning an explanation. This is contract/presentation
 evidence; live model comprehension uses the #3755 exercise, not a new provider run.
 
-## Remaining lane work
+## Manual evidence (#3757)
 
-#3757 owns complete manual
-presentation, host-wrapped reported returns and fresh-context continuity. Their
-runtime must work without a Planning owner. Each is a separate stacked PR.
+The native manual presentation includes the complete captured snapshot, including
+inputs larger than the ordinary lazy-entry threshold. It asks for new material;
+the initiating host retains immutable identity and wraps the response. The manual
+continuation holds one current-task owner reference to existing effect custody.
+Exported, explicitly reported, admitted, partial, rejected/repair and dispositioned
+carriage are separate states. No external execution or identity is authenticated.
+
+`test_manual_assignment_continuation.py` discards initiating context, locates the
+retained packet through fresh native entry, wraps a synthetic answer, records its
+reported provenance, resumes admission and retains settlement without Planning.
+It covers an agent specialist, human-produced work, rejected agent substitution
+for a human owner, partial findings, wrong identities, changed sources, unrelated
+work and replacement disposition. A planned but missing local commit recovers from
+exact retained terminal custody without repeating external work. The recipient
+snapshot carries every supplied byte and no inaccessible lazy references or
+transport envelope. This is a synthetic manual-protocol exercise; no interactive
+ChatGPT Pro or other external product was run or authenticated.
+
+## Lane delivery
+
+The four stacked slices cover policy, Planning, Verification and manual delivery.
+The live worker exercise is shared evidence for the lane. Independent review and
+merge remain outside implementer authority. Parent-lane closeout also retains the
+repository's current Verification assessments, including installed operational
+affordance evidence; the source-checkout worker exercise above does not substitute
+for that installed assurance. Wider provider/OS assurance and measured economics
+retain their existing separate issues.
+
+Combined validation passed 49 policy, execution-configuration, Assignment,
+Planning, Verification, manual and native process-journey checks. Final manual
+validation preserves the existing manual read-only eligibility. Rust Clippy passed
+with warnings denied; focused worker presentation and missing-source-meaning unit
+checks passed.

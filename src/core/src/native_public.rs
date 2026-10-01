@@ -206,6 +206,7 @@ fn resolve_selected(
                 .is_some_and(crate::native_independent::linked)
                 && !crate::native_resource_owner::operation(&i["operation_id"])
                 && i["operation_id"] != "delegation.dispatch"
+                && i["operation_id"] != crate::native_manual::OP
                 && i["operation_id"] != crate::native_patch::OP
                 && i["operation_id"] != crate::native_intent_write::WRITE
                 && i["operation_id"] != crate::native_intent_write::RECOVERY
@@ -1472,6 +1473,18 @@ fn resolve_selected(
         .remove("observed_invocation");
     let mut admission =
         crate::native_handoff::admission(&work, &delegation["observation"], &requests, &contract)?;
+    delegation["manual_continuation"] =
+        crate::native_manual::continuation(target, &input.task, &input.changed)?;
+    if delegation["observation"]["status"] == "current-reported-observation" {
+        let settlement = crate::native_manual::settle(
+            target, &work, &handoff, &admission, &requests, &contract,
+        )?;
+        if settlement.is_object() {
+            delegation["settlement_requests"] = json!([settlement["request"]]);
+            delegation["contribution"]["actions"] = json!([settlement["action"]]);
+            delegation["contribution"]["settled"] = json!(false);
+        }
+    }
     if admission["result_use_allowed"] == true {
         assignment_contribution["blockers"]
             .as_array_mut()
@@ -2193,6 +2206,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
         && invocation["operation_id"] != "delegation.dispatch"
+        && invocation["operation_id"] != crate::native_manual::OP
         && invocation["operation_id"] != crate::native_patch::OP
         && invocation["operation_id"] != crate::native_intent_write::WRITE
         && invocation["operation_id"] != crate::native_intent_write::RECOVERY
@@ -2419,6 +2433,24 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         result["value"]["reentry"] =
             crate::native_delegation::result_reentry(&executed, invocation)?;
+        return Ok(result);
+    }
+    if invocation["operation_id"] == crate::native_manual::OP {
+        progress.entered_effect_owner = true;
+        let executed = crate::native_manual::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
+        result["value"]["reentry"] = crate::native_manual::result_reentry(&executed, invocation)?;
         return Ok(result);
     }
     if matches!(

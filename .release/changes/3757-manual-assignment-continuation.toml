@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Present complete manual assignments and retain exact reported-return continuation without granting proof, human substitution or completion."

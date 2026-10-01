@@ -40,8 +40,20 @@ pub(crate) fn view(input: &Value) -> Result<Value, CoreError> {
             "worker packet requires at most eight exact captured inputs",
         ));
     }
+    if capsule
+        .into_iter()
+        .flatten()
+        .map(|i| i["content"].as_str().unwrap().len())
+        .sum::<usize>()
+        > 262144
+    {
+        return Err(CoreError::new(
+            "Worker captured inputs exceed the 256 KiB boundary; narrow required material before export.",
+        ));
+    }
     match input["action"].as_str() {
-        Some("entry") => {
+        Some("entry" | "manual") => {
+            let manual = input["action"] == "manual";
             let mut view = assignment_packet::worker_context(packet);
             view["kind"] = json!("agentic-workspace/assignment-worker-entry/v1");
             // Keep every restriction and requirement; only immutable protocol
@@ -64,11 +76,11 @@ pub(crate) fn view(input: &Value) -> Result<Value, CoreError> {
                 let mut projected = item.clone();
                 let bytes = item["content"].as_str().unwrap_or("").len();
                 projected["detail_ref"] = json!(reference(packet, index)?);
-                if bytes > 2048 || bytes > budget {
+                if !manual && (bytes > 2048 || bytes > budget) {
                     projected.as_object_mut().unwrap().remove("content");
                     projected["delivery"] = json!("required-lazy");
                 } else {
-                    budget -= bytes;
+                    budget = budget.saturating_sub(bytes);
                     projected["delivery"] = json!("inline");
                 }
                 inputs.push(projected);
@@ -77,6 +89,64 @@ pub(crate) fn view(input: &Value) -> Result<Value, CoreError> {
             view["inputs"]["lazy_expansion_rule"] = json!(
                 "Read every required input before working; use worker action expand with its exact detail_ref and the same packet for required-lazy bodies. Missing carriage: stop and re-export from the current owner. Captured bytes are not live source admission."
             );
+            if manual {
+                view.as_object_mut().unwrap().remove("assignment");
+                view["inputs"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("lazy_expansion_rule");
+                view["inputs"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("task_requirements");
+                // Source meaning stays intact, while identity and custody stay
+                // with the initiating host. Every captured body is inline.
+                for item in view["inputs"]["capsule"].as_array_mut().unwrap() {
+                    item.as_object_mut().unwrap().remove("detail_ref");
+                    item.as_object_mut().unwrap().remove("revision");
+                }
+                view["proof"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("obligation_id");
+                view["proof"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("obligation_revision");
+                if let Some(work) = view["inputs"]["source_work"].as_object_mut() {
+                    work.remove("work");
+                    work.remove("definition");
+                    if work["producer"] == "verification"
+                        && let Some(context) = work["accepted_context"].as_object_mut()
+                    {
+                        context.remove("subject");
+                        context.remove("freshness");
+                        if let Some(artifact) = context["artifact"].as_object_mut() {
+                            artifact.remove("sha256");
+                        }
+                    }
+                }
+                view["return_contract"] = json!({"requested_output":"Return your answer or findings, unresolved questions and any stop condition. For read-only work, supply no patch or changed files. The initiating agent wraps your new material; do not reproduce identifiers, hashes or a transport envelope.","proof_authority":false,"completion_authority":false});
+                if packet["assignment_identity"]["scope_class"] == "unapplied-patch" {
+                    view["return_contract"]["artefact_rule"] =
+                        packet["return_contract"]["rule"].clone();
+                    view["return_contract"]["mutation_paths"] =
+                        packet["return_contract"]["mutation_paths"].clone();
+                }
+                let reason = if packet["human_eligibility"].is_object() {
+                    "This work is assigned to the explicitly configured human owner. A model response cannot substitute for human-produced work."
+                } else {
+                    "Current execution policy selected this configured manual specialist. The initiating host retains admission and integration responsibility."
+                };
+                let prompt = format!(
+                    "Perform the bounded work below using only the included snapshot.\n\nWhy this recipient: {reason}\n\nAll required captured inputs are included. Repository references are provenance; you need no repository access or AW commands. If necessary meaning or material is missing, return the specific blocker. Do not run commands, change files, grant proof or claim completion.\n\n{}\n\nReturn only new answer/findings and unresolved questions. Delivery and execution identity are not authenticated by a pasted response.",
+                    serde_json::to_string_pretty(&view)
+                        .map_err(|e| CoreError::new(e.to_string()))?
+                );
+                return Ok(
+                    json!({"kind":"agentic-workspace/manual-assignment-presentation/v1","prompt":prompt,"view":view,"recipient_kind":if packet["human_eligibility"].is_object(){"human"}else{"agent"},"input_delivery":"complete-captured-snapshot","export_only":true,"delivery_observed":false,"execution_observed":false,"claim_boundary":{"proof":false,"independent_review":false,"completion":false}}),
+                );
+            }
             let burden = json!({
                 "legacy_context_bytes":{"status":"known","value":serde_json::to_vec(&packet["worker_context"]).unwrap().len()},
                 "entry_context_bytes":{"status":"known","value":serde_json::to_vec(&view).unwrap().len()},
@@ -184,6 +254,28 @@ mod tests {
         assert_eq!(
             detail["input"],
             raw["assignment_identity"]["input_capsule"][1]
+        );
+        let manual = view(&json!({"action":"manual","packet":packet})).unwrap();
+        assert_eq!(
+            manual["view"]["inputs"]["capsule"][1]["content"],
+            raw["assignment_identity"]["input_capsule"][1]["content"]
+        );
+        assert!(manual["view"]["assignment"].is_null());
+        assert!(manual["view"]["inputs"]["capsule"][1]["detail_ref"].is_null());
+        assert!(manual["view"]["return_contract"]["reentry"].is_null());
+        let mut patch = raw.clone();
+        patch["assignment_identity"]["scope_class"] = json!("unapplied-patch");
+        patch["return_contract"]["rule"] = json!("Return an unapplied canonical delta only.");
+        patch["return_contract"]["mutation_paths"] = json!(["rule"]);
+        let patch = assignment_packet::seal(&patch).unwrap();
+        let presentation = view(&json!({"action":"manual","packet":patch})).unwrap();
+        assert_eq!(
+            presentation["view"]["return_contract"]["mutation_paths"],
+            json!(["rule"])
+        );
+        assert_eq!(
+            presentation["view"]["return_contract"]["artefact_rule"],
+            "Return an unapplied canonical delta only."
         );
         let material =
             json!({"summary":"finding","patch":"","changed_paths":[],"stop_conditions_hit":[]});

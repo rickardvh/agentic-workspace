@@ -251,7 +251,10 @@ pub(crate) fn retain_handoff(
         return Ok(result);
     }
     let assignment = &handoff["packet"]["assignment_identity"]["current_assignment"];
-    let observed = observation["status"] == "current-executed-observation";
+    let observed = matches!(
+        observation["status"].as_str(),
+        Some("current-executed-observation" | "current-reported-observation")
+    );
     if handoff["status"] == "returned-unproven" && !observed {
         if request.is_some() {
             return Err(error(
