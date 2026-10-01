@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -213,8 +214,37 @@ def test_former_selection_requires_exact_current_agent_request(
     assert len(plugin_requests) == 2 and len(plugin_operations) == 1
     plugin_bytes = sum(len(json.dumps(row)) for row in [*plugin_requests, *plugin_operations])
     assert 0 < plugin_bytes < 1_600, plugin_bytes
+    # Source-defined bounded Planning work adds only these three optional
+    # introspection properties. Attribute their exact serialized delta while
+    # preserving the existing ordinary-state and compact-response ceilings.
+    without_assignment_inputs = copy.deepcopy(planning)
+    assignment_input_schemas = []
+
+    def remove_assignment_input_schema(value):
+        if isinstance(value, dict):
+            properties = value.get("properties", {})
+            if "assignment_inputs" in properties:
+                assignment_input_schemas.append(properties.pop("assignment_inputs"))
+            for item in value.values():
+                remove_assignment_input_schema(item)
+        elif isinstance(value, list):
+            for item in value:
+                remove_assignment_input_schema(item)
+
+    remove_assignment_input_schema(without_assignment_inputs)
+    assert len(assignment_input_schemas) == 3
+    assert all(row["type"] == "object" for row in assignment_input_schemas)
+    assignment_input_bytes = len(json.dumps(planning)) - len(json.dumps(without_assignment_inputs))
+    assert 0 < assignment_input_bytes < 2_300, assignment_input_bytes
     schema_extensions = (
-        retention_bytes + discovery_bytes + selection_bytes + activation_bytes + consequence_bytes + evidence_bytes + plugin_bytes
+        retention_bytes
+        + discovery_bytes
+        + selection_bytes
+        + activation_bytes
+        + consequence_bytes
+        + evidence_bytes
+        + plugin_bytes
+        + assignment_input_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
