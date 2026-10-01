@@ -58,6 +58,7 @@ mod native_planning_create;
 mod native_planning_retention;
 #[path = "modules/planning/native_planning_update.rs"]
 mod native_planning_update;
+mod native_plugin_exposure;
 mod native_procedure;
 mod native_procedure_answer;
 #[path = "modules/verification/native_proof.rs"]

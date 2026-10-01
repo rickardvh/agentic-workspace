@@ -13,6 +13,12 @@ mixed-reader pointer. Reconcile moved Windows checkout junctions explicitly;
 remove only authenticated matching exposure, preferably before payload teardown.
 Retired owned links remain removable. Discovery/selection grants no authority.
 
+Optional repository plugins use `plugin_exposure_request`. Choose `codex`,
+`claude-project` or explicit ignored `claude-local` scope, then carry the exact
+proposal. Configuration owns only repository references; run the returned host
+cache steps explicitly. Remove authenticated plugin exposure before its canonical
+bundle. Ordinary entry never runs host plugin managers.
+
 For repository adoption or removal, use Configuration's current
 `repository_adoption_request`. Inspect its exact footprint and preservation gaps.
 An inventory-only `reconcile-payload` proposal verifies all current package bytes
@@ -109,8 +115,19 @@ through existing write custody and recovery, without another human bookkeeping
 prompt. Reenter after interruption and keep already committed integrations;
 never replay stale actions. Changed relevant setup or source material invalidates
 reuse; unrelated tasks, commits and unchanged setup across versions do not.
-Unknown formats, major transitions and newer integration are preserved. Resume
-the original work: optional unresolved setup restricts its dependent integration
+Unknown formats, major transitions and newer integration are preserved.
+
+For a development source checkout, Configuration may return
+`source-reassessment-required` when its declaration and installed package files
+match the running artifact. Preserve the returned `source_reassessment`
+observations and fill only its `reason`, then reassess current material under
+standing repository authority. Configuration reobserves the exact witness before
+publication. This route does not downgrade a newer installed package or replace
+an unknown record. After the assessment commits, use the existing exact
+`reconcile-payload` proposal to renew provenance; the assessment itself does not
+renew it.
+
+Resume the original work: optional unresolved setup restricts its dependent integration
 claim, not unrelated repository execution. Do not declare package integration
 complete while any relevant assessment or supported consumer verification remains
 open. `integration_complete` refers only to this bounded Configuration assessment;

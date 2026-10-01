@@ -1,10 +1,13 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:65198973a10ddaecea36235224af7bc29f3775cf6c96003a920ac86f413cdf68",
+  "managed_revision": "sha256:342ff0048746cecab03e4ab00489341416f0975a1acd2694ebe78822e7b718b7",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
   "payload_files": [
+    ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json",
+    ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+    ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md",
     ".agentic-workspace/READING.json",
     ".agentic-workspace/OWNERSHIP.toml",
     ".agentic-workspace/skills/REGISTRY.json",

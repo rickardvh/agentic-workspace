@@ -70,7 +70,63 @@ repository setup remain separate. Keep the `AGENTS.md` pointer: passive discover
 does not guarantee automatic activation. Select the entry skill when needed.
 
 The shared plugin exposes one skill and has no hooks, MCP server or runtime.
-Use the native host lifecycle with the Git marketplace:
+Use repository integration by default. After adoption, ask your agent:
+
+> Enable the AW entry plugin for this repository in Codex and Claude Code project
+> scope. Show the Configuration proposal and preserve unrelated host settings.
+
+Configuration installs the canonical bundle under `.agentic-workspace/plugins/`
+and offers `configuration/read-plugin-exposure/v1`. Choose `codex`,
+`claude-project` or the explicit single-user `claude-local` option. Review and
+authorise the exact exposure proposal. Installation alone never enables a plugin.
+
+For Codex, the proposal adds one entry to `.agents/plugins/marketplace.json` and
+one enablement entry to `.codex/config.toml`. Restart Codex in the repository;
+project config applies only to trusted projects, subject to host requirements.
+The repository marketplace resolves the bundle from that working tree. No AW
+source marketplace or user-level enablement is needed. The current CLI's
+`plugin list` omits repository context; use the app's repository plugin view to
+check discovery and installation.
+
+For Claude, project scope adds shared enablement to `.claude/settings.json` and
+a repository catalogue under `.agentic-workspace/plugins/.claude-plugin/`.
+Each collaborator registers their own checkout locally and installs its bytes:
+
+```sh
+claude plugin marketplace add ./.agentic-workspace/plugins --scope local
+claude plugin install agentic-workspace-entry@<repository-marketplace> --scope project
+```
+
+Use the exact marketplace name and commands returned by Configuration. Local
+registration keeps the checkout's absolute path in `.claude/settings.local.json`,
+outside shared settings. Committed enablement does not download plugin bytes on
+a collaborator's machine. For single-user enablement, select `claude-local` and
+use `--scope local` for installation too. Exclude `.claude/settings.local.json`
+through the checkout's existing local Git ignore policy before local exposure;
+never commit or promote that file into project/user scope.
+
+Select `$agentic-workspace-entry` in Codex or
+`/agentic-workspace-entry:agentic-workspace-entry` in Claude Code. Selective use,
+discovery and automatic activation are separate observations.
+
+Repository refresh updates its canonical bundle; Configuration returns a bounded
+host refresh step when needed. Refresh Codex's repository plugin view and restart
+after local bundle changes. Development manifest versions include the bridge
+digest because Codex caches local bytes by version; release bundles use the
+declared release version. For
+Claude, refresh only this repository's marketplace and installed scope, then
+start a new session or run `/reload-plugins`. Ordinary AW entry never runs plugin
+managers. Before removing the canonical bundle, remove its owned exposure through
+Configuration. Edited/unowned entries stop removal; unrelated settings survive.
+Plugin removal leaves the `AGENTS.md` fallback and canonical startup skill usable.
+Inactive host caches and host-owned local marketplace declarations may remain;
+remove a local declaration separately with `claude plugin marketplace remove
+<repository-marketplace> --scope local` when no longer needed.
+
+### Deliberate global installation
+
+For users who want one adapter across many repositories, the existing Git or
+extracted-release marketplace remains an explicit user-scoped convenience:
 
 ```sh
 codex plugin marketplace add rickardvh/agentic-workspace
@@ -84,9 +140,7 @@ claude plugin install agentic-workspace-entry@agentic-workspace --scope user
 
 Alternatively, extract `agentic-workspace-entry-<version>.zip` from the ordinary
 release and pass the extracted directory to `plugin marketplace add`. Both
-catalogues refer to the same self-contained bundle. Select
-`$agentic-workspace-entry` in Codex or
-`/agentic-workspace-entry:agentic-workspace-entry` in Claude Code.
+catalogues refer to the same self-contained bundle.
 
 For Codex Git updates, run `codex plugin marketplace upgrade agentic-workspace`,
 then `codex plugin add agentic-workspace-entry@agentic-workspace`. Disable it in

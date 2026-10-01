@@ -2,6 +2,9 @@
   "kind": "agentic-workspace/host-surfaces/v1",
   "authority": "Current public repository adoption footprint; source maintenance has separate authority",
   "payload_files": [
+    ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json",
+    ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+    ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md",
     ".agentic-workspace/READING.json",
     ".agentic-workspace/OWNERSHIP.toml",
     ".agentic-workspace/skills/REGISTRY.json",
@@ -74,6 +77,36 @@
     ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
   ],
   "surfaces": [
+    {
+      "path": ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Canonical passive plugin metadata for optional repository host exposure",
+      "materialization": { "mode": "package-verbatim", "source": ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json" }
+    },
+    {
+      "path": ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Claude metadata over the same passive repository bundle",
+      "materialization": { "mode": "package-verbatim", "source": ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json" }
+    },
+    {
+      "path": ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "One generated passive bridge to the current repository startup procedure",
+      "materialization": { "mode": "package-verbatim", "source": ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md" }
+    },
     {
       "path": ".agentic-workspace/READING.json",
       "ownership": "package-managed",
@@ -1083,6 +1116,9 @@
   ],
   "derivation": {
     "portable_sources": [
+      ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json",
+      ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+      ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md",
       "src/core/contracts/portable_ownership.toml",
       ".agentic-workspace/skills/REGISTRY.json",
       ".agentic-workspace/skills/workspace-startup/SKILL.md",
@@ -1162,6 +1198,12 @@
   "enclave": {
     "owner": "workspace",
     "declarations": [
+      {
+        "path": ".agentic-workspace/plugins/.claude-plugin/marketplace.json",
+        "scope": "exact",
+        "class": "managed-support",
+        "lifetime": "adopted-host"
+      },
       {
         "path": ".agentic-workspace/config.toml",
         "scope": "exact",

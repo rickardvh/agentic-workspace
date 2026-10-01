@@ -498,7 +498,8 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     if pending.is_some() && mode != "recover" {
         blockers.push("interrupted adoption effect requires exact recover request".into());
     }
-    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"enclave":enclave,"observations":observations,"updates":updates,"installed":installed,"ownership_baseline":crate::native_ownership::baseline(),"preserved":preserved,"blockers":blockers,
+    let host_refresh = crate::native_plugin_exposure::refresh_actions(target, &json!(updates))?;
+    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"enclave":enclave,"observations":observations,"updates":updates,"host_refresh":host_refresh,"installed":installed,"ownership_baseline":crate::native_ownership::baseline(),"preserved":preserved,"blockers":blockers,
         "identity":revision(&identity),"prior_custody":held.as_ref().map(digest).transpose()?,"pending":pending});
     Ok(state)
 }
@@ -521,6 +522,12 @@ pub(crate) fn view(
         return Ok(());
     }
     if request["request_kind"] == EDIT && mode == "remove" {
+        let barriers = crate::native_plugin_exposure::removal_barriers(target, template)?;
+        if !barriers.is_empty() {
+            result["status"] = json!("remove-owned-plugin-exposures-first");
+            result["plugin_exposure"] = json!(barriers);
+            return Ok(());
+        }
         let mut exposure = json!({});
         crate::native_skill_exposure::view(
             target,
@@ -681,7 +688,13 @@ pub(crate) fn disabled_maintenance(action: &Value) -> bool {
 }
 
 fn outcome(i: &Value) -> Value {
-    json!({"status":"applied","effects":["configuration-source"],"value":{"kind":"agentic-workspace/repository-adoption-result/v1","mode":i["arguments"]["request"]["arguments"]["mode"],"completion_authority":false}})
+    let mut result = json!({"status":"applied","effects":["configuration-source"],"value":{"kind":"agentic-workspace/repository-adoption-result/v1","mode":i["arguments"]["request"]["arguments"]["mode"],"completion_authority":false}});
+    if let Some(refresh) = i["arguments"]["binding"]["state"].get("host_refresh")
+        && refresh.as_array().is_some_and(|items| !items.is_empty())
+    {
+        result["value"]["host_refresh"] = refresh.clone();
+    }
+    result
 }
 pub(crate) fn write_scope(i: &Value) -> Result<Vec<String>, CoreError> {
     let mut paths =
@@ -738,9 +751,37 @@ pub(crate) fn execute(
         drop(file);
         root.rename(&temporary, &root, RECORD).map_err(err)?;
     }
-    let updates = i["arguments"]["binding"]["state"]["updates"]
-        .as_object()
-        .unwrap();
+    publish(
+        &root,
+        &i["arguments"]["binding"]["state"]["updates"],
+        &original,
+        recovery,
+    )?;
+    if recovery {
+        let record =
+            held(target, &root)?.ok_or_else(|| err("adoption recovery custody missing"))?;
+        crate::attempt_store::commit(
+            json!({"target":target,"custody":record["custody"],"outcome":outcome(&record["invocation"])}),
+        )?;
+    }
+    let out = outcome(i);
+    let committed = crate::attempt_store::commit(
+        json!({"target":target,"custody":admission["custody"],"outcome":out}),
+    )?;
+    Ok(
+        json!({"outcome":out,"custody":committed["custody"],"post_effect_changed_paths":i["arguments"]["binding"]["state"]["updates"].as_object().unwrap().keys().collect::<Vec<_>>()}),
+    )
+}
+
+/// Publish exact, admitted file preimages/postimages; shared by optional project
+/// projections so their collision and interrupted-write barriers stay identical.
+pub(crate) fn publish(
+    root: &Dir,
+    updates: &Value,
+    original: &Value,
+    recovery: bool,
+) -> Result<(), CoreError> {
+    let updates = updates.as_object().unwrap();
     // Identity is published last and removed first; partial material is never
     // reported adopted merely because an earlier file write succeeded.
     let mut paths: Vec<_> = updates.keys().collect();
@@ -758,10 +799,10 @@ pub(crate) fn execute(
     for path in paths {
         let update = &updates[path];
         if update["enclave_residue"] == true {
-            crate::native_enclave::remove(&root, path, &update["before"], recovery)?;
+            crate::native_enclave::remove(root, path, &update["before"], recovery)?;
             continue;
         }
-        let current = bytes(&root, path)?;
+        let current = bytes(root, path)?;
         let after = update["after"].as_str().map(str::to_owned);
         if recovery && current == after {
             continue;
@@ -775,7 +816,7 @@ pub(crate) fn execute(
             root.create_dir_all(Path::new(path).parent().unwrap_or(Path::new(".")))
                 .map_err(err)?;
             let temporary = format!("{path}.{}.tmp", &digest(&original)?[7..]);
-            if let Some(existing) = bytes(&root, &temporary)? {
+            if let Some(existing) = bytes(root, &temporary)? {
                 if existing != text || !recovery {
                     return Err(err(format!(
                         "{temporary}: unknown or incomplete temporary preserved"
@@ -788,31 +829,18 @@ pub(crate) fn execute(
                 file.write_all(text.as_bytes()).map_err(err)?;
                 file.sync_all().map_err(err)?;
             }
-            if revision(&bytes(&root, path)?) != update["before"] {
+            if revision(&bytes(root, path)?) != update["before"] {
                 return Err(err("adoption source changed before replacement"));
             }
             if current.is_none() {
-                root.hard_link(&temporary, &root, path).map_err(err)?;
+                root.hard_link(&temporary, root, path).map_err(err)?;
                 root.remove_file(&temporary).map_err(err)?;
             } else {
-                root.rename(&temporary, &root, path).map_err(err)?;
+                root.rename(&temporary, root, path).map_err(err)?;
             }
         } else if current.is_some() {
             root.remove_file(path).map_err(err)?;
         }
     }
-    if recovery {
-        let record =
-            held(target, &root)?.ok_or_else(|| err("adoption recovery custody missing"))?;
-        crate::attempt_store::commit(
-            json!({"target":target,"custody":record["custody"],"outcome":outcome(&record["invocation"])}),
-        )?;
-    }
-    let out = outcome(i);
-    let committed = crate::attempt_store::commit(
-        json!({"target":target,"custody":admission["custody"],"outcome":out}),
-    )?;
-    Ok(
-        json!({"outcome":out,"custody":committed["custody"],"post_effect_changed_paths":updates.keys().collect::<Vec<_>>()}),
-    )
+    Ok(())
 }

@@ -1,11 +1,9 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agentic-workspace-entry",
   "description": "A passive entry to the current target repository's agentic-workspace procedure.",
   "author": {
     "name": "Rickard von Haugwitz"
   },
   "repository": "https://github.com/rickardvh/agentic-workspace",
-  "license": "MIT",
-  "version": "0.0.0-dev.0+9f3c337797d489d1"
+  "license": "MIT"
 }

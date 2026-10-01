@@ -167,6 +167,7 @@ fn resolve_selected(
                 && i["operation_id"] != "configuration.defer-choice"
                 && i["operation_id"] != "configuration.write"
                 && i["operation_id"] != "configuration.skill-exposure"
+                && i["operation_id"] != "configuration.plugin-exposure"
                 && i["operation_id"] != "configuration.repository-adoption"
                 && i["operation_id"] != "configuration.recover-write"
                 && i["operation_id"] != crate::native_memory_retention::OP
@@ -806,6 +807,7 @@ fn resolve_selected(
                 ) && action["arguments"]["request"]["arguments"]["source"]
                     .as_str()
                     .is_some_and(|source| crate::native_payload::paths().contains(&source)))
+                    || crate::native_configuration_assessment::repair_action(action)
                     || (action["operation_id"] == "configuration.repository-adoption"
                         && action["arguments"]["binding"]["state"]["updates"]
                             .as_object()
@@ -1607,6 +1609,7 @@ fn resolve_selected(
                             | "configuration.recover-write"
                             | "configuration.defer-choice"
                             | "configuration.skill-exposure"
+                            | "configuration.plugin-exposure"
                             | "configuration.repository-adoption"
                             | "system-intent.write"
                             | "system-intent.recover-write"
@@ -2155,6 +2158,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != crate::native_instruction_write::RECOVERY
         && invocation["operation_id"] != "configuration.defer-choice"
         && invocation["operation_id"] != "configuration.skill-exposure"
+        && invocation["operation_id"] != "configuration.plugin-exposure"
         && invocation["operation_id"] != "configuration.repository-adoption"
         && invocation["operation_id"] != "configuration.write"
         && invocation["operation_id"] != "configuration.recover-write"
@@ -2261,6 +2265,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 | "configuration.recover-write"
                 | "configuration.defer-choice"
                 | "configuration.skill-exposure"
+                | "configuration.plugin-exposure"
                 | "configuration.repository-adoption"
                 | "system-intent.write"
                 | "system-intent.recover-write"
