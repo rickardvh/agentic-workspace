@@ -236,6 +236,14 @@ def test_former_selection_requires_exact_current_agent_request(
     assert all(row["type"] == "object" for row in assignment_input_schemas)
     assignment_input_bytes = len(json.dumps(planning)) - len(json.dumps(without_assignment_inputs))
     assert 0 < assignment_input_bytes < 2_300, assignment_input_bytes
+    # A Verification investigation reuses an exact native receipt; its one
+    # optional request property is introspection only until explicitly supplied.
+    analysis_request = next(row for row in verification["requests"] if row["kind"] == "verification/requirements/v1")
+    without_analysis_receipt = copy.deepcopy(analysis_request)
+    receipt_schema = without_analysis_receipt["input_schema"]["properties"].pop("analysis_receipt_ref")
+    assert receipt_schema["type"] == "string" and receipt_schema["pattern"].startswith("^proof://local/")
+    analysis_receipt_bytes = len(json.dumps(analysis_request)) - len(json.dumps(without_analysis_receipt))
+    assert 0 < analysis_receipt_bytes < 250, analysis_receipt_bytes
     schema_extensions = (
         retention_bytes
         + discovery_bytes
@@ -245,6 +253,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + evidence_bytes
         + plugin_bytes
         + assignment_input_bytes
+        + analysis_receipt_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
