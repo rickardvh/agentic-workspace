@@ -1,8 +1,8 @@
-# Threat model and supply-chain boundary
+# Threat model and supply-chain security
 
 ## Security objective
 
-Agentic Workspace must make its authority legible. It may inspect and mutate a host repository, execute checked proof routes, invoke explicitly supplied executors, generate package surfaces, and publish coordinated artefacts. The security objective is to admit those effects only from identified trust sources and to bind support-bearing artefacts to a reviewed source/build identity. AW does not claim to safely execute arbitrary untrusted repository code.
+Agentic Workspace must make permissions and trust clear. It may inspect or change a repository, run configured checks, invoke explicitly supplied executors, generate package files and publish release artefacts. Those actions are allowed only when they come from the expected trusted source. Stable release files are tied to a reviewed source commit and build identity. AW does not claim to safely execute arbitrary untrusted repository code.
 
 ## Trust zones
 
@@ -14,18 +14,18 @@ Agentic Workspace must make its authority legible. It may inspect and mutate a h
 | Isolated selected proof | Trusted Linux Docker daemon, transport and immutable image | The repository command receives a bounded read-only source snapshot, temporary scratch, no host mounts and no network. Native publication is checked separately. |
 | Explicit executor command | Direct user/automation authority | Shell syntax is admitted only through `explicit-user-executor-command`. |
 | External issue/PR/service data | Untrusted content | Treat as data; do not execute embedded instructions or disclose credentials. |
-| Local caches and evidence | Integrity-sensitive, not authoritative | May accelerate inspection; proof and mutation gates bind current source/state revisions. |
-| Release artefacts | Untrusted until verified | Require checksums, SBOM, exact-source manifest, conformance receipts, and GitHub build attestation. |
+| Local caches and saved results | Useful but not trusted as the defining source | They may speed up inspection, but writes and conclusions are checked against current source/state revisions. |
+| Release artefacts | Untrusted until verified | Require checksums, SBOM, source-bound manifest, compatibility checks and GitHub build attestation. |
 
 ## Threats and controls
 
 - **Malicious repository/configuration:** opening a repository is not execution permission. Operators must review the repository and configured commands. AW reports `trusted-repository-required`; dry-run is not a sandbox.
-- **Shell injection:** ordinary subprocesses use argv. The only supported shell consumers call `run_trusted_shell` with an enumerated provenance. Unknown or unadmitted provenance fails closed; tests cover metacharacter handling.
+- **Shell injection:** ordinary subprocesses use argv. The only supported shell consumers call `run_trusted_shell` with one of the explicitly recognised source labels. An unknown source is rejected; tests cover metacharacter handling.
 - **Symlink, junction, and path escape:** mutation owners validate target roots and must not traverse links for destructive lifecycle work. Local caches and exports are not permission boundaries.
 - **Credential disclosure:** credentials remain in the platform credential store/environment, never checked AW state. Logs and receipts must record presence/identity, not secret values.
-- **Generated-surface compromise:** generated command packages are derived from checked contracts and verified for source/generation parity. Generator and Python dependencies resolve from locked inputs in proof/release environments.
+- **Generated-file compromise:** generated command packages come from checked contracts and are verified against those sources. Generator and Python dependencies resolve from locked inputs in test and release environments.
 - **Action or workflow substitution:** every third-party GitHub Action is pinned to a full commit SHA and updated through a reviewed dependency update. Workflows declare least-privilege permissions; write scopes are limited to release jobs.
-- **Dependency, code, or secret regression:** pull requests run dependency review, CodeQL, and Gitleaks. Findings fail their jobs and therefore block a support-bearing promotion when configured as required checks under #2454.
+- **Dependency, code, or secret regression:** pull requests run dependency review, CodeQL, and Gitleaks. Findings fail their jobs and therefore block a stable release when those jobs are required under #2454.
 - **Release substitution:** coordinated artefacts carry checksums, a CycloneDX/SPDX-compatible SBOM, a source-bound release manifest, semantic conformance receipts, and GitHub artefact attestations. Missing security readiness, SBOM, or attestation fails the release job before publication.
 
 ## Intentional trusted-shell inventory
@@ -36,19 +36,19 @@ Agentic Workspace must make its authority legible. It may inspect and mutate a h
 The ordinary host-shell boundaries inherit the caller's filesystem and credential
 authority. They are not sanitised or sandboxed. Verification can instead use the
 optional [isolated selected-proof executor](../maintainer/selected-proof-execution.md).
-That executor observes the Docker transport, daemon, pinned image and source bytes;
-it confines the selected command while retaining separate host-side receipt and
-custody admission. Missing confinement capability is a blocker, not a human waiver.
+That executor checks the Docker connection, daemon, pinned image and source bytes;
+it confines the selected command while the host separately records and verifies
+the result. If the required isolation is unavailable, the check remains blocked.
 Any new shell consumer must update the machine-readable policy, threat model,
 adversarial tests and readiness check in the same change.
 
-## Release readiness
+## Stable release checks
 
-`uv run python scripts/check/check_security_supply_chain.py --format json` emits `agentic-workspace/security-supply-chain-readiness/v1`. A support-bearing release runs this check with locked dependencies, includes the receipt and SBOM in its manifest/checksums, and attests every `dist/` subject. Any failed required control produces `status=blocked` and exits non-zero.
+`uv run python scripts/check/check_security_supply_chain.py --format json` emits `agentic-workspace/security-supply-chain-readiness/v1`. A stable release runs this check with locked dependencies, includes the result and SBOM in its manifest/checksums, and attests every file in `dist/`. Any failed required check produces `status=blocked` and exits non-zero.
 
-Repository ruleset and required-check admission remain owned by #2454. This baseline supplies exact check names and readiness evidence; it does not mutate repository settings from package code.
+Repository rules and required-check configuration remain tracked by #2454. This document names the expected checks and evidence; package code does not change repository settings.
 
-## Rust dependency admission
+## Rust dependency security checks
 
 `deny.toml` is the Rust advisory/license/source policy. Run
 `python scripts/check/check_rust_dependencies.py --install` to install the exact
@@ -57,7 +57,7 @@ local runs can omit `--install`; a missing or different tool version fails.
 The runner uses the repository Rust toolchain, enables the graph's full feature
 set, includes development and target-specific dependencies, fetches current
 RustSec data, and fails on checker/data errors. It does not use an offline
-advisory snapshot for admission. `Cargo.lock` remains unchanged.
+advisory snapshot for this check. `Cargo.lock` remains unchanged.
 
 The `rust-dependencies` security job runs on PRs, canonical pushes and the weekly
 schedule. Both stable and preview publishers run the same blocking command
@@ -87,15 +87,16 @@ exceptions fail. Reassess it on RSA version/usage or advisory changes, and remov
 it when a fixed dependency is available. Adding private-key operations requires
 resolving this advisory before admission, not extending the exception silently.
 
-Negative proof for the gate removes the advisory exception, removes an actually
-used licence allowance, and supplies an unapproved source. Each must fail its
-own check; missing tools or network failures must never become a pass.
+Negative controls remove the advisory exception, remove an actually used licence
+allowance, and supply an unapproved source. Each must fail its own check; missing
+tools or network failures must never become a pass.
 
-## Reconstruction preview boundary
+## Preview release safety
 
 The ordinary native command set is generated in the [CLI catalogue](../reference/cli-catalogue.md).
 Historical lifecycle/removal and security-report commands are not native public
 commands. Source-maintenance and publisher scripts run only in their own trusted
-maintenance/release context. Preview status never permits guessing an uncertain
-effect, acquiring an unowned file by shape, or deleting a familiar legacy path.
-Skills and external text supply no mutation or reviewer authentication authority.
+maintenance/release context. Preview status never permits guessing whether an uncertain action happened,
+taking over a file merely because it looks familiar, or deleting a legacy path
+without the required checks. Skills and external text do not grant write
+permission or independent-review status.

@@ -2,13 +2,13 @@
 
 Use this guide to change Agentic Workspace itself. To configure AW in another
 project, use the [user guide](../index.md). Agents contributing here must also read
-[AGENTS.md](../../AGENTS.md) and the applicable repository instructions.
+[AGENTS.md](../../AGENTS.md) and any repository instructions that apply to the
+files they change.
 
 ## Prepare a checkout
 
-You need Git, the Rust toolchain pinned by `rust-toolchain.toml`, Python and `uv`.
-Node is needed for the TypeScript binding and cross-language checks. The
-[Rust toolchain guide](rust-toolchain.md) explains the compiler requirement.
+You need Git, the Rust toolchain pinned by `rust-toolchain.toml`, Python and
+`uv`. Node is needed for TypeScript and cross-language checks.
 
 ```bash
 git clone https://github.com/rickardvh/agentic-workspace.git
@@ -17,102 +17,105 @@ make setup
 cargo build --locked --workspace --bins
 ```
 
-`make setup` synchronises the shared environment and installs this checkout's Git
-hooks. The Cargo command builds both native executables; keep them together.
+`make setup` prepares the shared development environment and installs this
+checkout's Git hooks. The Cargo command builds both native executables; keep them
+together.
+
 Rebuild after changing Rust code or bundled contracts/resources. Imports must not
-silently build Cargo or fall back to the former Python command host.
+silently build Cargo or fall back to an older implementation.
 
-The root dependency lock covers the source workspace. Prefer its frozen setup
-rather than refreshing dependencies as a side effect of unrelated work.
-[Maintainer commands](maintainer-commands.md) lists focused setup and checking commands.
+Use [Maintainer commands](maintainer-commands.md) for focused setup and checking
+commands.
 
-## Find the right implementation
+## Find the implementation responsible for the behaviour
 
-The [repository map](repository-layout.md) explains authored source, generated material
-and operating-state lifetimes. Start with the behaviour being changed, then locate
-its responsible component:
+Start from what the user or agent observes, then locate the code or document that
+actually defines it.
 
 | Change | Start here |
 | --- | --- |
-| Current context, authorisation, state or effects | `src/core/` |
+| Shared runtime behaviour, permissions, saved component state or controlled changes | `src/core/` |
 | CLI options or forwarding | `src/cli/rust/` and the native CLI contract |
-| Python / TypeScript transport | `src/cli/python/` / `src/cli/typescript/` |
-| Human instructions and examples | The relevant user, reference or contributor page |
-| Generated schemas or catalogues | Their named source contract, not the generated output |
-| Repository-maintainer workflow | `tools/skills/` and its current procedure |
+| Python / TypeScript API transport | `src/cli/python/` / `src/cli/typescript/` |
+| Human documentation and examples | The relevant user, reference or maintainer page |
+| Generated schemas or catalogues | Their source contract or generator, not the generated file |
+| Repository-maintainer procedure | `tools/skills/` and its current procedure |
 
-Read the [architecture](../architecture.md) when a change crosses those boundaries.
-Planning, Memory and Verification implementation and native schemas live under
-`src/core/src/modules/`. Shared native contracts live in `src/core/contracts/`;
-the core embeds its generated operating payload from `src/core/payload/`.
-Current package topology is specified in the [distribution reference](native-release-topology.md).
+Read [Architecture](../architecture.md) when a change crosses those areas.
 
-Maintainer execution lives under `src/tooling/`: `check/` validates sources,
-`generate/` derives adapters, `release/` builds and publishes artifacts, and
-`model-cli-harness/` contains the evaluation runners and their inputs. GitHub
-workflow helpers live in `github/`; shared development-only Python helpers live
-in `python/aw_maintainer/`. `contracts/` contains maintainer contracts, separate
-from native contracts under `src/core/`. `tools/skills/` retains procedure Markdown.
+Planning, Memory and Verification implementations live under
+`src/core/src/modules/`. Shared Rust contracts live in `src/core/contracts/`.
+The core embeds its generated package files from `src/core/payload/`.
 
-Repository state under `.agentic-workspace/` is not freehand implementation scratch.
-Use the responsible AW operation for interpreted state and use the canonical source
-for generated or packaged material. A change to README or another declared intent
-source needs its source reconciliation on the introducing PR, not a later repair.
+Maintainer tooling lives under `src/tooling/`:
 
-## Make a bounded change
+- `check/` validates source and package properties;
+- `generate/` produces derived files;
+- `release/` builds and publishes releases;
+- `model-cli-harness/` contains evaluation runners;
+- `github/` contains GitHub workflow helpers;
+- `python/aw_maintainer/` contains shared development-only Python helpers;
+- `contracts/` contains maintainer-tool schemas and data.
 
-Describe the problem and expected result before choosing a mechanism. Keep the
-patch independently understandable: the relevant implementation, documentation
-and present-tense evidence should agree on what it establishes.
+Do not treat `.agentic-workspace/` as scratch space. Use the supported AW
+operation for package-managed records and change generated/package files at their
+source.
 
-For documentation, follow the canonical [documentation style guide](../documentation-style-guide.md).
-For runtime work, preserve the agent's judgement and the current
-source ownership rather than adding a competing control path.
+## Keep the change focused
 
-If the work uses Planning, update its progress through Planning's owner. Do not
-create plans or memory entries merely to demonstrate use of AW. Preserve useful
-continuation before stopping; one-off narration can stay in the PR or Git history.
+Describe the problem and expected result before choosing an implementation.
+A PR should be understandable on its own: code, documentation and current evidence
+should agree on what changed.
 
-## Validate the claim
+For documentation, follow the
+[documentation style guide](../documentation-style-guide.md).
 
-Read the [testing strategy](testing-strategy.md) before changing behaviour, tests or
-CI. Name the failure classes the patch could introduce, reuse current evidence,
-and choose the lowest sufficient stable contract to test. An incident does not
-automatically justify another permanent regression.
+Do not create Planning or Memory records merely to demonstrate AW. Save unfinished
+work before stopping only when another session would otherwise have to reconstruct
+important context.
 
-Typical starting points are focused Cargo tests for shared behaviour, focused
-Python or Node tests for transport, and links/examples/freshness checks for docs.
-Use [Maintainer commands](maintainer-commands.md) for exact commands. Changes to
-contracts or bundled resources also require the applicable generated/payload
-refresh and validation.
+## Choose evidence
 
-The ordinary hosted job is **Merge sufficiency**. Broad artefact, runtime-matrix
-and support-promotion proof is a separate explicit escalation; do not call skipped
-jobs passing. Record the commands, subject and limits of your actual evidence.
-State why proof can stop or the named remaining risk that needs more checking.
+Read the [testing strategy](testing-strategy.md) before changing behaviour, tests
+or CI.
 
-For behaviour, test or CI changes, include the testing strategy's compact delta
-disposition: retained claim, evidence level, duplication removed or justified, and
-recurring CI cost. Documentation cleanup must not silently weaken those floors.
+Name the failure the patch could introduce, reuse existing evidence where it
+already catches that failure, and test at the lowest useful level.
+
+Typical starting points:
+
+- focused Cargo tests for shared Rust behaviour;
+- focused Python or Node tests for language/API transport;
+- link, generation and example checks for documentation;
+- package tests when package contents or installation behaviour changed.
+
+Use [Maintainer commands](maintainer-commands.md) for exact commands.
+
+The ordinary hosted requirement is **Merge sufficiency**. Broader package,
+runtime-matrix or release qualification should run only when the change creates a
+specific risk those checks can expose.
+
+Report which commands actually ran, what they tested and any remaining gap. Do not
+describe skipped checks as passing.
 
 ## Open the PR
 
-Use the [PR template](../../.github/PULL_REQUEST_TEMPLATE.md). State what changed,
-why it serves the intended outcome, what was validated and what remains unresolved.
-Choose the required semver classification when package behaviour or shipped content
-changes; a documentation change is not a release or support promotion.
+Use the [PR template](../../.github/PULL_REQUEST_TEMPLATE.md). State:
 
-Keep stacked PRs independently truthful at their own base and head. A downstream
-fix does not repair an invalid lower layer.
+- what changed;
+- why it satisfies the issue;
+- what was checked;
+- what remains unresolved.
 
-An agent that implemented or materially changed the patch must not approve or
-independently review it, nor direct a child agent to supply that approval. Mark it
-**ready for independent review** and leave review to an externally initiated
+Package-affecting changes need the appropriate semver label and release fragment.
+A documentation-only change is not itself a release or a maturity change.
+
+An agent that implemented or materially changed the patch must not independently
+approve it or direct a child agent to provide that approval. Mark completed work
+ready for independent review and leave approval to a separately initiated
 reviewer using the [review skill](../../tools/skills/pr-review-recheck/SKILL.md).
-The implementer can continue other authorised work; review is not automatically
-a gate on implementing the next stack layer.
 
-Use the [issue-shaping skill](../../tools/skills/github-issue-shaping/SKILL.md) and
-[issue-creation skill](../../tools/skills/github-issue-creation/SKILL.md) when filing
-follow-up work. For observed product friction, start with
-[dogfooding feedback](dogfooding-feedback.md).
+Use the [issue-shaping skill](../../tools/skills/github-issue-shaping/SKILL.md)
+before creating follow-up issues and the
+[issue-creation skill](../../tools/skills/github-issue-creation/SKILL.md) when
+publishing them.

@@ -1,49 +1,55 @@
-# Which AW Module Should I Enable?
+# Which AW components should I use?
 
-Use `agentic-workspace` as the public entrypoint. Enable only the modules whose specialised capability pays back for this repository.
+Start with `agentic-workspace`. Enable Planning, Memory or Verification only when
+that component solves a recurring problem in your repository.
 
-AW itself is the dynamic operating-context/control layer. Modules are optional peer extensions of what the generic `resolve -> act -> reconcile` loop can know and do. There is no privileged first module that every repo should start with.
+AW itself can still be useful without any optional component: it can route the
+agent to project instructions and skills, read current AW settings and support
+controlled repository changes.
 
-AW may be unnecessary when the repo is cheap to reread, tasks finish in one sitting, existing docs/tests already carry the important rules, and there is little recurring context, handoff, proof, or control friction. A routing-only install can also be enough when the repo benefits from dynamic instructions/control but no specialised module justifies durable state.
+AW may be unnecessary when the repository is cheap to reread, tasks finish in one
+sitting, and existing documentation and tests already preserve the important
+rules.
 
-For the product model, use [`docs/package/overview.md`](package/overview.md). For module boundaries, use [`docs/package/modules.md`](package/modules.md).
+For the product model, see [How AW fits into a project](package/overview.md). For
+extension design, see [Modules](package/modules.md).
 
-## Fast chooser
+## Choose by the problem you actually have
 
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
+- Use **Memory** when agents repeatedly rediscover useful repository facts,
+  recurring traps, runbooks or subsystem orientation.
+- Use **Planning** when unfinished work must survive interruption or handoff with
+  its goal, constraints, progress and next step intact.
+- Use **Verification** when the project benefits from reusable checking
+  procedures, saved evidence or explicit known gaps.
+- Use several when each independently saves enough future work to justify the
+  extra state.
+- Use AW without optional components when routing and repository guidance help but
+  none of those three problems is significant.
+- Use ordinary project documentation and tests alone when AW would cost more than
+  it saves.
 
-Choose by the bottleneck you actually have:
+The current built-in components are examples, not a fixed list of every possible
+future extension.
 
-- Use **Memory** when agents repeatedly rediscover durable repo lessons, invariants, traps, runbooks, or subsystem orientation that is expensive to reconstruct.
-- Use **Planning** when active work itself must survive interruption: bounded intent, sequencing, handoff, continuation, or non-obvious completion boundaries.
-- Use **Verification** when reusable manual/semi-automated verification protocols, bounded evidence, or known verification gaps need a repo-visible owner.
-- Combine modules when more than one capability independently saves enough future work to justify its state.
-- Use **routing-only / no modules** when AW's dynamic control, repo customisation, ownership, skills, or compact routing are useful but none of the current specialised domains justify installation.
-- Stay with ordinary repo docs/tests alone when even the core AW layer would cost more than it saves.
+## Keep ordinary use simple
 
-The current first-party modules are examples, not the limit of the architecture. Future modules may add delegation, deployment, richer repository retrieval, security, or other functions through the same generic contribution model.
+Installing a component should not make every task read its manual or follow a new
+command sequence. The repository's startup skill remains the entry point, and AW
+only shows component information when it matters to the current task.
 
-## Progressive discovery
-
-Module selection should not enlarge the ordinary mental model.
-
-After installation, agents should still start from the same compact current operating contract. A module becomes visible when it is relevant to the current decision; an irrelevant installed module should remain out of first-line context.
-
-Do not teach agents a module command sequence as the normal workflow. Follow the current routed operation, skill, selector, or owner.
-
-## What stays secondary
-
-Direct module CLIs, module-local lifecycle commands, internal manifests, and debugging workflows are real but secondary. Use them when the current route or maintainer task explicitly requires module-level control.
-
-Exact installed surfaces and current command details belong in generated/reference owners rather than this chooser.
+Direct component commands and internal manifests are mainly for debugging,
+maintenance or specialised integrations. Ordinary agents should follow the
+specific action or reference returned for the task rather than reconstructing a
+component workflow.
 
 ## Read next
 
-- Package overview: [`docs/package/overview.md`](package/overview.md)
-- Module contribution model: [`docs/package/modules.md`](package/modules.md)
-- Extensibility boundary: [`docs/extension-boundary.md`](extension-boundary.md)
-- Installed surfaces: [`docs/package/installed-surfaces.md`](package/installed-surfaces.md)
-- Memory module: [`packages/memory/README.md`](../packages/memory/README.md)
-- Planning module: [`packages/planning/README.md`](../packages/planning/README.md)
-- Verification module: [`packages/verification/README.md`](../packages/verification/README.md)
-- Architecture: [`docs/architecture.md`](architecture.md)
+- [Product overview](package/overview.md)
+- [Modules and extensions](package/modules.md)
+- [Integration boundaries](extension-boundary.md)
+- [Your repository and AW files](package/installed-surfaces.md)
+- [Memory](../packages/memory/README.md)
+- [Planning](../packages/planning/README.md)
+- [Verification](../packages/verification/README.md)
+- [Architecture](architecture.md)

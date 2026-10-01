@@ -1,82 +1,88 @@
 # Integrate an agent or tool
 
-Use this guide when you are adding AW calls to an agent host, editor or other
-application. The integration transports requests and shows their results; AW
-continues to evaluate repository rules and manage its own state.
+Use this guide when adding AW calls to an agent host, editor or other application.
+The integration sends requests and displays results; AW itself continues to apply
+repository rules and manage AW-owned records.
 
-You do not need an integration to use AW with an agent that can read repository
+You do not need a custom integration when an agent can read repository
 instructions and run the CLI. Start with [Getting started](agentic-workspace-install.md)
-for that path. A project-specific rule or procedure belongs in
-[repository configuration](customization.md), not in a new host adapter.
+for that path.
 
-## Choose how to call AW
+## Call AW through a supported interface
 
-Use the [Rust, Python or TypeScript API](architecture/shared-rust-core.md) that fits
-your application, or invoke the [CLI](package/commands.md) and consume JSON.
-CLI, Python and TypeScript integrations use the native executable pair installed
-for their platform. Rust applications can call the linked core directly. Keep
-model credentials and host session management in your application.
+Use the [Rust, Python or TypeScript API](architecture/shared-rust-core.md), or call
+the [CLI](package/commands.md) and consume JSON. Keep model credentials, provider
+sessions and other host-specific state in the host application.
 
-Begin with a context query, not an automatic execution loop. Supply the target
-repository, the current task, and known affected paths. Show the returned context
-and applicable constraints to the agent; load additional detail only when needed.
+Start by asking AW what applies to the current task. Supply the target repository,
+the task and any known changed paths. Present relevant returned information to the
+agent; load optional detail only when needed.
 
-## Handle the next step
+## Preserve the kind of result AW returned
 
-AW can return information, a request for material, a bounded question, an action,
-or a restriction. The agent or user decides among legitimate alternatives. Your
-adapter should preserve those distinctions rather than converting every response
-into “run the next command.”
+AW may return:
+
+- information;
+- a request for more input;
+- a specific question;
+- an available action;
+- a restriction.
+
+Do not collapse all of these into “run the next command”.
 
 A typical interaction is:
 
-1. Call `start` for the work context and present relevant information.
-2. When a returned request needs new material or an answer, collect only that
-   input and submit the same current request through `start`.
-3. When an action is authorised, pass that exact action to `invoke`.
-4. Show what happened and use the returned continuation or recovery route.
+1. call `start` for the task;
+2. when AW asks for information or an answer, supply only that requested input;
+3. when AW returns an action that is allowed, pass that exact action to `invoke`;
+4. show the result and follow any returned recovery or next-step information.
 
 These are supported interactions, not mandatory phases for every task. An agent
-may already have enough information to work directly. Selecting a skill helps it
-follow a procedure; it does not authorise a write or satisfy a test requirement.
+may already have enough information to work directly.
 
-Keep the original target, task and affected paths with the exchange. Let AW check
-whether the request still applies when it is used. Do not manufacture action IDs,
-permissions or currentness markers, even when a hand-built object fits a schema.
+Keep the original target, task and changed paths with follow-up calls. Let AW
+check whether a returned request still applies. Do not manufacture action IDs,
+permissions or source hashes merely because a hand-written object matches a
+schema.
 
-## Preserve results across interruptions
+## Handle interruptions safely
 
-A change and the query that follows it can succeed or fail separately. Your
-adapter must not report a confirmed write as failed merely because continuation
-was unavailable. Nor should it treat a timeout as proof that nothing happened.
+A repository change and the response that follows it can fail independently.
 
-Retain the exact result or recovery reference needed to determine what happened.
-Use the responsible operation's recovery path for uncertain effects. When only
-disposable context has been lost, query again with the current work context.
-Do not rely on an earlier conversation as the only record of a committed effect.
+If AW confirmed that a change happened, keep that result even when a later
+response fails. If a timeout or interruption leaves the outcome unknown, use the
+returned recovery information or inspect the current state before trying the
+operation again.
 
-## Support handoff without forwarding the whole session
+Do not rely on chat history as the only record of a confirmed external change.
 
-For delegated work, use the Assignment packet supplied by AW. The `worker` tool
-can present its entry context, expand selected inputs and assemble a return. Your
-host supplies its transport and current capability facts; it must not invent a
-successful worker launch, independent review or completed integration.
+## Delegated work
 
-Returned material or a patch still needs admission and any required verification
-in the receiving repository. Credentials stay with the host. See the
-[delegation transport reference](maintainer/consequential-delegation.md) when
-implementing that specific capability.
+For delegated work, use the Assignment information AW returns. The `worker`
+tool can provide the receiving agent's task context and assemble its result. The
+host remains responsible for actually starting the worker and reporting its real
+capabilities.
 
-## Check the integration
+A returned patch or review still needs normal integration and verification in the
+receiving repository. It does not automatically count as independent approval.
 
-Exercise an ordinary query, a request needing an answer, an authorised effect,
-rejection after relevant inputs change, and recovery after interruption. Test
-transport-specific risks such as lost fields, encoding or unavailable executables
-without reimplementing AW's semantic rules in the adapter.
+## Test the integration
 
-AW is not a sandbox: configured commands use the caller's filesystem and
+Exercise at least:
+
+- an ordinary query;
+- a request that needs an answer;
+- a permitted repository change;
+- rejection after relevant inputs change;
+- recovery after an interrupted operation.
+
+Add integration tests only for failures the transport can cause itself, such as
+lost fields, encoding errors or unavailable executables. Do not duplicate AW's
+shared behavioural tests in every adapter.
+
+AW is not a sandbox. Configured commands run with the caller's filesystem and
 credential access. Read the [security guide](security/threat-model.md) before
-exposing effectful operations to an agent or remote client.
+allowing an agent or remote client to trigger repository changes.
 
-To introduce new deterministic domain behaviour rather than transport existing
-operations, use the [native module contract](module-capability-contract.md).
+To add reusable behaviour rather than a host integration, use the
+[module interface](module-capability-contract.md).

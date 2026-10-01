@@ -22,12 +22,12 @@ platform; those installed clients do not need Cargo. A Rust application compiles
 the core as a dependency. Missing or damaged native executables are an error, not
 a reason to switch to another implementation.
 
-## Query current context
+## Ask AW what applies to the current task
 
 Each example asks the same question about the Git repository in the current
-working directory. Run it from that repository, or change `target`. The result
-is JSON describing the current context and available next steps; the exact
-content depends on the repository. A successful query does not authorise a write.
+working directory. Run it from that repository, or change `target`. The result is JSON describing the relevant project information, restrictions and
+available next steps. Its exact content depends on the repository. A successful
+query does not by itself permit a write.
 
 ### Rust
 
@@ -50,8 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 `operating::start` and `operating::invoke` accept `serde_json::Value` and return
-`Result<Value, CoreError>`. They provide the same context-query and action-execution
-boundary used by the language clients. See the [public Rust implementation](../../src/core/src/operating.rs)
+`Result<Value, CoreError>`. They provide the same query and action behaviour used by the language clients. See the [public Rust implementation](../../src/core/src/operating.rs)
 for the exact entry points.
 
 ### Python
@@ -112,10 +111,11 @@ A work context contains `target`, a description in `task`, and optional `changed
 paths. Keep that context consistent when submitting a returned request or action.
 Use `request` with `start`, and `invocation` with `invoke`.
 
-The default `compact` projection keeps optional detail behind references. `full`
-returns expanded information. `carried` includes an explicit context carrier for
-continuation without rebuilding the envelope. The carrier is transport data, not
-permission to repeat a previous operation.
+The exact `projection` field controls how much detail the API returns. `compact`
+keeps optional detail behind references. `full` expands it. `carried` also returns
+a context bundle that can be supplied to a later call without rebuilding the
+request. That bundle is only transport data; it does not permit a previous action
+to be repeated.
 
 | Python | TypeScript | Purpose |
 | --- | --- | --- |
@@ -123,18 +123,20 @@ permission to repeat a previous operation.
 | `invoke(context)` | `invoke(context)` | Execute an exact returned action. |
 | `resources(context)` | `resources(context)` | Submit a resource request. |
 | `select_reference(context, reference, answer=...)` | `selectReference(context, reference, answer?)` | Select returned detail or supply the bounded answer a question requests. |
-| `answer_carried(carriage, reference, answer)` | `answerCarried(carriage, reference, answer)` | Answer using the returned carrier. |
-| `invoke_carried(carriage, reference)` | `invokeCarried(carriage, reference)` | Execute the exact action selected from a carrier. |
+| `answer_carried(carriage, reference, answer)` | `answerCarried(carriage, reference, answer)` | Answer using the returned context bundle. |
+| `invoke_carried(carriage, reference)` | `invokeCarried(carriage, reference)` | Execute the exact action selected from a returned context bundle. |
 
 For queries, detail selection and invocation, the Rust `operating` calls accept
-the corresponding JSON inputs directly. Clients must use returned references and
-actions rather than inventing their identity or effect-bearing fields. Optional
+the corresponding JSON inputs directly. Clients must use returned references and actions rather than inventing identifiers
+or fields that change what the operation will do. Optional
 questions and actions are not an instruction to execute everything offered.
 
-An invocation can report rejection or uncertainty in its result; absence of a
-language exception is not proof that it applied. Read `effect_outcome` separately
-from continuation. Preserve a confirmed effect if continuation fails. If the
-effect is uncertain, use recovery rather than submitting it as a new operation.
+An invocation can report rejection or uncertainty in its result; the absence of a
+language exception does not mean the operation happened. Read the exact
+`effect_outcome` field to see whether the change was confirmed. If a change was
+confirmed but the next response failed, keep the confirmed result. If the action
+may have happened but the result is unknown, use the recovery path before trying
+it again.
 
 For source development, build both binaries as described in the
 [contributor guide](../maintainer/contributor-playbook.md). The full source tree

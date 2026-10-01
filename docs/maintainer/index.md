@@ -17,15 +17,15 @@ to the [user guide](../index.md).
 | Configure recurring research or monitoring | [Scheduled maintainer tasks](scheduled-tasks/README.md) |
 
 [System intent](../../SYSTEM_INTENT.md) and [design principles](../design-principles.md)
-explain the product's constraints. [Dogfooding feedback](dogfooding-feedback.md)
-explains where to route observed friction.
+explain the product's constraints. [Report problems found while using AW](dogfooding-feedback.md)
+explains where to record recurring friction.
 
 ## Specialist references and evidence
 
 Use [Rust toolchain](rust-toolchain.md),
 [native distribution topology](native-release-topology.md),
 [source/payload maintenance](source-payload-operational-install.md),
-[independent native owners](independent-native-owners.md), or
+[independent Rust components](independent-native-owners.md), or
 [repository-only reading](repository-read-profile.md) when working on those areas.
 
 Dated audits, candidate reports and migration inventories are evidence for their

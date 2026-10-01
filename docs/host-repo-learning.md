@@ -1,56 +1,88 @@
-# Host-Repo Learning
+# Learn how a repository works
 
-Agentic Workspace must treat every host repository as unfamiliar until repo evidence proves otherwise. Filenames, language markers, and AW source-repo conventions can suggest discovery questions, but they are not authority for build, test, proof, release, ownership, or workflow decisions.
+Treat every repository as unfamiliar until its own files and successful commands
+show otherwise. A filename or language marker can suggest what to inspect, but it
+does not by itself establish the project's build, test, release or workflow rules.
 
-## Evidence States
+## Classify what you learn
 
-- `candidate`: a hint worth inspecting, such as `pyproject.toml`, `tests/`, `package.json`, or a setup/adopt proof-route hint.
-- `confirmed`: evidence the target repo declares or exposes now, such as a configured proof profile, Make target, package script, declared test dependency, or successfully live-confirmed route hint.
-- `stale`: previously learned evidence that no longer matches current repo affordances.
-- `negative`: a failed or absent command, missing tool, invalid route, or disproved assumption that should not be reused as confirmed proof.
-- `superseded`: an older lesson replaced by a stronger owner surface.
+Use these states when recording a repository-specific lesson:
 
-## Owner Routing
+- **candidate** — a clue worth checking, such as `pyproject.toml`, `tests/` or
+  `package.json`;
+- **confirmed** — the repository currently declares or successfully demonstrates
+  the behaviour;
+- **stale** — the lesson no longer matches the repository;
+- **negative** — a plausible command or assumption was checked and found not to
+  apply;
+- **superseded** — a newer project rule, test or document has replaced the lesson.
 
-Use the strongest existing home before inventing a new surface:
+Do not turn a guess into project policy simply because it looks conventional for
+the language or framework.
 
-- Memory: durable repo facts, recurring traps, operator runbooks, routing hints, and confirmed or negative proof-route lessons.
-- Config: stable host policy, required proof profiles, and disallowed commands.
-- Canonical docs: human-facing build, validation, release, ownership, or workflow policy.
-- Tests/checks/contracts: lessons that can become enforceable validation.
-- Planning: active or bounded future work that needs sequencing.
-- Issue follow-up: product or repo improvements needing review and prioritisation.
-- Local-only scratch: machine-local probe output that is not shared authority.
+## Save the lesson where it will be used
 
-## Proof Selection
+Prefer an existing project home:
 
-Proof selection is one consumer of this posture:
+- **Memory** for useful repository facts, recurring traps and confirmed or failed
+  command choices that would otherwise be rediscovered;
+- **configuration** for stable AW settings;
+- **project documentation** for human-facing build, test, release and workflow
+  guidance;
+- **tests and checks** when the lesson can be enforced automatically;
+- **Planning** for unfinished follow-up work;
+- **GitHub issues** for improvements that need review or prioritisation;
+- **local scratch** for machine-specific probe output that should not be shared.
 
-- Generic changed-path rules create proof intent, not command authority.
-- Setup/adopt proof-route hints are advisory until live-confirmed.
-- Memory proof-route lessons can become durable confirmed or negative evidence when they carry scope, provenance, owner, and learned-at metadata.
-- Host config and proof profiles can require, add, or disallow routes.
-- Live target capabilities can select commands when the repo currently exposes them.
-- Language/project markers alone remain discovery candidates.
+Do not create another AW record when the repository already has a clearer source.
 
-For Python repos, `pyproject.toml` and `tests/` are not enough to require `uv run pytest`. Pytest proof requires confirmed repo evidence such as pytest configuration or a declared pytest dependency. If no executable route is confirmed, proof selection must ask for manual verification. An absent command becomes negative evidence only when the host repo, host config, proof profile, Memory note, or confirmed route hint made that command plausible first.
+## Choose checks from repository evidence
 
-## Capturing Proof Lessons
+A file such as `pyproject.toml` or a `tests/` directory may suggest Python
+testing, but it does not prove that `uv run pytest` is the right command.
 
-When proof selection discovers a durable repo-specific lesson, capture it in the strongest existing owner:
+Use a command when the repository provides evidence for it, for example:
 
-- Put recurring confirmed or negative proof-route lessons in Memory first.
-- Promote stable required or disallowed proof policy to config proof profiles.
-- Promote human workflow policy to canonical docs.
-- Promote enforceable lessons to tests, checks, or contracts.
-- Route active follow-up to Planning or issues.
+- test configuration;
+- a declared dependency;
+- a package-manager script;
+- a Make target;
+- an AW Verification definition;
+- a previously confirmed repository-specific lesson that still applies.
 
-Memory notes can carry a compact machine-readable route line so proof selection can reuse the lesson later:
+If no executable check is established, report that gap instead of inventing one.
+Record a failed command as a reusable negative lesson only when there was a real
+repository-specific reason to try it.
+
+## Keep useful command lessons compact
+
+Memory may keep a machine-readable line so later agents can reuse an observed
+check without rereading the surrounding narrative:
 
 ```text
 agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"npm test","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"repo","owner":"Memory","provenance":"npm test passed during setup","learned_at":"2026-06-02"}
 ```
 
-Use `state:"negative"` for failed or absent commands that should not be selected again as confirmed proof. Negative lessons suppress matching candidate commands before selection. Confirmed lessons may add a route when generic discovery cannot infer it, but they must preserve provenance and scope so later agents can promote or retire them.
+The field names above are exact data identifiers. In prose, interpret them simply:
 
-Confirmed and negative Memory lessons are authoritative only when the route line includes `candidate_command`, `state`, `intent_type`, `owner`, `scope`, `provenance`, and `learned_at`. If any of those fields are missing, proof selection treats the record as invalid learning evidence instead of using it as confirmed proof or negative suppression, and the output should point the agent to recapture the Memory lesson with the missing metadata.
+- `candidate_command` is the command that was tried;
+- `state` says whether it worked or should be avoided;
+- `scope` says where the lesson applies;
+- `provenance` records how it was learned;
+- `learned_at` records when.
+
+If required fields are missing, treat the record as incomplete rather than as
+permission to run the command. Recheck a lesson when relevant repository files or
+tooling have changed.
+
+## Turn repeated lessons into stronger project mechanisms
+
+When a lesson becomes stable:
+
+- put required or forbidden checks in configuration or Verification;
+- put human workflow guidance in project documentation;
+- turn mechanical rules into tests or checks where that is clearer;
+- remove older Memory advice once the stronger project mechanism makes it
+  redundant.
+
+The point is to reduce future rediscovery, not to accumulate more layers of advice.

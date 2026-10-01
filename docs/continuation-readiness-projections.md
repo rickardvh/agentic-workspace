@@ -1,64 +1,64 @@
-# Continuation Readiness Projections
+# Report views for continuing work
 
-Use this reference to interpret report sections that help an agent decide how to
-continue work. A projection is a derived view of existing facts, rather than a
-separate record to maintain.
+Some AW reports combine existing Planning, Verification and task information into
+small views that make interrupted work cheaper to resume.
 
-Agentic Workspace uses these views for completion, repair, finding, external-evidence, migration, compaction, and automation-readiness questions. They assemble facts from Planning, Verification, report state, and provider-agnostic external evidence. They do not create a new state store, workflow runner, ticket bridge, or agent-owned classifier.
+These views do not create another state store or workflow engine. They summarise
+records that already exist.
 
-Use them when a compact report answer should make continuation cheaper without making AW decide the work for the agent.
+## Available report sections
 
-## Projection Sections
-
-| Report section | Purpose |
+| Report section | What it helps answer |
 | --- | --- |
-| `completion_contract` | Shows the Planning completion-contract lens: what must become true, what proves it, how final satisfaction differs from bounded slice success, constraints, out-of-bounds work, iteration rule, and blocked stop condition. |
-| `repair_loop_residue` | Summarises validation-driven repair residue: observed problem, inspection findings, focused change, validation evidence, remaining gap, continuation input, and stop reason. |
-| `structured_findings` | Provides a compact finding shape with owner and disposition fields so review, friction, Verification, and promotion residue can be routed or dismissed. |
-| `external_evidence_safety` | Summarises external source freshness, local state, divergence, stale-after, closeout safety, and refresh route without making external systems authoritative. |
-| `workflow_compliance_summary` | Summarises expected entrypoint, observed workflow use, satisfied or missing gates, skipped or unavailable steps, trust impact, and recovery action for takeover, recovery, review, and closeout. |
-| `continuation_next_actions` | Ranks next actions by available evidence, confidence, validation route, and stop condition. |
-| `migration_pilot_template` | Defines an optional migration-pilot decomposition pattern with inventory, target design, parity proof, validation, and rollout boundaries. |
-| `compact_output_criteria` | Names the fields compact outputs must preserve or point to: intent, evidence, next action, stop condition, changed surfaces, and unresolved risk. |
-| `automation_readiness` | Gives a provider-agnostic checklist for evaluating external workflows while keeping execution, secrets, and side effects outside AW. |
-| `section_catalog` | Lists lazy report selectors and their purpose without computing their full payloads. |
+| `completion_contract` | What must be true before the work can honestly be called complete? |
+| `repair_loop_residue` | What problem was found, what changed, what was checked and what remains? |
+| `structured_findings` | What finding was recorded and what still needs to happen with it? |
+| `external_evidence_safety` | Is external evidence still current enough to use? |
+| `workflow_compliance_summary` | Which required workflow steps were completed, skipped or unavailable? |
+| `continuation_next_actions` | What are the most useful next actions and what would let the agent stop? |
+| `migration_pilot_template` | How can a migration be split into inventory, target design, parity checks and rollout? |
+| `compact_output_criteria` | Which facts must a compact handoff preserve? |
+| `automation_readiness` | What should be checked before relying on an external workflow? |
+| `section_catalog` | Which optional report sections exist? |
 
-## Boundary
+The exact JSON field names are part of the API. Users do not need to learn a
+separate vocabulary for the fact that these are generated report views.
 
-AW should own the repo-visible substrate:
+## What AW should and should not do
 
-- checked-in Planning and Verification context;
-- provider-agnostic external evidence snapshots;
-- compact derived answers;
-- proof, closeout, and continuation posture;
-- repo-local readiness guidance.
+AW can keep repository-visible task records, saved evidence and compact summaries.
 
-AW should not own:
+It should not become:
 
-- runtime orchestration;
-- workflow dispatch;
-- secrets management;
-- provider-specific ticket or CI synchronisation;
-- global task management;
-- the final reasoning judgement about whether work is direct, planned, delegated, done, partial, or blocked.
+- a workflow dispatcher;
+- a secrets manager;
+- a provider-specific ticket synchroniser;
+- a global task manager;
+- the final judge of whether implementation choices are good.
 
-## Use In Workflow
+The agent or human still interprets the work and decides among legitimate options.
 
-For ordinary work, start with:
+## Use the views only when they help
+
+Start with the normal current-task result:
 
 ```bash
 agentic-workspace start --target ./repo --format json
 ```
 
-Use a projection only when the compact answer, task shape, or closeout question needs it:
+Load an optional report section only when the current task or handoff needs it.
 
-Use the current `start` result and its exact owner request/action; see the [native CLI catalogue](/docs/reference/cli-catalogue.md).
+For issue or project completion, distinguish the final requested outcome from a
+useful partial change. A partial PR should not silently become evidence that the
+whole issue is complete.
 
-For closeout, preserve the completion boundary explicitly:
+A future session should be able to recover:
 
-- `final_satisfaction`: what must be true before the issue or lane is complete.
-- `bounded_slice_success`: useful partial progress that may land without claiming final closure.
-- `partial_pr_may_close`: defaults to `no` for direction/proposal work unless the issue author says otherwise.
-- `required_follow_up_owner`, `required_residual_intent`, and `evidence_required_for_final_completion`: where remaining intent lives and what proves final completion.
+- the intended outcome;
+- important evidence;
+- the next unfinished action;
+- the condition for stopping;
+- material changed files;
+- unresolved risks.
 
-The projections are designed to be restartable: a future session should recover the current intent, evidence, next action, stop condition, changed surfaces or selector, and unresolved risk without rereading chat history.
+It should not need the original chat transcript to understand those facts.

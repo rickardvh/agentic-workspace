@@ -1,17 +1,29 @@
-# Assurance Authority Contract
+# Repository assurance decisions
 
-Agentic Workspace can consume repository assurance policy from either native workspace configuration or a repository-owned classifier. Both routes produce the same bounded application identity and neither grants mutation, waiver, proof, or completion authority.
+Some repositories have additional rules that decide whether a change needs a
+particular review, check or restriction. AW can read those rules from repository
+configuration or from a repository-owned classifier.
 
-`agentic_workspace.assurance_authority` owns four small contracts:
+The result does not itself grant permission to change files, waive a requirement,
+prove that a test passed or decide that the task is complete.
 
-1. `build_assurance_application` binds a requirement id to its classification owner, source revision, relevant applicability input, and optional current-work identity. It deliberately stays separate from the proof subject.
-2. `admit_repository_assurance_decision` admits only complete decisions from the configured owner and current source/input revisions. Missing, malformed, incompatible, stale, ambiguous, conflicting, and authority-widening outputs fail closed with a constructible refresh action.
-3. `evaluate_assurance_disposition` keeps waivers and dismissals active only inside their optional application, source, work, proof-subject, expiry, and review bounds. Legacy reason-and-owner records remain compatible unless strict closeout is enabled; strict mode reactivates them for migration. Any inactive disposition re-exposes the original requirement and claim block.
-4. `admit_external_evidence` is the internal normalisation step. Public callers use `external-evidence.submit` and `external-evidence.query`; those operations accept an opaque signed host-result reference, derive producer custody inside AW, query repository evidence authority, and revalidate dependency-scoped source inputs before invoking normalisation. Producer identity, issuer, result contract, result, and evidence reference never come from candidate-authored fields.
+## What AW checks
 
-Evidence authorities live in `.agentic-workspace/verification/manifest.toml` under `[evidence_authorities.<id>]`. They are queryable through the Verification report, and the submission operation loads them directly rather than accepting a caller policy list. A host integration places a provider result in its protected inbox and gives the external consumer only an `external-evidence-host-result:<id>` reference. AW verifies the package-pinned issuer key, validity window, audience, replay identity, producer/result facts, proof route/class, and proof-subject digest. Repository-local keys, caller resolvers, `authenticated=true`, and submitted resolved-producer dictionaries cannot create custody. The producer, issuer, and transport remain distinct identities.
+The implementation has four responsibilities:
 
-The generated Python and TypeScript clients expose both operations through the normal external-operation profile. Submission and query are stateless and deterministic: neither creates a second evidence ledger, and an ordinary proof owner may consume the compact admitted result. Query re-verifies the signed host result, current Verification declaration, and current source inputs, so a previously admitted result becomes stale when a dependency changes while unrelated repository edits remain quiet.
+1. tie each assurance requirement to the repository source and inputs it depends on;
+2. accept only complete decisions produced from the current source/input revisions;
+3. keep waivers or dismissals valid only within the scope, revision, expiry and
+   review conditions they were created for;
+4. verify externally produced evidence before using it.
+
+If a source, input or required identity changes, AW should report that the earlier
+decision no longer applies and provide the next supported step.
+
+## External evidence
+
+Repository declarations for trusted external evidence live in
+`.agentic-workspace/verification/manifest.toml`:
 
 ```toml
 [evidence_authorities.acme_unit]
@@ -23,4 +35,20 @@ result_contract = "pytest/v1"
 allowed_results = ["passed", "failed"]
 ```
 
-The ordinary operating decision accepts an optional repository assurance decision. An invalid requested decision becomes a typed blocker; an admitted decision contributes repository-policy obligations and its source/input revisions. If no classifier is configured, direct work remains quiet and existing config-native assurance behaviour is unchanged.
+The field names above are exact configuration identifiers.
+
+A host stores the provider result in its protected storage and gives AW only the
+reference it needs. AW then checks the issuer signature, validity window,
+audience, producer/result data, configured evidence rule, and the exact code or
+inputs covered by the result.
+
+Caller-supplied fields such as `authenticated=true` do not make evidence trusted.
+Repository-local keys do not replace the package-pinned issuer checks.
+
+## Current use
+
+The normal AW result may include a repository assurance decision when one applies
+to the task. An invalid decision becomes a specific blocker. A valid decision adds
+the repository requirements that the agent must respect.
+
+If no repository classifier is configured, ordinary work remains unchanged.

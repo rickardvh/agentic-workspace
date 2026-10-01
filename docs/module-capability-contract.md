@@ -1,95 +1,85 @@
 # Add a reusable capability
 
-An AW module adds a domain that needs its own facts, operations or retained state.
-Use one when a capability should be reusable across repositories. A project rule
-or a procedure usually needs only [instructions or a skill](customization.md).
-Connecting an existing AW operation to an editor instead needs an
-[external integration](extension-boundary.md).
+Use a module when a reusable AW capability needs its own facts, operations or
+saved records. A repository-specific rule normally belongs in
+[instructions or a skill](customization.md). A host integration belongs in
+[Integrate an agent or tool](extension-boundary.md).
 
 The supported independent-module interface is Rust:
-`agentic_workspace_core::independent_owner`. A module is linked into a native core
-assembly. It is not a Python plugin, a dynamically loaded script or a set of
-workflow hooks. Python and TypeScript clients can use its admitted requests
-through that assembled core.
+`agentic_workspace_core::independent_owner`. The exact API keeps its existing
+names; this page explains how to use it.
 
-## Start with a read-only capability
+## Start read-only
+
+Begin with a capability that reads one exact repository source and reports a
+useful fact. This establishes discovery, repository configuration and behaviour
+when that source changes before you add writes.
+
+A module registration provides:
+
+| Part | Purpose |
+| --- | --- |
+| `Registration` | Name, implementation revision, API version, and functions |
+| `Description` | What the module can do, settings it accepts, and exact sources it needs |
+| `Resolution` | Current facts, restrictions, requests and any prepared operation |
 
 The [neutral example module](../tests/fixtures/native-independent-owner/src/lib.rs)
-is a separate crate using the public interface, without adding its identity to
-core dispatch. Use it as a working source example alongside the
-[owner API](../crates/agentic-workspace-core/src/independent_owner.rs).
+shows the public interface in use.
 
-Begin with a capability that observes one exact repository source and reports a
-bounded fact. That lets you establish discovery, repository authorisation and
-source-change behaviour before adding writes.
+A read-only module needs no fake output file, write operation or skill.
 
-The implementation has three parts:
+## Repository configuration controls availability
 
-| Part | What you provide |
-| --- | --- |
-| `Registration` | Owner name, implementation revision, API version, and the `describe` and `resolve` functions. |
-| `Description` | The capability descriptor, optional settings schema and exact source paths it needs. |
-| `Resolution` | Current facts, restrictions, request templates and, when applicable, a prepared operation. |
+Linking a module into the Rust binary makes its code available. A repository
+still has to configure that module before it can participate in that project's
+work.
 
-Register through the exported `submit!` macro. The assembly links the module crate
-and calls the shared `transport::run_stdio`; the standard CLI runs beside that
-core binary. Adding an independent module therefore requires rebuilding the
-assembly. The default distribution contains no independently registered owners.
+Configuration declares the exact implementation, settings, source reads and
+allowed effects. Missing or changed configuration should be reported explicitly,
+not turned into an empty success result.
 
-A facts-only implementation returns its facts and leaves the other `Resolution`
-fields empty. It needs no dummy operation, output file or skill.
+The Rust core gives the module current task information, configured settings,
+observed sources and any typed request. The module interprets its own domain
+facts; it should not decide how the coding agent implements unrelated work.
 
-## Authorise use in a repository
+## Add a write only when the capability needs one
 
-Linking code makes it available; it does not give it access to every repository.
-The repository separately authorises the exact implementation and descriptor,
-scope, source reads, effects, claims, restrictions and durable settings through
-`modules.independent`.
+When a module must change something, define the request and operation schemas and
+return the exact prepared operation for that request.
 
-Use the current Configuration requests to inspect and propose that configuration.
-Do not copy a grant from an unrelated example. Missing, changed or revoked
-authorisation must remain visible rather than turning into an empty successful
-result. Unrelated modules should stay out of the current query.
+The core checks the current task, relevant source revisions, repository settings
+and declared effects before execution.
 
-The core supplies `Context`: current work, admitted settings, freshly observed
-sources and an optional typed request. Keep semantic decisions with the agent or
-human. `resolve` interprets bounded domain inputs; it is not a callback for
-choosing how the agent should perform a task.
+A module may publish files under its own namespace when its API supports that. It
+must not rewrite arbitrary project files or another component's records merely
+because it runs in the same process.
 
-## Add an operation only when needed
+For example, a module may produce information useful to Planning without creating
+a Planning record itself. The caller can pass that information to Planning
+through Planning's own operation.
 
-Declare its request and operation schemas, then return a `PreparedOperation`
-when the current request supports it. The caller submits an intention; the module
-prepares the exact action and result. The core checks the work, sources, settings,
-authorisation and declared effects before execution.
+## Skills are optional
 
-For retained output, `Publication` supports immutable acquisition under the
-owner's namespace. It does not permit replacing an arbitrary file, rewriting an
-input source or modifying another module's state. Such changes need the relevant
-owner's supported update operation. A read-only computation need not publish
-anything.
+A module may include a normal `SKILL.md` and relative resources. It may also
+ship no skill. Procedure text does not grant permissions or remove runtime
+restrictions.
 
-For example, a module can return material suitable for a plan without creating a
-Planning record. The caller then submits that material through Planning's own
-creation request. This keeps the two capabilities independently responsible for
-their state.
+A linked Rust module is trusted executable code, not sandboxed code. Review it
+before including it in an AW build.
 
-## Procedure, safety and validation
+## Validate the module
 
-A module may include an ordinary `SKILL.md` and relative resources, discoverable
-through the existing skill registry. It can also ship no skill. Removing or
-bypassing a procedure must not remove the module's restrictions.
+Test:
 
-A linked native module is trusted executable code, not sandboxed code. Review it
-before assembly. Publication constraints are not protection against malicious
-Rust code running in the same process.
+- ordinary read behaviour;
+- irrelevant or disabled absence;
+- behaviour after a relevant source or setting changes;
+- malformed requests;
+- exact file creation and collision handling when the module writes files;
+- recovery after an interrupted write when applicable.
 
-Validate ordinary observation, irrelevant/disabled absence, changed source or
-authorisation, and malformed requests. An effectful module also needs evidence
-for exact publication, collision preservation and interrupted recovery. Reuse
-core contract coverage; add adapter tests only for distinct transport risks.
+Reuse shared core tests for shared behaviour. Add host or language-adapter tests
+only for failures those adapters can introduce independently.
 
-The [authoring and recovery reference](maintainer/independent-native-owners.md)
-explains immutable publication and retained effects in more detail. The
-[architecture](architecture.md) explains why modules share one execution boundary
-without sharing ownership of each other's data.
+For lower-level implementation details, see
+[Independent Rust components](maintainer/independent-native-owners.md).

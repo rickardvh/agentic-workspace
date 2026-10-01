@@ -1,61 +1,69 @@
-# Jumpstart Contract
+# Set up AW in an existing repository
 
-Jumpstart is the bounded post-bootstrap phase for a newly installed or adopted Agentic Workspace in a lived-in repo. It orients the agent toward useful durable workspace surfaces without turning init into broad repo analysis.
+Use this guide after installing AW in a repository that already has code,
+documentation and working conventions. The goal is to connect AW to what the
+repository already knows, not to analyse or import the whole project.
 
-## Entry
+## Start from the current AW result
 
-Start with compact routing:
+Run the normal `start` path and follow the specific request or action it returns.
+The [native CLI catalogue](/docs/reference/cli-catalogue.md) lists the executable
+commands.
 
-Use the current `start` result and its exact owner request/action; see the [native CLI catalogue](/docs/reference/cli-catalogue.md).
+A repository that has completed setup records a `configuration_readiness` value
+in `.agentic-workspace/adoption-receipt.json`. That exact field name is part of
+the stored format. AW uses it to tell whether repository configuration needs
+attention.
 
-A fresh necessary-surfaces bootstrap records a versioned `configuration_readiness` identity in `.agentic-workspace/adoption-receipt.json`. Ordinary startup uses that durable receipt, not setup-shaped task wording, to route one exact `reconcile-repository-configuration` action to `workspace-setup-jumpstart` and the configured `setup` command. A current identity stays quiet. Missing readiness metadata in an adoption receipt is not, by itself, evidence that setup is incomplete; an explicit stale identity blocks only configured-workflow claims and effects while leaving unrelated read-only inspection available.
+A missing field in an older receipt does not by itself mean the repository is
+broken. When AW detects a real mismatch, it should identify the affected setup
+action rather than blocking unrelated read-only work.
 
-Use `setup` as a pre-write and pre-seed discovery report. It may point at candidate surfaces, promotion rules, and follow-up routes, but it does not authorise bulk imports or automatic planning/memory writes by itself.
+## Inspect before writing
 
-## Configuration concerns
+Use `setup` to inspect the repository before changing shared configuration. It
+may point to existing project instructions, settings or useful follow-up work, but
+it does not authorise bulk imports or automatic Planning/Memory writes.
 
-The setup report exposes the current native Configuration owner, its exact
-requests, and its bounded write actions. Follow the current setup skill and
-return only the requested human judgement. Source revisions bind each edit;
-configuration grants no Memory, Planning, proof or completion authority.
+Follow the specific Configuration request returned for the change. Each proposed
+edit is checked against the source files it was based on before it is applied.
 
-The human configuration grammar has no version marker. Shared choices belong in
-`.agentic-workspace/config.toml`; local choices belong in
-`.agentic-workspace/config.local.toml`. Proof definitions belong in Verification's
-manifest and reusable procedural guidance belongs in scoped instructions. Use the
-current generated configuration references for the accepted fields.
+Shared AW settings belong in `.agentic-workspace/config.toml`. Machine-specific
+settings belong in `.agentic-workspace/config.local.toml`. Verification
+definitions belong in Verification's manifest, and reusable procedures belong in
+skills or scoped instructions.
 
-Setup has no fixed questionnaire or independent wizard state. After each owner
-action, resolve the current owners again. Absent configuration does not by itself
-require setup.
+Setup has no separate questionnaire or hidden wizard state. After applying one
+setup change, ask AW for the current result again if the next action depends on
+what changed.
 
-## Promote
+## Save only information that will help later work
 
-Promote only information that has a durable owner and would reduce future rediscovery:
+Do not import repository material merely because it exists.
 
-- stable operating boundaries, invariants, traps, restart rules, or proof expectations to Memory;
-- bounded active follow-up to Planning;
-- evidence-backed friction or workflow improvement to improvement intake;
-- package or host-repo documentation gaps to docs only when the missing guidance is reusable.
+Useful candidates include:
 
-Keep low-confidence, generic, one-off, or broad narrative findings transient.
+- stable project constraints or restart instructions that agents repeatedly need;
+- recurring traps or expensive-to-rediscover facts for Memory;
+- genuinely unfinished work for Planning;
+- reusable checking guidance for Verification;
+- missing human documentation that should be fixed in the project itself.
 
-## Mature Repo Seed Bias
+README files, issue backlogs, generated references and design documents should
+normally remain where they are. Link to them rather than copying them into AW
+unless having a separate saved fact clearly reduces future rediscovery.
 
-For mature repos, prefer compact contract-like surfaces over broad prose mirrors. Good first Memory candidates are surfaces that encode repeatable decisions, restart boundaries, task-shape guidance, proof expectations, or other durable operating knowledge.
+Low-confidence, one-off or generic observations should remain temporary.
 
-Do not bulk-import README files, issue backlogs, generated references, or design prose simply because they exist. Link to canonical docs instead of copying them when the document is already discoverable and not expensive to reconstruct.
+## Verify setup work
 
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
+Before saying setup follow-through is complete, be able to explain:
 
-Leave assurance or verification absent when the only available input is generic risk language, filenames, or Agentic Workspace source-repo policy. A missing durable surface is better than a placeholder obligation that future agents treat as authority.
+- which setup command or returned action was used;
+- which existing project sources were inspected;
+- what was saved, changed, deferred or deliberately ignored;
+- where any durable information was written;
+- which check supports the changed files.
 
-## Proof
-
-Before claiming setup follow-through, show:
-
-- the setup command used;
-- the candidate surfaces inspected;
-- each promoted, dismissed, or deferred finding;
-- where durable residue was written, if any;
-- the validation command selected for changed paths.
+Do not create placeholder rules or saved records merely to make setup look
+complete.

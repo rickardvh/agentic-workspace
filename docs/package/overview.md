@@ -8,35 +8,36 @@ to try it; this page explains the model behind that experience.
 ## Keep project context where it belongs
 
 Project documentation, code, tests and decisions remain in their existing files.
-AW retains additional information only when it helps later work: for example,
+AW saves additional information only when it will help later work: for example,
 where a task stopped, which procedure applies to a change, or what made an earlier
 approach fail.
 
-This is *operating context*: information that changes how an agent should approach
-a task. It is not a second copy or index of everything in the repository.
+AW does not try to build a second copy or index of the repository. It keeps only
+the extra working context that is expensive to reconstruct and useful to future
+agents.
 
-## Apply the relevant part
+## Apply only what matters to this task
 
 A repository can define rules for particular paths or kinds of work. Skills
-explain reusable procedures. The agent selects useful procedure by meaning;
-AW's runtime checks current sources and applies their declared constraints.
+explain reusable procedures. The agent chooses a useful procedure from the task;
+AW checks the relevant current sources before presenting their requirements.
 
-The resulting information can include a required document, a checking procedure,
-an unresolved question or an available action. Unrelated capabilities need not
-appear. The agent still decides how to implement the requested change.
+The result can include a document to read, a checking procedure, an unresolved
+question or an available action. Unrelated capabilities stay out of the way. The
+agent still decides how to implement the requested change.
 
-## Preserve useful results
+## Save useful results in the right place
 
-[Planning](modules.md#planning) can retain an unfinished task's outcome and next
-step. [Memory](modules.md#memory) can retain advice with its assumptions.
-[Verification](modules.md#verification) can retain checking procedures and evidence.
+[Planning](modules.md#planning) can save an unfinished task's outcome and next
+step. [Memory](modules.md#memory) can save advice together with its assumptions.
+[Verification](modules.md#verification) can save checking procedures and evidence.
 These serve different purposes: a lesson does not become policy, and a previous
 successful check does not automatically prove changed code.
 
-The CLI and Rust, Python and TypeScript APIs use one Rust implementation for
-current queries and controlled updates. The repository's AW skill teaches the
-agent when to use them, without imposing a command sequence on every task.
+The CLI and Rust, Python and TypeScript APIs all use the same Rust implementation
+for current queries and controlled updates. The repository's AW skill teaches the
+agent when to use those tools without imposing a command sequence on every task.
 
 [Configure your project](../customization.md) for rules and procedures;
 [Your repository and data](installed-surfaces.md) for saved files and removal;
-[Architecture](../architecture.md) for implementation boundaries.
+[Architecture](../architecture.md) for implementation details.

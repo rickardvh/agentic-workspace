@@ -1,86 +1,75 @@
-# Repository adoption, refresh and removal
+# Repository setup, update and removal
 
-Use this reference when implementing a client that manages AW's repository integration. For interactive use, follow [Getting started](../agentic-workspace-install.md) or [Your repository and data](installed-surfaces.md).
+Use this reference when implementing a client that manages AW's repository
+integration. For interactive use, follow [Getting started](../agentic-workspace-install.md)
+or [Your repository and AW files](installed-surfaces.md).
 
-Installation supplies the executable. **Adoption** establishes its small repository integration. **Refresh** reconciles that integration with the installed package. **Removal** relinquishes the package integration without deleting independent project data.
+Installing a package supplies the executable. Repository **setup** adds AW's small
+checked-in integration. **Update** refreshes package-managed files when the
+installed version changes. **Removal** removes AW's integration while preserving
+project-owned records.
 
-## Human setup entry point
+## Setup
 
-From the Git working-tree root, `agentic-workspace setup` proposes adoption or
-refresh and asks before applying it. It preserves surrounding `AGENTS.md` prose
-and independently owned state. `--dry-run --format json` shows the exact proposed
-file changes; `--yes` authorises that bounded proposal for automation. JSON mode
-does not prompt. `--recover` explicitly selects an interrupted owner transaction
-for inspection and authorisation. A stale proposal fails closed; inspect a fresh
-proposal before retrying. Successful setup ends with ordinary agent work.
+From the Git working-tree root, `agentic-workspace setup` shows the proposed file
+changes and asks before applying them.
 
-This command is in the development version; published 1.2.0 does not contain it.
-The composition below remains the integration protocol and the only repository
-writer. Python, npm and Cargo launch the same Rust CLI composition.
+It preserves text outside AW's managed section in `AGENTS.md` and preserves
+project-owned data. Use `--dry-run --format json` to inspect the proposal and
+`--yes` to accept that exact proposal in automation.
 
-## Automatic setup assessment
+If a previous setup/update may have been interrupted, use the recovery mode the
+CLI reports rather than repeating writes blindly.
 
-Ordinary native `start` exposes Configuration's `setup_assessment` independently
-of task wording and payload-target policy. Compact entry provides a consequence
-route to the same owner. The main skill obtains that observation at session entry
-and after a possible dependency change, reusing a sufficient current observation.
-Existing users may run `agentic-workspace setup` to refresh the installed package
-integration, including the managed fence.
-Subsequent compatible changes are observed at ordinary entry. Installation only
-supplies the executable: there are no package-manager or interpreter hooks.
-Without runtime observation an external update is unknown.
+## Detecting that setup files need attention
 
-Submit `setup_assessment.request` to receive current installed setup text and
-configuration declarations, even if repository skills are stale or absent. After
-authorised integration, observe the affected consumer and fill the returned
-`record_request` with coverage, relevant source dependencies and grounded
-dispositions. Invoke its exact Configuration action. This uses the existing
-writer and recovery contract; reading never writes or grants policy consent.
+The `start` result can report when repository integration files are missing,
+out of date or need review. The exact stored fields and request names are part of
+the API; ordinary users do not need to maintain a separate version checklist.
 
-The current repository assessment lives in
-`.agentic-workspace/configuration-assessment.json`; machine-local assessment uses
-`.agentic-workspace/local/configuration-assessment.json`. These are current owner
-records, not human version checklists or domain evidence stores. A package-owned
-setup revision determines whether semantic review is due. Maintainers change it
-when setup needs reconsideration, including same-version development changes.
-A separate build-prepared managed revision detects changes anywhere in the shipped
-payload and routes existing refresh without repeating setup. Cosmetic edits and
-version-only releases do not reopen semantic review. Ordinary comparison does not
-construct setup text/schemas, hash the shipped payload or explore other owners.
-It reads the bounded selected configuration/intent sources through existing
-currentness, without repository scanning. Selected review alone loads material.
+Package installation alone never edits the repository. There are no package
+manager or interpreter hooks that silently run setup.
 
-Effective dispositions are verified at publication through the existing consumer.
-Unchanged deferred/blocked work retains its reason and precise resume route, with
-`review_complete: true` and `integration_complete: false`; it creates no repeated
-assessment consequence. Resume for a relevant source/prerequisite change, dependent
-work or explicit `reconsider`. Changed sources retain previous decisions for the
-agent to revisit only affected integration. Exclusions stay binding. Unknown
-formats and major/newer integration remain preserved.
+When setup or refresh is needed, follow the exact Configuration request AW
+returns. Reading setup state does not change files.
 
-The assessment restriction targets `claim:configuration-integration-complete`.
-Existing payload policies and other owners keep their own restrictions. Package
-bytes, assessment and actual integration remain distinct; neither a provenance
-label nor a successful configuration write proves all three.
+## Applying a change
 
-## Request the change
+Use the request returned for the actual repository and task. Inspect the proposed
+file changes and provide only the approval or decision the request asks for.
 
-Call `start` for the actual target/task and inspect Configuration's returned `repository_adoption_request`. Submit that exact request through `start --input` to obtain the available adoption, refresh, removal or recovery requests. Inspect the proposal and supply only its requested authorisation before invoking the returned action.
+Do not reconstruct write-capable request fields from filenames or schema examples.
+If AW does not offer an operation for a file, that is not permission to emulate it
+with manual package-file copies.
 
-Do not generate effect-bearing fields from filenames or a schema example. An absent operation is an unsupported path for that artefact, not permission to emulate it with file copies. The [CLI reference](../reference/cli-catalogue.md) describes the transport.
+## Preserve project-owned information
 
-## Preserve the right material
+The package file set comes from the
+[installed file contract](../../src/core/contracts/workspace_surfaces.json).
 
-The [host-surface contract](../../src/core/contracts/workspace_surfaces.json) drives the package file set and its materialisation. Some files match package bytes; ownership combines portable package facts with supported project declarations; the read profile derives from the resulting ownership ledger.
+Use that contract and AW's normal operations rather than keeping a second
+hand-written install/removal list.
 
-Use those operations rather than maintaining a second install/removal list. Package provenance does not make unrelated project content removable. Shared configuration, independent domain records, local state and unknown content remain separately owned. Edited or conflicting package material can require resolution before replacement or deletion.
+Package metadata does not make unrelated project files removable. Shared project
+configuration, Planning/Memory/Verification records, machine-local data and
+unknown files remain separate from package-managed integration files.
 
-Remove authenticated host-discovery links through the existing skill-exposure operation before removing their canonical targets. Do not recursively remove `.agents/skills`.
+Host-discovery links should be removed through the same supported setup/removal
+path that created them. Do not recursively delete `.agents/skills/`.
 
-## Handle interruption
+## Interruption and recovery
 
-Separate a committed file change from a failure to produce its continuation. Preserve returned effect/recovery information and request current recovery rather than replaying a possibly committed action.
+A file change may have completed even when AW failed to return the next response.
+Keep confirmed changes. If the outcome is unknown, inspect the current result or
+use the returned recovery path before trying the operation again.
 
-Check the resulting repository after completion. A second current refresh should not rewrite already-current content; removal should leave the integration absent while preserving independent material. Later adoption uses the ordinary path, not a retained uninstall history.
+After a successful update, running the same update again should make no changes.
+After removal, AW integration files should be absent while project-owned records
+remain.
 
-Historical source-maintenance profiles are not native lifecycle commands. See [Troubleshooting](../troubleshooting.md) for user-facing recovery symptoms and the [generated catalogue](../reference/installed-surface-catalogue.md) for exact files.
+Later setup uses the normal setup path; it does not depend on an uninstall
+history.
+
+See [Troubleshooting](../troubleshooting.md) for user-facing recovery and the
+[generated file catalogue](../reference/installed-surface-catalogue.md) for exact
+package-managed paths.

@@ -27,17 +27,17 @@ Rust, Python and TypeScript are ways to consume the same core, not three indepen
 | An observed agent run | That agent's behaviour under the recorded conditions | That all models follow guidance or work more cheaply |
 | Verification of your project | The claim covered by those checks and inputs | Completion of unrelated requirements or independent approval |
 
-A saved result remains evidence about its actual subject. Changed dependencies can make it unsuitable for a new claim.
+A saved result remains evidence about the exact code, inputs and environment it checked. Changed dependencies can make it unsuitable for a new conclusion.
 
 ## Verify a download or investigate support
 
 Published releases provide artefact checksums and installation evidence. `distribution-install-readiness.json` identifies platform-specific packages and commands. Registry publication evidence, when present, identifies the corresponding published versions and digests; a GitHub asset alone does not prove registry availability.
 
-These files are useful for auditing a release. You do not need to learn the publisher's admission procedure to use the package. Maintainers use [release and versioning](release-and-versioning.md) for that procedure.
+These files are useful for auditing a release. You do not need to learn the publisher's internal release checks to use the package. Maintainers use [release and versioning](release-and-versioning.md) for that procedure.
 
 <a id="current-support-boundary"></a>
 
-## Boundaries that remain
+## What AW does not provide
 
 AW does not sandbox your commands, store provider credentials for you, or guarantee model obedience. A repository-only reader can inspect saved context but cannot establish live machine state or fresh test results.
 
