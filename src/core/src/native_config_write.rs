@@ -271,6 +271,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
         .unwrap()
         .push(crate::native_configuration_procedure::declaration());
     crate::native_skill_exposure::declarations(&mut owner);
+    crate::native_plugin_exposure::declarations(&mut owner);
     crate::native_adoption::declarations(&mut owner);
     owner["requests"]
         .as_array_mut()
@@ -393,6 +394,19 @@ pub(crate) fn view_selected(
     );
     result["payload_discovery_request"] = template(READ_PAYLOAD, json!({}));
     result["skill_exposure_request"] = template(crate::native_skill_exposure::READ, json!({}));
+    // Optional plugin discovery is selected setup detail, not an ordinary-entry
+    // request carried by every caller and every task.
+    if matches!(
+        request.and_then(|r| r["request_kind"].as_str()),
+        Some(
+            crate::native_configuration_assessment::READ
+                | crate::native_plugin_exposure::READ
+                | crate::native_plugin_exposure::EDIT
+        )
+    ) {
+        result["plugin_exposure_request"] =
+            template(crate::native_plugin_exposure::READ, json!({}));
+    }
     // Advertise repository foothold work only for a root-shaped Git target or
     // retained adoption subject. This is discovery, not Git/custody admission;
     // the adoption owner still validates both on every exact request. Unrelated
@@ -584,6 +598,13 @@ pub(crate) fn view_selected(
         Some(crate::native_skill_exposure::READ | crate::native_skill_exposure::EDIT)
     ) {
         crate::native_skill_exposure::view(target, request, &binding, &template, &mut result)?;
+        return Ok(result);
+    }
+    if matches!(
+        request["request_kind"].as_str(),
+        Some(crate::native_plugin_exposure::READ | crate::native_plugin_exposure::EDIT)
+    ) {
+        crate::native_plugin_exposure::view(target, request, &binding, &template, &mut result)?;
         return Ok(result);
     }
     if request["request_kind"] == crate::native_configuration_procedure::READ {
@@ -852,6 +873,9 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
     if action["operation_id"] == crate::native_skill_exposure::OP {
         return crate::native_skill_exposure::write_scope(action);
     }
+    if action["operation_id"] == crate::native_plugin_exposure::OP {
+        return crate::native_plugin_exposure::write_scope(action);
+    }
     let args = &action["arguments"]["request"]["arguments"];
     let source = args["source"]
         .as_str()
@@ -883,6 +907,9 @@ pub(crate) fn execute(
 ) -> Result<Value, CoreError> {
     if invocation["operation_id"] == crate::native_skill_exposure::OP {
         return crate::native_skill_exposure::execute(target, decision, invocation, revalidate);
+    }
+    if invocation["operation_id"] == crate::native_plugin_exposure::OP {
+        return crate::native_plugin_exposure::execute(target, decision, invocation, revalidate);
     }
     if invocation["operation_id"] == crate::native_adoption::OP {
         return crate::native_adoption::execute(target, decision, invocation, revalidate);

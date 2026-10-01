@@ -183,12 +183,27 @@ def test_former_selection_requires_exact_current_agent_request(
     }
     evidence_bytes = len(json.dumps(non_resource_contract)) - len(json.dumps(without_current_evidence))
     assert 0 < evidence_bytes < 3_000, evidence_bytes
-    schema_extensions = retention_bytes + activation_bytes + consequence_bytes + evidence_bytes
+    # Optional project plugins add two selected requests and one effect. This
+    # allowance belongs only to their full introspection schemas; compact and
+    # ordinary-state budgets below remain unchanged.
+    configuration = next(owner for owner in contract["owners"] if owner["owner"] == "configuration")
+    plugin_requests = [
+        row
+        for row in configuration["requests"]
+        if row["kind"] in {"configuration/read-plugin-exposure/v1", "configuration/plugin-exposure/v1"}
+    ]
+    plugin_operations = [row for row in configuration["operations"] if row["id"] == "configuration.plugin-exposure"]
+    assert len(plugin_requests) == 2 and len(plugin_operations) == 1
+    plugin_bytes = sum(len(json.dumps(row)) for row in [*plugin_requests, *plugin_operations])
+    assert 0 < plugin_bytes < 1_600, plugin_bytes
+    schema_extensions = retention_bytes + activation_bytes + consequence_bytes + evidence_bytes + plugin_bytes
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
     assert len(json.dumps(first["planning"]["terminal_retention"])) < 500
     assert "current_evidence" not in first["verification"]
+    assert "plugin_exposure_request" not in first["configuration_write"]
+    assert "configuration.plugin-exposure" not in first["decision_packet"]["operation_revisions"]
     evidence_revisions = {
         key: value for key, value in first["decision_packet"]["operation_revisions"].items() if key in evidence_operations
     }

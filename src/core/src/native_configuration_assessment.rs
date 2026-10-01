@@ -73,7 +73,7 @@ fn material() -> Result<Value, CoreError> {
 // Bump only when repository setup needs reconsideration, including same-version
 // development changes. Cosmetic/package-only changes use PAYLOAD_REVISION instead.
 fn basis() -> &'static str {
-    "configuration-setup-v2"
+    "configuration-setup-v3"
 }
 // Configuration can settle consideration without acquiring another owner's
 // readiness authority. This is a disposition in the existing assessment, not
@@ -251,6 +251,92 @@ fn transition(root: &Dir, record: &Value) -> Result<&'static str, CoreError> {
     Ok(compatibility(
         &json!({"kind":KIND,"runtime_version":installed["release_identity"]["version"]}),
     ))
+}
+/// A source-current development checkout can contain an assessment made by a
+/// released maintainer build. This is reassessment of known source material,
+/// never permission to downgrade an installed package or preserve unknown fields.
+fn source_reassessment(
+    target: &Path,
+    source: &str,
+    record: &Value,
+) -> Result<Option<Value>, CoreError> {
+    if !matches!(version(), "0.0.0-dev.0" | "0.0.0.dev0")
+        || !matches!(
+            compatibility(record),
+            "major-transition" | "newer-integration-preserved"
+        )
+        || !record.as_object().is_some_and(|o| {
+            o.keys().all(|k| {
+                [
+                    "kind",
+                    "runtime_version",
+                    "scope",
+                    "basis",
+                    "selected_dependencies",
+                    "dependencies",
+                    "coverage",
+                    "dispositions",
+                    "continuation",
+                ]
+                .contains(&k.as_str())
+            })
+        })
+    {
+        return Ok(None);
+    }
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let config = deps::read(&root, ".agentic-workspace/config.toml")?.unwrap_or_default();
+    let config: toml::Value =
+        toml::from_str(std::str::from_utf8(&config).map_err(err)?).map_err(err)?;
+    if config
+        .get("payload")
+        .and_then(|v| v.get("target_release"))
+        .and_then(toml::Value::as_str)
+        != Some("source-current")
+    {
+        return Ok(None);
+    }
+    let declaration: Value =
+        serde_json::from_str(include_str!("../contracts/workspace_surfaces.json")).map_err(err)?;
+    if read(&root, "src/core/contracts/workspace_surfaces.json")? != Some(declaration) {
+        return Ok(None);
+    }
+    let provenance =
+        read(&root, ".agentic-workspace/payload-provenance.json")?.unwrap_or(Value::Null);
+    if provenance["kind"] != "agentic-workspace/payload-provenance/v1"
+        || provenance["release_identity"]["package"] != "agentic-workspace"
+        || provenance["release_identity"]["version"] != "0.0.0.dev0"
+    {
+        return Ok(None);
+    }
+    let mut observations = serde_json::Map::new();
+    for path in crate::native_payload::paths()
+        .into_iter()
+        .filter(|p| *p != ".agentic-workspace/payload-provenance.json")
+    {
+        let Some(current) = deps::read(&root, path)? else {
+            return Ok(None);
+        };
+        let desired = crate::native_payload::desired(target, path)?;
+        let revision = deps::revision(&current, deps::Scheme::UniversalNewlineUtf8)?;
+        if revision != deps::revision(&desired, deps::Scheme::UniversalNewlineUtf8)? {
+            return Ok(None);
+        }
+        observations.insert(path.into(), json!(revision));
+    }
+    Ok(Some(
+        json!({"assessment_revision":digest(&read(&root, source)?)?,"provenance_revision":digest(&provenance)?,"artifact_revision":crate::native_payload::identity(),"package_sources":observations,"reason":""}),
+    ))
+}
+/// Exact assessment publication/recovery can settle a prerequisite while payload
+/// provenance is stale. It never lifts the payload restriction on other work.
+pub(crate) fn repair_action(action: &Value) -> bool {
+    matches!(
+        action["operation_id"].as_str(),
+        Some("configuration.write" | "configuration.recover-write")
+    ) && action["arguments"]["request"]["arguments"]["source"]
+        .as_str()
+        .is_some_and(is_source)
 }
 pub(crate) fn admit_maintenance(target: &Path) -> Result<(), CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
@@ -451,13 +537,23 @@ fn view_inner(
                 "continuation":{"type":["object","null"],"properties":{"task":{"type":"string","minLength":1}},"description":"Required original ordinary task when any disposition remains unfinished."}
             }
         });
-        result["setup_assessment"]["remaining_routes"] = json!({"payload":result["payload_discovery_request"],"adoption":result["repository_adoption_request"],"behavior":result["behavior_request"],"exposure":result["skill_exposure_request"]});
-        if compatibility == "compatible" {
+        result["setup_assessment"]["remaining_routes"] = json!({"payload":result["payload_discovery_request"],"adoption":result["repository_adoption_request"],"behavior":result["behavior_request"],"exposure":result["skill_exposure_request"],"plugins":result["plugin_exposure_request"]});
+        let reassessment = if compatibility != "compatible" {
+            source_reassessment(target, source, &record)?
+        } else {
+            None
+        };
+        if compatibility == "compatible" || reassessment.is_some() {
             let mut value = json!({"kind":KIND,"runtime_version":version(),"scope":scope,"basis":setup,"selected_dependencies":extra,"dependencies":observed,"coverage":"","dispositions":[],"continuation":null});
             if !record.is_null() {
                 for field in ["coverage", "dispositions", "continuation"] {
                     value[field] = record[field].clone();
                 }
+            }
+            if let Some(reassessment) = reassessment {
+                result["setup_assessment"]["status"] = json!("source-reassessment-required");
+                result["setup_assessment"]["judgment_schema"]["properties"]["source_reassessment"] = json!({"type":"object","description":"Preserve every returned observation and fill only reason with the standing authority and why this exact development source checkout should reassess the retained record. Configuration reobserves the complete witness before publication; this does not permit a newer installed package downgrade."});
+                value["source_reassessment"] = reassessment;
             }
             result["setup_assessment"]["record_request"] = template(
                 "configuration/edit-source/v1",
@@ -494,6 +590,7 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
                 "coverage",
                 "dispositions",
                 "continuation",
+                "source_reassessment",
             ]
             .contains(&k.as_str())
         })
@@ -504,8 +601,27 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
         return Err(err("setup assessment source is not canonical"));
     }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    if transition(&root, &read(&root, source)?.unwrap_or(Value::Null))? != "compatible" {
-        return Err(err("incompatible or newer integration preserved"));
+    let record = read(&root, source)?.unwrap_or(Value::Null);
+    if transition(&root, &record)? != "compatible" {
+        let mut supplied = value["source_reassessment"].clone();
+        if !supplied["reason"]
+            .as_str()
+            .is_some_and(|s| !s.trim().is_empty())
+        {
+            return Err(err(
+                "incompatible or newer integration preserved; current source reassessment reason required",
+            ));
+        }
+        supplied["reason"] = json!("");
+        if source_reassessment(target, source, &record)?.as_ref() != Some(&supplied) {
+            return Err(err(
+                "source reassessment changed or unavailable; preserve integration",
+            ));
+        }
+    } else if value.get("source_reassessment").is_some() {
+        return Err(err(
+            "source reassessment is stale; obtain current assessment",
+        ));
     }
     let scope = if source == LOCAL {
         "machine-local"
@@ -561,7 +677,11 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
             }
         }
     }
-    let mut bytes = serde_json::to_vec_pretty(value).map_err(err)?;
+    // The exact migration judgment remains in the immutable write attempt.
+    // The current assessment retains no second version/migration history.
+    let mut saved = value.clone();
+    saved.as_object_mut().unwrap().remove("source_reassessment");
+    let mut bytes = serde_json::to_vec_pretty(&saved).map_err(err)?;
     if bytes.len() > 128 * 1024 {
         return Err(err(
             "setup assessment exceeds bounded current judgment size",

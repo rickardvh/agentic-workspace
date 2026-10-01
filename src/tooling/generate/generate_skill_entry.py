@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import tomllib
@@ -31,6 +32,10 @@ def render(root: Path = ROOT, *, version: str | None = None) -> dict[str, str]:
     # Source Git installations use Claude's native commit identity. Only staged
     # coordinated artifacts supply an explicit release version.
     portable_version = version or release_version(root)
+    # Codex reuses local caches by manifest version. Development bundles need a
+    # distinct identity when their passive bridge changes, even between releases.
+    if version is None and portable_version == "0.0.0-dev.0":
+        portable_version += "+" + hashlib.sha256(body.encode()).hexdigest()[:16]
     metadata = {
         "name": NAME,
         "description": "A passive entry to the current target repository's agentic-workspace procedure.",
@@ -42,7 +47,7 @@ def render(root: Path = ROOT, *, version: str | None = None) -> dict[str, str]:
     def encoded(value):
         return json.dumps(value, indent=2) + "\n"
 
-    return {
+    outputs = {
         NPM_SKILL: body,
         f"{BUNDLE}/skills/{NAME}/SKILL.md": body,
         f"{BUNDLE}/plugin.json": encoded(
@@ -71,6 +76,11 @@ def render(root: Path = ROOT, *, version: str | None = None) -> dict[str, str]:
             }
         ),
     }
+    # Repository adoption consumes the same maintained passive bundle. Host
+    # catalogues and enablement are optional Configuration-owned projections.
+    for suffix in (f"skills/{NAME}/SKILL.md", "plugin.json", ".claude-plugin/plugin.json"):
+        outputs[f".agentic-workspace/plugins/{NAME}/{suffix}"] = outputs[f"{BUNDLE}/{suffix}"]
+    return outputs
 
 
 def synchronize(*, root: Path = ROOT, check: bool = False) -> list[str]:

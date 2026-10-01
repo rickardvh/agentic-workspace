@@ -58,6 +58,7 @@ mod native_planning_create;
 mod native_planning_retention;
 #[path = "modules/planning/native_planning_update.rs"]
 mod native_planning_update;
+mod native_plugin_exposure;
 mod native_procedure;
 mod native_procedure_answer;
 #[path = "modules/verification/native_proof.rs"]
@@ -2309,6 +2310,12 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
                     .operations
                     .keys()
                     .map(move |id| (owner, capability, id))
+            })
+            .filter(|(_, _, id)| {
+                id.as_str() != native_plugin_exposure::OP
+                    || available_actions
+                        .iter()
+                        .any(|action| action.action.operation_id == id.as_str())
             })
             .map(|(owner, capability, id)| {
                 Ok((id.clone(), operation_revision(owner, id, capability)?))

@@ -420,13 +420,20 @@ def test_entry_distribution_is_one_bridge_with_resolvable_manifest_paths():
         manifest = json.loads(files[f"{generator.BUNDLE}/{name}"])
         assert manifest["name"] == generator.NAME
         if name == "plugin.json":
-            assert manifest["version"] == generator.release_version(ROOT)
+            import hashlib
+
+            expected = generator.release_version(ROOT)
+            if expected == "0.0.0-dev.0":
+                expected += "+" + hashlib.sha256(skill.encode()).hexdigest()[:16]
+            assert manifest["version"] == expected
         else:
             assert "version" not in manifest
     codex = json.loads(files[".agents/plugins/marketplace.json"])
     claude = json.loads(files[".claude-plugin/marketplace.json"])
     assert len(codex["plugins"]) == len(claude["plugins"]) == 1
     assert "version" not in claude["plugins"][0]
+    for suffix in ["plugin.json", ".claude-plugin/plugin.json", f"skills/{generator.NAME}/SKILL.md"]:
+        assert files[f".agentic-workspace/plugins/{generator.NAME}/{suffix}"] == files[f"{generator.BUNDLE}/{suffix}"]
     assert codex["plugins"][0]["source"]["path"] == claude["plugins"][0]["source"] == f"./{generator.BUNDLE}"
     assert (ROOT / generator.BUNDLE / "skills" / generator.NAME / "SKILL.md").is_file()
     package = json.loads((ROOT / "src/cli/typescript/package.json").read_text())

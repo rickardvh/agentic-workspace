@@ -4,10 +4,13 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:6a9eec305190da6355ea6bbcbbe465b8f09031ecb6519bcee2a69762e947f8b7`
+- Contract digest: `sha256:9c5a04434226403bb6043ef99338279d21402941101092207394260e9e642075`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
+| `.agentic-workspace/plugins/agentic-workspace-entry/plugin.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Canonical passive plugin metadata for optional repository host exposure |
+| `.agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Claude metadata over the same passive repository bundle |
+| `.agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | One generated passive bridge to the current repository startup procedure |
 | `.agentic-workspace/READING.json` | package-managed | target-derived | adopted-host | `configuration.repository-adoption` | Repository-only source orientation bound to the ownership ledger |
 | `.agentic-workspace/OWNERSHIP.toml` | package-managed | host-composed | adopted-host | `configuration.repository-adoption` | Current source/lifetime declarations for runtime and repository-only readers |
 | `.agentic-workspace/skills/REGISTRY.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Passive route and executable procedure declarations |
@@ -83,6 +86,9 @@ Public host derivation reads only explicitly promoted portable sources or anothe
 
 Portable source promotions:
 
+- `.agentic-workspace/plugins/agentic-workspace-entry/plugin.json`
+- `.agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json`
+- `.agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md`
 - `src/core/contracts/portable_ownership.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`

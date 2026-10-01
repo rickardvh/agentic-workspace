@@ -21,7 +21,7 @@ def stage(directory: Path, version: str) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive, "x", zipfile.ZIP_DEFLATED) as bundle:
         for reference, body in outputs(version=version).items():
-            if not reference.startswith("src/"):
+            if not reference.startswith(("src/", ".agentic-workspace/")):
                 bundle.writestr(reference, body)
         bundle.write(ROOT / "LICENSE", "LICENSE")
     return archive

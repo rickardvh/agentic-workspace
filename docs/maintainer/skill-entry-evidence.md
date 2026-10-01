@@ -232,3 +232,102 @@ Formats were checked against the [OpenAI plugin format](https://developers.opena
 [Claude plugin lifecycle](https://code.claude.com/docs/en/plugins) and
 [skills-npm source convention](https://github.com/antfu/skills-npm/blob/main/SPEC.md).
 This finite record supplies no guarantee of automatic activation or enforcement.
+
+## Repository scope exercise for #3737
+
+On 1 October 2026, Codex CLI 0.159.0 and Claude Code 2.1.285 used isolated
+profiles and three temporary Git repositories: X and Y adopted AW; Z did not.
+Configuration published only repository catalogues and enablement. The ordinary
+user profiles were unchanged. These observations distinguish host discovery,
+cached bytes, enablement and explicit selected use.
+
+Codex's app-server `plugin/list` with explicit `cwds` and local marketplaces
+reported each repository's distinct selector as installed and enabled. Its
+`skills/list` returned the entry from that selector's host cache. Z returned no
+AW marketplace or entry skill. The CLI's `plugin list` omitted repository
+context, so it was unsuitable evidence for this boundary. The isolated user
+configuration had trusted repository declarations and no plugin enablement.
+
+A selected `$agentic-workspace-entry:agentic-workspace-entry` task started in
+X's subdirectory, read the cached bridge, resolved X's Git root, read X's
+canonical startup skill and its relative witness, then read X's sample. The
+reported markers were `REPOSITORY-X-R1` and `X-SAMPLE`. The recorded model was
+`gpt-6.1-sol`, with read-only policy, approvals disabled and the Windows
+unelevated sandbox. This supplies selected handoff evidence, not automatic
+activation or stronger sandbox provisioning evidence.
+
+Claude local marketplace registration and project installation returned
+`scope: project`, `enabled: true` and `projectEnabled: true` in X. Y's entry was
+inactive there. A fresh collaborator profile initially listed no installed
+plugins, and installation failed before local registration. Registration and
+project installation succeeded without changing X's shared enablement. Switching
+Y through Configuration removal to explicit local exposure left no shared
+settings file; local settings were Git-ignored and native listing returned
+`scope: local`, `enabled: true`. Z reported every installed AW entry disabled.
+The isolated user profile had no user-level enablement settings. Claude itself
+retained machine-local catalogue paths and downloaded bytes in its host cache.
+
+X's bridge and canonical witness then advanced to R2 while Y stayed at R1.
+Claude's returned marketplace-update and project-plugin-update commands produced
+cached X bridge bytes equal to R2 and left Y's cache unchanged. Codex catalogue
+refresh initially retained the old bytes when the manifest version was unchanged.
+Changing X's version refreshed its cache without changing Y. A development
+version with the bridge digest (`0.0.0-dev.0+3d1a41693f9eadee`) was also accepted
+and cached correctly. The source generator now assigns development bridges a
+content identity; explicit release staging retains its release version.
+
+Removing X's Configuration-owned exposures made Codex's repository marketplace
+list empty and Claude's cached entry disabled. A subsequent Codex task using
+only the generic `AGENTS.md` pointer followed canonical startup and reported
+`REPOSITORY-X-R2` and `X-SAMPLE`. Host-owned inactive caches remained. The
+unchanged bridge's linked-worktree resolution evidence from #3729 above is
+reused; no new bridge procedure was introduced.
+
+The new deterministic fixtures cover all three scopes, unrelated settings,
+matching unowned collisions, changed owned fields, local-ignore requirements and
+refusal to expose tracked local settings,
+interrupted publication, two independent repositories and exposure-before-bundle
+removal. The retained released Configuration assessment initially blocked
+source provenance reconciliation. A bounded native reassessment now checks the
+development declaration, exact installed package bytes and prior record before
+offering a current semantic assessment. Unknown records and newer installed
+packages remain protected. The owner committed this checkout's reassessment and
+its separate exact provenance reconciliation. Deterministic coverage exercises
+both repository and machine-local assessment scopes, stale observations and
+preservation guards.
+
+### Review repair: repository Claude marketplace declarations
+
+The initial Claude observation above used manual local marketplace registration.
+The reviewed implementation now owns both `extraKnownMarketplaces` and
+`enabledPlugins` in the selected project/local settings file, with directory
+source `./.agentic-workspace/plugins`. This replaces the manual registration step
+in the ordinary repository path; no scoped marketplace command is returned.
+
+On 2026-10-01, isolated profiles and new adopted repositories exercised Claude
+Code 2.1.285 for the initial project startup and 2.1.286 for the fresh collaborator
+and local checks. Interactive startup accepted each disposable repository's trust
+dialog and registered its relative directory declaration without `marketplace
+add`. No model prompt was submitted; a synthetic API-key fixture allowed startup
+without copying account credentials. These observations establish settings and
+plugin lifecycle, not model-selected use or remote policy readiness.
+
+The fresh collaborator initially listed no installed plugins. After trusted
+startup, marketplace listing resolved the shared relative declaration to that
+collaborator's checkout, while installed-plugin listing remained empty. Explicit
+`plugin install <selector> --scope project` then reported project scope, enabled
+and projectEnabled. The original profile also reported project enablement. Local
+startup read the declaration from ignored `.claude/settings.local.json`; explicit
+`--scope local` installation was enabled only in that repository, with no shared
+settings file. The profile's other repository entry was disabled there, and both
+profiles reported every AW entry disabled in the unrelated repository. Neither
+profile had user-level AW marketplace declarations or enablement.
+
+Shared and local settings retained the relative source after host installation.
+Authenticated Configuration removal deleted both owned settings fragments and
+native listing reported disabled entries in the removed repositories; host cache
+bytes remained. Deterministic coverage additionally preserves unrelated
+marketplace declarations and rejects matching unowned or edited owned declarations
+in both scopes. Full API introspection has a bounded, named plugin-schema
+allowance; optional discovery and effect revision appear only in selected setup
+or an actual proposal, preserving the existing ordinary-response budgets.

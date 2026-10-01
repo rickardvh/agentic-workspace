@@ -76,7 +76,7 @@ fn names(root: &Dir) -> Result<Vec<String>, CoreError> {
     Ok(names)
 }
 
-fn no_link_directory(root: &Dir, path: &str) -> Result<(), CoreError> {
+pub(crate) fn no_link_directory(root: &Dir, path: &str) -> Result<(), CoreError> {
     let mut prefix = std::path::PathBuf::new();
     for part in path.split('/') {
         prefix.push(part);
