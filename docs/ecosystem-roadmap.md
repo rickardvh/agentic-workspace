@@ -1,88 +1,49 @@
-# Ecosystem Roadmap
+# Ecosystem direction
 
-Last doctrinal review: 2026-04-13
+This page records current product-packaging direction. It is supporting context,
+not a promise to create more packages.
 
-This page records the current ecosystem stance without turning it into a promise of more top-level packages.
+For current product behaviour, start with [Documentation](index.md) and
+[How AW fits into a project](package/overview.md). For maturity labels, see
+[Maturity model](maturity-model.md).
 
-For the broader long-horizon capability map behind that stance, see `docs/agent-os-capabilities.md`.
+## What ships today
 
-For current shipped package behaviour, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This roadmap is supporting context, not an immediate product promise.
+The current first-party components are distributed with Agentic Workspace:
 
-When the current stance changes, update this page and move any concrete next work into owner-scoped Planning records or linked issues instead of accumulating latent backlog prose here.
-Use a doctrine-refresh review when the current ecosystem stance may have drifted from actual shipped behaviour or extraction discipline.
+- Memory;
+- Planning;
+- Verification;
+- the main `agentic-workspace` entry point and shared Rust core.
 
-## Role Boundary
+The main package supplies repository setup, task-relevant routing and the common
+interfaces used by those components.
 
-This page owns current ecosystem stance:
+## What is proven
 
-- what is shipped externally today
-- what remains internal for now
-- what evidence is required before extraction
+The first-party components can be installed and used selectively in ordinary
+repositories through the shared AW setup path.
 
-It does not own:
+What is **not** yet a general product promise is a third-party plugin/module
+ecosystem with the same support guarantees. New extension mechanisms should be
+added only when a real external use case needs them.
 
-- the full capability taxonomy
-- the bounded future-work queue
-- current maturity labels
+## When a capability should become separate
 
-Route those concerns to:
+Consider extracting a capability into a separate reusable component only when:
 
-- `docs/agent-os-capabilities.md` for the capability map
-- owner-scoped Planning records or linked issues for bounded next candidates
-- `docs/maturity-model.md` for maturity framing
+- multiple repositories or components need it;
+- keeping it inside the current component causes repeated maintenance cost;
+- its inputs, outputs and lifecycle are stable;
+- it can be used independently without importing unrelated AW machinery.
 
-## Refresh Triggers
+Do not create a package merely because an internal concept has a name.
 
-Update this page directly when any of the following happens:
+## What should remain internal
 
-- a new first-party shipped module appears
-- an internal capability clearly moves toward or away from extraction
-- the extraction discipline changes enough that current stance would otherwise become stale
-- another doctrine page starts carrying ecosystem-packaging claims that belong here instead
+Keep implementation helpers internal when they exist only to support the current
+first-party packages, depend on sibling internals, or have no independent user
+value.
 
-## Current Stable External Products
-
-- Agentic Memory, distributed as the exact-release asset `agentic-workspace-memory`
-- Agentic Planning, distributed as the exact-release asset `agentic-workspace-planning`
-- Agentic Verification, distributed as the exact-release asset `agentic-workspace-verification`
-
-## Current Composition Layer
-
-- `agentic-workspace` is the public workspace-level orchestration entrypoint for shared lifecycle verbs, compact routing, reports, proof selection, and first-party module composition.
-- External module or plugin extension is not yet a supported public contract; see `docs/extension-boundary.md`.
-
-## Current Portability Read
-
-- Proven now: the shipped first-party modules are portable across clean repos through the shared workspace lifecycle front door. Selective adoption is real for those first-party shapes.
-- Not yet proven: broader ecosystem portability beyond the first-party set. The repo does not yet have evidence for third-party extension, non-core module composition, or a wider module ecosystem that keeps the same guarantees outside closely related first-party contracts.
-
-## Important Internal Capabilities
-
-- Routing
-- Checks / liveness validation
-
-These capabilities matter, but they are not standalone packages yet. Keep the fuller capability taxonomy in `docs/agent-os-capabilities.md`; keep this page focused on ecosystem stance and extraction discipline.
-
-## Evidence Required Before Extraction
-
-Consider extraction only when dogfooding shows all of the following:
-
-- repeated maintenance friction that is hard to solve inside the current modules
-- stable schemas or manifests that do not rely on sibling internals
-- clear owners and boundaries
-- independent value in selectively adopted repos
-
-## What Should Stay Internal For Now
-
-- module-specific installer helpers
-- workspace glue that only exists to compose the current first-party set or still depends on sibling internals
-- checks that still derive their real behaviour from one module's internal contract
-
-## Discipline Rule
-
-Prefer sharper documentation, liveness checks, and consistency hardening over adding new top-level concepts unless real reuse pressure proves otherwise.
-
-Current stance on shared tooling:
-
-- prefer one managed source over new shared helpers when one module still clearly owns the behaviour
-- extract broader shared tooling only after cross-module reuse and maintenance cost are both clearly proven
+Prefer simpler docs and sharper component boundaries over another top-level
+package when both solve the problem.

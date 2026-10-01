@@ -1,268 +1,178 @@
-# Agentic Workspace Design Principles
+# Agentic Workspace design principles
 
-## Purpose
+Agentic Workspace should make repository work cheaper to continue, verify and
+hand off while keeping its own machinery out of the way.
 
-Agentic Workspace should make repositories easier and cheaper for agents to operate while staying quiet about its own machinery.
+For the current product model, start with [How AW fits into a project](package/overview.md)
+and [System Intent](../SYSTEM_INTENT.md).
 
-Its core product idea is simple:
+## 1. Keep only information that changes future work
 
-- preserve a bounded set of **operating context** because it can materially change agent behaviour;
-- dynamically resolve the relevant part into the current operating contract;
-- let specialised modules extend what the loop can know and do without changing the loop itself.
+Save a fact, procedure, task record or lesson when having it later will change a
+decision or prevent expensive rediscovery. Do not save chat, logs, plans, reviews
+or repository facts merely because they exist.
 
-The product should feel smaller than the implementation behind it and should earn every visible surface it keeps.
+Source code, project documentation, tests and history stay where they already
+belong. AW should point to those sources rather than copy them into another
+knowledge system.
 
-For the current product model, start with [`docs/package/overview.md`](package/overview.md) and [`SYSTEM_INTENT.md`](../SYSTEM_INTENT.md). This page explains the design pressure that should keep that model coherent.
+## 2. Show only what matters now
 
-## Doctrine
+First contact should contain only information that can affect the current task.
+Load deeper procedures or references when the task actually needs them.
 
-### 1. Keep context only when it changes future decisions
+Prefer a short answer that names the relevant source, restriction and next action
+over a broad reading list or a manual for every installed capability.
 
-Repository persistence is not free. Preserve a fact, state, procedure, or lesson when its current or durable availability materially changes safe agent behaviour and its future value exceeds its reread and maintenance cost.
+## 3. Leave responsibility with the component that owns the work
 
-Do not persist chat, logs, plans, reviews, histories, or arbitrary repository facts merely because they exist.
+Planning maintains unfinished task records. Memory keeps useful lessons.
+Verification maintains checking procedures and evidence. Repository files remain
+the source for project policy and documentation.
 
-### 2. Operating context is not a repository knowledge model
+AW may combine information from those places for the current task, but it should
+not create a second competing copy of their meaning.
 
-AW should not ingest or mirror the repository simply to make it knowable.
+## 4. Make the next step usable
 
-Source code, canonical docs, tests, history, and normal project artefacts keep their existing owners. Rich semantic search, RAG, embeddings, knowledge graphs, or broader repository models may be useful specialised modules, but core AW should remain simpler.
+When AW says more work is needed, it should point to something the agent can
+actually do: a supported operation, a command, a skill, a specific source to
+read, a clearly stated choice or a recovery procedure.
 
-### 3. Surface less, later
+Do not return an abstract status such as “reconcile”, “escalate” or “resolve the
+owner” without saying what to inspect or do next.
 
-The system succeeds when first contact contains only what can change the current decision.
+## 5. Ask humans only for decisions that really require them
 
-Prefer:
+Do not ask the user to repeat facts available from the repository or to approve
+routine work merely because AW manages the file involved.
 
-- compact current decisions;
-- exact selectors;
-- lazy skill/module discovery;
-- owner references;
-- typed actions;
-- bounded evidence bundles.
+A human decision is appropriate when the task is explicitly assigned to a human
+or when Verification says human judgement is required. Otherwise, use the
+repository's current rules and let the agent continue within them.
 
-Avoid broad reading lists and always-loaded capability manuals.
+## 6. Keep one ordinary working loop
 
-Of several relevant unknowns, prefer the observation that can change the next action or prevent expensive downstream rework. A compatibility requirement may determine whether an implementation is viable; formatting detail usually does not. This is decision-relevant information gain, not a requirement to calculate entropy or rank every source. The agent judges semantic value; owners expose trustworthy facts, consequences and exact routes.
+The ordinary model is simple:
 
-Small certainly-needed context can be cheaper to deliver now than behind another selector. Independent reads may be batched when that helps; progressive disclosure is not one fact per turn. A useful negative result or newly discovered conflict may increase acknowledged uncertainty rather than reduce it.
+```text
+Check what applies → Do the work → Update what matters
+```
 
-### 4. One operating decision, many source owners
+Startup, implementation, checking, handoff and finishing are situations within
+that loop, not separate frameworks the user must operate.
 
-Repository and module sources keep semantic authority. Workspace composes their current effect; it should not create a second source of truth.
+If an action may already have happened but its result is unknown, check what
+happened before trying it again.
 
-A generated instruction or operating contract is useful because it is cheap to consume, not because it replaces the source that authorised it.
+## 7. Small work should stay small
 
-Current context should be sufficient for the next supported decision, including exact source routes and explicit unknowns where more observation is needed. Equivalent task, authority, evidence/effects and environment observations should expose equivalent material action and claim boundaries regardless of conversation history. This is a practical continuity property, not a literal Markov model, global state snapshot, or demand for identical model choices.
+A typo fix should not create a plan, memory entry, verification record, handoff or
+other artefact merely because those capabilities are installed.
 
-### 5. Make the next action constructible
+Components that are irrelevant to the current task should stay quiet.
 
-Good dynamic control should normally end in something the agent can actually do:
+## 8. Help the agent; do not script ordinary implementation
 
-- a typed operation;
-- a derived command;
-- a routed skill;
-- an exact selector/owner;
-- a bounded recovery;
-- or, for a Verification step requiring human judgement or a task explicitly assigned to a human owner, a human decision with the relevant facts.
+AW should be strict about project rules, permissions, saved state and what test
+results actually establish. It should not micromanage routine coding decisions.
 
-A transition name without a supported route is not an adequate instruction.
+Prefer a small number of clear rules and supported actions over scheduler-like
+workflow machinery.
 
-A question should identify what is unresolved, why it changes the action or claim, and what bounded answer is needed. Do not ask the human to repeat facts available from current sources or decisions already admitted by standing authority. Preserve a truthful insufficient-evidence path rather than forcing a choice. Carry a uniquely determined authorised action without a model turn just to select it; genuinely different choices must remain visible.
+## 9. Optimise the whole cost of finishing correctly
 
-Regular operation must resolve through agents and domain owners. Repository ownership, a managed write or the absence of an explicit agent delegation must not create a human approval step. Human escalation requires one of the two exceptions above, with its Verification requirement or configured human assignment identified. A capability or evidence gap requires recovery through its owner.
+Consider rereading, rediscovery, clarification, retries, extra checks, handoff
+reconstruction, repair and user round-trips—not only token count or command count.
 
-### 6. Use one generic loop
+Do not save agent effort by creating more human ceremony. Stop optional discovery
+when more information is unlikely to change the next decision.
 
-The ordinary mental model is `resolve -> act -> reconcile`.
+## 10. Fix the source of recurring problems
 
-Startup, implementation, proof, handoff, closeout, and continuation are common situations, not independent core frameworks. Closeout is terminal reconciliation.
+Repeated confusion, stale information, wrong checks or repeated user correction
+should lead to a fix in the component or document responsible for that behaviour.
 
-Do not create another phase-specific decision engine when the existing operating-decision path can carry the result.
+Do not compensate for a deterministic defect by adding warnings in unrelated
+places.
 
-After a consequential result, make its supported claim, remaining uncertainty and continuation recoverable through current owners. A decision delta may help a continuing consumer, but a delta alone must not become the only way a fresh consumer can understand current work. Preserve confirmed effects independently of continuation failure; an unknown effect requires recovery, not replay.
+## 11. Keep extensions narrow
 
-### 7. Modules specialise the loop; they do not redefine it
+A reusable capability may justify a module with its own data and operations.
+Ordinary repository-specific guidance belongs in instructions, configuration,
+skills or project documentation.
 
-Modules own independently reusable domain capabilities. They may contribute relevant context/procedure, typed operations, and bounded result/reconciliation facts.
+Do not turn AW into a generic plugin runtime, event bus, credential store or
+workflow engine.
 
-Planning, Memory, and Verification are current first-party examples, not privileged architectural slots. Future modules should fit without adding a mandatory new first-contact question or requiring Workspace to understand their domain state shape.
+External integrations should translate another host into AW's existing public
+operations; they should not redefine AW behaviour.
 
-### 8. Preserve one semantic owner per concern
+## 12. Keep AW removable
 
-Ownership should follow meaning rather than convenience.
+Package-managed files should stay under `.agentic-workspace/` as far as practical.
+Files outside it should exist only because a host requires that exact location.
 
-- canonical repository truth stays in canonical repository surfaces;
-- Workspace owns cross-cutting control composition;
-- modules own their domain state and semantics;
-- repo customisation owns host policy and durable operating choices;
-- external adapters own transport/vendor integration;
-- local runtime state remains lower-authority local state unless deliberately promoted.
+Removing AW should remove only files that AW can verify it manages and preserve
+project-owned configuration, plans, lessons, evidence and unrelated content.
 
-Do not duplicate an owner merely to make another subsystem easier to implement.
+## 13. Prefer files that collaborate well
 
-### 9. Configuration must earn durable authority
+Normal Git use should not make AW brittle. Avoid giant frequently edited state
+files. Keep task-specific records separate when that reduces merge conflicts, and
+remove or archive completed information when it no longer helps future work.
 
-Shared config should express real repo policy, ownership, capability selection, or durable operating choices. Local config should express machine/runtime capability or preference with appropriately weaker authority.
+Generated files should come from one clear source and should not compete with it
+for meaning.
 
-Do not preserve a growing `posture` or personality framework simply because more knobs can be represented. Retain a control when it materially changes the current contract or has demonstrated completion-cost value.
+## 14. Compatibility layers need a reason to exist
 
-### 10. Direct work must stay direct
+Do not keep old and new designs in parallel indefinitely. A compatibility layer
+should protect a named consumer during a real transition and have a clear removal
+path.
 
-Small, obvious work should not acquire Planning, Memory, Verification, review, handoff, or other artefacts merely because those capabilities are installed.
+## 15. Documentation should be simpler than the implementation
 
-Irrelevance and absence are valid states. A capability that is not needed should be silent.
+Start with the reader's task. Use ordinary language for what to do and what
+happens. Put detailed API fields, maintainer procedure and historical evidence
+behind links for readers who need them.
 
-### 11. Help the agent do the job; do not script the job
+Exact commands, field names and file paths stay exact. Internal repository jargon
+does not become public vocabulary merely because the implementation uses it.
 
-AW should be opinionated about authority, effects, proof/claim boundaries, ownership, and safe transitions. It should not micromanage ordinary implementation judgement.
+## 16. Evidence should match the claim
 
-Prefer thin contracts and exact escalation over scheduler-like choreography.
+Run the smallest check that can expose the relevant failure. Reuse current
+evidence when it still applies. Broaden to another platform, provider or package
+surface only for a specific remaining risk.
 
-### 12. Optimise total successful-completion cost
+Passing a command supports only what that command actually tested. A saved result
+does not automatically apply after its inputs change.
 
-Measure the whole path: rereads, rediscovery, clarification, retries, route reversals, proof reruns, handoff reconstruction, repair, and user roundtrips.
+## Questions for a proposed change
 
-Token count, bytes, latency, commands, and file count are useful proxies only when they improve the total path to a correct result.
+A change is moving in the right direction when:
 
-Do not save model tokens by creating human bureaucracy. Do not replace total completion cost with a greedy information-per-call metric: some valuable steps perform work, establish custody, or protect future continuation rather than resolve a new question. Stop optional discovery when it will not materially improve the supported decision, not when all conceivable uncertainty is gone. Required work, currentness, authority and proof remain binding.
+- it makes important context cheaper to recover;
+- it gives the agent a clear next action;
+- it removes duplication or unnecessary machinery;
+- direct work can ignore it when irrelevant;
+- responsibility for each record or rule remains clear;
+- it reduces the total cost of finishing correctly;
+- it would still make sense in another repository.
 
-### 13. Improve the deterministic owner before compensating elsewhere
+A change deserves scrutiny when it mainly:
 
-Repeated human steering, wrong-owner work, stale context, repeated rediscovery, proof confusion, or late reconciliation repair should create pressure to improve the actual owner or control path.
+- adds another framework or vocabulary layer;
+- stores history with no clear future use;
+- copies information already maintained elsewhere;
+- introduces a new visible concept without replacing an old one;
+- makes generated documentation or state compete with its source;
+- adds ceremony to compensate for a simpler defect.
 
-A permanent warning in another subsystem is a poor substitute for fixing deterministic behaviour.
+## Related maintainer guidance
 
-### 14. Preserve graceful partial compliance
-
-AW must work with mixed agents and cannot assume perfect adherence, hidden reasoning, or one vendor.
-
-Make the intended path progressively discoverable and cheaper than bypass. When an agent ignores a routed contract, lower trust explicitly rather than allowing silent authority expansion.
-
-Do not depend on a consumer remembering a fact that was presented before its purpose was clear. Bind decision-bearing context to its current task, scope and consequence; re-establish that relationship when relevance changes. Valid in-context reuse is welcome. Fresh or context-limited consumers need current references or material, not a claim that it was delivered to somebody earlier. Delivery remains distinct from understanding, reconciliation and proof.
-
-### 15. Extensibility must stay bounded
-
-Prefer declarative capability identity, relevance, ownership, typed operations, effects, lifecycle, and bounded results over arbitrary callbacks and workflow hooks.
-
-Do not turn extensibility into:
-
-- a generic plugin runtime;
-- an event bus;
-- a module marketplace;
-- an adapter registry;
-- a credential store;
-- or a new user-visible command/phase for every capability.
-
-### 16. Repo customisation is different from a module
-
-Ordinary host-specific guidance belongs in scoped Markdown. Repo-owned config, specialised stage-bound compatibility obligations, skills, canonical guidance, ownership, or deterministic repo operations remain narrower owners when scoped guidance cannot express the required semantics.
-
-A reusable domain capability with its own state/resources, operations, compatibility, and lifecycle may justify a module. Do not turn every repository rule into one.
-
-### 17. External adapters remain outside core
-
-An integration may know how to consume AW; AW should not need to know the integration package or vendor.
-
-Transport does not create semantic authority. Credentials and vendor lifecycle remain adapter concerns.
-
-### 18. Keep package ownership quiet and removable
-
-Package-owned machinery should stay under `.agentic-workspace/` as far as practical. Local caches and diagnostics do not become shared authority by existence alone. Promoted output should become normal repo-owned output.
-
-The package should remain plausibly removable.
-
-### 19. Collaboration safety matters
-
-Normal git pressure should not make AW brittle.
-
-- keep shared hot state compact;
-- prefer bounded owner-scoped files over giant mutable dashboards;
-- archive/compact completed active state when future value is low;
-- make derived surfaces reproducible when they must exist.
-
-### 20. Compatibility layers must have a beneficiary and an exit
-
-Do not preserve old and new models in parallel by default.
-
-A compatibility layer should protect a named consumer, exist for a concrete transition reason, and have a credible removal/demotion path. Otherwise it is likely permanent ambiguity.
-
-### 21. Generated surfaces derive; they do not own
-
-Generated docs, clients, adapters, or prose are useful when they derive from one authoritative contract and remove more cost than they create.
-
-Do not keep generated mirrors of changing truth simply because generation is possible.
-
-### 22. Documentation should demonstrate progressive disclosure
-
-Public docs should be simpler than the implementation.
-
-Use an abstraction ladder:
-
-1. core product model;
-2. specialised capability concepts only when relevant;
-3. generated exact references;
-4. maintainer procedure;
-5. historical evidence.
-
-Links compose docs; copied truth creates drift. Introduce the subject and purpose before details whose interpretation depends on them. The same discipline applies to agent-facing results: concise output should not leave facts waiting for a later message to explain why they matter.
-
-### 23. Portability beats dogfooding cleverness
-
-Do not generalise this repository's language, structure, environment manager, provider, or current modules into universal requirements without evidence.
-
-Prefer narrow contracts and plain ownership boundaries that still make sense in another repository and with another agent.
-
-### 24. Proof should beat preference
-
-Features that claim to reduce restart cost, context cost, handoff burden, or agent failure should earn their place through deterministic proof and representative ordinary work.
-
-Keep weak, negative, and unavailable evidence visible rather than averaging it into a broad success claim.
-
-Select proof for the claims and failure modes still unresolved, not the number of commands available. Checks with similar names or the same claimed goal need not supply equivalent evidence; correlation and different failure coverage matter. Reuse valid evidence and avoid demonstrated duplication without weakening independent review or source-required checks. Empirical lessons may improve a method, but repetition alone cannot promote advice into human-owned policy.
-
-## Design tests
-
-A change is moving in the right direction when it helps answer yes to questions such as:
-
-- Does this preserve or route operating context that materially changes behaviour?
-- Does the information arrive when it can change a decision, without unnecessary discovery hops?
-- Does the current agent get a constructible action, real choice, bounded question, or recovery rather than a forced primary action?
-- Does source ownership remain explicit?
-- Can a fresh consumer interpret the current action and claim boundaries from current owners and exact refs, without reconstructing the prior conversation?
-- Does this reduce total successful-completion cost rather than shifting it elsewhere?
-- Can direct work ignore the capability entirely?
-- Can another module provide a different domain capability without changing the core mental model?
-- Does the change remove, derive, merge, or background an older concept instead of merely adding one?
-- Would it still make sense outside this monorepo?
-
-A change is suspicious when it tends to:
-
-- create a general repository knowledge store in core;
-- create another packet/phase authority beside the compiled operating decision;
-- expose irrelevant context at first contact;
-- hard-code a first-party module identity in generic composition;
-- add a new policy/identity/lifecycle concept without naming what it replaces;
-- persist history with no clear future decision value;
-- save agent work mainly by creating maintainer ceremony;
-- make generated projections compete with their source authority;
-- preserve old and new models indefinitely.
-
-## Tactical policy lives elsewhere
-
-Use narrower owner docs for maintainer procedure and implementation details:
-
-- [Operational affordance design](maintainer/operational-affordance-design.md) for interaction design and consequence-based evidence;
-- `docs/maintainer/contributor-playbook.md` for maintainer routing and validation;
-- `docs/maintainer/dogfooding-feedback.md` for dogfooding/product-friction routing;
-- `.agentic-workspace/docs/` contracts for installed/source-checkout tactical details;
-- generated references for exact machine contract fields.
-
-## Short version
-
-Preserve the context that governs agent work.
-Surface only what matters now.
-Act through the supported route.
-Reconcile what changed.
-Let modules specialise the loop without enlarging it.
-Stay quiet.
+Use [Contributor playbook](maintainer/contributor-playbook.md) for repository
+maintenance, [Testing strategy](maintainer/testing-strategy.md) for choosing
+evidence, and [Documentation style guide](documentation-style-guide.md) for
+human-facing writing.

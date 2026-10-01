@@ -1,128 +1,66 @@
-# Routine Work Context
+# Routine task context
 
-Agentic Workspace keeps canonical owner surfaces separate, but ordinary agents
-should not have to choose among every internal concept before starting,
-implementing, proving, and closing work. The routine work context is an
-assembled router view over existing owners.
+AW keeps Planning, Memory, Verification, project instructions and other sources
+separate. An ordinary agent should not need to learn each internal subsystem
+before starting work.
 
-It does not store new knowledge. It answers five routine questions:
+The routine task view answers five practical questions without storing another
+copy of the underlying information:
 
-| Category | Routine question | Existing owners fronted |
-| --- | --- | --- |
-| Authority | What source, policy, or owner governs this work? | `effective_authority`, `authority_hierarchy`, standing intent, workflow obligations, assurance requirements, decision pressure |
-| Active work | What is live, done, blocked, delegated, or waiting? | Planning state, current/next action, execution shape, continuation state, external work reconciliation |
-| Evidence / proof | What must be shown before a claim is safe? | proof selection, proof confidence, assurance evidence, workflow obligations, closeout trust, completion options |
-| Durable knowledge | What applies here that future agents should not rediscover? | Memory consult, durable facts, durable intent, standing intent, system intent |
-| Promotion / residue | What should move to a stronger owner, become follow-up, or be dismissed? | durable intent promotion, improvement intake, decision pressure, Memory promotion metadata, closeout residue |
+| Question | Typical source |
+| --- | --- |
+| What project rule applies? | Repository instructions and configuration |
+| What work is unfinished? | Planning |
+| What checks matter? | Verification and project test policy |
+| What useful lesson should I know? | Memory and project documentation |
+| What information should be saved or moved elsewhere after this task? | Planning, Memory, docs, configuration or issues |
 
-The projection also carries a `knowledge_authority_review` when existing
-repo-owned metadata creates active pressure. That review composes Memory
-manifest metadata, Memory promotion-pressure samples, workflow-obligation
-matches, proof expectations, and closeout residue without becoming a new owner.
+The exact JSON fields used by the implementation remain defined by their
+contracts. This page describes the purpose of the combined view, not another data
+model users need to maintain.
 
-## Classification
+## Keep the view small
 
-| Concept | Classification | Router category |
-| --- | --- | --- |
-| Memory notes and durable facts | Canonical owner surface | Durable knowledge |
-| `memory_consult` | Router/projection concept | Durable knowledge |
-| Planning execplans and state | Canonical owner surface | Active work |
-| `external_work_reconciliation` | Router/projection concept | Active work |
-| Standing intent and effective authority | Authority projection | Authority |
-| Assurance requirements | Config-owned evidence gate | Authority, evidence / proof |
-| Verification protocols and evidence bundles | Repo-owned soft verification procedures and bounded evidence | Authority, evidence / proof |
-| Workflow obligations | Config-owned lifecycle obligation | Authority, evidence / proof |
-| Decision records / ADRs | Canonical owner surface | Authority, promotion / residue |
-| `decision_pressure` | Router/projection concept | Authority, promotion / residue |
-| Proof selection and proof confidence | Evidence/proof concept | Evidence / proof |
-| `closeout_trust` | Claim-boundary and lifecycle action surface | Evidence / proof, promotion / residue |
-| Improvement intake | Lifecycle action / routing concept | Promotion / residue |
+Show information only when it can change the next action, required checks or a
+completion decision.
 
-## Knowledge Authority Review
+For example:
 
-`knowledge_authority_review` is the concrete #1150 loop:
+- a project rule affecting the changed path should appear;
+- unfinished Planning work for another task should not;
+- a stale Memory note should be reconsidered before it is relied upon;
+- a required Verification procedure should be visible before claiming the work
+  complete.
 
-```text
-scattered signal
-  -> existing owner found
-  -> authority / freshness / supersession / promotion metadata interpreted
-  -> proof and closeout effects surfaced
-  -> existing owner action suggested
-```
+Do not dump every known source into startup output.
 
-For Memory, the review reads existing manifest fields such as `authority`,
-`canonicality`, `canonical_home`, `routes_from`, `stale_when`, `evidence`,
-`memory_role`, `promotion_target`, and `promotion_trigger`. A changed path that
-matches `stale_when` becomes freshness pressure. A note marked
-`candidate_for_promotion`, `improvement_signal`, or carrying a promotion target
-becomes owner-shaped promotion pressure. Deprecated or canonical-elsewhere notes
-become supersession pressure.
+## Use existing components for changes
 
-The review suggests existing Memory freshness and promotion actions. Scoped
-instructions and Verification retain their own procedure and proof requirements.
+The combined view does not own project rules, plans, lessons or evidence.
 
-## Workflow Placement
+When the task reveals something worth keeping:
 
-`start` should show compact category status when the task activates authority,
-durable knowledge, or promotion pressure. It should not dump owner detail.
+- unfinished work goes to Planning;
+- a reusable lesson goes to Memory;
+- a binding project rule goes to documentation or configuration;
+- a checking procedure or evidence gap goes to Verification;
+- a product improvement that needs review can go to an issue.
 
-`implement` should make the projection selectable and verbose-visible for changed
-paths, especially where authority, evidence, durable knowledge, or residue could
-change the next safe action.
+Use the specific operation returned by the component that maintains that record.
 
-`proof` should continue to own proof selection. The routine context should only
-explain which proof expectations are activated by repo authority, verification
-protocols, or claim gates. When a changed path activates a workflow obligation or
-verification protocol, proof can show the authority and evidence/proof
-categories so the obligation or protocol is not missed before validation.
+## Recheck changed information
 
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
+If a saved rule, lesson or test result depends on files that changed, check it
+again before relying on it. Do not treat an old hash, previous conversation or
+successful test name as enough by itself.
 
-`closeout_trust` and completion options remain the claim boundary. They should
-consume evidence and residue signals rather than move canonical ownership into
-the routine context. Closeout surfaces compact knowledge-authority pressure so
-Memory promotion or dismissal does not disappear behind "knowledge preserved
-somewhere" when the stronger owner is docs, config, assurance, ADR, checks, or
-explicit dismissal.
+When a relevant external source is unavailable, report that gap rather than
+inventing a current answer.
 
-## Proportionality
+## Completion
 
-Small bounded work should stay quiet when no category has attention. Detail
-belongs behind selectors or report sections. The projection should surface when:
+A component having nothing left to do does not automatically mean the user's task
+is complete. Completion still depends on the requested outcome and the checks the
+repository requires.
 
-- it changes the safe next action;
-- it changes proof or completion claim gates;
-- stale, conflicting, or mis-owned knowledge can affect current work;
-- a discovered constraint needs promotion, follow-up, or explicit dismissal.
-
-The projection should stay quiet for unmatched assurance requirements, unrelated
-verification protocols, unrelated Memory notes, unrelated ADR candidates, and
-broad historical audit detail.
-
-Default `report` is intentionally a discriminator-only route signal:
-
-```json
-{"kind": "agentic-workspace/routine-work-context/v1"}
-```
-
-Do not add category details, owner inventory, Memory samples, or obligation
-detail to the default report router. Those belong in
-`report --section routine_work_context`, selected/verbose `implement`, compact
-activated `start`, proof pressure, or closeout trust as appropriate.
-
-## Boundary
-
-This closes #1150, #1151, and #1152 by providing the routine router model, the
-owner-surface map, and the knowledge-to-action composition needed for scattered
-authority, freshness, and promotion pressure. It does not collapse Memory,
-Planning, ADRs, assurance requirements, workflow obligations, proof, or closeout
-trust into a new generic knowledge store.
-
-Still requiring agent or human judgement:
-
-- whether a Memory promotion candidate should actually become docs, config,
-  assurance, ADR, checks, or be dismissed;
-- whether a stale note is wrong or merely needs re-confirmation;
-- whether external authority evidence has an accepted repo interpretation;
-- whether proof execution and closeout evidence are sufficient for a completion
-  claim.
+Small tasks should remain quiet when none of these sources matter.

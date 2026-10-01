@@ -1,17 +1,21 @@
-# Verification Routing Note
+# Verification
 
-Verification is the Agentic Workspace module for reusable soft verification
-protocols, proof-route hints, bounded evidence records, and known gaps.
+Verification is AW's component for reusable checking procedures, saved test or
+review results, and known gaps.
 
-Canonical owner: [packages/verification/README.md](../packages/verification/README.md).
+The full component documentation lives in
+[packages/verification/README.md](../packages/verification/README.md). This page
+remains a short public link target rather than a second manual.
 
-Use this top-level page only as a stable public link target from generated
-contracts, tests, and historical plans. Do not expand it into a second
-Verification manual.
+For ordinary work, follow the current `start` result. If Verification has
+something relevant, AW returns the specific request or action needed. The
+[native CLI catalogue](/docs/reference/cli-catalogue.md) lists the executable
+commands.
 
-Ordinary surfaces:
+Verification's implementation lives in `packages/verification/`. Repository
+configuration and saved verification records live under
+`.agentic-workspace/verification/` when that component is enabled.
 
-Use the current `start` result and its exact owner request/action; see the [native CLI catalogue](/docs/reference/cli-catalogue.md).
-
-The module implementation lives in `packages/verification/`. Host-repo protocol
-and evidence state lives under `.agentic-workspace/verification/` when enabled.
+A saved passing result supports only the code, inputs and environment it actually
+checked. It does not by itself prove that the whole task is complete or that a
+later change still passes.

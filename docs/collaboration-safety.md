@@ -1,74 +1,76 @@
-# Collaboration Safety
+# Working safely with multiple branches and agents
 
-Agentic Workspace is git-native and collaboration-aware, but not concurrency-proof.
+AW stores shared project information in Git rather than hiding it in a separate
+service. That makes changes visible and portable, but it does not make concurrent
+edits magically conflict-free.
 
-It does not hide agent state in a service, lock manager, database, or CRDT. The package makes agent operating state participate in ordinary git review and merge workflows. That gives visibility and portability, but shared active-state files still need to stay small, bounded, and quickly closed or distilled.
+Use normal Git discipline: keep shared files small, isolate task-specific records,
+and resolve overlapping edits deliberately.
 
-Use these rules when multiple agents or contributors are working through git. Use `docs/maintainer/maintainer-commands.md` for command lookup; this page is only for concurrent-edit and merge-safety rules.
+## What works well
 
-## Collaboration Model
+- Checked-in AW files use ordinary branch, diff, review and merge behaviour.
+- Planning can keep separate records for separate work items instead of one giant
+  shared task file.
+- Useful long-term knowledge can live in Memory or project documentation rather
+  than in chat history.
+- Generated files can be recreated from their source when a merge damages them.
+- `agentic-workspace start` can report current restrictions or missing setup
+  information before an agent makes a dependent change.
 
-What is robust:
+## Where conflicts can still happen
 
-- Checked-in state uses normal branch, diff, review, and merge semantics.
-- Active work can be isolated in feature-scoped execplan files.
-- Durable repo knowledge can live in Memory notes or canonical docs instead of chat history.
-- Generated and managed surfaces should be repairable from canonical sources when the source authority is clear.
-- `agentic-workspace start`, `preflight`, `summary`, `report`, and `doctor` expose compact collaboration and recovery signals before broad file reads.
+- Two branches editing the same plan, Memory note or configuration file can
+  conflict like any other same-file edit.
+- Configuration and responsibility changes deserve careful review because they
+  can change how later agents work.
+- JSON and TOML are reviewable, but a manual merge can still produce invalid or
+  contradictory data.
 
-What is still fragile:
+AW is therefore **Git-friendly, not multi-writer safe**.
 
-- `.agentic-workspace/planning/state.toml` is a shared hot file because it selects live future work.
-- Two branches editing the same active execplan will conflict like any same-file collaboration.
-- Durable Memory notes can conflict when several branches update one broad note.
-- Config and ownership conflicts need human or strong-review judgement because they change policy.
-- JSON and TOML are reviewable, but manual merge resolution can still be awkward.
+## Reduce avoidable conflicts
 
-The practical rule is:
+- Keep task-specific Planning records separate.
+- Remove or archive completed task state when it no longer helps future work.
+- Prefer several focused Memory notes over one broad frequently edited note.
+- Edit project documentation directly when it is the real source of a rule.
+- Change generated files through their source and regenerate them.
+- Use AW's supported operations for package-managed records instead of hand-editing
+  files whose format or checks you would otherwise have to reconstruct.
+- Keep meaningful follow-up work in Planning, Memory, documentation or an issue
+  rather than only in chat.
 
-```text
-Agentic Workspace is git-native and collaboration-aware, not multi-writer safe.
-```
+## Resolve a merge involving AW files
 
-- Keep `.agentic-workspace/memory/repo/current/` out of ordinary active-state flow. Use it only for optional routing calibration or migration review; durable facts move into memory/docs and active state stays in planning/status.
-- Archive execplans aggressively once they stop affecting future execution.
-- Prefer feature-scoped execplan files over growing shared hot files.
-- Edit canonical docs directly; edit module-managed `.agentic-workspace/` planning or memory surfaces only through their owning package or managed source.
-- Do not edit generated routing docs under `tools/` by hand; update the manifest source and rerender.
-- Keep the package-managed memory install authoritative for monorepo operation, and keep planning state authoritative in `.agentic-workspace/planning/state.toml` through the planning package.
-- Let local pre-commit hooks handle formatting and lint, and let master-bound commits run tests in the hook as well; keep broader test execution in CI or explicit validation runs.
-- When pre-commit rewrites files, restage them and rerun the commit instead of fighting the formatter.
-- Record meaningful follow-up work in planning or memory instead of leaving it in chat-only residue.
+First identify what each file represents.
 
-## Merge Recovery
+- A project-owned instruction or configuration change is resolved like other
+  project policy: compare the intended rules and choose the correct final text.
+- A Planning or Memory record should preserve the useful information from both
+  branches without creating duplicate “current” answers.
+- A generated file should normally be regenerated from the resolved source rather
+  than merged by hand.
+- If AW reports that a package-managed file has been edited unexpectedly, follow
+  the recovery or refresh instruction it returns instead of overwriting it.
 
-When a merge touches Agentic Workspace surfaces:
+After resolving the source files, run the checks appropriate to the changed files
+and inspect the resulting diff.
 
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
+## Generated files
 
-## Generated Surface Repair
+Treat a generated file as a view of another source, not as a second handbook.
 
-Generated and derived surfaces are cheap to repair only when source authority is clear. Prefer this order:
+Prefer this order:
 
-- source schema, manifest, or package payload;
-- package command that renders the managed or generated surface;
-- generated output as inspection evidence only.
+1. resolve the source schema, manifest, template or package file;
+2. regenerate the derived file using the repository's existing command;
+3. review the generated diff.
 
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
+## Before finishing
 
-Do not turn generated surfaces into a second handbook during conflict resolution. Repair the source, rerender, then review the resulting diff.
+Look for shared files that have grown into conflict magnets. Split or remove them
+when a more focused record would make future collaboration cheaper.
 
-## Quick Boundary Checks
-
-- Active-now sequencing or next step: planning.
-- Durable invariant, rationale, or runbook: memory or canonical docs.
-- Shared module workflow support under `.agentic-workspace/`: package-managed surface.
-- Rendered `tools/` guidance: generated output, not source.
-
-## Hot-File Pressure
-
-Use compact diagnostics before closeout or push:
-
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
-
-These are pressure signals, not locks. They tell an agent or reviewer when ordinary git collaboration risk is high enough to review, split, close, archive, rerender, or route durable residue before continuing.
+These are ordinary Git maintenance decisions, not locks or special AW workflow
+stages.

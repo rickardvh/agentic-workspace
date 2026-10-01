@@ -41,9 +41,8 @@ def test_security_and_consumers_keep_their_schedule_and_permission_boundaries():
     assert "codeql-action/analyze@" in str(security)
     maintenance = workflow("maintenance.yml")
     assert maintenance["on"]["schedule"]
-    projection = [s for j in maintenance["jobs"].values() for s in j.get("steps", []) if "current_install.py" in s.get("run", "")]
-    assert len(projection) == 1 and "--observe" in projection[0]["run"]
-    assert "continue-on-error" not in projection[0]
+    assert "current-install-projection" not in maintenance["jobs"]
+    assert "current_install.py" not in str(maintenance)
 
 
 @pytest.mark.parametrize("status", ["success", "failure", "skipped", "cancelled"])

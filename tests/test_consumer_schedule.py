@@ -134,14 +134,14 @@ def test_hosted_scope_passes_only_with_all_deterministic_results(tmp_path):
     assert schedule.summary(plan(), paths)["status"] == "incomplete-or-failed"
 
 
-def test_release_observation_runs_in_separate_maintenance_verdict():
+def test_release_consumers_run_in_separate_maintenance_workflow():
     release = yaml.load((ROOT / ".github/workflows/release.yml").read_text(), Loader=yaml.BaseLoader)
     maintenance = yaml.load((ROOT / ".github/workflows/maintenance.yml").read_text(), Loader=yaml.BaseLoader)
     assert "public-consumers" not in release["jobs"]
-    assert "current-install-projection" not in release["jobs"]
+    assert "current-install-projection" not in maintenance["jobs"]
     assert maintenance["on"]["workflow_run"] == {"workflows": ["Release"], "types": ["completed"]}
     assert "github.event.workflow_run.conclusion == 'success'" in maintenance["jobs"]["freeze"]["if"]
-    assert "current_install.py" in str(maintenance["jobs"]["current-install-projection"])
+    assert "current_install.py" not in str(maintenance)
 
 
 def test_cancel_cleanup_targets_only_exact_owned_resource(tmp_path, monkeypatch):

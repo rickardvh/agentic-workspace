@@ -1,57 +1,50 @@
-# Module Interaction Contract
+# How AW components work together
 
-This page records the compact interaction contract for first-party modules under
-the root `agentic-workspace` CLI. It is a boundary note, not a second module
-manual. For module responsibilities, use [Modules](package/modules.md).
+This page summarises how the built-in components divide responsibility. It is not
+a second module manual. For module-specific behaviour, see [Modules](package/modules.md).
 
-## Core Rule
+## Keep one clear home for each kind of information
 
-One concern has one primary owner:
-
-| Concern | Primary owner | May reference | Must not become |
+| Concern | Where it belongs | It may refer to | It should not become |
 | --- | --- | --- | --- |
-| Active execution state | Planning | Memory, Verification, repo docs | durable knowledge base or backlog mirror |
-| Durable repo knowledge | Memory | Planning state and repo docs as routing context | active task tracker or execution log |
-| Verification protocols and bounded evidence | Verification | Planning refs, Memory lessons, Assurance requirements | CI runner, claim authority, or universal testing policy |
-| Shared lifecycle and routing | Workspace root | selected module reports and manifests | hidden module policy owner |
-| Generated references and adapters | Source contracts and generated outputs | module manifests and operation contracts | hand-edited source of truth |
+| Unfinished task state | Planning | Memory, Verification, project docs | a long-term knowledge base or backlog copy |
+| Useful long-term repository knowledge | Memory | Planning and project docs | an active task tracker or execution log |
+| Checking procedures and saved evidence | Verification | Planning, Memory and assurance requirements | a CI runner or a source of completion decisions |
+| Shared setup and routing | AW core | reports and manifests from the relevant components | hidden module-specific policy |
+| Generated references and adapters | Their source contracts and generators | module manifests and operation definitions | another hand-edited source of truth |
 
-## Operating Model
+## Ordinary interaction
 
-1. Workspace routes the agent to compact context and the selected modules.
-2. Planning says what work is active and what continuation or closeout requires.
-3. Memory says what durable knowledge is expensive to rediscover.
-4. Verification says what evidence protocols, proof routes, bundles, or gaps are
-   relevant.
-5. The agent owns semantic judgement and completion claims using those facts.
+1. AW gives the agent the project context relevant to the task.
+2. Planning says what unfinished work exists and what remains to be done.
+3. Memory provides useful lessons that would otherwise be expensive to rediscover.
+4. Verification provides relevant checking procedures, saved results and known gaps.
+5. The agent judges how to do the work and what conclusions the available evidence supports.
 
-Module interaction should reduce rereads and duplicated authority. If the same
-guidance appears in multiple modules, tighten ownership instead of relying on
-contributors to guess which copy is current.
+If the same rule or explanation appears in several places, fix the duplication
+instead of expecting readers to guess which copy is current.
 
-## Residue Routing
+## Where to put information after a task
 
-After work finishes, route leftover detail by owner:
+When work finishes:
 
-- active continuation or unfinished parent intent: Planning;
-- durable anti-rediscovery lesson: Memory;
-- reusable evidence protocol, bounded evidence, or known gap: Verification;
-- stable human-facing guidance or policy: docs or contracts;
-- one-off task narration already recoverable from code, tests, or PR history:
-  drop it.
+- unfinished work or the next step belongs in Planning;
+- a reusable lesson belongs in Memory;
+- a reusable checking procedure or known evidence gap belongs in Verification;
+- stable human-facing guidance belongs in project documentation or configuration;
+- narration already obvious from code, tests or pull-request history can be dropped.
 
-Writing nothing is valid when no durable residue exists. Broadly preserving
-chat, plan prose, or raw logs is not proof of diligence.
+Writing nothing is valid when there is nothing worth keeping.
 
-## Source Precedence
+## Which source to trust
 
-Prefer the narrowest current owner:
+Prefer the most specific current source for the fact you need:
 
-1. module-managed active state and manifests for module-specific facts;
-2. repo-owned docs or Memory for durable knowledge;
-3. Verification records for evidence protocol and gap facts;
-4. generated references only as derived contract projections;
-5. dated reviews and archives only as historical evidence.
+1. the component that maintains the current task or evidence record;
+2. project documentation or saved Memory for long-term project knowledge;
+3. Verification for checking procedures and evidence gaps;
+4. generated references only as views of the files that define them;
+5. dated reviews and archives only for historical context.
 
-Historical archives are not current policy unless a current owner links to them
-for that purpose.
+Historical records do not become current project rules unless a current document
+explicitly relies on them.

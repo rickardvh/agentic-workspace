@@ -35,10 +35,10 @@ For a caller that has already synchronised dependencies, use the corresponding
 available `*-nosync` target rather than repeating setup. Test execution is serial
 by default; parallel execution needs a deliberate local capacity choice.
 
-The Git hook runs its own bounded formatting/lint/type checks. Passing it does not
-replace focused proof for the changed behaviour. Hosted **Merge sufficiency** and
-explicit exhaustive admission are separate evidence levels; see the testing
-strategy for their current scope.
+The Git hook runs a limited set of formatting, lint and type checks. Passing it
+does not replace focused testing for the changed behaviour. Hosted **Merge
+sufficiency** and any deliberately broader checks are separate; see the testing
+strategy for when they are warranted.
 
 ## Refresh generated material
 
@@ -48,12 +48,12 @@ Read a generated file's source notice before choosing a command.
 | --- | --- |
 | `make render-schema-reference` | Regenerate schema and contract reference pages. |
 | `make schema-reference-docs` | Check the generated reference pages against their sources. |
-| `make render-agent-docs` | Regenerate the maintained agent-routing projections. |
+| `make render-agent-docs` | Regenerate the maintained agent-routing files. |
 | `make maintainer-surfaces` | Check the relevant maintained source/payload/routing surfaces. |
 
-These commands maintain source-derived output; they do not adopt another
-repository or authorise edits to retained owner state. Package-specific refresh
-and release artefact checks belong to the [source/payload boundary](source-payload-operational-install.md)
+These commands maintain files generated from source. They do not set up another
+repository or grant permission to edit saved AW component records. Package-specific refresh
+and release artefact checks belong to the [source/package maintenance guide](source-payload-operational-install.md)
 and [native distribution reference](native-release-topology.md).
 
 ## Specialised maintenance

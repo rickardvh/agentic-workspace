@@ -1,18 +1,18 @@
 # Author a repository skill
 
-Use a skill for a reusable method. Start with a short Markdown entry; add optional
-branch delivery only when it saves reading. Skills do not grant permission,
-admit proof or replace required review. Binding rules belong in
+Use a skill for a reusable method. Start with a short `SKILL.md`; add optional
+branching or helper scripts only when they reduce repeated work.
+
+A skill teaches procedure. It does not grant write permission, prove that a check
+passed, or replace required review. Binding repository rules belong in
 [scoped instructions](scoped-instructions.md).
 
-When authoring agent-facing text in this repository, apply the canonical
-[agent-facing writing guide](../../.agentic-workspace/instructions/agent-facing-style.md).
-It is delivered for the usual skill and instruction paths; use the same source
-for prose embedded elsewhere. Check that the reader can identify the situation,
-inspect the relevant signal, take the action and recognise when it is done.
-The guide supplies writing principles; exact metadata remains in the specification.
+Follow the
+[agent-facing writing guide](../../.agentic-workspace/instructions/agent-facing-style.md):
+a fresh reader should know when the method applies, what to inspect, what to do
+and when to stop.
 
-## Write and try the method
+## Start with a plain skill
 
 Create `tools/skills/change-note/SKILL.md`:
 
@@ -22,102 +22,79 @@ name: change-note
 description: Draft a change note from an observed patch; never publish it.
 ---
 
-Compare the patch with its accepted intent. Describe observable changes to
-public results, inputs or errors. For an internal refactor, explain the evidence
-that public behaviour is preserved. Ask for missing evidence. Return a draft;
-do not publish or modify repository state.
+Compare the patch with the accepted intent. Describe observable changes to public
+results, inputs or errors. For an internal refactor, explain the evidence that
+public behaviour is preserved. Ask for missing evidence. Return a draft; do not
+publish or modify repository state.
 ```
 
-Ask your agent to read that file and draft a note for a real patch. A known file
-needs no registry, route, helper or module. Inspect the draft against the patch;
-a skilful-sounding answer is not evidence that the method was followed.
+Ask an agent to read that file and use it on a real patch. A known skill file
+needs no extra registry or helper merely to be useful.
 
-Keep repository bundles separate from package-managed
-`.agentic-workspace/skills/`. For host discovery, use that host's supported skill
-exposure; a directory alone does not activate a skill. Keep `name` aligned with
-the directory and describe when the method applies. Bundle-relative links can
-reach references and scripts. The [skill specification](../reference/skill-spec.md)
-owns exact metadata. A host may load the entire entry, so keep large alternatives
-out of it.
+Keep repository-owned skills separate from package-managed
+`.agentic-workspace/skills/`. Do not edit installed package skills in place.
 
-## Add branch delivery only when useful
+The [skill specification](../reference/skill-spec.md) defines exact metadata.
+Keep `name` aligned with the directory and make the description clear enough for
+a host or agent to decide when the skill is relevant.
 
-For a method with substantial alternatives:
+## Add branches only when the method is genuinely branch-heavy
 
-1. Put its question in a linked `procedure.md`, with one `agentic-procedure` fence.
-   Write natural-language criteria and name each branch's resource.
-2. Keep question/context/branch paths relative to and confined inside the bundle.
-   Do not use absolute paths, `..` or executable expressions.
-3. Add the skill's path, semantic route and procedure resource to the repository
-   registry. Remove the row when removing the bundle.
-4. Ask the agent to select that route, inspect the question, answer from current
-   evidence and request only the selected resource. The same Markdown must work
-   when read directly.
+When a method has substantial alternatives, put the question in a linked
+`procedure.md` and keep branch resources inside the skill directory.
 
-The complete [change-note fixture](../../tests/fixtures/change-note/SKILL.md)
-demonstrates visible/internal branches without a second tutorial to maintain.
-The [semantic route reference](../reference/semantic-task-routes.md) and
-[source decision contract](../../src/core/contracts/source_decision_contract.json)
-own exact selection/answer fields, limits and currentness. Use returned identities
-instead of reconstructing them from an example. Unknown evidence means an unknown
-answer, not a default branch. Lost or stale answers require fresh selection or
-judgement; a current hash is not semantic truth.
+Use the existing procedure/registry format rather than inventing executable
+conditions. The
+[semantic task-route reference](../reference/semantic-task-routes.md) defines the
+exact stored fields.
 
-## Keep effects with their owners
+If evidence is insufficient to choose a branch, return an unknown/needs-input
+result rather than selecting a convenient default.
 
-An optional helper may calculate facts, but it runs with ordinary host permissions
-and cannot decide acceptance or manufacture owner actions. Its declared entrypoint
-and dependencies are repository-relative, unlike branch links. Verify runtime
-availability before execution; discovery neither executes nor sandboxes it.
+## Helpers compute facts; they do not make policy decisions
 
-For effects, use the current domain owner's exact supported request/action. See
-the installed [Assignment method](../../.agentic-workspace/planning/skills/planning-assignment/SKILL.md)
-and [review method](../../tools/skills/pr-review-recheck/SKILL.md) for bounded
-compositions. Their policy, independence and proof requirements survive skill
-replacement or removal. A method's answer cannot approve its own implementation.
+A skill may include a deterministic helper script. The host still executes it
+with ordinary host permissions.
 
-The installed Assignment method includes the generic pre-binding local/delegate/
-unknown choice. A repository may replace or supplement its criteria with a
-distinct repo-owned skill and source-owned preference; package refresh/removal
-does not own that repository procedure. Repository-specific delegation policy
-stays with its instruction/configuration owner, not the generic installed method.
+Check that the required runtime is available before execution. Discovering a
+helper does not execute it, sandbox it or grant permission to change the
+repository.
 
-## Repair the source and retry
+If the skill needs Planning, Memory, Verification or another AW component to make
+a change, use that component's exact returned operation. The skill should not
+manufacture another component's write request or approval.
 
-Correct malformed declarations, missing files or unsafe paths in the named bundle,
-then repeat the selected read. If route names collide, choose the returned
-qualified source or clarify the intended meaning; registry order is not authority.
-When evidence changes, reconsider the dependent answer. When the runtime is
-unavailable, read the same Markdown and leave owner effects or proof unresolved.
+## Repair the skill at its source
 
-Replace a package method with a distinct repository-owned skill and deliberately
-update the preference through its source owner. Do not edit installed package
-bodies or treat local exposure as an override of shared policy. Durable unfinished
-work stays with its existing continuation owner, not a new state file in the skill.
+Fix malformed metadata, missing resources or unsafe paths in the repository-owned
+skill itself, then try it again.
 
-## Publish situation-driven activation
+If names collide, use the source-qualified skill returned by the host/AW rather
+than relying on registry order.
 
-Keep optional activation declarations in the existing `agentic-procedure` source.
-After adding, removing or changing a declaration, derive the registry projection
-with the installed executable (no source checkout or maintainer Python required):
+When evidence changes, reconsider any branch choice that depended on it.
+
+## Regenerate the activation index when using optional activation rules
+
+If the skill uses the existing `agentic-procedure` activation declarations,
+regenerate the repository registry after changing them:
 
 ```sh
 agentic-workspace activation-index --target . --input index-request.json
 ```
 
-Use this JSON input, changing the repository-relative registry path as needed:
+Example input:
 
 ```json
 {"registry":"tools/skills/REGISTRY.json","mode":"write"}
 ```
 
-Commit the generated registry with the procedure source. In authoring checks, use
-`"mode":"check"`; stale membership or declarations exit nonzero without mutation.
-`"mode":"render"` returns the proposed registry as `projection`, plus `drift`,
-without mutation; source-maintenance tools use this same native derivation.
-This explicit pass inspects every declared procedure, including those absent from
-the previous index. Run it before exercising or publishing edited skills. Ordinary
-operating lookup remains lazy and cannot detect newly relevant unindexed sources;
-it validates only entries selected by the compact index. Never duplicate activation
-metadata by hand. The command changes only the named registry's derived index,
-retaining its other fields; it grants no procedure, policy or outcome authority.
+Use `"mode":"check"` in validation and `"mode":"render"` to inspect the proposed
+generated registry without writing it. The returned JSON field named
+`projection` is an exact API identifier for that generated result.
+
+Commit the generated registry with the procedure source. Do not duplicate the
+activation metadata by hand.
+
+The activation index only helps discovery. It does not grant permission, prove
+the skill was followed or decide that the user's task is complete.

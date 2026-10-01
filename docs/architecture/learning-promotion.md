@@ -1,27 +1,30 @@
-# Learning promotion and subtraction
+# Turn useful lessons into lasting improvements
 
-Use this reference when a retained lesson could be enforced more reliably by a
-test, tool, contract or other canonical source. Promotion moves that lesson to
-the responsible component and removes advice that the new source makes redundant.
+Use this reference when a saved lesson could be handled more reliably by a test,
+tool, configuration rule or project document.
 
-Promotion uses existing owner operations. Its inputs are the provisional owner identity, later effectiveness,
-source authority, current repository state, configured improvement latitude,
-expected future cost, and the target owner's revision-bound operation.
+The goal is not to create another layer. Move the lesson to the place that can
+apply it more reliably, verify the change there, then remove advice that has become
+redundant.
 
-| Provisional owner | Preferred stronger owner | Required authority and proof |
+| Saved lesson | Better long-term home | What must be true first |
 | --- | --- | --- |
-| Memory or correction guidance for a mechanical mistake | test/check, scaffold/generator, command/typed operation, config/contract, or code boundary | repeated authoritative outcome, current typed owner operation, resulting-revision proof |
-| Successful aid/shortcut candidate | command, skill, runbook, or helper | multiple independently evidenced comparable uses plus owner proof |
-| Human/domain semantic lesson | canonical docs, config, contract, architecture, policy | explicit current human/domain admission before the existing owner operation |
-| Target-specific correction | target guidance or suitability | target-owned evidence; never widened into shared doctrine by recurrence alone |
-| Broader unsafe or unready opportunity | repo-improvement pressure | awareness retained under configured latitude; no premature mutation |
-| Irreducible advisory rationale | Memory or current advisory owner | retain only while anti-rediscovery value survives stronger-owner review |
+| Repeated mechanical mistake | Test, check, generator, command, configuration rule or code guard | The failure is understood and the new mechanism can prevent it |
+| Useful repeated shortcut | Command, skill, runbook or helper | Several comparable uses show that the shortcut really helps |
+| Human or domain rule | Project documentation, configuration, contract or architecture document | A current human/domain decision supports the rule |
+| Repository-specific correction | Repository guidance or configuration | Evidence shows the rule belongs only to that repository |
+| Interesting but unready improvement | GitHub issue or other improvement queue | More work is needed before changing product behaviour |
+| Rationale that still prevents rediscovery | Memory | No stronger project mechanism replaces it yet |
 
-A completed promotion requires the selected operation's expected input revision,
-the matching successful operation result, and proof bound to the resulting owner
-revision. Naming a target is not promotion. After proof, the provisional owner
-is re-evaluated as retain, shrink, stub, or delete. Full duplicate copies are
-removed; a discovery stub remains only when it lowers future lookup cost.
+A change is complete only when the target mechanism has actually been updated and
+checked. Merely naming a better home for the lesson is not enough.
 
-Promoted, absorbed, dismissed, retired, and superseded pressure is quiet.
-No-signal work performs no analysis and emits no promotion projection.
+After the stronger mechanism works, reconsider the older saved lesson:
+
+- **keep** it when it still adds information;
+- **shorten** it when only some context remains useful;
+- **replace it with a short pointer** when that genuinely saves lookup time;
+- **delete it** when the new mechanism fully replaces it.
+
+Do not keep duplicate instructions “just in case”. When there is no useful lesson
+to apply, create no recommendation or extra record.

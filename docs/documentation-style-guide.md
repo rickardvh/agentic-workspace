@@ -42,24 +42,30 @@ changes the reader's present action. Navigation should lead to guides first, the
 specialist reference and evidence. Judge sufficiency by the reader's job, not a
 word quota. Preserve safety and compatibility details at the affected step.
 
-## Introduce context before details
+## Use ordinary language before implementation vocabulary
 
-Open with the reader's task and the result the page helps them obtain. Define the
-subject before using its specialised vocabulary. Apply the sequential-information
-(Bayesian) writing rule: each sentence and paragraph should make the subject and
-its relevance clearer using information already established. A reader should not
-have to retain an unexplained fact while waiting for later prose to reveal why it
-matters.
+Open with the reader's task and the result the page helps them obtain. Explain the
+concrete file, command, setting, action or consequence before introducing a
+specialised term. Each paragraph should make the subject clearer using information
+the reader already has; do not make readers hold an unexplained internal term until
+later prose reveals what it means.
+
+Do not require readers to learn repository-internal vocabulary merely to follow a
+guide. Words such as “owner”, “admission”, “projection”, “custody”, “currentness”,
+“surface”, “claim boundary” or “support-bearing” are not documentation shortcuts.
+Replace them with the actual meaning when ordinary language is sufficient. When an
+exact public identifier or genuinely necessary technical term must remain, keep it
+exact and explain it locally at first use.
 
 Explain general behaviour before an example, and label the example's assumptions
-so readers can distinguish examples from general claims.
-Show the action, expected result and meaningful failure case together. Put safety
-warnings before the affected operation. Keep unrelated internals and historical
-justification out of the sequence.
+so readers can distinguish examples from general claims. Show the action, expected
+result and meaningful failure case together. Put safety warnings before the
+affected operation. Keep unrelated internals and historical justification out of
+the sequence.
 
-Avoid making readers translate implementation terms into practical consequences.
-“Your saved instruction applies only to this checkout” is useful to a user;
-its underlying admission mechanics belong in an integration reference.
+Prefer “Your saved instruction applies only to this checkout” over an explanation
+of the internal checks that make that true. Put those implementation details in a
+specialist reference only when that reader actually needs them.
 
 ## Keep examples usable and claims accurate
 
@@ -89,17 +95,17 @@ specific consumers. Specialist, generated and reference documentation should use
 the structure and precision its actual reader needs, rather than imitate user-guide
 prose. Git and dated evidence can preserve reconstruction history; current API introductions should not replay it.
 
-A changed declaration of system intent still requires its existing source
-reconciliation. A documentation rewrite does not itself establish new runtime
+A changed declaration of system intent still requires the existing checks that
+keep its generated and copied sources in sync. A documentation rewrite does not itself establish new runtime
 capability, supported platforms, independent review or release publication.
 
 ## Apply the guide and judge the result
 
 The repository's [documentation instruction](../.agentic-workspace/instructions/documentation.md)
 uses `governed_by` to supply this guide for its declared documentation scope.
-Changes to the guide expose that scope for bounded reassessment through
-Verification. Continue the returned groups until every current consumer is
-covered; unchanged and still-conforming documents need no artificial edits.
+Changes to the guide require a focused Verification review of the documentation
+scope. Review the affected groups until every current document is covered;
+unchanged documents that already follow the guide need no artificial edits.
 
 Loading the guide supplies context; it does not prove understanding or compliance.
 Writers and independent reviewers judge prose quality against the reader's task.

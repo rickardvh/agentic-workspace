@@ -1,153 +1,67 @@
 # Scoped repository instructions
 
-Use an instruction for a repository rule, context requirement, evidence obligation
-or write protection. Use a skill for a reusable method. A short rule needs no
-skill, and an ordinary skill needs no instruction. Optional branch judgements never
-change repository policy or satisfy required proof.
+Use an instruction for a repository rule. Use a skill for a reusable method.
 
-This page describes the current native source contract. Check the selected
-[release and installation evidence](../agentic-workspace-install.md) before
-assuming an older installed artefact supports it. Use your configured AW invocation
-in place of `agentic-workspace` below; no historical instruction CLI is required.
+Shared instructions live under `.agentic-workspace/instructions/`. Machine-local
+instructions live under `.agentic-workspace/local/instructions/` and should stay
+out of version control.
 
-For reusable methods, see [skill authoring](skill-authoring.md). Follow the
-[customisation walkthrough](../customization.md) to combine them in one task.
+## Choose where the rule applies
 
-## Choose scope and lifetime
+A plain Markdown file applies repository-wide. Front matter can limit it to
+matching repository-relative paths:
 
-Checked-in shared sources live under `.agentic-workspace/instructions/`.
-Machine-local sources live under `.agentic-workspace/local/instructions/` and stay
-out of version control. Local means local lifetime, not higher authority: it cannot
-waive shared protection or substitute for a current shared source admission.
+```markdown
+---
+paths: [src/api/**]
+read: [docs/api-contract.md]
+---
 
-A plain Markdown file has global applicability. A front matter block with `paths`
-limits it to matching repository-relative paths. Entries within the list are
-alternatives; use forward slashes, without absolute paths or `..`. References are
-relative to the repository root, not the instruction directory. The supported
-small metadata vocabulary is:
+Preserve existing public response fields unless the accepted API change says
+otherwise.
+```
 
-| Field | Observable consequence |
+The common fields are:
+
+| Field | Meaning |
 | --- | --- |
-| `paths` | Limit applicability by repository-relative glob; omit for global scope. |
-| `read` | Supply named context for reasoning; availability does not prove it correct. |
-| `governed_by` | Supply exact governing sources and require consistency of the declared consumer scope when either side changes. |
-| `reconcile` | Require current consistency judgement for exact canonical files, without compulsory editing. |
-| `use` | Prefer an existing replaceable procedure; no guaranteed host activation, effect permission or proof. |
-| `checks` | Require current evidence through Verification; `- run: ...` declares a concrete command. |
-| `protect` | Restrict writes to matching paths; cannot grant permission elsewhere. |
+| `paths` | Apply the instruction only to matching repository paths |
+| `read` | Supply named files as context |
+| `governed_by` | Say that another source defines the rule this instruction implements |
+| `reconcile` | Require the named files to be checked for consistency |
+| `use` | Prefer an existing skill when the task matches |
+| `checks` | Require evidence through Verification; `- run: ...` names a command |
+| `protect` | Restrict writes to matching paths |
 
-Use simple inline lists or indented list entries, not general YAML expressions,
-nested conditions or powerskill predicates. Unknown keys, malformed lists,
-unterminated front matter and unsafe paths remain explicit source problems.
-The reader still recognises historical `routes` metadata for compatibility; it
-is not an additional preferred public authoring field. Meaning-based skill
-selection belongs to procedure, separately from instruction policy.
+The [generated instruction reference](../reference/instruction-clause-program.md)
+defines exact field formats and limits.
 
-## Write and inspect a small rule
+A local instruction has local lifetime only. It does not override a shared rule or
+grant extra permission.
 
-For a receipt-formatting repository, first create the ordinary context file
-`docs/receipt-format.md` with its current public format, for example:
+## Create or change an instruction
 
-```markdown
-# Receipt format
+Ask the agent for the rule you want and the scope where it should apply. The agent
+should show the proposed Markdown before writing it.
 
-A total is a decimal amount without a currency symbol. Preserve the existing
-public representation unless the accepted change explicitly alters it.
-```
+When driving the native API directly:
 
-Then ask the agent:
+1. call `start` for the real repository, task and changed paths;
+2. use the exact returned `instructions/edit-source/v1` request;
+3. set only the source path and complete Markdown content the request asks for;
+4. submit the returned request through `start`;
+5. if AW returns an allowed action, pass that exact action to `invoke`;
+6. call `start` again if the next step depends on the changed instruction.
 
-> Add a shared instruction at `.agentic-workspace/instructions/receipts.md`
-> applying to `src/receipt.py`. Read `docs/receipt-format.md` before changing
-> public formatting. Prefer the installed `workspace-proof-selection` method
-> when choosing evidence. Preserve the accepted formatting intent.
+Do not invent write-capable request fields from examples. A returned request or
+successful read does not itself permit a write.
 
-The complete proposed source is:
+If an interrupted write may already have happened, use AW's returned recovery
+information before trying it again.
 
-```markdown
----
-paths: [src/receipt.py]
-read: [docs/receipt-format.md]
-use: [workspace-proof-selection]
----
+## Require a check only when the repository really uses it
 
-Preserve the accepted public receipt format. Explain any intended change to it.
-```
-
-`workspace-proof-selection` is an existing Workspace bundle after adoption. If it
-is absent, report that method gap; the instruction does not manufacture it or
-waive any independent obligation. The context file above exists in this setup.
-
-Inspect with the same task and actual changed path:
-
-```sh
-agentic-workspace start --target . --task "Change receipt formatting" --changed src/receipt.py --projection full --format json
-```
-
-Under `instructions.sources`, the row names its source, `applicable`, guidance,
-context and `preferred_procedures` / `procedure_resolution`. Expect this source to
-apply and the named procedure to resolve when installed. A context-only source
-has `binding_admission.status: not-required`; that does not mean it grants effects.
-With `--changed docs/unrelated.md` instead, expect this source's `applicable` to be
-false. Do not invent a changed path to obtain a preferred policy result.
-
-For a global version omit `paths`; for a local version choose the local directory.
-These are deliberate scope/lifetime choices, not a priority mechanism.
-
-## Publish hard requirements through the owner
-
-Editing a source and admitting its hard consequences are separate. `governed_by`, `reconcile`,
-concrete `checks` and `protect` require current instruction admission. A changed
-or unadmitted source stays unresolved; copying a hash or advancing a trust revision
-by hand is not admission. A current protection is not permission to run a command.
-
-The native authoring path can create or replace one exact shared/local Markdown
-source. The agent inspects the entire proposed file and supplies the current bounded
-instruction-write authorisation decision. To drive it directly:
-
-1. Run the `start` command above. Copy its exact
-   `instructions.authoring.requests` entry for `instructions/edit-source/v1`.
-2. Set only `arguments.source` to the chosen instruction path and
-   `arguments.content` to the complete Markdown. Save that returned request as
-   `request.json`, then run the same `start` command with `--input request.json`.
-3. Inspect the source/postimage and pending `instruction-write-authorization`
-   decision. The acting agent supplies `authorize-write` or `defer` under current
-   task authority in its returned response request; return that request through
-   `start --input`. Preserve exact source protections and proposal binding.
-4. If authorised, invoke only the exact returned action with `invoke --target .`
-   and the same task/changed context plus `--input action.json`. Re-run `start`.
-   Expect a committed effect and current source admission, or retain the owner's
-   explicit failure/recovery state. A receipt is not task completion.
-
-No special request schema needs to be authored; preserve all owner-issued fields.
-For a crash, use the exact recovery action at the current frontier. Do not repeat
-a consumed authorisation, edit managed custody or overwrite a collision.
-
-## Add evidence or protection deliberately
-
-To require consistency with the context file, add
-`reconcile: [docs/receipt-format.md]`. A reviewed and still-correct file needs no
-edit; the following section explains admission of that judgement.
-
-A separate command example assumes Python is installed. Create `src/receipt.py`:
-
-```python
-def format_total(value):
-    return str(value)
-```
-
-Create `tests/test_receipt.py`:
-
-```python
-import unittest
-from src.receipt import format_total
-
-class ReceiptTest(unittest.TestCase):
-    def test_public_format(self):
-        self.assertEqual(format_total(12), "12")
-```
-
-For this fixture, the concrete evidence declaration is:
+Example:
 
 ```markdown
 ---
@@ -159,22 +73,33 @@ checks:
 Verify the public receipt format.
 ```
 
-Publish it through the same instruction owner, then inspect the current
-Verification request/action before running and admitting the result. A shell exit
-code alone is not admitted proof. Do not add this fixture check to a repository
-whose actual test command differs.
+Do not copy this command into a repository with a different test setup.
 
-A protection-only alternative can declare `protect: [generated/**]`. Do not infer
-that combining it with the shell check above is supported just because both parse:
-the native owner blocks shell proof when it cannot establish a bounded write scope
-preserving current protection. `-B`, an agent's read-only assertion or selecting a
-skill does not supply that proof. Keep the contradiction visible and use the
-responsible owner's supported evidence/authorization path; do not weaken policy
-merely to make the example run.
+A successful process exit is evidence only for the check that actually ran.
+Verification records whether that evidence satisfies the repository requirement.
 
-## Source reconciliation
+## Protect files deliberately
 
-To make a source govern consumers, name it once in `governed_by`:
+A rule such as:
+
+```markdown
+---
+protect: [generated/**]
+---
+
+Do not edit generated files directly.
+```
+
+restricts writes to those paths. It does not grant permission elsewhere.
+
+If a requested check cannot run without violating an active protection, keep the
+conflict visible and use the repository's supported check or update path. Do not
+weaken the rule merely to make an example pass.
+
+## Keep consumers consistent with a source document
+
+Use `governed_by` when a named document defines behaviour that other files must
+follow:
 
 ```markdown
 ---
@@ -185,74 +110,20 @@ governed_by: [spec/wire-format.md]
 Keep adapters consistent with the wire format.
 ```
 
-Publish this declaration through the instruction owner described above. Adapter
-work receives the specification as context; no duplicate `read` entry is needed.
-A change to `spec/wire-format.md` discovers the current adapter scope even though
-the specification is outside `paths`. Plain `read` never creates this reverse
-obligation. Existing `reconcile` continues to check named canonical files against
-resulting work.
+When the specification changes, Verification can identify the affected adapter
+group and ask for a judgement such as `updated` or `reviewed-current`.
 
-Inspect `verification.source_reconciliation`: `relation_id` identifies the
-declaration, `proposal.work_postimages` names the current group, and `coverage`
-shows what remains. Its `material_request` reads at most 16 exact references;
-select fewer if the existing byte budget is exceeded. Submit the issued judgement
-request after assessing the source and group, then publish with current authority.
-A justified no-impact assessment requires no consumer edits. For substantive
-impact, edit consumers through their normal owners and obtain a fresh request.
+A file that is still correct needs no artificial edit. If the specification
+really changes behaviour, update the affected consumers through their normal
+project workflow and then record the new result.
 
-Each declared relationship retains its own authority and coverage. Overlapping
-scopes and sources inside their own scope are direct relationships, not recursive
-expansion. Unrelated work does not acquire a corpus review. An unadmitted scope
-withdrawal remains unresolved until its instruction owner admits the change.
+Large consumer sets may be checked in groups. Completion requires every current
+consumer to be accounted for, not a sample.
 
-Verification returns an exact material request for applicable `reconcile` sources.
-Propose `updated` or `reviewed-current`, with a reason, for each named source:
+## Keep instructions simple
 
-- `updated`: the work invalidated the source and its normal owner changed it.
-- `reviewed-current`: the source was checked against the resulting work and needs
-  no change.
+Do not turn instruction front matter into a second programming language. Use only
+the supported fields, keep paths repository-relative, and prefer a short rule plus
+a link to the real source over copied policy.
 
-Material alone does not admit a judgement. Verification constructs the complete
-proposal and a bounded confirm/defer request in the decision packet's pending
-decisions. The acting agent supplies this domain judgement from the current
-sources and resulting work; it need not ask a human to approve its own assessment.
-The confirmed basis records the exact request, proposal and answer as a domain
-judgement, without claiming human authorisation or authenticated identity.
-Independent review retains its separate identity and separation-of-duty rules.
-
-Publication uses existing Verification proof/effect custody. Its receipt is
-evidence of the bounded answer, not deciding authority or a semantic truth oracle.
-It satisfies only the source-reconciliation obligation; other completion checks
-remain pending. No source body is copied into a documentation store.
-
-Currentness binds canonical sources, declared context dependencies, admitted instruction content,
-relevant work files, the matching decision delegation and producer semantics.
-Admission is checked afresh; changing its Git pointer to identical instruction
-content preserves accepted coverage. Unrelated configuration and other owners'
-capability changes also preserve coverage. Task and Planning identity remain
-invocation and claim context, outside the reusable source assessment.
-Fresh publication requests and actions
-still require their current capability envelope and exact authority. Every entry
-reobserves the declared file set, including additions made outside AW. An incomplete
-caller change list or a quiet event stream cannot prove freshness. Discovery is
-bounded; an unsafe or incompletely observed scope remains unresolved for completion.
-
-Large scopes are assessed in groups of at most 64 consumers. The proposal names
-the exact group; `coverage` reports total, accepted and pending consumers. Publish
-the group, then request the next one. A fresh process can recover accepted groups
-from Verification's current group references and their receipts without the
-original task or conversation. Superseded receipts remain historical evidence;
-ordinary discovery does not scan that history. Missing or damaged current
-evidence leaves coverage unresolved. New tasks
-still need their own current publication authority. Completion requires coverage
-of the entire current set, not a sample or the sum of overlapping groups.
-
-A consumer change invalidates its group; a canonical source or governing policy
-change invalidates dependent groups. New consumers require additional coverage.
-These observations mean reconsideration, not that every consumer needs editing.
-
-Unresolved obligations are reobserved on Planning-owned continuation. Direct work
-does not acquire Planning. Unrelated scoped work has no reconciliation obligation;
-`reviewed-current` causes no source edit. Legacy route metadata and maintainer
-instruction commands remain migration compatibility, not additional public v1
-authoring fields or a second executable authority.
+For reusable methods, see [Author a repository skill](skill-authoring.md).

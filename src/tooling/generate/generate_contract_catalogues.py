@@ -10,10 +10,8 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CLI_PATH = Path("src/core/contracts/source_decision_contract.json")
 SURFACES_PATH = Path("src/core/contracts/workspace_surfaces.json")
-SUPPORT_INSTALL_PATH = Path("src/tooling/contracts/support_bearing_install.json")
 CLI_OUTPUT = Path("docs/reference/cli-catalogue.md")
 SURFACES_OUTPUT = Path("docs/reference/installed-surface-catalogue.md")
-SUPPORT_INSTALL_OUTPUT = Path("docs/reference/support-bearing-install.md")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -151,42 +149,6 @@ def render_surface_catalogue() -> str:
 
 
 
-def render_support_install() -> str:
-    projection = _load(SUPPORT_INSTALL_PATH)
-    receipt = projection["receipt"]
-    artifact = projection["artifact"]
-    return "\n".join(
-        [
-            "<!-- GENERATED FILE: edit the source projection and rerun `make render-schema-reference`. -->",
-            "",
-            "# Current Support-Bearing Install",
-            "",
-            "Human-copyable projection of the latest stable release-owned installation receipt.",
-            "",
-            "This receipt describes only its named release. It does not install newer branch or admitted-but-unpublished behaviour; consult the [installation guide](../agentic-workspace-install.md) for the current implementation boundary.",
-            "",
-            f"- Release: [{projection['version']}]({projection['release_url']})",
-            f"- Published: `{projection['published_at']}`",
-            f"- Dereferenced source commit: `{projection['source_commit']}`",
-            f"- Receipt: [{receipt['kind']}]({receipt['url']})",
-            f"- Receipt digest: `sha256:{receipt['sha256']}`",
-            f"- Root artefact: [{artifact['name']}]({artifact['url']})",
-            f"- Artefact digest: `sha256:{artifact['sha256']}`",
-            "",
-            "```bash",
-            projection["install_command"],
-            "```",
-            "",
-            "The command above is for the root receipt's named platform, not a universal wheel. Choose your platform:",
-            "",
-            *[f"- `{row['target']}`: `{row['command']}`" for row in projection.get("platforms", [])],
-            "",
-            "The release receipt remains authority. This checked-in page is a parity-checked projection for discovery; mutable branch, registry, editable, source-checkout, and debug installs are not substituted for this identity.",
-            "",
-        ]
-    )
-
-
 def _write_or_check(path: Path, content: str, *, check: bool) -> bool:
     target = REPO_ROOT / path
     if check:
@@ -203,7 +165,6 @@ def main() -> int:
     outputs = {
         CLI_OUTPUT: render_cli_catalogue(),
         SURFACES_OUTPUT: render_surface_catalogue(),
-        SUPPORT_INSTALL_OUTPUT: render_support_install(),
     }
     stale = [path for path, content in outputs.items() if not _write_or_check(path, content, check=args.check)]
     if stale:

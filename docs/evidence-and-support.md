@@ -8,7 +8,7 @@ Use the documentation and packages for the same AW release. A newer source check
 
 ## Choose a release
 
-A **stable release** carries the project's supported compatibility and installation claims for its stated platforms. The [stable install reference](reference/support-bearing-install.md) identifies that release.
+A **stable release** carries the project's supported compatibility and installation claims for its stated platforms. Select the current stable version from [GitHub Releases](https://github.com/rickardvh/agentic-workspace/releases/latest) or the language package registry you use. The selected release's attached receipts and checksums describe its exact files and platform support.
 
 A **release candidate** or **preview** is available for testing, not stable support. Passing its tests does not turn it into a stable release. Use the selected release's platform declaration and receipts for its runtime requirements.
 
@@ -27,17 +27,17 @@ Rust, Python and TypeScript are ways to consume the same core, not three indepen
 | An observed agent run | That agent's behaviour under the recorded conditions | That all models follow guidance or work more cheaply |
 | Verification of your project | The claim covered by those checks and inputs | Completion of unrelated requirements or independent approval |
 
-A saved result remains evidence about its actual subject. Changed dependencies can make it unsuitable for a new claim.
+A saved result remains evidence about the exact code, inputs and environment it checked. Changed dependencies can make it unsuitable for a new conclusion.
 
 ## Verify a download or investigate support
 
 Published releases provide artefact checksums and installation evidence. `distribution-install-readiness.json` identifies platform-specific packages and commands. Registry publication evidence, when present, identifies the corresponding published versions and digests; a GitHub asset alone does not prove registry availability.
 
-These files are useful for auditing a release. You do not need to learn the publisher's admission procedure to use the package. Maintainers use [release and versioning](release-and-versioning.md) for that procedure.
+These files are useful for auditing a release. You do not need to learn the publisher's internal release checks to use the package. Maintainers use [release and versioning](release-and-versioning.md) for that procedure.
 
 <a id="current-support-boundary"></a>
 
-## Boundaries that remain
+## What AW does not provide
 
 AW does not sandbox your commands, store provider credentials for you, or guarantee model obedience. A repository-only reader can inspect saved context but cannot establish live machine state or fresh test results.
 

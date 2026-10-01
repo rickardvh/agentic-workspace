@@ -1,6 +1,6 @@
 # Configure your project
 
-Configure AW when you have a project rule, local preference or repeatable procedure worth preserving. You do not need to configure every capability before starting work. Repository adoption installs the integration; it does not choose your policy or populate optional task state.
+Configure AW when you have a project rule, local preference or repeatable procedure worth preserving. You do not need to configure every capability before starting work. Repository setup installs AW's integration files; it does not choose project policy or create optional task records.
 
 ## Choose the scope first
 
@@ -34,16 +34,17 @@ Preserve existing response fields unless the API owner approves a change.
 
 The path identifies when the instruction applies; `read` identifies a prerequisite source. The paragraph states the rule. Use paths and a document that actually exist in your project. The agent should publish the instruction through the supported instruction operation and verify the result.
 
-Then inspect both a matching and an unrelated task. The matching task should surface the rule; the unrelated task should not acquire an API requirement.
+Then inspect both a matching and an unrelated task. The matching task should receive the rule; the unrelated task should not acquire an API requirement.
 
 The [scoped-instruction reference](package/scoped-instructions.md) explains `paths`, `read`, `governed_by`, `reconcile`, `use`, `checks` and `protect`, including a worked inspection command. Add those fields only when their behaviour is needed.
 
 If the API contract governs the implementation, use `governed_by` in place of
-`read`. The contract then arrives as context for implementation work, and a
-contract-only change identifies the consumers needing reassessment. Follow the
-returned bounded groups until all current consumers are covered. A justified
-no-impact judgement needs no artificial edits. Publish the declaration through
-the instruction owner; ordinary background reading stays context-only.
+`read`. The contract is then supplied when implementation work needs it, and a change to
+the contract identifies the files or procedures that need another look. Review
+the returned groups until every affected current consumer is covered. If a group
+is genuinely unaffected, record that judgement without making artificial edits.
+Save the declaration through AW's supported instruction operation; ordinary
+background reading does not create a write.
 
 ## Change an existing setting
 
@@ -69,10 +70,10 @@ Planning helps with interrupted or delegated work. Memory helps retain expensive
 
 Ask the agent to enable the relevant capability and identify any configuration it still needs. Selecting Verification, for example, does not invent the project's test commands or prove the code correct. [Modules](package/modules.md) explains these choices.
 
-A new project rule or method usually needs no module. A separately reusable capability with its own facts or operations may justify one; that is the [module-authoring](module-capability-contract.md) path.
+A new project rule or method usually needs no module. A separately reusable capability with its own data or operations may justify one; that is the [module-authoring](module-capability-contract.md) path.
 
 ## Change or undo a customisation
 
 Ask the agent to locate the existing rule, setting or skill and change that source, rather than adding a competing copy. Inspect the diff and check the affected behaviour again. Remove obsolete advice when its assumptions no longer hold.
 
-If the native operation rejects a change, preserve the source and inspect the reported conflict. Do not bypass the rejection by editing managed state. See [Troubleshooting](troubleshooting.md).
+If AW rejects a change, preserve the existing files and inspect the reported conflict. Do not bypass the rejection by hand-editing package-managed state. See [Troubleshooting](troubleshooting.md).

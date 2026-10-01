@@ -1,63 +1,86 @@
 # Maturity model
 
-This page defines Agentic Workspace's public maturity vocabulary and promotion rule. It is not a manually maintained status dashboard.
+This page defines AW's public maturity labels. It is not a manually maintained
+status page.
 
-The exact maturity of a source revision or published distribution is owned by coordinated release metadata and the package/release artefacts for that subject. In source, `.github/release-ownership.json` names the coordinated `maturity_classifier`; package metadata must agree. For published bytes, use the selected immutable release and its receipts rather than inferring maturity from a newer source checkout.
+The maturity of a published package belongs to that exact release. A newer source
+checkout can contain additional fixes or evidence without changing an older
+release.
 
-## Labels
+## Alpha
 
-### Alpha
+The product or feature is real, tested and used on real work, but behaviour,
+names, schemas, compatibility rules or guidance may still change materially.
+Early adopters should expect change and pin versions when reproducibility matters.
 
-The product/capability is real, tested, and dogfooded, but ordinary behaviour, naming, schema shape, compatibility boundaries, or guidance may still change materially. Early adopters should expect change and rely on versioned release contracts rather than broad stability assumptions.
+## Beta
 
-### Beta
+The public interface is broadly usable for early adopters, supported platforms
+and compatibility expectations are clear, and expected changes are mostly
+additive or refining rather than architectural.
 
-The public contract is broadly usable for early adopters, the supported compatibility boundary is explicit, selective adoption works, and expected changes are mostly additive or refining rather than architectural. Moving to Beta requires package metadata, release checks, and representative behavioural evidence; documentation wording alone cannot promote it.
+Moving to Beta requires package metadata, release checks and representative use;
+changing documentation wording alone cannot change maturity.
 
-### Stable
+## Stable
 
-The support and compatibility contract is deliberate enough that incompatible change is exceptional and follows the project's declared versioning/deprecation policy. Stable maturity does not imply support for every operating system, runtime, provider, or host integration: those remain explicit release/support claims.
+Compatibility expectations are deliberate enough that incompatible changes are
+exceptional and follow the project's versioning and deprecation policy.
 
-## Current public status
+Stable does not mean “works everywhere”. Supported operating systems, runtimes,
+agent hosts and integrations remain explicit claims for each release.
 
-Do not copy a current maturity label into conceptual pages merely for convenience.
+## Find the status for the thing you are using
 
-For a source revision, read the coordinated release authority:
+For source code, inspect:
 
-- [`.github/release-ownership.json`](../.github/release-ownership.json) for the canonical maturity classifier and release model;
-- [`pyproject.toml`](../pyproject.toml) and coordinated package metadata for the distribution projection;
-- release checks/receipts for whether a proposed promotion is actually admitted.
+- [release ownership](../.github/release-ownership.json) for the package maturity
+  classifier and release model;
+- [package metadata](../pyproject.toml) for the distribution metadata;
+- release checks when assessing a proposed maturity change.
 
-For installed or published bytes, use the exact immutable release subject. A source checkout can contain newer evidence or a proposed promotion without changing an older published release's maturity.
+For installed or published packages, use the exact release you installed and its
+attached receipts. Do not infer an older package's maturity from a newer branch.
 
-Release class and product maturity are related but not interchangeable. A preview or release candidate is explicitly non-support-bearing even when it exercises near-final behaviour. A stable support-bearing release must satisfy the project's promotion and compatibility requirements for its exact subject; neither a branch name nor a green source checkout supplies that claim.
+A preview or release candidate is for testing and does not carry the stable
+release's compatibility promises. A stable release must pass the project's
+required release and compatibility checks.
 
-## Promotion rule
+## Changing maturity
 
-Promote a public surface only when all relevant owners agree:
+A public maturity change is justified only when all of the following agree:
 
-1. package/distribution metadata uses the promoted maturity;
-2. the public compatibility and support boundary is explicit;
-3. deterministic release/conformance evidence covers the promised contract;
-4. representative ordinary-agent evidence does not reveal a known architectural blocker to the claimed maturity;
-5. installation, security, removal, and failure behaviour are documented at the same support level;
-6. exact release identity and support evidence are immutable/source-bound rather than asserted only by prose;
-7. generated/reference surfaces that project maturity or release identity agree with their source owner.
+1. package metadata uses the new maturity;
+2. supported platforms and compatibility expectations are documented;
+3. deterministic release checks cover those promises;
+4. representative ordinary use has not exposed a known architectural blocker;
+5. installation, security, removal and failure behaviour are documented at the
+   same level;
+6. the release identity and supporting evidence are tied to the exact release
+   files and source commit;
+7. generated references agree with the source files that define them.
 
-Do not create a second informal maturity scale for individual capabilities merely because one subsystem has stronger evidence than another. Record stronger or weaker capability evidence in [Evidence and support](evidence-and-support.md) while keeping the public distribution's maturity owned by the coordinated release contract.
+Do not invent a second maturity scale for individual features. Record stronger or
+weaker evidence in [Compatibility and support](evidence-and-support.md) without
+changing the package's public maturity label.
 
-## Evidence boundary
+## What evidence means
 
-Maturity is a compatibility/support claim, not a feature-count score.
+Maturity is a compatibility and support claim, not a feature-count score.
 
-- Live-agent results are behavioural evidence, not deterministic compatibility proof.
-- Deterministic contracts/tests are not proof that real agents discover or use the product cheaply or correctly.
-- Exact artefact admission is not publication.
-- Publication of a prerelease is not stable support.
-- A stable release does not widen platform/provider support beyond its evidence.
+- An observed agent run shows what happened under those conditions; it does not
+  prove deterministic compatibility.
+- Automated contracts and tests do not prove that every agent will discover or
+  use the product correctly.
+- Passing release checks is not the same as publishing packages.
+- Publishing a prerelease does not make it stable.
+- A stable release does not support platforms or integrations beyond what its
+  release evidence covers.
 
-Public maturity decisions should consider both deterministic and representative behavioural evidence while keeping weak, unavailable, and negative evidence visible.
+Historical maturity decisions belong in review or release history, not in this
+current vocabulary page.
 
-Historical candidate dispositions and migration-era maturity decisions belong in maintainer/review evidence, not in this current vocabulary page.
-
-See [Evidence and support](evidence-and-support.md), [Installation and adoption](agentic-workspace-install.md), [Documentation style guide](documentation-style-guide.md), and the [Threat model](security/threat-model.md).
+See [Compatibility and support](evidence-and-support.md),
+[Installation and setup](agentic-workspace-install.md),
+[Documentation style guide](documentation-style-guide.md), and the
+[Threat model](security/threat-model.md).

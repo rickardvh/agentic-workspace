@@ -20,7 +20,7 @@ Before ending a session with unfinished work, ask:
 
 > Preserve the intended outcome, accepted progress, important decisions, unresolved questions and next step so another session can continue this task.
 
-Planning can keep that continuation with the repository. Check that it describes the remaining work, not just a history of completed actions. Commit shared records together with the work they describe; machine-local execution evidence is not automatically portable.
+Planning can keep the remaining work with the repository. Check that the saved task explains what is left to do, not just what already happened. Commit shared records together with the work they describe; machine-local test or execution details do not automatically transfer to another checkout.
 
 In the next session:
 
@@ -43,21 +43,21 @@ Make the lifetime of your correction explicit:
 
 The first request can remain task-local. The others belong in shared or local instructions/configuration. Ask where the correction was saved and inspect the resulting change. A promise in chat is not persistence. [Configure your project](customization.md) shows the supported destinations.
 
-## Delegate a bounded task
+## Delegate a clearly limited task
 
 Describe a result that can be checked independently:
 
 > Ask another agent to inspect the pagination patch for compatibility problems. Give it the API contract and patch, request findings with evidence, and do not let it modify the repository.
 
-Delegation depends on the available host and configured transport. A manual handoff is a valid alternative when automatic execution is unavailable. The receiving agent needs the scope, relevant sources and expected return, not necessarily the entire parent conversation.
+Delegation depends on the agent host and configured way of sending work. A manual handoff is a valid alternative when automatic execution is unavailable. The receiving agent needs the task limits, relevant sources and expected result, not necessarily the entire parent conversation.
 
 When it returns, the responsible agent still checks the result and integrates any changes. Receiving a patch or review-like report does not by itself establish independent approval.
 
 ## Check the result
 
-Ask what was checked, against which revision, and what remains unverified. Verification can retain reusable checking procedures and evidence; your repository must supply its actual proof requirements.
+Ask what was checked, against which revision, and what remains unverified. Verification can save reusable checking procedures and evidence; your repository must still define which checks are actually required.
 
-A previous passing result may be reusable when its relevant dependencies are unchanged. It is not fresh evidence for different code merely because it has the same test name. Human review and explicitly required checks cannot be replaced by a favourable summary.
+A previous passing result may be reusable when the code and other relevant inputs are unchanged. It does not prove different code merely because the test has the same name. Human review and explicitly required checks cannot be replaced by a favourable summary.
 
 <a id="preserve-a-useful-lesson-or-decision"></a>
 <a id="improve-a-method-within-current-authority"></a>
@@ -76,7 +76,7 @@ It is also reasonable to retain nothing: code, tests and the PR may already expl
 
 ## Work with a repository-only reviewer
 
-A reviewer without executable AW can read the same main skill and follow the relevant references in `.agentic-workspace/READING.json`. It can inspect recorded intent, progress and lessons. It cannot establish current machine state, available credentials or newly passing tests from those files.
+A reviewer without executable AW can read the same main skill and follow the relevant references in `.agentic-workspace/READING.json`. It can inspect recorded goals, progress and lessons. Those files cannot establish live machine state, available credentials or newly passing tests.
 
 For saved files, see [Your repository and data](package/installed-surfaces.md).
 For failures, see [Troubleshooting](troubleshooting.md). Direct CLI operation is

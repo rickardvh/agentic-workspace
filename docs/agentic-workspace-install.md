@@ -9,16 +9,19 @@ Pin AW per repository when repositories need independent versions; otherwise a
 shared installation is fine. Choose npm, Python/uv, Cargo or a standalone archive
 according to your tooling. Keep using that installation when running AW.
 
-Replace `<stable-version>` below with the exact version from the
-[current stable reference](reference/support-bearing-install.md). That reference
-also provides platform-specific assets, checksums and installation details.
+Package registries resolve the current stable release. A repository-local npm
+install can record the resolved version exactly; for other package managers, add
+an explicit version when your repository needs the same version on every machine.
+Standalone downloads are available from the
+[latest stable GitHub release](https://github.com/rickardvh/agentic-workspace/releases/latest),
+whose attached receipts and checksums describe the exact release files.
 
 | Distribution | Install |
 | --- | --- |
-| npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli@<stable-version>` in the repository; use `--global` instead of `--save-dev --save-exact` for a shared tool |
-| Python/uv | `uv pip install 'agentic-workspace==<stable-version>'` in your repository's virtual environment, or `uv tool install 'agentic-workspace==<stable-version>'` for a shared tool |
-| Cargo | `cargo install --locked agentic-workspace-core --version '=<stable-version>'`, then `cargo install --locked agentic-workspace-cli --version '=<stable-version>'`; use the same `--root` for both if choosing a repository-specific location |
-| Standalone | Extract the exact platform archive from the stable reference into your chosen location, keeping both executables together |
+| npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli` in the repository; use `--global` instead of `--save-dev --save-exact` for a shared tool |
+| Python/uv | `uv pip install agentic-workspace` in your repository's virtual environment, or `uv tool install agentic-workspace` for a shared tool; use `agentic-workspace==<version>` when pinning |
+| Cargo | `cargo install --locked agentic-workspace-core`, then `cargo install --locked agentic-workspace-cli`; when pinning, pass the same `--version` to both crates and use the same `--root` for a repository-specific location |
+| Standalone | Open the latest stable GitHub release, choose the archive for your platform and keep both executables together |
 
 Run `--help` using that installation: `npm exec --no -- agentic-workspace` for
 repository-local npm, `agentic-workspace` in the selected environment or on PATH,
@@ -40,9 +43,9 @@ npm exec --no -- agentic-workspace setup
 ```
 
 Review the proposal and authorise it. Installation alone does not change the
-repository. Setup adds the AW enclave under `.agentic-workspace/` and a small
-`AGENTS.md` pointer to its startup skill. Existing instructions outside that
-section and independently owned data remain preserved. A conflict stops setup.
+repository. Setup adds the `.agentic-workspace/` directory and a small `AGENTS.md` pointer
+to its startup skill. Existing instructions outside that section and unrelated
+project data remain preserved. A conflict stops setup.
 Review and commit the shared integration files; leave ignored local state alone.
 
 **AW is not a sandbox:** configured commands run with your access and credentials.
@@ -91,13 +94,13 @@ the host's plugin settings or remove it with
 `codex plugin remove agentic-workspace-entry@agentic-workspace`. For Claude Git
 updates, run `claude plugin marketplace update agentic-workspace`, then
 `claude plugin update agentic-workspace-entry@agentic-workspace --scope user`.
-The Git projection omits Claude's explicit version so its cache identity follows
-the source commit; release ZIPs use the coordinated explicit release version.
+The Git-distributed Claude manifest omits an explicit version so Claude can track
+the source commit; release ZIPs carry the release version.
 Claude Code also provides `plugin disable`, `plugin enable` and `plugin uninstall`
 with that selector and `--scope user`. Restart the host after lifecycle changes.
 For an extracted release, replace the marketplace directory with the chosen
-release before updating. These operations affect host storage, not repository
-integration or retained state. The generic repository pointer remains usable
+release before updating. These operations change the agent host's plugin storage, not the repository's AW
+files or saved project records. The generic repository pointer remains usable
 after removal.
 
 The npm package also ships `skills/agentic-workspace-entry/SKILL.md`. npm and pnpm
@@ -117,15 +120,13 @@ The installer requires Node 22.20 or later. Its default package source resolves
 the declaration from the consumer, including pnpm's layout; `--source
 node_modules` also discovers bundled skills directly. No AW install hook runs
 this step. Keep an integration-only consumer package under `.agentic-workspace/`
-if it is not already part of the repository's package setup. Installer-created
-host exposure is an explicit external boundary.
+if it is not already part of the repository's package setup. Files or links created by the installer belong to the agent host rather than to
+AW's repository integration.
 
-Update the dependency and rerun the installer. To remove this exposure, remove
-the dependency and declaration, run the package manager, then rerun skills-npm
-with cleanup enabled. Clearing the declaration alone can retain cached bundled
+Update the dependency and rerun the installer. To remove the installed skill, remove the dependency and declaration, run the
+package manager, then rerun skills-npm with cleanup enabled. Clearing the declaration alone can retain cached bundled
 skills while the package is installed. Cleanup preserves unrelated skills.
 
-See the [current local evidence and support boundary](maintainer/skill-entry-evidence.md)
-before advertising these optional paths as tested host entry. Plugin recognition
-and artifact correctness alone do not establish selected handoff or automatic
-activation.
+See the [current local evidence](maintainer/skill-entry-evidence.md) before
+advertising these optional paths as tested host entry. A host finding the plugin
+does not prove that it will select the skill automatically or follow it correctly.

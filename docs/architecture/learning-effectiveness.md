@@ -1,29 +1,36 @@
-# Learning effectiveness ownership
+# Check whether a saved lesson actually helped
 
-Use this reference when checking whether retained guidance helped later work.
-Each component that retains a lesson owns its identity and revision; later
-evidence must identify the exact lesson it evaluates.
+Use this reference when evaluating whether guidance saved by Memory, repository
+instructions or another AW feature improved later work.
 
-Attribution joins the destination owner's existing identity and revision to the
-canonical operating-decision identity and source-owned later outcome evidence.
-Only material later outcomes enter the composition. This uses the existing
-owners' records rather than creating a universal learning ledger.
+A later result must identify the exact saved lesson and revision it is evaluating.
+Do not create a universal “learning score” or another central history just to
+measure this.
 
-| Destination | Existing identity | Later evidence owner | Existing consequence destination |
+| Where the lesson was saved | Identity used for comparison | Useful later evidence | Where to act on the result |
 | --- | --- | --- | --- |
-| Shared Memory | `fact_id` + `fact_revision` | human, reviewer, proof/test, current repo authority | Memory lifecycle and stronger-owner review |
-| Target or agent guidance | `guidance_id` + `guidance_revision` | target outcome/evaluation/reviewer evidence | target guidance, suitability, and review |
-| Repo improvement | `candidate_id` + candidate/action revision | Evaluation plus admitted proof | repo-improvement effectiveness and source owner |
-| Agent aid or shortcut | `aid_id` + `aid_revision` | demonstrated comparable use/value | existing aid/adaptation promotion |
+| Shared Memory | `fact_id` + `fact_revision` | Human/reviewer judgement, tests or current repository evidence | Update or remove the Memory fact; move it into a stronger project mechanism when justified |
+| Target or agent guidance | `guidance_id` + `guidance_revision` | Later task result, evaluation or review | Update the guidance or its suitability rules |
+| Repository improvement candidate | `candidate_id` + candidate/action revision | Evaluation plus relevant checks | Update the improvement or the source responsible for it |
+| Agent aid or shortcut | `aid_id` + `aid_revision` | Comparable successful uses | Keep, revise or replace the aid |
 
-The owner identity is not replaced or normalised. The compiler derives only an
-ephemeral join key so that equivalent evidence deduplicates. A recurrence with
-no matching projected owner revision is a routing miss. Changed owner or repo
-authority makes the learning stale/superseded. Agent self-report alone stays
-inconclusive. Correct guidance with recurring deterministic cost routes toward
-the repo/product/interface owner; it does not merely make reminder prose louder.
+Keep each component's existing identifiers. AW only needs enough information to
+match later evidence to the exact lesson that was used.
 
-Successful use is also sparse: independent evidence must demonstrate actual
-use and material value in at least two comparable later cases. Seeing guidance,
-one success, or not observing a failure creates no persistent success record.
-Fixed, dismissed, promoted, resolved, retired, and superseded learning is quiet.
+A lesson should be reconsidered when:
+
+- its saved revision changed;
+- the repository rule or code it depended on changed;
+- the later task did not actually use it;
+- repeated cost shows that the underlying tool or project rule should be fixed
+  instead of repeating advice.
+
+An agent saying “this helped” is not enough on its own.
+
+Treat success conservatively too. Seeing guidance once or observing one successful
+task does not justify a permanent success record. Prefer independent evidence from
+at least two comparable later uses before treating an aid or shortcut as reliably
+useful.
+
+Once the underlying problem is fixed, the lesson is replaced, or the advice no
+longer saves meaningful rediscovery, stop surfacing it.

@@ -142,7 +142,6 @@ def _copy_source_fixture(target_root: Path) -> None:
         "LICENSE",
         "README.md",
         "docs/agentic-workspace-install.md",
-        "docs/reference/support-bearing-install.md",
         "pyproject.toml",
     ):
         target = target_root / relative
@@ -160,13 +159,13 @@ def test_source_package_identity_is_coordinated() -> None:
     assert CHECKER.source_identity_errors(ROOT) == []
 
 
-@pytest.mark.parametrize("relative", ["README.md", "docs/agentic-workspace-install.md", "docs/reference/support-bearing-install.md"])
+@pytest.mark.parametrize("relative", ["README.md", "docs/agentic-workspace-install.md"])
 def test_source_package_identity_requires_complete_install_route(tmp_path: Path, relative: str) -> None:
     _copy_source_fixture(tmp_path)
     assert CHECKER.source_identity_errors(tmp_path) == []
-    # A receipt filename in prose cannot replace a traversable documentation link.
+    # Plain prose cannot replace the required traversable documentation link.
     (tmp_path / relative).write_text("distribution-install-readiness.json\n", encoding="utf-8")
-    assert any(relative in error and "canonical receipt" in error for error in CHECKER.source_identity_errors(tmp_path))
+    assert any(relative in error and "durable release path" in error for error in CHECKER.source_identity_errors(tmp_path))
     (tmp_path / relative).unlink()
     assert any(relative in error and "missing" in error for error in CHECKER.source_identity_errors(tmp_path))
 

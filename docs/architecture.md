@@ -4,97 +4,95 @@ This page is for contributors deciding where a change belongs. To use AW in a
 project, start with the [user guide](index.md). To call it from another program,
 use the [APIs](architecture/shared-rust-core.md).
 
-AW separates agent procedure, project rules and retained state so that each can
-change without becoming a second source of truth for the others.
+AW keeps agent procedure, project rules and saved component state separate so one
+does not quietly become a competing copy of another.
 
 ## Main components
 
 | Component | Responsibility |
 | --- | --- |
-| Skills | Reusable procedure for the agent, loaded when useful. |
-| Repository instructions and configuration | Project rules, preferences, scope and authorisation. |
-| Domain owners | The component responsible for a particular kind of state, evidence or effect, such as Planning or Verification. |
-| Rust core | Read current sources, compose applicable constraints, validate requests and execute supported effects. |
-| CLI and language clients | Transport and presentation over that core. |
-| Agent or human | Decide meaning, choose among legitimate alternatives and perform the programming work. |
+| Skills | Reusable procedure for the agent, loaded when useful |
+| Repository instructions and configuration | Project rules, preferences and scope |
+| Planning, Memory, Verification and other components | Maintain their own task state, lessons, checking procedures or evidence |
+| Rust core | Read current sources, combine the applicable rules, validate requests and perform supported operations |
+| CLI and language clients | Present the shared Rust behaviour through commands and APIs |
+| Agent or human | Interpret the task, choose among legitimate alternatives and do the programming work |
 
 The repository's code, documentation and tests stay in their ordinary locations.
-AW does not import them into a central knowledge model. Its retained operating
-context exists only where it reduces future investigation or makes work safer to
-continue.
+AW does not import them into a central knowledge model. It saves additional
+information only when that makes later work cheaper or safer to continue.
 
-## From a query to an effect
+## From a query to a change
 
-A client supplies the repository, current task, affected paths and any selected
-request. Relevant owners observe their sources. The core combines their facts,
-restrictions, questions and available actions into a current response.
+A client supplies the repository, current task and any relevant paths or returned
+request. The responsible AW components read their current sources. The Rust core
+combines the facts, restrictions, questions and available actions into one result.
 
-Most queries need only a compact result. Optional detail stays behind exact
-references. Information that affects the next decision needs its scope and
-consequence explained when delivered, not in a later message.
+Most queries need only a compact answer. Optional detail stays behind links or
+returned references.
 
-A request asks an owner to interpret supplied material. That owner may prepare an
-action, identify a blocker or ask for a bounded judgement. The caller cannot turn
-a request into permission by supplying a plausible operation name.
+A request asks the responsible component to interpret supplied information. That
+component may prepare an action, identify a blocker or ask for a specific
+judgement. Supplying a plausible operation name does not create permission.
 
-Before an effect, AW rechecks the action's material dependencies and authority.
-The returned action binds its target, arguments, effects and currentness.
-Lower-authority advice cannot widen a repository restriction. Conflicting or
-unknown enforcing requirements remain visible and constrain the affected action
-or claim rather than unrelated work.
+Before changing files or running another effectful operation, AW checks that the
+relevant inputs and permissions still match. A returned action identifies its
+target and arguments so the caller does not have to reconstruct them.
 
-After execution, effect evidence and continuation are separate. A confirmed write
-survives a failure to produce the next response. An uncertain effect requires
-recovery, not replay as a new operation. A settled owner is not proof that the
-user's larger task is complete.
+If a change was confirmed but preparing the next response failed, keep the
+confirmed change. If the operation may have happened but the result is unknown,
+check what happened before trying it again.
 
-These responsibilities are sometimes described as *resolve â†’ act â†’ reconcile*.
-They are not mandatory workflow phases for the model or the user.
+These responsibilities are sometimes summarised as:
+
+```text
+Check what applies → Do the work → Update what matters
+```
+
+They are not workflow phases that the user must operate manually.
 
 ## Instructions and extensions
 
-Ordinary project rules use [scoped instructions](customization.md). Internally,
-applicable clauses can surface context, express a preference, require evidence or
-an operation, or restrict an effect. This representation executes nothing itself
-and grants no blanket permission. The [instruction schema](reference/instruction-clause-program.md)
-is an implementation reference, not a general-purpose public programming language.
+Ordinary project rules use [scoped instructions](customization.md). The
+[instruction schema](reference/instruction-clause-program.md) is an implementation
+reference for contributors, not a general-purpose language users are expected to
+learn.
 
-[Independent modules](module-capability-contract.md) add deterministic domain
-behaviour through the Rust owner interface. Their registration describes the
-capability; repository configuration separately authorises it. A read-only module
-needs no fake state or mutation hook. Shared semantics belong in core, but core
-must not learn each module's domain or identity merely to recognise it.
+[Independent modules](module-capability-contract.md) add distinct capabilities
+through the shared Rust interfaces. Repository configuration decides whether a
+module is enabled. The Rust core should not need module-specific special cases
+merely to recognise an extension.
 
-[External adapters](extension-boundary.md) integrate existing operations with agent
-hosts. They keep transport, credentials and vendor sessions outside core. Skills
-can help use either kind of capability; skill selection does not change authority.
+[External adapters](extension-boundary.md) connect AW to agent hosts. They own
+vendor-specific transport, credentials and sessions while reusing AW's existing
+operations.
 
-## Persistence and learning
+## Saved information
 
-Planning keeps continuation, Memory keeps advisory lessons, and Verification keeps
-procedures and evidence. A human correction belongs with the strongest appropriate
-source, not automatically in Memory. Useful results may improve later work, but
-one success does not create policy and one observation need not create a record.
+Planning keeps unfinished work, Memory keeps reusable lessons and Verification
+keeps checking procedures and evidence. A human correction belongs in the place
+that can apply it most reliably; it does not automatically become Memory.
 
-Generated context and disposable carriers are projections, not new owners. A
-fresh consumer should recover relevant current work from retained sources without
-having witnessed the conversation. Missing local effect evidence remains an
-explicit limitation. Repository-only readers can inspect recorded facts but
-cannot establish runtime capability, fresh proof or permission to mutate state.
+Generated views and temporary request data are not new sources of truth. A fresh
+agent should be able to recover relevant work from the saved project records
+without having seen the earlier conversation.
+
+Repository-only readers can inspect saved facts, but they cannot establish live
+machine state, current test results or permission to change local state.
 
 ## Source layout
 
 | Path | Work that belongs here |
 | --- | --- |
-| `src/core/` | Shared deterministic behaviour and native state/effect owners. |
-| `src/cli/rust/` | Public command parsing and forwarding. |
-| `src/cli/python/`, `src/cli/typescript/` | Installed language bindings and transport declarations. |
-| `src/core/contracts/`, `src/core/src/modules/*/contracts/` | Shared and domain-owned native contracts and schemas. |
-| `src/tooling/`, `src/adapters/codex/` | Maintainer machinery and provider protocol integration. |
-| `.agentic-workspace/` | This repository's own AW integration, policy and retained state. |
-| `docs/`, `tools/skills/` | Human documentation and repository procedures. |
+| `src/core/` | Shared Rust behaviour and component implementations |
+| `src/cli/rust/` | Public command parsing and forwarding |
+| `src/cli/python/`, `src/cli/typescript/` | Installed language bindings |
+| `src/core/contracts/`, `src/core/src/modules/*/contracts/` | Shared and component-specific schemas and contracts |
+| `src/tooling/`, `src/adapters/codex/` | Maintainer tooling and provider integration |
+| `.agentic-workspace/` | This repository's AW integration, settings and saved records |
+| `docs/`, `tools/skills/` | Human documentation and repository procedures |
 
-[System intent](../SYSTEM_INTENT.md) owns product direction; [design principles](design-principles.md)
-explain tradeoffs. Use the [contributor guide](maintainer/contributor-playbook.md)
-for building and validating changes. AW's operation boundaries are not an OS
-sandbox; see the [threat model](security/threat-model.md).
+[System intent](../SYSTEM_INTENT.md) defines product direction; [design principles](design-principles.md)
+explain trade-offs. Use the [contributor guide](maintainer/contributor-playbook.md)
+for building and validating changes. AW does not provide an OS sandbox; see the
+[threat model](security/threat-model.md).
