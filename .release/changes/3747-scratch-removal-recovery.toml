@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Recover authenticated scratch removal after partial deletion loses the in-tree custody marker."

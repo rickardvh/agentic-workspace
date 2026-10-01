@@ -17,6 +17,188 @@ use std::{
 const LOCAL: &str = ".agentic-workspace/local";
 const SCRATCH: &str = ".agentic-workspace/local/scratch";
 const MARKER: &str = ".aw-scratch.json";
+const REMOVAL_LOCK: &str = ".agentic-workspace/local/effects/resources.lock";
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RemovalCustody {
+    attempt: crate::attempt_store::Evidence,
+    committed: Option<Value>,
+}
+
+fn producer() -> &'static str {
+    static PRODUCER: std::sync::LazyLock<String> =
+        std::sync::LazyLock::new(|| digest(&json!(include_str!("native_resources.rs"))).unwrap());
+    &PRODUCER
+}
+
+fn removal_path(relative: &str) -> Result<String, CoreError> {
+    let id = relative
+        .strip_prefix(&format!("{SCRATCH}/"))
+        .filter(|id| id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit()))
+        .ok_or_else(|| {
+            err("scratch operation requires one exact task container below local/scratch")
+        })?;
+    Ok(format!(
+        ".agentic-workspace/local/effects/scratch-{id}.prepared.json"
+    ))
+}
+
+fn container_identity(path: &Path) -> Result<Value, CoreError> {
+    unlinked(path)?;
+    let metadata = fs::metadata(path).map_err(err)?;
+    if !metadata.is_dir() {
+        return Err(err("scratch container is not a directory; preserve"));
+    }
+    let created = metadata.created().ok();
+    #[cfg(windows)]
+    if created.is_none() {
+        return Err(err("scratch creation identity unavailable; preserve"));
+    }
+    let mut identity = json!({"created":created});
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        identity["device"] = json!(metadata.dev());
+        identity["inode"] = json!(metadata.ino());
+    }
+    Ok(identity.take())
+}
+
+fn resource_lock(target: &Path, root: &Dir) -> Result<std::fs::File, CoreError> {
+    unlinked(&target.join(REMOVAL_LOCK))?;
+    root.create_dir_all(".agentic-workspace/local/effects")
+        .map_err(err)?;
+    let file = root
+        .open_with(
+            REMOVAL_LOCK,
+            OpenOptions::new().read(true).write(true).create(true),
+        )
+        .map_err(err)?
+        .into_std();
+    if file.metadata().map_err(err)?.len() != 0 {
+        return Err(err("unrecognized resource lock preserved"));
+    }
+    file.try_lock().map_err(err)?;
+    Ok(file)
+}
+
+fn removal_record(target: &Path, relative: &str) -> Result<Option<Value>, CoreError> {
+    let path = removal_path(relative)?;
+    unlinked(&target.join(&path))?;
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let Some(record) = crate::current_projection::read(&root, &path)? else {
+        return Ok(None);
+    };
+    let custody: RemovalCustody = serde_json::from_value(record["custody"].clone()).map_err(err)?;
+    let attempt = crate::attempt_store::read_source(target.to_str().unwrap(), &custody.attempt)?;
+    let invocation = &record["invocation"];
+    let paths = crate::attempt_store::write_paths(invocation)?;
+    if record != json!({"invocation":invocation,"custody":record["custody"]})
+        || attempt["invocation"] != *invocation
+        || record["custody"]["attempt"]["path"] != paths[0]
+        || custody.committed.is_some()
+        || invocation["source_owner"] != "workspace-resources"
+        || invocation["operation_id"] != "workspace.resources.scratch-remove"
+        || invocation["operation_revision"] != producer()
+        || invocation["arguments"]["target"] != json!(target)
+        || invocation["arguments"]["request"]["path"] != relative
+        || invocation["arguments"]["request"]["operation"] != "scratch-remove"
+        || invocation["arguments"]["request"]["expected_revision"] != invocation["idempotency_key"]
+        || invocation["arguments"]["removal"]["snapshot"]["status"] != "present"
+        || invocation["arguments"]["removal"]["snapshot"]["marker"]["retain"] != false
+    {
+        return Err(err(
+            "scratch removal lacks exact owner attempt custody; preserve",
+        ));
+    }
+    Ok(Some(record))
+}
+
+fn removal_snapshot(
+    target: &Path,
+    relative: &str,
+    task: &str,
+    changed: &[String],
+    policy_revision: &str,
+) -> Result<(Value, Option<Value>), CoreError> {
+    let record = removal_record(target, relative)?;
+    let Some(record) = record else {
+        return Ok((scratch_snapshot(target, relative, None)?, None));
+    };
+    let arguments = &record["invocation"]["arguments"];
+    if arguments["task"] != task
+        || arguments["changed"] != json!(changed)
+        || arguments["removal"]["policy_revision"] != policy_revision
+    {
+        return Err(err(
+            "scratch removal task/path or current policy changed; preserve",
+        ));
+    }
+    let path = target.join(relative);
+    unlinked(&path)?;
+    let mut snapshot = if path.exists() {
+        if container_identity(&path)? != arguments["removal"]["container_identity"] {
+            return Err(err("scratch removal container identity changed; preserve"));
+        }
+        unlinked(&path.join(MARKER))?;
+        if path.join(MARKER).exists()
+            && scratch_snapshot(target, relative, None)? != arguments["removal"]["snapshot"]
+        {
+            return Err(err(
+                "scratch removal custody or retention changed; preserve",
+            ));
+        }
+        arguments["removal"]["snapshot"].clone()
+    } else {
+        json!({"status":"absent"})
+    };
+    snapshot["removal_attempt"] = json!(digest(&record)?);
+    Ok((snapshot, Some(record)))
+}
+
+fn remove_scratch(
+    target: &Path,
+    relative: &str,
+    invocation: &Value,
+    snapshot: &Value,
+    policy_revision: &str,
+    previous: Option<&Value>,
+    observe: &mut dyn FnMut(&str) -> Result<(), CoreError>,
+) -> Result<(), CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let record = if let Some(record) = previous {
+        record.clone()
+    } else {
+        let mut invocation = invocation.clone();
+        invocation["arguments"]["removal"] = json!({"snapshot":snapshot,"policy_revision":policy_revision,
+            "container_identity":container_identity(&target.join(relative))?});
+        let admission = crate::attempt_store::admit(json!({"target":target,
+            "decision":{"ready_actions":[invocation]},"invocation":invocation}))?;
+        let record = json!({"invocation":invocation,"custody":admission["custody"]});
+        crate::current_projection::write(&root, &removal_path(relative)?, &record)?;
+        record
+    };
+    observe("custody-retained")?;
+    if target.join(relative).exists() {
+        // The external exact attempt survives loss of the in-tree marker.
+        root.remove_dir_all(relative).map_err(err)?;
+    }
+    match root.symlink_metadata(relative) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+        Err(error) => return Err(err(error)),
+        Ok(_) => return Err(err("scratch removal absence not confirmed")),
+    }
+    observe("container-absent")?;
+    // This short-lived owner projection and its immutable admission serve only
+    // the pending removal. No scratch history or independent registry survives.
+    let evidence = serde_json::from_value(record["custody"]["attempt"].clone()).map_err(err)?;
+    crate::attempt_store::read_source(target.to_str().unwrap(), &evidence)?;
+    root.remove_file(removal_path(relative)?).map_err(err)?;
+    root.remove_file(record["custody"]["attempt"]["path"].as_str().unwrap())
+        .map_err(err)?;
+    Ok(())
+}
 
 fn err(e: impl ToString) -> CoreError {
     CoreError::new(e.to_string())
@@ -494,9 +676,17 @@ fn planning_continuity(input: &Input, target: &Path, seed: &str) -> Result<Value
     }
     Ok(result)
 }
+
 /// Read-only proposal first; effects require the exact freshly rederived revision.
 /// No generic cache, session or resource registry is created.
 pub fn view(value: Value) -> Result<Value, CoreError> {
+    view_checked(value, &mut |_| Ok(()))
+}
+
+fn view_checked(
+    value: Value,
+    observe: &mut dyn FnMut(&str) -> Result<(), CoreError>,
+) -> Result<Value, CoreError> {
     let input: Input = serde_json::from_value(value.clone()).map_err(err)?;
     let target = fs::canonicalize(&input.target).map_err(err)?;
     let request = &input.request;
@@ -528,11 +718,18 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     let id = task_id.trim_start_matches("sha256:");
     let scratch = format!("{SCRATCH}/{id}");
     let relative = request.path.as_deref().unwrap_or(&scratch);
-    let targets = if request.operation.starts_with("scratch") {
+    let mut targets = if request.operation.starts_with("scratch") {
         vec![relative.to_owned(), format!("{relative}/**")]
     } else {
         vec![".git/worktrees/**".to_owned()]
     };
+    if request.operation.starts_with("scratch") {
+        targets.push(REMOVAL_LOCK.into());
+    }
+    if request.operation == "scratch-remove" {
+        targets.push(removal_path(relative)?);
+        targets.push(".agentic-workspace/local/effects/*.attempt.json".into());
+    }
     let policy = policy(
         &target,
         &changed,
@@ -546,6 +743,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     let mut registration = Value::Null;
     let mut seed = String::new();
     let mut outputs = vec![];
+    let mut removal = None;
     match request.operation.as_str() {
         "scratch-create" | "scratch-remove" | "scratch-prune" | "scratch-retain"
         | "scratch-release" => {
@@ -569,7 +767,17 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     "scratch-prune requires one explicit selection; other operations accept none",
                 ));
             }
-            snapshot = scratch_snapshot(&target, relative, request.selection.as_deref())?;
+            if request.operation == "scratch-remove" {
+                (snapshot, removal) =
+                    removal_snapshot(&target, relative, &input.task, &changed, &policy_revision)?;
+            } else {
+                if removal_record(&target, relative)?.is_some() {
+                    return Err(err(
+                        "scratch has an interrupted removal; recover that exact scratch-remove before other operations",
+                    ));
+                }
+                snapshot = scratch_snapshot(&target, relative, request.selection.as_deref())?;
+            }
             if matches!(
                 request.operation.as_str(),
                 "scratch-remove" | "scratch-prune"
@@ -747,11 +955,18 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             ));
         }
     }
-    let writes = if request.operation.starts_with("scratch") {
+    let mut writes = if request.operation.starts_with("scratch") {
         vec![format!("{relative}/**")]
     } else {
         vec![".git/worktrees/**".to_owned()]
     };
+    if request.operation == "scratch-remove" {
+        writes.push(removal_path(relative)?);
+        writes.push(".agentic-workspace/local/effects/*.attempt.json".into());
+    }
+    if request.operation.starts_with("scratch") {
+        writes.push(REMOVAL_LOCK.into());
+    }
     let mut route_unresolved = false;
     for source in policy["instructions"].as_array().into_iter().flatten() {
         if (source["applicable"] == true || source["applicability"]["status"] == "unresolved")
@@ -777,7 +992,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     if (matches!(
         request.operation.as_str(),
         "scratch-remove" | "scratch-prune"
-    ) && snapshot["status"] == "present")
+    ) && (snapshot["status"] == "present" || removal.is_some()))
         || (request.operation == "worktree-remove" && !registration.is_null())
     {
         let current = crate::native_public::start(
@@ -811,10 +1026,9 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             blockers.push("current owner references this resource material; reconcile that owner before cleanup");
         }
     }
-    static PRODUCER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| digest(&json!(include_str!("native_resources.rs"))).unwrap());
+    let producer = producer();
     let revision = digest(
-        &json!({"semantics":&*PRODUCER,"target":target,"task":input.task,"changed":input.changed,"operation":request.operation,"path":path,"snapshot":snapshot,"policy":policy,"need":request.need,"reason":request.reason,"disposable_outputs":outputs}),
+        &json!({"semantics":producer,"target":target,"task":input.task,"changed":input.changed,"operation":request.operation,"path":path,"snapshot":snapshot,"policy":policy,"need":request.need,"reason":request.reason,"disposable_outputs":outputs}),
     )?;
     let mut next = request.clone();
     next.path = Some(if request.operation.starts_with("scratch") {
@@ -850,15 +1064,43 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     }
     let operation = format!("workspace.resources.{}", request.operation);
     let invocation = json!({"kind":"agentic-workspace/operation-invocation/v1","source_owner":"workspace-resources",
-        "operation_id":operation,"operation_revision":&*PRODUCER,"idempotency_key":revision,
+        "operation_id":operation,"operation_revision":producer,"idempotency_key":revision,
         "arguments":result["action"],"effects":["task-resource"],"expected_dependency_revision":revision});
     crate::admit_invocation_value(
         json!({"decision":{"ready_actions":[invocation]},"invocation":invocation}),
     )?;
+    let root = Dir::open_ambient_dir(&target, ambient_authority()).map_err(err)?;
+    let _lock = if request.operation.starts_with("scratch") {
+        Some(resource_lock(&target, &root)?)
+    } else {
+        None
+    };
+    if request.operation.starts_with("scratch") {
+        let mut fresh = value.clone();
+        fresh["request"]["expected_revision"] = Value::Null;
+        let observed = view(fresh)?;
+        if observed["revision"] != revision
+            || observed["blockers"]
+                .as_array()
+                .is_none_or(|b| !b.is_empty())
+        {
+            return Err(err(
+                "resource sources changed at locked effect barrier; preserve and reobserve",
+            ));
+        }
+    }
     unlinked(&path)?;
-    if request.operation.starts_with("scratch")
-        && scratch_snapshot(&target, relative, request.selection.as_deref())? != snapshot
-    {
+    let current_snapshot = if request.operation == "scratch-remove" {
+        removal_snapshot(&target, relative, &input.task, &changed, &policy_revision)?.0
+    } else if request.operation.starts_with("scratch") {
+        if removal_record(&target, relative)?.is_some() {
+            return Err(err("scratch removal appeared at effect barrier; preserve"));
+        }
+        scratch_snapshot(&target, relative, request.selection.as_deref())?
+    } else {
+        snapshot.clone()
+    };
+    if current_snapshot != snapshot {
         return Err(err(
             "scratch changed at effect barrier; preserve and reobserve",
         ));
@@ -887,11 +1129,16 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 .map_err(err)?;
             file.sync_all().map_err(err)?;
         }
-        "scratch-remove" if snapshot["status"] == "present" => {
-            let root = Dir::open_ambient_dir(&target, ambient_authority()).map_err(err)?;
-            // Confined native recursive removal does not follow contained links.
-            // Only the authenticated, unretained, unreferenced container is removed.
-            root.remove_dir_all(relative).map_err(err)?;
+        "scratch-remove" if snapshot["status"] == "present" || removal.is_some() => {
+            remove_scratch(
+                &target,
+                relative,
+                &invocation,
+                &snapshot,
+                &policy_revision,
+                removal.as_ref(),
+                observe,
+            )?;
         }
         "scratch-prune" if snapshot["status"] == "present" => {
             let dir = Dir::open_ambient_dir(&path, ambient_authority()).map_err(err)?;
@@ -1001,4 +1248,184 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     result["retry_effect"] = json!(false);
     result.as_object_mut().unwrap().remove("action");
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct Repo(PathBuf);
+    impl Repo {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "aw-scratch-recovery-{}-{}",
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+        fn intent(&self, operation: &str) -> Value {
+            json!({"target":self.0,"task":"Exact scratch lifecycle","request":{"operation":operation}})
+        }
+        fn create(&self) -> (PathBuf, String) {
+            let proposal = view(self.intent("scratch-create")).unwrap();
+            let relative = proposal["action"]["request"]["path"]
+                .as_str()
+                .unwrap()
+                .to_owned();
+            view(proposal["action"].clone()).unwrap();
+            let path = self.0.join(&relative);
+            fs::write(path.join("residue.txt"), "owned temporary material").unwrap();
+            (path, relative)
+        }
+        fn interrupt(&self, path: &Path, stage: &str) {
+            let proposal = view(self.intent("scratch-remove")).unwrap();
+            let result = view_checked(proposal["action"].clone(), &mut |phase| {
+                if phase == stage {
+                    if stage == "custody-retained" {
+                        fs::remove_file(path.join(MARKER)).unwrap();
+                    }
+                    return Err(err("deterministic removal interruption"));
+                }
+                Ok(())
+            });
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("deterministic removal interruption")
+            );
+        }
+    }
+    impl Drop for Repo {
+        fn drop(&mut self) {
+            fs::remove_dir_all(&self.0).unwrap();
+        }
+    }
+
+    #[test]
+    fn recovery_child() {
+        let Ok(input) = std::env::var("AW_TEST_SCRATCH_RECOVERY") else {
+            return;
+        };
+        let proposal = view(serde_json::from_str(&input).unwrap()).unwrap();
+        assert_eq!(
+            view(proposal["action"].clone()).unwrap()["effect_outcome"],
+            "committed"
+        );
+    }
+
+    #[test]
+    fn exact_removal_recovers_in_fresh_process_after_marker_loss_or_absence() {
+        for stage in ["custody-retained", "container-absent"] {
+            let repo = Repo::new();
+            let (path, relative) = repo.create();
+            let sibling = repo.0.join(SCRATCH).join("unowned-sibling");
+            fs::create_dir(&sibling).unwrap();
+            fs::write(sibling.join("keep.txt"), "preserve").unwrap();
+            repo.interrupt(&path, stage);
+            assert!(repo.0.join(removal_path(&relative).unwrap()).exists());
+            assert!(!path.join(MARKER).exists());
+            let child = Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "native_resources::tests::recovery_child",
+                    "--nocapture",
+                ])
+                .env(
+                    "AW_TEST_SCRATCH_RECOVERY",
+                    repo.intent("scratch-remove").to_string(),
+                )
+                .output()
+                .unwrap();
+            assert!(
+                child.status.success(),
+                "{}{}",
+                String::from_utf8_lossy(&child.stdout),
+                String::from_utf8_lossy(&child.stderr)
+            );
+            assert!(!path.exists());
+            assert!(!repo.0.join(removal_path(&relative).unwrap()).exists());
+            assert_eq!(
+                fs::read_to_string(sibling.join("keep.txt")).unwrap(),
+                "preserve"
+            );
+            let root = Dir::open_ambient_dir(&repo.0, ambient_authority()).unwrap();
+            assert!(
+                root.read_dir(".agentic-workspace/local/effects")
+                    .unwrap()
+                    .all(|e| { e.unwrap().file_name() == "resources.lock" })
+            );
+        }
+    }
+
+    #[test]
+    fn recovery_preserves_changed_task_policy_custody_and_replaced_container() {
+        for change in [
+            "task",
+            "policy",
+            "record",
+            "attempt",
+            "container",
+            "retention",
+        ] {
+            let repo = Repo::new();
+            let (path, relative) = repo.create();
+            let original_marker = fs::read(path.join(MARKER)).unwrap();
+            repo.interrupt(&path, "custody-retained");
+            let record_path = repo.0.join(removal_path(&relative).unwrap());
+            let mut record: Value =
+                serde_json::from_slice(&fs::read(&record_path).unwrap()).unwrap();
+            let mut intent = repo.intent("scratch-remove");
+            intent["request"]["path"] = json!(relative);
+            match change {
+                "task" => intent["task"] = json!("Other task"),
+                "policy" => fs::write(
+                    repo.0.join(".agentic-workspace/config.toml"),
+                    "[workspace]\nenabled=true\n",
+                )
+                .unwrap(),
+                "record" => {
+                    record["invocation"]["arguments"]["task"] = json!("Forged subject");
+                    fs::write(&record_path, record.to_string()).unwrap();
+                }
+                "attempt" => fs::write(
+                    repo.0
+                        .join(record["custody"]["attempt"]["path"].as_str().unwrap()),
+                    "{}",
+                )
+                .unwrap(),
+                "container" => {
+                    fs::rename(&path, repo.0.join("preserved-container")).unwrap();
+                    fs::create_dir(&path).unwrap();
+                    fs::write(path.join("unowned.txt"), "preserve").unwrap();
+                }
+                "retention" => {
+                    let mut marker: Value = serde_json::from_slice(&original_marker).unwrap();
+                    marker["retain"] = json!(true);
+                    fs::write(path.join(MARKER), marker.to_string()).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            assert!(view(intent).is_err(), "{change}");
+            assert!(path.exists(), "{change}");
+            assert!(record_path.exists(), "{change}");
+            assert!(view(repo.intent("scratch-create")).is_err());
+        }
+    }
+
+    #[test]
+    fn markerless_unowned_material_cannot_acquire_removal_custody() {
+        let repo = Repo::new();
+        let (path, relative) = repo.create();
+        fs::remove_file(path.join(MARKER)).unwrap();
+        assert!(view(repo.intent("scratch-remove")).is_err());
+        assert!(!repo.0.join(removal_path(&relative).unwrap()).exists());
+        assert!(path.join("residue.txt").exists());
+    }
 }
