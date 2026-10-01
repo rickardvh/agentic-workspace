@@ -119,9 +119,8 @@ def test_declared_shared_local_overlay_is_current_and_missing_never_absent(tmp_p
     fresh = call(surface, shared_core_binary, native_cli, root)
     assert fresh["configuration"]["assignment_policy"]["enforceable"] is False
     shared.unlink()
-    missing = call(surface, shared_core_binary, native_cli, root)
-    assert any(b["code"] == "assignment-policy-source-unresolved" for b in missing["decision_packet"]["blockers"])
-    assert missing["configuration"]["assignment_policy"] is None
+    with pytest.raises(AssertionError, match="shared local source.*missing"):
+        call(surface, shared_core_binary, native_cli, root)
     assert not (root / ".agentic-workspace/local").exists()
 
 

@@ -5,6 +5,9 @@ adds no justified value. Do not create Assignment/Planning state or a handoff ju
 to record consideration. Unknown/defer preserves uncertainty and carries no
 nomination; reconsider only when a changed outcome or capability gap warrants it.
 
-Current binding policy remains applicable: supply required owner assessment, and
-do not use this method to override another target's binding assignment. Keep a
+Current binding policy remains applicable: inspect the returned implementation
+admission. When standing policy settles current-agent execution, continue without
+a self-assignment answer or a consideration record. If comparison remains
+unresolved, supply only that bounded judgment. Do not use this method to override
+another target's binding assignment or an unadmitted return. Keep a
 conclusion only when later work needs it, through its existing owner.

@@ -594,7 +594,47 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
             .map_err(|e| CoreError::new(e.to_string()))?;
     }
 
+    // Standing policy can settle a choice without a self-assignment answer.
+    // Preferences are unordered guarantees: only a unique strict superset
+    // dominates. Counting tags would invent weights the source never declared.
+    let ready = input["requirements"]["status"] == "resolved"
+        && input["policy"]["enforceable"] == true
+        && execution["gaps"].as_array().is_some_and(Vec::is_empty)
+        && unresolved.is_empty();
     let mut selected = Value::Null;
+    let mut determination = "comparative-judgment-required";
+    if judgment.is_null() && ready {
+        let current = &input["policy"]["current_profile"]["name"];
+        let candidates: Vec<_> = alternatives
+            .iter()
+            .filter(|a| {
+                input["policy"]["assignment_policy"] != "local-preferred" || a["target"] == *current
+            })
+            .collect();
+        let settled = if candidates.len() == 1 {
+            determination = "sole-eligible-configuration";
+            candidates.first().copied()
+        } else {
+            candidates
+                .iter()
+                .copied()
+                .find(|candidate| {
+                    let matched = candidate["matched_preferences"].as_array().unwrap();
+                    !matched.is_empty()
+                        && candidates.iter().all(|other| {
+                            other["id"] == candidate["id"] || {
+                                let peer = other["matched_preferences"].as_array().unwrap();
+                                matched.len() > peer.len()
+                                    && peer.iter().all(|tag| matched.contains(tag))
+                            }
+                        })
+                })
+                .inspect(|_| determination = "standing-execution-preferences")
+        };
+        if let Some(choice) = settled {
+            selected = choice.clone();
+        }
+    }
     if !judgment.is_null() {
         if judgment["revision"] != revision {
             return Err(CoreError::new(
@@ -608,12 +648,7 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
             .ok_or_else(|| {
                 CoreError::new("assignment comparative alternative is not currently admitted")
             })?;
-        if let Some(row) = rows
-            .iter()
-            .find(|r| r["configuration"]["id"] == selected["id"] && r["eligible"] == true)
-        {
-            selected["configuration"] = row["configuration"].clone();
-        }
+        determination = "acting-orchestrator-comparison";
         let prior = &execution["configurations"]["selected"];
         if !prior.is_null() && prior["id"] != selected["id"] {
             return Err(CoreError::new(
@@ -627,11 +662,19 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
             return Err(CoreError::new("assignment comparative reason required"));
         }
     }
+    if let Some(row) = rows
+        .iter()
+        .find(|r| r["configuration"]["id"] == selected["id"] && r["eligible"] == true)
+    {
+        selected["configuration"] = row["configuration"].clone();
+    }
+    let prior = &execution["configurations"]["selected"];
+    if !selected.is_null() && !prior.is_null() && prior["id"] != selected["id"] {
+        return Err(CoreError::new(
+            "standing policy conflicts with current execution configuration choice; resolve the bounded comparison",
+        ));
+    }
     let binding = input["policy"]["binding"] == true;
-    let ready = input["requirements"]["status"] == "resolved"
-        && input["policy"]["enforceable"] == true
-        && execution["gaps"].as_array().is_some_and(Vec::is_empty)
-        && unresolved.is_empty();
     // Comparative uncertainty is retained with the exact judgment, not a
     // universal veto requiring false certainty. Unresolved capability, policy
     // and task requirements above remain hard admission boundaries.
@@ -642,7 +685,7 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
             "assignment comparison cannot override current local-preferred policy",
         ));
     }
-    let status = if judgment.is_null() {
+    let status = if selected.is_null() {
         "assessment-required"
     } else if !ready || selected["status"] == "unresolved-target" {
         "unresolved-assessment"
@@ -657,8 +700,51 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
     );
     Ok(
         json!({"kind":"agentic-workspace/assignment-decision/v1","revision":revision,"status":status,"alternatives":alternatives,"unresolved_alternatives":unresolved,
-        "selected":selected,"judgment":judgment,"binding":binding,"local_assignment_satisfied":assigned&&local,
+        "selected":selected,"judgment":judgment,"determination":determination,"binding":binding,"local_assignment_satisfied":assigned&&local,
         "assignment_identity":if assigned{json!({"work":input["work"],"requirements_revision":input["requirements"]["revision"],"policy_revision":input["policy"]["revision"],"configuration_revision":execution["configurations"]["revision"],"assignment_decision_revision":hash(&json!({"assessment_revision":revision,"judgment":judgment,"selected":selected})),"selected":selected})}else{Value::Null},
         "claim_boundary":"Current comparative judgment only; no dispatch, sealed handoff, evidence, completion or override authority."}),
     )
+}
+
+#[cfg(test)]
+mod policy_determination_tests {
+    use super::*;
+
+    #[test]
+    fn standing_preferences_settle_only_feasible_unambiguous_work() {
+        let candidate = |id: &str, tags: Value, transport: &str| json!({"eligible":true,"configuration":{"id":id,"target":id,"transport":transport,"execution_guarantees":tags}});
+        let mut input = json!({"work":{"id":"bounded"},"policy":{"binding":true,"enforceable":true,"assignment_policy":"required-best-fit","current_profile":{"name":"local"}},
+            "requirements":{"status":"resolved","execution_posture":{"preferred_execution_guarantees":["cost.bounded","context.large"]}},
+            "execution":{"gaps":[],"configurations":{"candidates":[candidate("local",json!([]),"internal"),candidate("worker",json!(["cost.bounded"]),"cli")]}},"judgment":null});
+        let chosen = comparative_assessment(input.clone()).unwrap();
+        assert_eq!(chosen["selected"]["target"], "worker");
+        assert_eq!(chosen["status"], "assigned-nonlocal-handoff-required");
+        assert_eq!(chosen["determination"], "standing-execution-preferences");
+        assert!(chosen["judgment"].is_null());
+        input["execution"]["configurations"]["candidates"][0]["configuration"]["execution_guarantees"] =
+            json!(["context.large"]);
+        assert_eq!(
+            comparative_assessment(input.clone()).unwrap()["status"],
+            "assessment-required"
+        );
+        input["execution"]["configurations"]["candidates"][0]["configuration"]["execution_guarantees"] =
+            json!(["cost.bounded"]);
+        assert_eq!(
+            comparative_assessment(input.clone()).unwrap()["status"],
+            "assessment-required"
+        );
+        input["execution"]["configurations"]["candidates"][1]["eligible"] = json!(false);
+        assert_eq!(
+            comparative_assessment(input.clone()).unwrap()["local_assignment_satisfied"],
+            true
+        );
+        input["execution"]["unavailable_adapters"] = json!([{"target":"unknown"}]);
+        assert_eq!(
+            comparative_assessment(input.clone()).unwrap()["local_assignment_satisfied"],
+            false
+        );
+        input["execution"]["unavailable_adapters"] = json!([]);
+        input["policy"]["enforceable"] = json!(false);
+        assert!(comparative_assessment(input).unwrap()["assignment_identity"].is_null());
+    }
 }
