@@ -12,7 +12,7 @@
     "repository": "https://github.com/rickardvh/agentic-workspace",
     "issues": "https://github.com/rickardvh/agentic-workspace/issues",
     "support": "https://github.com/rickardvh/agentic-workspace/issues",
-    "maturity_classifier": "Development Status :: 3 - Alpha"
+    "maturity_classifier": "Development Status :: 5 - Production/Stable"
   },
   "distribution_identity": {
     "strategy": "exact-tagged-release-artifacts",
