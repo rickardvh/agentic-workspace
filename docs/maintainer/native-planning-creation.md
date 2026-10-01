@@ -167,12 +167,21 @@ postimage recovery remain the same owner paths.
 
 ## Terminal retention
 
-Ordinary entry exposes a bounded `planning_retention` hint when Planning history
-needs current judgment or an interrupted retirement needs recovery. Its detail
-reference resolves `planning.terminal_retention`, including an exact
-`planning/terminal-disposition/v1` request. Read the offered records before
-asserting terminal intent, absence of unresolved work and absence of continuing
-value. Archive location merely discovers legacy candidates; it grants no custody.
+Unrelated ordinary entry does not scan terminal Planning history or expose a
+`planning_retention` hint. To inspect that history explicitly, resolve the offered
+Planning detail reference (or use full projection), then submit the exact
+`planning.terminal_retention.discovery_request` with its empty arguments through
+`start` in the same work context. This
+`planning/discover-terminal-disposition/v1` request reads the current candidates;
+it grants no deletion authority.
+
+The resulting `planning.terminal_retention` offers an exact
+`planning/terminal-disposition/v1` request when eligible records need judgment,
+or a recovery request when an interrupted retirement needs recovery. Bound
+Planning work or an interrupted retirement belonging to the current work can
+also expose retention directly. Read the offered records before asserting
+terminal intent, absence of unresolved work and absence of continuing value.
+Archive location merely discovers legacy candidates; it grants no custody.
 The native operation admits the exact source preimages and current request.
 
 The owner preserves current selection and explicit consumers in Planning, proof,

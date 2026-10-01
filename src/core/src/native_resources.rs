@@ -630,7 +630,11 @@ fn planning_continuity(input: &Input, target: &Path, seed: &str) -> Result<Value
             r["owner"] != "planning"
                 || !matches!(
                     r["request_kind"].as_str(),
-                    Some("planning/continuation/v1" | "planning/posture/v1")
+                    Some(
+                        "planning/continuation/v1"
+                            | "planning/posture/v1"
+                            | "planning/select-owner/v1"
+                    )
                 )
         }) {
             return Err(err(

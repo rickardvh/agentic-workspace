@@ -138,8 +138,9 @@ def test_worktree_seed_preserves_current_planning_relation(tmp_path, shared_core
         )
 
     unresolved = propose()
-    assert unresolved["continuity"]["status"] == "relation-required" and "action" not in unresolved
-    continuation = unresolved["planning"]["requests"][0]
+    assert unresolved["continuity"]["status"] == "admitted" and "action" not in unresolved
+    continuation = unresolved["planning"]["selection_requests"][0]
+    continuation["arguments"] = {"owner_ref": reference}
     judgment = {
         "need": "destructive-validation",
         "reason": "Validation rewrites tracked fixtures",
@@ -159,7 +160,7 @@ def test_worktree_seed_preserves_current_planning_relation(tmp_path, shared_core
     assert blocked["blockers"] and not path.exists()
     changed = json.loads(json.dumps(ready["action"]))
     changed["request"]["planning_request"]["arguments"] = {"answer": "independent", "task_posture": "direct"}
-    with pytest.raises(AssertionError, match="changed"):
+    with pytest.raises(AssertionError):
         resource("native", shared_core_binary, native_cli, changed)
     assert not path.exists()
     original = owner.read_bytes()
@@ -174,44 +175,42 @@ def test_worktree_seed_preserves_current_planning_relation(tmp_path, shared_core
     assert not (path / ".agentic-workspace/local/planning/owner-selection.json").exists()
     fresh_context = {"target": str(path), "task": context["task"]}
     fresh = consume("native", shared_core_binary, native_cli, fresh_context)
-    continued = consume("native", shared_core_binary, native_cli, {**fresh_context, "request": fresh["planning"]["requests"][0]})
+    selection = fresh["planning"]["selection_requests"][0]
+    selection["arguments"] = {"owner_ref": reference}
+    continued = consume("native", shared_core_binary, native_cli, {**fresh_context, "request": selection})
     assert continued["planning"]["selected_owner"]["ref"] == reference
     removal = resource(
         "native", shared_core_binary, native_cli, {**context, "request": {"operation": "worktree-remove", "path": str(path)}}
     )
     resource("native", shared_core_binary, native_cli, removal["action"])
 
-    for posture in ["direct", "planned"]:
-        independent = {**continuation, "arguments": {"answer": "independent", "task_posture": posture}}
-        proposal = propose(**judgment, planning_request=independent)
-        assert proposal["planning"]["task_relation"] == "independent"
-        assert proposal["planning"]["status"] == posture
-        resource("native", shared_core_binary, native_cli, proposal["action"])
-        assert not (path / reference).exists()
-        removal = resource(
-            "native", shared_core_binary, native_cli, {**context, "request": {"operation": "worktree-remove", "path": str(path)}}
+    # A remembered cursor may refer to an owner absent from the seed without
+    # constraining isolation for work that did not bind to that owner.
+    selector = repo / ".agentic-workspace/local/planning/owner-selection.json"
+    selector.parent.mkdir(parents=True)
+    selector.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "selected_owner": {"id": "delegation-lane-sweep", "ref": reference},
+            }
         )
-        resource("native", shared_core_binary, native_cli, removal["action"])
-
-    # Ordinary start/invoke composes the same relation automatically; callers
-    # need not reconstruct a second nested Planning answer.
-    initial = consume("native", shared_core_binary, native_cli, context)
-    proposal_request = initial["resources"]["requests"][0]
-    proposal_request["arguments"]["request"] = {"operation": "worktree-create", "path": str(path), "base": before_owner, **judgment}
-    ready = consume(
-        "native", shared_core_binary, native_cli, {**context, "request": [independent, proposal_request]}, host_path=os.environ["PATH"]
     )
-    action = next(a for a in ready["decision_packet"]["ready_actions"] if a["operation_id"] == "workspace.resources.worktree-create")
-    assert action["arguments"]["request"]["planning_request"] == independent
-    created = consume("native", shared_core_binary, native_cli, {**context, "invocation": action}, host_path=os.environ["PATH"])
-    assert created["value"]["effect_outcome"] == "committed"
+    held = selector.read_bytes()
+    proposal = propose(**judgment)
+    assert proposal["planning"]["status"] == "direct"
+    assert proposal["continuity"]["status"] == "admitted"
+    resource("native", shared_core_binary, native_cli, proposal["action"])
+    assert not (path / reference).exists()
     removal = resource(
         "native", shared_core_binary, native_cli, {**context, "request": {"operation": "worktree-remove", "path": str(path)}}
     )
     resource("native", shared_core_binary, native_cli, removal["action"])
+    assert selector.read_bytes() == held
 
 
-def test_legacy_migration_blocks_direct_resource_seed(tmp_path, shared_core_binary, native_cli):
+def test_legacy_migration_blocks_only_explicitly_resumed_resource_seed(tmp_path, shared_core_binary, native_cli):
     from tests.test_native_planning_create import material
     from tests.test_native_public_cli import consume
 
@@ -238,10 +237,9 @@ def test_legacy_migration_blocks_direct_resource_seed(tmp_path, shared_core_bina
     path = tmp_path / "isolated"
     request = {"operation": "worktree-create", "path": str(path), "base": seed}
     initial = resource("native", shared_core_binary, native_cli, {**context, "request": request})
-    assert initial["continuity"]["status"] == "relation-required"
-    assert initial["planning"]["status"] == "legacy-choice-required"
-    assert initial["planning"]["task_relation"] == "unresolved"
-    assert len(initial["planning"]["legacy_aggregate"]["selection_requests"]) == 2
+    assert initial["continuity"]["status"] == "admitted"
+    assert initial["planning"]["status"] == "direct"
+    request["planning_request"] = initial["planning"]["selection_requests"][0]
     request.update(
         need="destructive-validation",
         reason="Separate mutable fixtures",

@@ -15,6 +15,7 @@ use std::{
 
 pub(crate) const REQUEST: &str = "planning/terminal-disposition/v1";
 pub(crate) const RECOVER: &str = "planning/recover-terminal-disposition/v1";
+pub(crate) const DISCOVER: &str = "planning/discover-terminal-disposition/v1";
 pub(crate) const OP: &str = "planning.retire-terminal";
 pub(crate) const RECOVERY: &str = "planning.recover-terminal";
 const HOME: &str = ".agentic-workspace/planning/execplans/";
@@ -54,6 +55,7 @@ fn record_bytes(record: &Value) -> Result<Vec<u8>, CoreError> {
 
 pub(crate) fn declarations() -> Vec<Value> {
     vec![
+        json!({"kind":DISCOVER,"result_kind":"agentic-planning/terminal-disposition/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false}}),
         json!({"kind":REQUEST,"result_kind":"agentic-planning/terminal-disposition/v1","input_schema":{
         "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"sources":{"type":"array","minItems":1,"maxItems":32,"uniqueItems":true,"items":{"type":"string"}},
@@ -437,6 +439,39 @@ pub(crate) fn view(
         .iter()
         .find(|o| o["owner"] == "planning")
         .ok_or_else(|| err("Planning owner unavailable"))?;
+    let discovery = json!({"kind":"agentic-workspace/public-request/v1","id":DISCOVER,"owner":"planning","owner_revision":owner["revision"],"source_revision":digest(&json!(DISCOVER))?,"capability_revision":contract["revision"],"task_identity":work,"request_kind":DISCOVER,"arguments":{}});
+    let discovering = request.is_some_and(|r| r["request_kind"] == DISCOVER);
+    if let Some(request) = request.filter(|_| discovering) {
+        crate::prepare_request_value(
+            json!({"request":request,"current_work":work,"capability_contract":contract}),
+        )?;
+        if request["source_revision"] != discovery["source_revision"] {
+            return Err(err("stale Planning disposition discovery"));
+        }
+    }
+    if planning["incumbent_owner"].is_null() && request.is_none() {
+        // Retirement is an explicit Planning concern, not startup ceremony for
+        // every task sharing a checkout. An exact retained effect still brings
+        // its own originating work into scope.
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+        let pending_work = read(&root, PENDING)
+            .ok()
+            .flatten()
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .is_some_and(|record| {
+                record["invocation"]["arguments"]["request"]["task_identity"] == *work
+            });
+        if !pending_work {
+            return Ok(json!({"status":"quiet","requests":[],"discovery_request":discovery}));
+        }
+    }
+    let request = request.filter(|_| !discovering);
+    let owner = contract["owners"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["owner"] == "planning")
+        .ok_or_else(|| err("Planning owner unavailable"))?;
     let pending = retained(target)?;
     let binding = if let Some(record) = &pending {
         json!({"record_revision":digest(record)?})
@@ -731,10 +766,17 @@ mod tests {
         }
         fn start(&self, request: Option<Value>) -> Value {
             let mut input = json!({"target":self.0,"task":"Retire terminal history"});
-            if let Some(request) = request {
-                input["request"] = request;
+            if let Some(request) = &request {
+                input["request"] = request.clone();
             }
-            crate::native_public::start(input).unwrap()
+            let result = crate::native_public::start(input.clone()).unwrap();
+            if request.is_none() {
+                input["request"] =
+                    result["planning"]["terminal_retention"]["discovery_request"].clone();
+                crate::native_public::start(input).unwrap()
+            } else {
+                result
+            }
         }
         fn ready(&self) -> Value {
             let mut request =
@@ -891,13 +933,7 @@ mod tests {
         let compact =
             crate::operating::start(json!({"target":f.0,"task":"Retire terminal history"}))
                 .unwrap();
-        assert_eq!(compact["planning_retention"]["candidate_count"], 1);
-        assert!(
-            compact["planning_retention"]["reference"]
-                .as_str()
-                .unwrap()
-                .starts_with("detail:planning:")
-        );
+        assert!(compact["planning_retention"].is_null());
         let start = f.start(None);
         assert_eq!(
             start["planning"]["terminal_retention"]["status"],
@@ -1105,7 +1141,8 @@ mod tests {
                     created["value"]["selection_request"].clone(),
                 ),
             );
-            let continuation = start(&context, Value::Null)["planning"]["requests"][0].clone();
+            let continuation =
+                start(&context, Value::Null)["planning"]["selection_requests"][0].clone();
             let mut task =
                 start(&context, continuation.clone())["task_requirements"]["requests"][0].clone();
             task["arguments"]["required_result_classes"] = json!(["read-only"]);
@@ -1139,7 +1176,11 @@ mod tests {
 
             update["arguments"]["material"] = closed;
             invoke(&context, &start(&context, json!([continuation, update])));
-            let current = start(&context, Value::Null);
+            let quiet = start(&context, Value::Null);
+            let current = start(
+                &context,
+                quiet["planning"]["terminal_retention"]["discovery_request"].clone(),
+            );
             if n > 0 {
                 let mut disposition =
                     current["planning"]["terminal_retention"]["requests"][0].clone();

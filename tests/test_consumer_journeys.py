@@ -176,8 +176,7 @@ def test_clean_context_keeps_native_selected_owner_resolvable(tmp_path, native_c
     for name in intact.keys() - clean.keys():
         (tmp_path / name).unlink()
     current = call({"task": "Finish the approved rollout"})
-    assert current["planning"]["incumbent_owner"]["ref"] == plan
-    relation = current["planning"]["requests"][0]
-    relation["arguments"]["answer"] = "continue-selected"
+    assert current["planning"]["incumbent_owner"] is None
+    relation = current["planning"]["selection_requests"][0]
     resumed = call({"task": "Finish the approved rollout", "request": relation})
     assert resumed["planning"]["selected_owner"]["ref"] == plan

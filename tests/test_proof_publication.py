@@ -82,8 +82,7 @@ def test_planning_claim_cannot_use_published_manual_result(
         return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
 
     initial = call(context)
-    continuation = initial["decision_packet"]["decision_request"]["response_request"]
-    continuation["arguments"]["answer"] = "continue-selected"
+    continuation = initial["planning"]["selection_requests"][0]
     selected = call({**context, "request": continuation})
     planning_action = selected["decision_packet"]["primary_action"]
     assert planning_action["operation_id"] == "planning.reconcile"

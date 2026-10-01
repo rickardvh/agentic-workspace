@@ -201,12 +201,7 @@ def test_sequential_instruction_write_preserves_composed_dependencies(tmp_path, 
     context["task"] = "Publish independent repository instructions"
 
     def direct(**extra):
-        relation = call()["planning"]["requests"][0]
-        relation["arguments"].update(answer="independent", task_posture="direct")
-        if "invocation" in extra:
-            return call(**extra)
-        request = extra.pop("request", None)
-        return call(request=[relation, *([request] if request else [])], **extra)
+        return call(**extra)
 
     guard = ".agentic-workspace/instructions/guard.md"
     content = "---\nprotect: [.agentic-workspace/local/instructions/**]\n---\nPreserve local instructions.\n"
@@ -217,7 +212,7 @@ def test_sequential_instruction_write_preserves_composed_dependencies(tmp_path, 
     source = ".agentic-workspace/instructions/second.md"
     _, answer, action = instruction(direct, source, "Use the current repository owner.\n")
     assert action["operation_id"] == "instructions.write"
-    assert any(r["owner"] == "planning" for r in action["source_requests"])
+    assert not any(r["owner"] == "planning" for r in action["source_requests"])
     assert call(request=action["source_requests"])["decision_packet"]["primary_action"] == action
     assert direct(request=answer)["decision_packet"]["primary_action"] == action
     with pytest.raises(AssertionError, match="stale|changed"):

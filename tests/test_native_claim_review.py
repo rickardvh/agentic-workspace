@@ -123,7 +123,7 @@ def test_claim_review_keeps_planning_subject_and_unfinished_work(tmp_path, share
         return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     first = call()
-    continuation = first["planning"]["requests"][0]
+    continuation = first["planning"]["selection_requests"][0]
     call(invocation=call(request=continuation)["decision_packet"]["primary_action"])
     request = call()["verification"]["claim_review"]["request"]
     request["arguments"] = {

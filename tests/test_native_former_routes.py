@@ -131,13 +131,30 @@ def test_former_selection_requires_exact_current_agent_request(
     assert set(consequence[0]["required"]) == {"claim", "evidence_reference", "proof_subject"}
     consequence_bytes = len(json.dumps({"receiving_consequence": consequence[0]}))
     assert consequence_bytes < 400
+    # Explicit Planning history discovery keeps unrelated entry quiet. It adds
+    # one read-only introspection schema, not another retirement/recovery effect.
+    # Bound that named delta separately; preserve the existing four-entry owner
+    # allowances and the compact/remaining-state budgets below. Full detail's
+    # offered requests are bounded separately from passive state metadata.
+    planning = next(owner for owner in contract["owners"] if owner["owner"] == "planning")
+    discovery_kind = "planning/discover-terminal-disposition/v1"
+    discovery = [row for row in planning["requests"] if row["kind"] == discovery_kind]
+    assert len(discovery) == 1
+    discovery_bytes = len(json.dumps(discovery[0]))
+    assert discovery_bytes < 300
+    # Current-work selection/resume also has its own schema. Its optional exact
+    # owner reference replaces implicit cursor binding; no new effect is added.
+    selection = [row for row in planning["requests"] if row["kind"] == "planning/select-owner/v1"]
+    assert len(selection) == 1
+    selection_bytes = len(json.dumps(selection[0]))
+    assert selection_bytes < 650
     retention_bytes = 0
     for owner_name in ("planning", "memory", "verification"):
         owner = next(row for row in contract["owners"] if row["owner"] == owner_name)
         retention = [
             row
             for row in owner["requests"]
-            if "terminal-disposition" in row["kind"]
+            if ("terminal-disposition" in row["kind"] and row["kind"] != discovery_kind)
             or row["kind"] in {"verification/retire-receipts/v1", "verification/recover-retirement/v1"}
         ]
         retention += [
@@ -196,11 +213,19 @@ def test_former_selection_requires_exact_current_agent_request(
     assert len(plugin_requests) == 2 and len(plugin_operations) == 1
     plugin_bytes = sum(len(json.dumps(row)) for row in [*plugin_requests, *plugin_operations])
     assert 0 < plugin_bytes < 1_600, plugin_bytes
-    schema_extensions = retention_bytes + activation_bytes + consequence_bytes + evidence_bytes + plugin_bytes
+    schema_extensions = (
+        retention_bytes + discovery_bytes + selection_bytes + activation_bytes + consequence_bytes + evidence_bytes + plugin_bytes
+    )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
-    assert len(json.dumps(first["planning"]["terminal_retention"])) < 500
+    terminal_retention = first["planning"]["terminal_retention"]
+    offered_discovery = terminal_retention["discovery_request"]
+    assert offered_discovery["request_kind"] == discovery_kind
+    assert offered_discovery["arguments"] == {}
+    assert len(json.dumps(offered_discovery)) < 650
+    assert terminal_retention["status"] == "quiet" and terminal_retention["requests"] == []
+    assert len(json.dumps({key: value for key, value in terminal_retention.items() if key != "discovery_request"})) < 500
     assert "current_evidence" not in first["verification"]
     assert "plugin_exposure_request" not in first["configuration_write"]
     assert "configuration.plugin-exposure" not in first["decision_packet"]["operation_revisions"]
@@ -213,6 +238,15 @@ def test_former_selection_requires_exact_current_agent_request(
     for owner_name, field in (("planning", "terminal_retention"), ("memory", "terminal_retention"), ("verification", "retention")):
         assert len(json.dumps(first[owner_name].get(field, {}))) < 1_600
         state[owner_name] = {key: value for key, value in first[owner_name].items() if key != field}
+    # Full Planning detail offers one exact selection/resume request instead of
+    # treating a remembered cursor as current work. Attribute only that envelope
+    # here; keep the 28 KB ceiling for all remaining state and 6 KB for compact.
+    selection_requests = state["planning"]["selection_requests"]
+    assert len(selection_requests) == 1
+    assert selection_requests[0]["request_kind"] == "planning/select-owner/v1"
+    assert selection_requests[0]["arguments"] == {}
+    assert len(json.dumps(selection_requests)) < 650
+    state["planning"] = {key: value for key, value in state["planning"].items() if key != "selection_requests"}
     # Retention and current-evidence each contribute two bounded effect revisions.
     state["decision_packet"] = {
         **first["decision_packet"],
@@ -234,6 +268,7 @@ def test_former_selection_requires_exact_current_agent_request(
     assert len(json.dumps(state)) < 28_000, {key: len(json.dumps(value)) for key, value in state.items()}
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
     assert len(json.dumps(compact)) < 6_000
+    assert "planning_retention" not in compact
     assert len(json.dumps(candidate)) < 8_000
     request = candidate["selection_request"]
     assert request["task_identity"] != fact["task_identity"]

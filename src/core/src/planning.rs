@@ -339,6 +339,11 @@ fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Va
     } else {
         json!([])
     };
+    if let Some(work) = input.intent.get("current_work") {
+        for action in actions.as_array_mut().unwrap() {
+            action["arguments"]["current_work"] = work.clone();
+        }
+    }
     if !input.source_requests.is_empty() {
         for action in actions.as_array_mut().unwrap() {
             action["source_requests"] = json!(input.source_requests);

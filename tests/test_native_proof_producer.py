@@ -790,8 +790,7 @@ def test_native_proof_uses_actual_reconciled_planning_subject(
         return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
 
     initial = call(context)
-    request = initial["decision_packet"]["decision_request"]["response_request"]
-    request["arguments"]["answer"] = "continue-selected"
+    request = initial["planning"]["selection_requests"][0]
     continued = call({**context, "request": request})
     call({**context, "invocation": continued["decision_packet"]["primary_action"]})
     current = call(context)
@@ -822,8 +821,7 @@ def test_native_proof_uses_actual_reconciled_planning_subject(
     body = json.loads(plan.read_bytes())
     body["canonical_core"]["hard_constraints"] = "New material Planning boundary"
     plan.write_text(json.dumps(body))
-    request = call(context)["decision_packet"]["decision_request"]["response_request"]
-    request["arguments"]["answer"] = "continue-selected"
+    request = call(context)["planning"]["selection_requests"][0]
     action = call({**context, "request": request})["decision_packet"]["primary_action"]
     call({**context, "invocation": action})
     assert call(context)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != subject["revision"]

@@ -75,7 +75,7 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_unreconciled_planning_owner_is_not_known_absence(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+def test_explicit_legacy_resume_is_not_known_absence(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
     plan.parent.mkdir(parents=True)
@@ -91,11 +91,14 @@ def test_unreconciled_planning_owner_is_not_known_absence(tmp_path: Path, shared
     )
     context = {"target": str(tmp_path), "task": "Continue the selected work", "changed": []}
     result = consume(surface, shared_core_binary, native_cli, context)
-    assert result["planning"]["status"] == "unresolved"
+    selection = result["planning"]["selection_requests"][0]
+    context["request"] = selection
+    result = consume(surface, shared_core_binary, native_cli, context)
+    assert result["planning"]["status"] == "legacy-choice-required"
     assert result["verification"]["assurance_applicability"]["requirements"][0]["status"] == "unresolved"
     request = result["verification"]["assurance_request"]
     request["arguments"]["decisions"] = {"risk_review": "not-applicable"}
-    result = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    result = consume(surface, shared_core_binary, native_cli, {**context, "request": [selection, request]})
     row = result["verification"]["assurance_applicability"]["requirements"][0]
     assert row["status"] == "unresolved"
     assert "current agent applicability judgment" not in row["applies_because"]

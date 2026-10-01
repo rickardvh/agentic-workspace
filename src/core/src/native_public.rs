@@ -248,7 +248,11 @@ fn resolve_selected(
                     && request["owner"] == "planning"
                     && matches!(
                         request["request_kind"].as_str(),
-                        Some("planning/continuation/v1" | "planning/posture/v1")
+                        Some(
+                            "planning/continuation/v1"
+                                | "planning/posture/v1"
+                                | "planning/select-owner/v1"
+                        )
                     ))
         })
     {
@@ -809,6 +813,13 @@ fn resolve_selected(
     for request in planning["requests"].as_array_mut().into_iter().flatten() {
         request["capability_revision"] = contract["revision"].clone();
     }
+    for request in planning["selection_requests"]
+        .as_array_mut()
+        .into_iter()
+        .flatten()
+    {
+        request["capability_revision"] = contract["revision"].clone();
+    }
     for request in planning["legacy_aggregate"]
         .get_mut("selection_requests")
         .and_then(Value::as_array_mut)
@@ -1072,6 +1083,7 @@ fn resolve_selected(
                 Some(
                     crate::native_planning_retention::REQUEST
                         | crate::native_planning_retention::RECOVER
+                        | crate::native_planning_retention::DISCOVER
                 )
             )
         });

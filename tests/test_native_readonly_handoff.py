@@ -142,8 +142,9 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
             creation["arguments"]["material"]["material_lifetimes"]["continuation_frontier"] = "observation"
             creation["arguments"]["material"]["continuation"][destination] = dependency.read_bytes().decode()
         created = call(invocation=call(creation)["decision_packet"]["primary_action"])
+        context = created["value"]["selection_context"]
         plan_path = tmp_path / created["value"]["owner_path"]
-        selection = call()["planning"]["created_owner"]["selection_request"]
+        selection = created["value"]["selection_request"]
         call(invocation=call(selection)["decision_packet"]["primary_action"])
         original_plan = json.loads(plan_path.read_bytes())
         if surface == "json":
@@ -451,19 +452,16 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         def other_call(request=None, **updates):
             return call(request, task="A different independent Planning task", **updates)
 
-        unrelated_request = other_call()["planning"]["requests"][0]
-        unrelated_request["arguments"].update(answer="independent", task_posture="planned")
-        creation = other_call(unrelated_request)["planning"]["creation_requests"][0]
+        creation = other_call()["planning"]["creation_requests"][0]
         creation["arguments"] = {"material": new_material()}
         creation["arguments"]["material"]["title"] = "A different selected Planning owner"
-        other_call(invocation=other_call([unrelated_request, creation])["decision_packet"]["primary_action"])
+        other_call(invocation=other_call(creation)["decision_packet"]["primary_action"])
         selection = other_call()["planning"]["created_owner"]["selection_request"]
         other_call(invocation=other_call(selection)["decision_packet"]["primary_action"])
         with pytest.raises(AssertionError, match="changed|stale"):
             call(held["reentry"]["request"])
-        selection = call()["planning"]["requests"][0]
+        selection = call()["planning"]["selection_requests"][0]
         selection["arguments"]["owner_ref"] = plan_ref
-        selection = call(selection)["planning"]["requests"][0]
         call(invocation=call(selection)["decision_packet"]["primary_action"])
     observed = call(held["reentry"]["request"])
     assert observed["task_requirements"]["assignment"]["result_admission"]["status"] == "judgment-required"
@@ -525,8 +523,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         assert plan_path.read_bytes() == before_reobservation
     proof_context = {**context, "changed": [plan_ref, "dependency.md", "verify_frontier.py"]}
     proof_start = consume(surface, shared_core_binary, native_cli, proof_context, host_path=os.environ["PATH"])
-    continuation = proof_start["planning"]["requests"][0]
-    continuation["arguments"]["answer"] = "continue-selected"
+    continuation = proof_start["planning"]["selection_requests"][0]
     proof_ready = consume(surface, shared_core_binary, native_cli, {**proof_context, "request": continuation}, host_path=os.environ["PATH"])
     proof_request = proof_ready["verification"]["execution_requests"][0]
     proof_action = consume(

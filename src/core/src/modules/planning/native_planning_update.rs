@@ -881,7 +881,7 @@ fn view_material(
         result["recovery_requests"] = json!([template]);
         if effective.is_none()
             && invocation.is_none()
-            && continuation.is_some_and(|c| c["arguments"]["answer"] == "continue-selected")
+            && continuation.is_some_and(crate::native_planning::explicit_continuation)
         {
             let carried = &result["recovery_requests"][0];
             match view_material(
@@ -905,7 +905,7 @@ fn view_material(
             let continuation = continuation.ok_or_else(|| {
                 error("Planning recovery requires current continue-selected judgment")
             })?;
-            if continuation["arguments"]["answer"] != "continue-selected"
+            if !crate::native_planning::explicit_continuation(continuation)
                 || !matches!(
                     planning["status"].as_str(),
                     Some("current" | "reentry-required")
@@ -1271,7 +1271,7 @@ mod tests {
         created["value"]["owner_path"].as_str().unwrap().to_owned()
     }
     fn ready(target: &Path) -> Value {
-        let continuation = start(target)["planning"]["requests"][0].clone();
+        let continuation = start(target)["planning"]["selection_requests"][0].clone();
         let admitted = request(target, continuation.clone());
         let mut update = admitted["planning"]["update_requests"][0].clone();
         let mut material = material();
@@ -1363,7 +1363,10 @@ mod tests {
                 );
                 assert_eq!(read(&target, &relative).unwrap(), foreign);
             } else {
-                let fresh = request(&target, start(&target)["planning"]["requests"][0].clone());
+                let fresh = request(
+                    &target,
+                    start(&target)["planning"]["selection_requests"][0].clone(),
+                );
                 let recovered = fresh["planning"]["pending_update"]["invocation"].clone();
                 assert_eq!(recovered, action);
                 assert_ne!(fresh["decision_packet"]["status"], "terminal");
@@ -1372,7 +1375,7 @@ mod tests {
                 let mut reworded = context(&target);
                 reworded["task"] = json!("Continue this same bounded native owner update");
                 let reentry = crate::native_public::start(reworded.clone()).unwrap();
-                reworded["request"] = reentry["planning"]["requests"][0].clone();
+                reworded["request"] = reentry["planning"]["selection_requests"][0].clone();
                 let continued = crate::native_public::start(reworded.clone()).unwrap();
                 assert!(continued["planning"]["pending_update"].is_object());
                 let current_bytes = read(&target, &relative).unwrap();
@@ -1381,7 +1384,7 @@ mod tests {
                 assert!(crate::native_public::invoke_checked(reworded.clone()).is_err());
                 assert_eq!(read(&target, &relative).unwrap(), current_bytes);
                 reworded.as_object_mut().unwrap().remove("invocation");
-                let continuation = reentry["planning"]["requests"][0].clone();
+                let continuation = reentry["planning"]["selection_requests"][0].clone();
                 let recovery = continued["planning"]["update_recovery_requests"][0].clone();
                 let mut unrelated = continuation.clone();
                 unrelated["arguments"]["answer"] = json!("unrelated-direct");
@@ -1510,7 +1513,7 @@ mod tests {
             let mut context = context(&target);
             context["task"] = json!("Continue the same owner after interruption");
             let fresh = crate::native_public::start(context.clone()).unwrap();
-            let continuation = fresh["planning"]["requests"][0].clone();
+            let continuation = fresh["planning"]["selection_requests"][0].clone();
             context["request"] = continuation.clone();
             let admitted = crate::native_public::start(context.clone()).unwrap();
             context["request"] = json!([

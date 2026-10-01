@@ -88,6 +88,18 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "selection_request": {
+      "type": "object",
+      "description": "Explicitly select a named owner for this work, or resume the local hint when owner_ref is omitted. Selection requires current source and custody; the hint alone grants no authority.",
+      "additionalProperties": false,
+      "properties": {
+        "owner_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact canonical owner source to select instead of the remembered resume hint."
+        }
+      }
+    },
     "retained_reconciliation": {
       "type": "object",
       "description": "Bounded producer custody retained by the already admitted current owner selection; not caller authority or Planning semantics.",
@@ -508,6 +520,10 @@
       "type": "object",
       "description": "Planning-returned arguments; never caller-authored.",
       "properties": {
+        "current_work": {
+          "type": "object",
+          "description": "Exact current-work binding retained in the producer invocation. Legacy effects without this field remain explicitly resumable."
+        },
         "target": {
           "type": "string",
           "description": "Owner-derived target root."

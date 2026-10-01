@@ -71,6 +71,9 @@ def test_source_repository_configured_native_route_is_stateful(tmp_path: Path, s
     assert process.returncode == 0, process.stderr
     initial = json.loads(process.stdout)
     assert initial["configuration"]["payload"]["status"] == "satisfied"
+    initial = consume(
+        "native", shared_core_binary, native_cli, {**context, "request": initial["planning"]["selection_requests"][0]}, host_path=git_path
+    )
     transfer = initial["planning"]["selector_transfer"]["request"]
     transfer["arguments"]["answer"] = "authorize-selector-transfer"
     requests = [initial["startup_adapter"]["requests"][0], transfer]
@@ -188,10 +191,6 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
             request = current["planning"]["creation_requests"][0]
             request["arguments"] = {"material": planning_material()}
             requests = [request]
-            if index:
-                direct = current["decision_packet"]["decision_request"]["response_request"]
-                direct["arguments"] = {"answer": "independent", "task_posture": "planned"}
-                requests.insert(0, direct)
             created = setup({**context, "invocation": setup({**context, "request": requests})["decision_packet"]["primary_action"]})
             context = created["value"]["selection_context"]
             switch_choice = created["value"]["selection_request"]
@@ -233,8 +232,7 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
         owner_request = current["planning"]["creation_requests"][0]
         owner_request["arguments"] = {"material": planning_material()}
     else:
-        owner_request = current["decision_packet"]["decision_request"]["response_request"]
-        owner_request["arguments"]["answer"] = "continue-selected"
+        owner_request = current["planning"]["selection_requests"][0]
     automatic = call({**context, "request": owner_request})
     assert automatic["startup_adapter"]["status"] == "source-context-delivered"
     delivered = call({**context, "request": [read_request, owner_request]})
