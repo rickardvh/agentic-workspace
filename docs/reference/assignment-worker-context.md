@@ -30,6 +30,7 @@ Bounded worker-facing projection mechanically derived from canonical assignment 
 | `effects.prohibited` | array of string | yes |  | Effects explicitly outside worker authority. |  |  |
 | `inputs` | object | yes |  | Required inputs and exact lazy context acquisition routes. |  |  |
 | `inputs.required` | array of string | yes |  | Inputs required before work proceeds. |  |  |
+| `inputs.source_work` | object | no |  | Selected source owner's bounded outcome, constraints, accepted context and return destination; no added authority. |  |  |
 | `inputs.read_first` | array of string | yes |  | Exact references or selectors the worker reads before requesting deeper context. |  |  |
 | `inputs.capsule` | array of object | no |  | Exact currently observed input bodies selected by the acting agent for this read-only assignment. |  |  |
 | `inputs.task_requirements` | object | no |  | Unchanged current task requirement owner projection; this grants no capability or evidence authority. |  |  |

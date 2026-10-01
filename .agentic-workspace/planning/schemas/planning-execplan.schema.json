@@ -11,6 +11,19 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "assignment_inputs": {
+      "type": "object",
+      "description": "Explicit bounded execution definition shaped with this owner. Readiness is an accepted source declaration, not proof or a scheduler.",
+      "additionalProperties": false,
+      "required": ["result_class", "input_refs", "mutation_paths", "required_proof_classes", "accepted_dependencies"],
+      "properties": {
+        "result_class": {"enum": ["read-only", "unapplied-patch"]},
+        "input_refs": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "mutation_paths": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "required_proof_classes": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1}},
+        "accepted_dependencies": {"type": "array", "maxItems": 8, "items": {"type": "object", "additionalProperties": false, "required": ["reference", "revision"], "properties": {"reference": {"type": "string", "minLength": 1}, "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}}}
+      }
+    },
     "integration_proposal": {
       "type": "object",
       "description": "Bounded semantic proposal for lazy target reconciliation. Git observations and completion authority are not part of the proposal.",

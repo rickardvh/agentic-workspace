@@ -565,7 +565,13 @@ pub(crate) fn resolve_with_contract(
         prepare_request_value(
             json!({"request":request,"current_work":current_work,"capability_contract":contract}),
         )?;
-        if request["source_revision"] != quiet["source_revision"] {
+        if request["source_revision"] != quiet["source_revision"]
+            && !crate::native_planning_update::retained_continuation_current(
+                target,
+                &quiet["incumbent_owner"],
+                request,
+            )?
+        {
             return Err(error(
                 "selection request",
                 "stale current-work selection request",

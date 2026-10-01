@@ -363,6 +363,7 @@
       "type": "object",
       "description": "Current material Planning state, excluding execution history.",
       "properties": {
+        "assignment_inputs": {"type": "object", "description": "Explicit source-owned bounded execution definition; never inferred from arbitrary prose."},
         "canonical_core": {
           "type": [
             "object",

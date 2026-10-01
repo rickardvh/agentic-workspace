@@ -154,6 +154,9 @@ pub(crate) fn view(
         .unwrap();
     let selected = &requirements["assignment"]["result"]["selected"]["configuration"];
     let packet = &handoff["packet"];
+    let origin_task = packet["assignment_identity"]
+        .get("origin_task")
+        .unwrap_or(&packet["assignment_identity"]["human_intent"]);
     let source = digest(
         &json!({"work":work,"assignment":requirements["assignment"]["result"]["assignment_identity"],"packet":packet,"execution":selected["execution"]}),
     )?;
@@ -227,7 +230,7 @@ pub(crate) fn view(
             {
                 returned[key] = value.clone();
             }
-            observation = json!({"kind":"agentic-workspace/delegation-result-observation/v1","status":"current-executed-observation","assignment_identity":requirements["assignment"]["result"]["assignment_identity"],"returned":returned,"process":value["process"],"context_cost":value["context_cost"],"custody":request["arguments"]["custody"],"origin_assignment":old["assignment_identity"]["current_assignment"],"context":{"task":packet["assignment_identity"]["human_intent"],"role":packet["assignment_identity"]["role"],"scope_class":"read-only","executed_configuration":old["assignment_identity"]["current_assignment"]["selected"]["configuration"]},"claim_boundary":value["claim_boundary"]});
+            observation = json!({"kind":"agentic-workspace/delegation-result-observation/v1","status":"current-executed-observation","assignment_identity":requirements["assignment"]["result"]["assignment_identity"],"returned":returned,"process":value["process"],"context_cost":value["context_cost"],"custody":request["arguments"]["custody"],"origin_assignment":old["assignment_identity"]["current_assignment"],"context":{"task":origin_task,"role":packet["assignment_identity"]["role"],"scope_class":"read-only","executed_configuration":old["assignment_identity"]["current_assignment"]["selected"]["configuration"]},"claim_boundary":value["claim_boundary"]});
         }
     }
     if let Some(request) = result_read {
@@ -262,7 +265,7 @@ pub(crate) fn view(
         }
         observed_invocation = invocation.clone();
         observation = json!({"kind":"agentic-workspace/delegation-result-observation/v1","status":"current-executed-observation","assignment_identity":requirements["assignment"]["result"]["assignment_identity"],"returned":value["returned"],"process":value["process"],"context_cost":value["context_cost"],"custody":request["arguments"]["custody"],"claim_boundary":value["claim_boundary"]});
-        observation["context"] = json!({"task":packet["assignment_identity"]["human_intent"],"role":packet["assignment_identity"]["role"],"scope_class":packet["assignment_identity"]["scope_class"],"context_cost":value["context_cost"]});
+        observation["context"] = json!({"task":origin_task,"role":packet["assignment_identity"]["role"],"scope_class":packet["assignment_identity"]["scope_class"],"context_cost":value["context_cost"]});
         if packet["assignment_identity"]["scope_class"] == "unapplied-patch" {
             observation["delta"] = crate::native_patch::delta(packet, &value["returned"])?;
         }

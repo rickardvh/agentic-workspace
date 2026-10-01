@@ -60,6 +60,7 @@
       "description": "Required inputs and exact lazy context acquisition routes.",
       "properties": {
         "required": {"description": "Inputs required before work proceeds.", "items": {"type": "string"}, "type": "array"},
+        "source_work": {"type": "object", "description": "Selected source owner's bounded outcome, constraints, accepted context and return destination; no added authority."},
         "read_first": {"description": "Exact references or selectors the worker reads before requesting deeper context.", "items": {"type": "string"}, "type": "array"},
         "capsule": {"description": "Exact currently observed input bodies selected by the acting agent for this read-only assignment.", "type": "array", "maxItems": 8, "items": {"type": "object", "additionalProperties": false, "required": ["reference", "revision", "content"], "properties": {"reference": {"type": "string"}, "revision": {"type": "string"}, "content": {"type": "string"}}}},
         "task_requirements": {"description": "Unchanged current task requirement owner projection; this grants no capability or evidence authority.", "type": "object"},

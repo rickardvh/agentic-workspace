@@ -4,6 +4,7 @@
 use crate::{CoreError, attempt_store, compile_value, digest, operation_result_value};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use sha2::Digest;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -25,6 +26,73 @@ struct Input {
 
 fn error(message: impl ToString) -> CoreError {
     CoreError::new(message.to_string())
+}
+
+/// Only an explicitly selected owner with a typed execution definition supplies
+/// defaults. Arbitrary plan prose is never parsed into a task graph or authority.
+pub(crate) fn assignment_work(
+    target: &std::path::Path,
+    subject: Option<&Value>,
+) -> Result<Value, CoreError> {
+    let Some(subject) = subject else {
+        return Ok(Value::Null);
+    };
+    let state = &subject["state"];
+    let definition = &state["assignment_inputs"];
+    if !definition.is_object() {
+        return Ok(Value::Null);
+    }
+    let mut gaps = Vec::new();
+    if state["scope"]["owner_level"] != "slice" {
+        gaps.push("Select or shape one bounded slice owner before dispatch.".to_owned());
+    }
+    if state["frontier"]["blockers"]
+        .as_array()
+        .is_some_and(|b| !b.is_empty())
+    {
+        gaps.push("Selected work has unresolved blockers.".to_owned());
+    }
+    let root =
+        cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
+    let accepted = definition["accepted_dependencies"].as_array().unwrap();
+    for dependency in accepted {
+        let reference = dependency["reference"].as_str().unwrap();
+        match crate::native_verification::read(&root, reference) {
+            Ok(Some(bytes)) if format!("sha256:{:x}", sha2::Sha256::digest(&bytes)) == dependency["revision"].as_str().unwrap() => (),
+            _ => gaps.push(format!("Accepted prerequisite {reference} is missing or changed; readmit it before this work.")),
+        }
+    }
+    let dependencies = &state["dependencies"]["declared"];
+    if dependencies
+        .as_object()
+        .is_some_and(|d| d.keys().any(|k| k != "refs"))
+    {
+        gaps.push(
+            "Refine declared prerequisites into exact accepted source references.".to_owned(),
+        );
+    }
+    for reference in dependencies["refs"].as_array().into_iter().flatten() {
+        if !accepted.iter().any(|a| a["reference"] == *reference) {
+            gaps.push(format!(
+                "Declared prerequisite {reference} has no current accepted source."
+            ));
+        }
+    }
+    if definition["result_class"] == "read-only"
+        && definition["mutation_paths"]
+            .as_array()
+            .is_some_and(|p| !p.is_empty())
+    {
+        gaps.push("Read-only work cannot declare mutation paths.".to_owned());
+    }
+    Ok(
+        json!({"status":if gaps.is_empty(){"ready"}else{"shaping-required"},"producer":"planning",
+        "work":{"id":subject["id"],"revision":subject["revision"]},"definition":definition,
+        "outcome":state["outcome"],"scope":state["scope"],"constraints":state["constraints"],
+        "accepted_context":state["residual"]["continuation"],"proof":state["proof"],"next_action":state["frontier"]["next_action"],
+        "return_destination":"originating selected owner; use its current Planning adoption request after Assignment admission",
+        "gaps":gaps,"claim_boundary":"Source-shaped work and accepted prerequisite references only; no proof or completion authority."}),
+    )
 }
 
 fn semantic_subject(state: &Value) -> Value {
@@ -224,6 +292,9 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         "handoff": {"delegation": body["relationships"]["delegation"], "assignment": body["relationships"]["assignment"], "returned": body["relationships"]["returned"], "integration_pending": body["relationships"]["integration_pending"], "contracts": body["specialist_contracts"]},
         "residual": {"continuation": body["continuation"], "intent_continuity": body["intent_continuity"]}
     });
+    if let Some(inputs) = body.get("assignment_inputs") {
+        material["assignment_inputs"] = inputs.clone();
+    }
     // Consume the representation's existing typed assurance declarations only.
     // Absence is unknown, not an authoritative empty list. Keep their complete
     // values material, including constraints outside applicability selectors.
@@ -247,6 +318,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         material["residual"][crate::planning_lifetime::PROPOSAL] = proposal.clone();
     }
     let known = [
+        "assignment_inputs",
         "kind",
         "id",
         "title",

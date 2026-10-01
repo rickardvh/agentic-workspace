@@ -17,11 +17,16 @@ dispatch/transport action. Do not reopen binding target choice because of cost,
 availability or convenience. Only an admitted structured transition can change it.
 Manual-only and unavailable transport are honest states, not failed automatic work.
 
-For a handoff, supply a bounded frontier through the current handoff-input request:
-outcome and scope, still-current judgments with source revisions, required inputs,
-uncertainties, stop conditions and return/proof requirements. Reuse owner material
-before adding a summary; capture relied-upon procedure and evidence sources and
-judge completeness from what the owner actually captured. A summary is neither
+For a selected slice with `assignment_inputs`, reuse the source-derived work and
+current handoff-input request. Planning carries its outcome, scope, constraints,
+accepted context, proof, next action and return destination; confirm the captured
+inputs suffice for the receiver's access. Do not retype that shaped work into a
+second judgment or worker summary. Missing or changed accepted dependencies and
+blocked frontiers return to Planning shaping before export.
+
+For work without that source definition, supply the bounded frontier through the
+current handoff-input request. Capture relied-upon procedure and evidence sources
+and judge completeness from what the owner actually captured. A summary is neither
 parent chat nor fresh authority. No separate handoff registry is needed.
 
 ```agentic-owner-reference

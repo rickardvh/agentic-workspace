@@ -614,6 +614,16 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
         let settled = if candidates.len() == 1 {
             determination = "sole-eligible-configuration";
             candidates.first().copied()
+        } else if !candidates.is_empty()
+            && candidates
+                .iter()
+                .all(|a| a["target"] == candidates[0]["target"])
+        {
+            determination = "sole-eligible-executor-selected-transport";
+            candidates
+                .iter()
+                .copied()
+                .find(|a| a["id"] == execution["configurations"]["selected"]["id"])
         } else {
             candidates
                 .iter()

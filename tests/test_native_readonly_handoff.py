@@ -133,6 +133,19 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
 
         creation = call()["planning"]["creation_requests"][0]
         creation["arguments"] = {"material": material()}
+        if surface == "native" and not host and not repair_evaluation:
+            creation["arguments"]["material"].update(
+                owner_level="slice",
+                intent={"outcome": "Return the supplied source observation"},
+                blockers=[],
+                assignment_inputs={
+                    "result_class": "read-only",
+                    "input_refs": ["dependency.md"],
+                    "mutation_paths": [],
+                    "required_proof_classes": [],
+                    "accepted_dependencies": [],
+                },
+            )
         destination = "frontier"
         if surface == "typescript":
             # A new admitted return must still acquire consumption custody when
@@ -180,9 +193,17 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     if fault is None:
         task = [call()["planning"]["requests"][0], task]
     inputs = call(task)["task_requirements"]["handoff_inputs"]["requests"][0]
-    inputs[-1]["arguments"].update(
-        input_refs=["dependency.md"], complete=False, reason="The one source is sufficient for this bounded task."
-    )
+    if surface == "native" and fault is None and not host and not repair_evaluation:
+        derived = call()["task_requirements"]
+        assert derived["result"]["status"] == "resolved"
+        assert derived["source_work"]["producer"] == "planning"
+        inputs = derived["handoff_inputs"]["requests"][0]
+        assert inputs[-1]["arguments"]["input_refs"] == ["dependency.md"]
+        inputs[-1]["arguments"]["complete"] = True
+    else:
+        inputs[-1]["arguments"].update(
+            input_refs=["dependency.md"], complete=False, reason="The one source is sufficient for this bounded task."
+        )
     inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
     inputs[-1]["arguments"]["complete"] = True
     offered = call(inputs)["task_requirements"]
