@@ -82,3 +82,9 @@ Planning, Verification, manual and native process-journey checks. Final manual
 validation preserves the existing manual read-only eligibility. Rust Clippy passed
 with warnings denied; focused worker presentation and missing-source-meaning unit
 checks passed.
+
+Hosted merge proof exposed full-introspection schema growth. Each slice now
+attributes only its exact named optional schemas to bounded allowances; ordinary
+state and compact ceilings remain unchanged. The manual owner omits absent
+continuation detail in unrelated work. The former-route and manual regression
+checks passed together (33 cases) after that correction.

@@ -98,7 +98,7 @@ def test_manual_snapshot_fresh_return_and_authority(tmp_path, shared_core_binary
     fresh = call()["task_requirements"]["delegation"]["manual_continuation"]
     assert fresh["status"] == "exported"
     assert call(fresh["reentry"]["request"])["task_requirements"]["handoff"]["packet"] == fresh["packet"]
-    assert call(task="Unrelated independent work")["task_requirements"]["delegation"]["manual_continuation"] is None
+    assert call(task="Unrelated independent work")["task_requirements"]["delegation"].get("manual_continuation") is None
     material = {
         "summary": "A loan lasts 14 days. One renewal is allowed only when no reservation exists.",
         "changed_paths": [],

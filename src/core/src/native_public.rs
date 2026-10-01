@@ -1473,8 +1473,11 @@ fn resolve_selected(
         .remove("observed_invocation");
     let mut admission =
         crate::native_handoff::admission(&work, &delegation["observation"], &requests, &contract)?;
-    delegation["manual_continuation"] =
+    let manual_continuation =
         crate::native_manual::continuation(target, &input.task, &input.changed)?;
+    if !manual_continuation.is_null() {
+        delegation["manual_continuation"] = manual_continuation;
+    }
     if delegation["observation"]["status"] == "current-reported-observation" {
         let settlement = crate::native_manual::settle(
             target, &work, &handoff, &admission, &requests, &contract,
