@@ -12,6 +12,11 @@
         "judgment"
       ],
       "properties": {
+        "analysis_receipt_ref": {
+          "type": "string",
+          "pattern": "^proof://local/[a-f0-9]{64}$",
+          "description": "Select a committed native receipt for the source-defined read-only investigation. No execution or proof authority is transferred."
+        },
         "obligation_ref": {
           "type": [
             "string",

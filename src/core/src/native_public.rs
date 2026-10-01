@@ -1563,6 +1563,13 @@ fn resolve_selected(
         owner["blockers"].as_array_mut().unwrap().push(json!({"code":"planning-continuity-unresolved","message":planning["continuity_unresolved"].to_string(),"affects":["effect:planning-state","claim:complete"]}));
         owner["settled"] = json!(false);
     }
+    if requirements["source_work"]["producer"] == "verification" {
+        verification["analysis"] = json!({"work":requirements["source_work"]["work"],"source":requirements["source_work"]["accepted_context"],
+            "status":admission["status"],"returned":admission["returned"],"custody":admission["execution_custody"],
+            "analysis_use_allowed":admission["result_use_allowed"] == true,"trust_level":"unproven-analysis",
+            "next_route":"Use current Verification proof.report for additional checks; shape a separately authorised repair for implementation.",
+            "claim_boundary":{"passing_proof":false,"evidence_sufficiency":false,"independent_approval":false,"completion":false}});
+    }
     requirements["assignment"]["result_admission"] = admission;
     contributions.push(delegation["contribution"].clone());
     delegation.as_object_mut().unwrap().remove("contribution");

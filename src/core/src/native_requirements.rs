@@ -58,7 +58,7 @@ pub(crate) fn view(
     let current_work = planning_subject
         .map(|s| json!({"id":s["id"],"revision":s["revision"]}))
         .unwrap_or_else(|| task_identity.clone());
-    let source_work = crate::planning::assignment_work(target, planning_subject)?;
+    let mut source_work = crate::planning::assignment_work(target, planning_subject)?;
     let mut required = configuration["assignment_requirements"]["required_execution_guarantees"]
         .as_array()
         .cloned()
@@ -148,13 +148,37 @@ pub(crate) fn view(
         .or(nested.as_ref())
         .filter(|v| !v.is_null());
     let mut obligation = Value::Null;
-    if judgment["role"] == "evaluator" || selected_request.is_some() {
+    if judgment["role"] == "evaluator"
+        || selected_request.is_some()
+        || (request.is_none()
+            && verification["strategy"]["protocols"]
+                .as_object()
+                .is_some_and(|p| p.values().any(|v| v["analysis"].is_object())))
+    {
         obligation = crate::verification_requirements::resolve(
             json!({"target":target,"task":task,"changed_paths":changed,
-            "current_work":current_work,"role":judgment["role"].as_str().unwrap_or("evaluator"),"request":selected_request}),
+            "current_work":current_work,"role":judgment["role"].as_str().or_else(|| selected_request.and_then(|r|r["arguments"]["role"].as_str())).unwrap_or("executor"),"request":selected_request}),
             Some(transport_work),
             Some(contract),
         )?;
+        if obligation["source_work"].is_object() {
+            source_work = obligation["source_work"].clone();
+            template["arguments"]["required_result_classes"] = json!(["read-only"]);
+            template["arguments"]["required_proof_classes"] = json!([]);
+            template["arguments"]["verification_identity"] = json!({"id":obligation["verification"]["id"],"revision":obligation["verification"]["revision"]});
+            if request.is_none() && source_work["status"] == "ready" {
+                judgment = template["arguments"].clone();
+            }
+            if !judgment.is_null()
+                && (judgment["role"] != "executor"
+                    || judgment["required_result_classes"] != json!(["read-only"])
+                    || judgment["required_proof_classes"] != json!([]))
+            {
+                return Err(CoreError::new(
+                    "Verification investigation permits read-only analysis only; commands and repair use their existing separately scoped owner paths.",
+                ));
+            }
+        }
         if !obligation["verification"].is_null()
             && judgment["verification_identity"].is_null()
             && !judgment.is_null()

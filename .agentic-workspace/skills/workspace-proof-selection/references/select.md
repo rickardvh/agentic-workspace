@@ -16,6 +16,20 @@ Resolve current Verification through `start`. Read selected protocol purpose,
 expected observations, escalation and review aids. Optional profiles remain behind
 exact detail references; omitted alternatives are not absent alternatives.
 
+Keep a known selected command on its existing `proof.report` path; a worker is
+unnecessary merely to launch or monitor it. For a source-defined protocol
+`analysis`, use the current Verification requirements request to select its
+`analysis_receipt_ref`. The owner derives the question, relevant source inputs and
+exact committed execution log. Confirm captured context sufficiency once, then use
+current Assignment policy and its sealed read-only handoff. No Planning owner or
+new prose task is needed. Missing or changed receipt, subject, log or environment
+returns to Verification recovery/selection before export.
+
+The analyst returns explanation or a specific blocker. Assignment admission makes
+that analysis usable at the originating Verification investigation; it supplies no
+passing receipt, sufficiency, independent approval or completion. Additional checks
+use current Verification execution; repairs require separately authorised scope.
+
 Broaden to another suite, adapter, platform or real-agent exercise only when a
 named remaining risk needs that observation. Stop once the bounded claim and
 required checks are supported. Repository testing guidance may supply examples

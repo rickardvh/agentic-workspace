@@ -30,9 +30,25 @@ economic savings or independent approval. Claude was installed but unauthenticat
 an earlier generic wrapper attempt failed before a provider launch and its committed
 failure was preserved. It was not counted as live model evidence.
 
+## Verification evidence (#3756)
+
+`test_verification_derived_analysis.py` exercises an existing native `proof.report`
+that fails, committed receipt recovery without another command run, the protocol's
+source-defined investigation, exact log capture, a read-only process analysis and
+Assignment admission at the originating Verification work. No Planning module or
+owner is enabled. The analysis is explicitly unproven, with passing proof,
+sufficiency, approval and completion grants false. Prohibited patch work fails;
+unrelated material preserves admission; changed check input requires a fresh
+Verification selection. The original failed receipt stays failed.
+
+The worker presentation supplies the investigation question, exact failed status,
+code and bounded log together, and directs additional commands to Verification
+and implementation to a separate repair decision. The fixture receiver checks
+that boundary before returning an explanation. This is contract/presentation
+evidence; live model comprehension uses the #3755 exercise, not a new provider run.
+
 ## Remaining lane work
 
-#3756 composes Verification-owned investigation with this same packet/admission
-path while preserving direct selected-proof execution. #3757 owns complete manual
+#3757 owns complete manual
 presentation, host-wrapped reported returns and fresh-context continuity. Their
 runtime must work without a Planning owner. Each is a separate stacked PR.
