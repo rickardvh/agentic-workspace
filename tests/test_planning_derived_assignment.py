@@ -69,7 +69,7 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
             relationships={"dependencies": {"refs": ["accepted.txt"]}},
             assignment_inputs={
                 "result_class": "read-only",
-                "input_refs": ["accepted.txt"],
+                "input_refs": [],
                 "mutation_paths": [],
                 "required_proof_classes": [],
                 "accepted_dependencies": [{"reference": "accepted.txt", "revision": revision}],
