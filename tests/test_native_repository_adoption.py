@@ -248,8 +248,8 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
 
     def assert_disabled():
         assert policy.read_bytes() == disabled
-        blocker = next(b for b in call()["decision_packet"]["blockers"] if b["code"] == "workspace-disabled")
-        assert "task" in blocker["affects"]
+        assert not any(b["code"] == "workspace-disabled" for b in call()["decision_packet"]["blockers"])
+        assert call(maintenance=None)["status"] == "inactive"
         assert custom.read_text() == "Preserve independently owned state.\n"
         assert all(p.read_bytes() == data for p, data in preserved_planning.items())
 
@@ -274,7 +274,7 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     removal_answer["arguments"]["answer"] = "authorize-write"
     denied = call(request=removal_answer)
     assert not denied["decision_packet"]["ready_actions"]
-    assert any(b["code"] == "workspace-disabled" and "task" in b["affects"] for b in denied["decision_packet"]["blockers"])
+    assert not any(b["code"] == "workspace-disabled" for b in denied["decision_packet"]["blockers"])
     request = next(r for r in read["adoption_requests"] if r["arguments"]["mode"] == "adopt")
     proposal = call(request=request)
     answer = next(
@@ -284,8 +284,7 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     authorised = call(request=answer)
     action = authorised["decision_packet"]["primary_action"]
     assert action["operation_id"] == "configuration.repository-adoption"
-    blocker = next(b for b in authorised["decision_packet"]["blockers"] if b["code"] == "workspace-disabled")
-    assert "effect:implementation" in blocker["affects"]
+    assert not any(b["code"] == "workspace-disabled" for b in authorised["decision_packet"]["blockers"])
     original = agents.read_bytes()
     agents.write_bytes(original + b"Concurrent repository edit.\n")
     with pytest.raises(AssertionError, match="changed|stale"):
