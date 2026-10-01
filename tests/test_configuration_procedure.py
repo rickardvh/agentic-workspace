@@ -332,7 +332,8 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
     path.write_text('{"kind":"future-format"}')
     assert assessment()["status"] == "unavailable"
     (workspace / "config.toml").write_text("[workspace]\nenabled=false\n")
-    assert "setup_assessment" not in call()["configuration_write"]
+    assert call()["status"] == "inactive"
+    assert "setup_assessment" not in call(maintenance="configuration")["configuration_write"]
 
 
 @pytest.mark.parametrize(

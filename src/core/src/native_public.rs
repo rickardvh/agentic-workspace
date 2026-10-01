@@ -78,6 +78,17 @@ fn resolve_with_baseline(
     resolve_selected(input, target, executing, baseline, &Resolution::Full)
 }
 
+fn disabled_maintenance(action: &Value) -> bool {
+    crate::native_adoption::disabled_maintenance(action)
+        || matches!(
+            action["operation_id"].as_str(),
+            Some("configuration.write" | "configuration.recover-write")
+        ) && matches!(
+            action["arguments"]["request"]["arguments"]["source"].as_str(),
+            Some(".agentic-workspace/config.toml" | ".agentic-workspace/config.local.toml")
+        )
+}
+
 fn resolve_selected(
     input: &Input,
     target: &std::path::Path,
@@ -88,6 +99,42 @@ fn resolve_selected(
     let compatibility = crate::runtime_compatibility::native(target)?;
     if compatibility["status"] == "blocked" {
         return Ok(compatibility);
+    }
+    // Opt-out ends ordinary AW participation before reading module, material,
+    // route or retained operation state. It supplies no repository authority.
+    if !native_config::enabled(target)? {
+        let requests = owner_requests(if executing {
+            input
+                .invocation
+                .as_ref()
+                .and_then(|i| i.get("source_requests"))
+        } else {
+            input.request.as_ref()
+        })?;
+        let configuration_only = requests.iter().all(|r| {
+            matches!(
+                r["owner"].as_str(),
+                Some("configuration" | "startup-adapter")
+            )
+        });
+        let maintenance = input.maintenance.is_some()
+            || !requests.is_empty() && configuration_only
+            || input
+                .invocation
+                .as_ref()
+                .is_some_and(|i| i["source_owner"] == "configuration");
+        let allowed_effect = input.invocation.as_ref().is_some_and(disabled_maintenance);
+        if !configuration_only || executing && !allowed_effect {
+            return Err(CoreError::new(
+                "AW ordinary operations are unavailable while workspace.enabled=false",
+            ));
+        }
+        if !maintenance {
+            return Ok(json!({"kind":"agentic-workspace/inactive-workspace/v1",
+                "status":"inactive", "configuration":{"enabled":false},
+                "message":"AW is disabled. End AW startup and continue repository work under existing repository, user and host rules.",
+                "authority":"No repository permissions, restrictions, proof or completion authority are supplied by inactive AW."}));
+        }
     }
     let mut work_identity = json!({
         "target":target, "task":input.task, "changed":input.changed
@@ -466,10 +513,8 @@ fn resolve_selected(
     if configuration["contribution"]["blockers"]
         .as_array()
         .is_some_and(|rows| {
-            rows.iter().any(|row| {
-                row["code"] == "native-payload-target-unproven"
-                    || row["code"] == "workspace-disabled"
-            })
+            rows.iter()
+                .any(|row| row["code"] == "native-payload-target-unproven")
         })
     {
         for authority in configuration["capability_contract"]["restriction_authorities"]
@@ -791,6 +836,13 @@ fn resolve_selected(
         request_for("configuration"),
         resolution.detail("configuration_write"),
     )?;
+    if configuration["enabled"] == false {
+        for field in ["actions", "ready_actions"] {
+            if let Some(actions) = config_write["contribution"][field].as_array_mut() {
+                actions.retain(disabled_maintenance);
+            }
+        }
+    }
     crate::native_configuration_assessment::revalidate_saved(
         target,
         &configuration,
@@ -825,35 +877,6 @@ fn resolve_selected(
             .flatten()
         {
             if blocker["code"] == "native-payload-target-unproven" {
-                blocker["affects"] = json!(configuration_gap_scopes);
-            }
-        }
-    }
-    // Disablement still permits exact source repair and bounded package maintenance.
-    if config_write["contribution"]["actions"]
-        .as_array()
-        .is_some_and(|actions| {
-            actions.iter().any(|action| {
-                (matches!(
-                    action["operation_id"].as_str(),
-                    Some("configuration.write" | "configuration.recover-write")
-                ) && matches!(
-                    action["arguments"]["request"]["arguments"]["source"].as_str(),
-                    Some(".agentic-workspace/config.toml" | ".agentic-workspace/config.local.toml")
-                )) || crate::native_adoption::disabled_maintenance(action)
-            })
-        })
-    {
-        for blocker in configuration["contribution"]["blockers"]
-            .as_array_mut()
-            .into_iter()
-            .flatten()
-        {
-            if blocker["affects"]
-                .as_array()
-                .is_some_and(|scopes| scopes.iter().any(|scope| scope == "task"))
-                && blocker["code"] == "workspace-disabled"
-            {
                 blocker["affects"] = json!(configuration_gap_scopes);
             }
         }
