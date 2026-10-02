@@ -1,6 +1,26 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
+  "$defs": {
+    "execution_prerequisites": {
+      "type": "object",
+      "description": "Declared deterministic requirements of an isolated selected command. Native Verification checks these before selected-command launch; no script dependency inference.",
+      "properties": {
+        "source_inputs": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+        "image_executables": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "type": "string", "minLength": 2, "maxLength": 4096 } },
+        "git_subject": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "minLength": 2, "maxLength": 4096 },
+            "revision": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+          },
+          "required": ["path", "revision"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "properties": {
     "execution": {
       "type": "object",
@@ -34,6 +54,7 @@
             },
             "description": "Bounded read-only investigation of this protocol's selected native receipt; analysis never satisfies proof or independent approval."
           },
+          "execution_prerequisites": { "$ref": "#/$defs/execution_prerequisites" },
           "title": {
             "type": "string",
             "minLength": 1,
@@ -260,6 +281,7 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
+          "execution_prerequisites": { "$ref": "#/$defs/execution_prerequisites" },
           "protocol_refs": {
             "type": "array",
             "items": {

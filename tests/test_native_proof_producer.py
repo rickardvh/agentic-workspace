@@ -478,6 +478,31 @@ def test_native_isolated_proof_preserves_protected_source(tmp_path: Path, shared
     def call(value: dict) -> dict:
         return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
 
+    if mode == "read":
+        text = manifest.read_text()
+        # Declared prerequisites refuse selection before any selected-command
+        # effect. Existing write mode below retains a real semantic failure.
+        for prerequisites, missing in [
+            ('source_inputs=["omitted.txt"]', "proof-prerequisite-source-missing:omitted.txt"),
+            ('image_executables=["/missing/runtime"]', "proof-prerequisite-image-executable-missing"),
+            ('git_subject={path="/missing/git",revision="' + "0" * 40 + '"}', "proof-prerequisite-git-subject-unavailable"),
+        ]:
+            manifest.write_text(
+                text.replace("[execution]", "[proof_routes.check.execution_prerequisites]\n" + prerequisites + "\n[execution]")
+            )
+            request = call(context)["verification"]["execution_requests"][0]
+            blocked = call({**context, "request": request})
+            assert blocked["verification"]["execution"]["status"] == "blocked"
+            assert missing in blocked["verification"]["execution"]["recovery"]["diagnostic"]
+            assert not blocked["decision_packet"]["primary_action"]
+            assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+        manifest.write_text(
+            text.replace(
+                "[execution]",
+                '[proof_routes.check.execution_prerequisites]\nsource_inputs=["a.txt","protected.txt"]\nimage_executables=["/bin/sh"]\n[execution]',
+            )
+        )
+
     request = call(context)["verification"]["execution_requests"][0]
     selected = call({**context, "request": request})
     if mode == "publication":

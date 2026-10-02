@@ -72,10 +72,23 @@ pub(crate) fn binary(path: &Path) -> Result<Value, CoreError> {
 fn runtime(target: &Path, strategy: &Value) -> Result<Value, CoreError> {
     let execution = crate::proof_executor::configuration(target)?;
     if !execution.is_null() {
+        let mut requirements = Vec::new();
+        for declaration in std::iter::once(&strategy["route"]).chain(
+            strategy["protocols"]
+                .as_object()
+                .into_iter()
+                .flat_map(|p| p.values()),
+        ) {
+            if let Some(value) = declaration.get("execution_prerequisites") {
+                requirements.push(value.clone());
+            }
+        }
+        let subject = json!({"route_id":strategy["route_id"],"command":strategy["command"],
+            "route_revision":digest(&strategy["route"])?,"protocol_revision":digest(&strategy["protocols"])?,"requirements":requirements});
         return Ok(
             json!({"implementation":"native-aw-proof","producer_contract":REVISION,
             "producer":binary(&std::env::current_exe().map_err(err)?)?,
-            "executor":crate::proof_executor::observe(target, &execution)?,
+            "executor":crate::proof_executor::observe(target, &execution, &subject)?,
             "shell_dialect":"posix-sh", "strategy_revision":digest(strategy)?,
             "environment_scope":"isolated-image-and-readonly-source", "nested_tool_runtime":"image-bound"}),
         );
@@ -250,7 +263,7 @@ pub(crate) fn select_mode(
             }
         }
     }
-    let semantic_strategy = json!({"execution":strategy["execution"],"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies,"source_strategy_revision":digest(strategy)?,"assessment":strategy["assessment"],"assurance_request":strategy["assurance_request"],"strategy_coverage":if source_selected{"selected-command-covered"}else{"unproven"}});
+    let semantic_strategy = json!({"execution":strategy["execution"],"command":command,"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies,"source_strategy_revision":digest(strategy)?,"assessment":strategy["assessment"],"assurance_request":strategy["assurance_request"],"strategy_coverage":if source_selected{"selected-command-covered"}else{"unproven"}});
     let observed = if report.is_some() {
         json!({"implementation":"interoperability-report","strategy_revision":digest(&semantic_strategy)?,"producer_admission":"unproven","environment_scope":"unobserved"})
     } else {
@@ -259,7 +272,7 @@ pub(crate) fn select_mode(
             Err(error) if !strategy["execution"].is_null() => {
                 return Ok(
                     json!({"status":"blocked","reason":"proof-execution-capability-unavailable","recovery":{"kind":"capability-gap","human_answer_allowed":false,
-                        "detail":"The selected proof cannot run with its configured isolation. Prepare the Linux Docker daemon and the declared immutable image with the command's offline dependencies, then select the proof again. Human approval cannot supply this capability.",
+                        "detail":"The selected proof cannot run with its configured isolation. Supply any named missing declared source inputs in the snapshot and runtime/Git prerequisites in the immutable image, or prepare the Linux Docker daemon, then select the proof again. Human approval cannot supply this capability.",
                         "diagnostic":error.to_string()},"choices":available}),
                 );
             }
@@ -369,7 +382,7 @@ pub(crate) fn freshness(
             json!({"status":"stale","strategy_coverage":"unproven","reason":"planning-proof-subject-changed"}),
         );
     }
-    let mut observed = match runtime(target, &json!({"execution":strategy["execution"]})) {
+    let mut observed = match runtime(target, &previous["strategy"]) {
         Ok(value) => value,
         Err(_) => {
             return Ok(
