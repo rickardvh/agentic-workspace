@@ -274,6 +274,79 @@ def test_transport_reads_every_page_and_never_requests_mutation(monkeypatch):
     assert calls == [["gh", "api", "--method", "GET", "repos/o/r/pulls/1/files?per_page=100", "--paginate", "--slurp"]]
 
 
+def test_implementation_layer_paths_follow_provider_parent_and_select_only_local_proof(
+    tmp_path, monkeypatch, shared_core_binary, native_cli
+):
+    def git(*args):
+        return subprocess.check_output(["git", "-C", str(tmp_path), *args])
+
+    git("init", "-q")
+    (tmp_path / "root.txt").write_text("root")
+
+    def commit(message):
+        git("add", ".")
+        git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "-qm", message)
+        return git("rev-parse", "HEAD").decode().strip()
+
+    heads = [commit("base")]
+    for name in ["lower", "middle", "upper"]:
+        (tmp_path / f"{name}.py").write_text(name)
+        heads.append(commit(name))
+    monkeypatch.setattr(review, "git", git)
+    state = {"bases": {index: heads[index - 1] for index in range(1, 4)}, "move": False, "partial": False}
+
+    def api(endpoint, *, collection=None):
+        number = int(endpoint.split("/pulls/")[1].split("/")[0])
+        base, head = state["bases"][number], heads[number]
+        if "/files?" in endpoint:
+            paths = git("diff", "--name-only", f"{base}...{head}").decode().splitlines()
+            if state["partial"]:
+                paths = []
+            if state["move"]:
+                state["bases"][number] = heads[0]
+            return [{"filename": path} for path in paths]
+        return {
+            "number": number,
+            "base": {"sha": base, "ref": f"layer-{number - 1}", "repo": {"full_name": "owner/repo"}},
+            "head": {"sha": head, "ref": f"layer-{number}"},
+            "changed_files": len(git("diff", "--name-only", f"{base}...{head}").decode().splitlines()),
+        }
+
+    monkeypatch.setattr(review, "api", api)
+    layers = [review.implementation_scope("owner/repo", number=index) for index in range(1, 4)]
+    assert [layer["changed"] for layer in layers] == [["lower.py"], ["middle.py"], ["upper.py"]]
+    assert [(layer["subject"]["value"]["base"], layer["subject"]["value"]["head"]) for layer in layers] == list(zip(heads, heads[1:]))
+    assert review.implementation_scope("owner/repo", base_ref=heads[2])["changed"] == ["upper.py"]
+    aggregate = review.implementation_scope("owner/repo", base_ref=heads[0], cumulative=True)
+    assert aggregate["scope_kind"] == "cumulative-integration" and aggregate["changed"] == ["lower.py", "middle.py", "upper.py"]
+
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        '[protocols.lower]\napplies_to_paths=["lower.py"]\ncommands=["echo lower focused proof"]\n[proof_routes]\n'
+    )
+
+    def selected(paths):
+        return consume(
+            "native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Validate the current layer", "changed": paths}
+        )["verification"]["strategy"]["protocols"]
+
+    assert "lower" in selected(layers[0]["changed"])
+    assert "lower" not in selected(layers[2]["changed"])
+    assert "lower" in selected(aggregate["changed"])
+    state["bases"][3] = heads[0]
+    assert review.implementation_scope("owner/repo", number=3)["changed"] == aggregate["changed"]
+    state["bases"][3] = heads[2]
+    state["move"] = True
+    stale = review.implementation_scope("owner/repo", number=3)
+    assert stale["status"] == "stale" and "changed" not in stale
+    state.update(move=False, partial=True)
+    assert review.implementation_scope("owner/repo", number=3)["status"] == "unavailable"
+    with pytest.raises(ValueError, match="layer base is unknown"):
+        review.implementation_scope("owner/repo")
+
+
 def test_trusted_loader_never_executes_worktree_replacement_and_eligibility_stays_external(tmp_path):
     def git(*args):
         return subprocess.check_output(["git", "-C", str(tmp_path), *args])

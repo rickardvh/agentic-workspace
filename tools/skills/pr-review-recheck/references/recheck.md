@@ -29,6 +29,36 @@ eligibility assertion; the helper cannot establish custody from an account or
 process. Preparation performs only local Git object reads and GitHub GET requests
 through the available `gh` transport.
 
+### Implementation layer subject
+
+The same read-only collector can supply implementation/proof scope without
+conducting review. It does not require or assert independent reviewer eligibility.
+Use the Git-object loader above with `--implementation-scope --pr <number>` in
+place of `--eligibility independent`. Select an exact repository baseline with
+the helper behavior needed for the task; its successful execution grants no
+review or proof authority.
+
+This mode observes only the provider's exact direct base/head and complete
+paginated PR file list, including both paths of a rename. It brackets that
+collection with a fresh subject read. `changed` appears only for an observed
+subject; stale, incomplete or unavailable results report a scope gap. Do not
+substitute a cached stack or default-branch diff for missing provider topology.
+Local unpublished edits must be added as this layer's work, with their actual
+working-tree provenance. Before creating a PR, replace `--pr` with
+`--base <explicitly-established-parent>` and optionally `--head <head-ref>`.
+Neither option infers a parent from branch names. Local subjects resolve both
+identities before computing the PR-style merge-base delta and check them again
+after collection.
+
+For an explicitly required aggregate integration check, use an explicit base and
+`--cumulative-integration`. Preserve that separate subject and purpose. Lower-layer
+evidence keeps its own identity and may be reused only if still current. Changes
+to a layer's base/head require fresh scope before proof or closure, including after
+review fixes and rebases. No checked-in stack ledger or review verdict is produced.
+
+The rest of this reference concerns independently initiated review preparation;
+its eligibility and trusted tooling gate still apply unchanged.
+
 The packet contains exact base/head/repository identities, complete paginated
 files, current draft/merged state, linked issue references and observations, reviews/comments, CI/status and
 trusted guidance identities. Scoped `AGENTS.md` references follow changed-path

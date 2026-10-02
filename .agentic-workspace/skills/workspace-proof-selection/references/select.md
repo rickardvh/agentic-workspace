@@ -1,6 +1,31 @@
 # Select current evidence and strategy
 
 First state what should happen and what error would make that claim false.
+For a repository PR, establish the current layer subject before supplying changed
+paths, selecting proof or assessing source currentness. Use that PR's live direct
+base/head, as independent review does. Before publication, use its explicitly
+established parent; ordinary direct branch work needs only its known intended
+base. Branch names alone do not establish a stack relationship. An unknown parent
+is a scope gap, not permission to call a cumulative default-branch diff layer proof.
+
+The repository's existing [read-only preparation helper](../../../../tools/skills/pr-review-recheck/prepare.py)
+also offers implementation scope without invoking review. Load it from an exact
+repository baseline as shown in the [helper reference](../../../../tools/skills/pr-review-recheck/references/recheck.md#implementation-layer-subject).
+Use `--implementation-scope --pr <number>` for live topology, or
+`--implementation-scope --base <established-parent>` before publication. Supply
+only its observed `changed` paths, together with changes made locally in this
+layer that are not yet published. Preserve the observed base/head identities with
+the proof subject. The helper is read-only and grants no evidence admission.
+
+Lower-layer proof remains dependency evidence with its original subject. Reuse it
+only while the relevant sources, environment and evidence remain current; do not
+rename it as upper-layer proof or repeat it merely because its paths differ from
+the default branch. After a review fix, revalidate changed behavior and affected
+dependent evidence. Reobserve topology before proof or closure claims when a base,
+head or stack relationship changes. A final aggregate integration check can have
+a distinct explicit purpose: name that cumulative subject separately, using
+`--cumulative-integration --base <integration-base>` when using the helper.
+
 Inspect existing evidence for that error, then choose the smallest stable
 behavioral boundary that can expose it. Shared semantics normally belong with
 their owner; a public adapter needs separate proof only when its transport or
