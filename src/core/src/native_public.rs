@@ -2024,6 +2024,18 @@ fn resolve_selected(
     Ok(public)
 }
 
+pub(crate) fn owner_request_key(request: &Value) -> String {
+    let owner = request["owner"].as_str().unwrap_or("");
+    if matches!(
+        owner,
+        "verification" | "planning" | "assignment" | "delegation"
+    ) {
+        format!("{owner}:{}", request["request_kind"].as_str().unwrap_or(""))
+    } else {
+        owner.to_owned()
+    }
+}
+
 fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     let Some(request) = request else {
         return Ok(vec![]);
@@ -2051,15 +2063,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     }
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
-        let owner = request["owner"].as_str().unwrap();
-        let key = if matches!(
-            owner,
-            "verification" | "planning" | "assignment" | "delegation"
-        ) {
-            format!("{owner}:{}", request["request_kind"].as_str().unwrap())
-        } else {
-            owner.to_owned()
-        };
+        let key = owner_request_key(request);
         if !owners.insert(key) {
             return Err(CoreError::new(
                 "supply at most one current request per owner and Verification request kind",

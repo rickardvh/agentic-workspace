@@ -727,8 +727,7 @@ fn use_selected(
             None => vec![],
         };
         requests.retain(|request| {
-            !(request["owner"] == answered["owner"]
-                && request["request_kind"] == answered["request_kind"])
+            native_public::owner_request_key(request) != native_public::owner_request_key(&answered)
         });
         requests.push(answered);
         next["request"] = json!(requests);
@@ -1300,6 +1299,45 @@ mod tests {
             "reference":selected
         }));
         assert!(stale.is_err());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn carried_route_selection_replaces_completed_discovery() {
+        let root = temp_root("route-carriage");
+        std::fs::create_dir_all(root.join("tools/skills/checks")).unwrap();
+        std::fs::write(root.join("tools/skills/REGISTRY.json"),
+            r#"{"skills":[{"id":"checks","path":"checks/SKILL.md","semantic_routes":["repository/checks"]}]}"#).unwrap();
+        std::fs::write(
+            root.join("tools/skills/checks/SKILL.md"),
+            "Inspect current test prerequisites.",
+        )
+        .unwrap();
+        let first =
+            start(json!({"target":root,"task":"Prepare repository checks","projection":"carried"}))
+                .unwrap();
+        let discovery = start(json!({"request":first["carriage"],"reference":"owner:request:semantic-routes:semantic-routes/discover/v1"})).unwrap();
+        let discovered = start(json!({"request":first["carriage"],"reference":discovery["reference"],"answer":{"parent":"repository"},"projection":"carried"})).unwrap();
+        let choice = start(json!({"request":discovered["carriage"],"reference":"owner:request:semantic-routes:semantic-routes/select/v1"})).unwrap();
+        let selected = start(json!({"request":discovered["carriage"],"reference":choice["reference"],"answer":{"posture":"selected","routes":["repository/checks"]},"projection":"carried"})).unwrap();
+        assert_eq!(
+            selected["view"]["decision_packet"]["semantic_task_routes"]["status"],
+            "current"
+        );
+        assert_eq!(
+            selected["view"]["decision_packet"]["semantic_task_routes"]["routes"],
+            json!(["repository/checks"])
+        );
+        assert_eq!(
+            selected["carriage"]["context"]["request"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|r| r["owner"] == "semantic-routes")
+                .count(),
+            1
+        );
+        assert!(!root.join(".agentic-workspace/local").exists());
         std::fs::remove_dir_all(root).unwrap();
     }
 
