@@ -131,7 +131,13 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Whether this checkout should keep ignored local AW command session logs."
+          "description": "Whether this checkout should keep ignored local AW diagnostic inputs and outputs. Disabled by default."
+        },
+        "detail": {
+          "type": "string",
+          "enum": ["full", "metadata"],
+          "default": "full",
+          "description": "Full retains delivered native requests, stdout/stderr and configuration provenance in local artifacts; metadata explicitly omits bodies. Applies once configured, without command flags."
         },
         "path_mode": {
           "type": "string",

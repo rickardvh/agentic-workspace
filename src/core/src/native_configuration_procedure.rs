@@ -11,7 +11,9 @@ pub(crate) fn declaration() -> Value {
 pub(crate) fn concern(key: &str) -> Option<&'static str> {
     match key {
         "workspace.agent_instructions_file" => Some("instructions"),
-        "session_logging.enabled" | "session_logging.path_mode" => Some("diagnostics"),
+        "session_logging.enabled" | "session_logging.detail" | "session_logging.path_mode" => {
+            Some("diagnostics")
+        }
         "modules.enabled" | "modules.independent" => Some("modules"),
         "workspace.cli_invoke" | "workspace.enabled" => Some("invocation"),
         "clarification.mode" | "workspace.improvement_latitude" => Some("preferences"),

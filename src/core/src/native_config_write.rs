@@ -24,6 +24,7 @@ const CHOICES: &[(&str, &str)] = &[
     (SHARED, "workspace.enabled"),
     (LOCAL, "workspace.enabled"),
     (LOCAL, "session_logging.enabled"),
+    (LOCAL, "session_logging.detail"),
     (LOCAL, "session_logging.path_mode"),
     (LOCAL, "clarification.mode"),
     (SHARED, "workspace.cli_invoke"),

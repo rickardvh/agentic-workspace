@@ -218,17 +218,16 @@ pub fn run_stdio() {
     } else {
         crate::compile_value(request.clone())
     };
-    let capture = crate::maintainer_logging::capture(&request, &result, started.elapsed());
+    let capture = crate::maintainer_logging::capture_transport(
+        &request,
+        Some(&input),
+        &result,
+        started.elapsed(),
+    );
     match result {
         Ok(mut decision) => {
             if let Some(capture) = capture {
-                // Carried consumers show only the view; never place diagnostics
-                // in the immutable carriage used for reentry/admission.
-                if let Some(view) = decision.get_mut("view").filter(|v| v.is_object()) {
-                    view["session_capture"] = capture;
-                } else {
-                    decision["session_capture"] = capture;
-                }
+                decision = crate::maintainer_logging::attach_capture(decision, capture);
             }
             println!(
                 "{}",
@@ -244,10 +243,7 @@ fn fail(code: &str, message: &str) -> ! {
 }
 
 fn fail_with_capture(code: &str, message: &str, capture: Option<serde_json::Value>) -> ! {
-    let mut payload = serde_json::json!({"error": {"code": code, "message": message}});
-    if let Some(capture) = capture {
-        payload["session_capture"] = capture;
-    }
+    let payload = crate::maintainer_logging::error_payload(code, message, capture);
     eprintln!(
         "{}",
         serde_json::to_string(&payload).expect("error is JSON serializable")

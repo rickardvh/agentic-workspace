@@ -15,10 +15,10 @@ import pytest
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def configured(target: Path, mode="redacted"):
+def configured(target: Path, mode="redacted", detail="full"):
     source = target / ".agentic-workspace/config.local.toml"
     source.parent.mkdir(parents=True, exist_ok=True)
-    source.write_text(f'[session_logging]\nenabled = true\npath_mode = "{mode}"\n', encoding="utf-8")
+    source.write_text(f'[session_logging]\nenabled = true\npath_mode = "{mode}"\ndetail = "{detail}"\n', encoding="utf-8")
 
 
 def call(binary: Path, target: Path, *, enabled=True, task="Inspect current sources", invoke=False, identity="private-session-secret"):
@@ -50,7 +50,7 @@ def test_native_logging_default_disable_and_result_noninterference(tmp_path, sha
     assert not (tmp_path / ".agentic-workspace/local").exists()
     enabled = call(shared_core_binary, tmp_path)
     active_result = json.loads(enabled.stdout)
-    assert active_result.pop("session_capture") == {"status": "capturing", "authoritative": False}
+    assert active_result.pop("session_capture") == {"status": "capturing", "detail": "full", "authoritative": False}
     assert active_result == json.loads(disabled.stdout)
     assert (enabled.returncode, enabled.stderr) == (disabled.returncode, disabled.stderr)
     rows = events(tmp_path)
@@ -76,9 +76,11 @@ def test_logging_effective_local_policy_preserves_privacy_and_source_failure(tmp
     shared.unlink()
     failed = call(shared_core_binary, tmp_path)
     disabled = call(shared_core_binary, tmp_path, enabled=False)
-    assert json.loads(failed.stdout) == json.loads(disabled.stdout)
+    assert (failed.returncode, failed.stdout, failed.stderr) == (disabled.returncode, disabled.stdout, disabled.stderr)
     assert len(events(tmp_path)) == 2
-    assert any(b["code"] == "assignment-policy-source-unresolved" for b in json.loads(failed.stdout)["decision_packet"]["blockers"])
+    source_error = json.loads(failed.stderr)["error"]
+    assert failed.returncode == 2 and source_error["code"] == "invalid-source-decision"
+    assert "configured shared local source" in source_error["message"] and "missing" in source_error["message"]
 
 
 @pytest.mark.parametrize("mode,expected", [("redacted", "<target>"), ("repo-relative", "."), ("absolute", None)])
@@ -100,6 +102,16 @@ def test_native_logging_paths_large_input_and_stable_identity(tmp_path, shared_c
     recorded = rows[0]["payload"]["entry"]["target"]
     assert recorded == expected if expected else str(tmp_path) in recorded
     assert rows[0]["payload"]["entry"]["omissions"]
+    for row in rows:
+        entry = row["payload"]["entry"]
+        artifact = (tmp_path / entry["artifact"]["path"]).read_bytes()
+        assert hashlib.sha256(artifact).hexdigest() == entry["artifact"]["sha256"]
+        assert "private-session-secret" not in artifact.decode()
+        if mode != "absolute":
+            assert str(tmp_path) not in artifact.decode() and tmp_path.as_posix() not in artifact.decode()
+    retained = json.loads((tmp_path / rows[1]["payload"]["entry"]["artifact"]["path"]).read_bytes())
+    assert "secret-argument-" * 100000 in retained["request"]
+    assert rows[1]["payload"]["entry"]["artifact"]["bytes"] > 1000000
 
 
 @pytest.mark.parametrize("damage", ["registry", "stream", "lock", "historical", "body", "custody"])
@@ -164,7 +176,7 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
 
     for surface in ["python", "typescript"]:
         value = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect", "projection": "compact"})
-        assert value["session_capture"] == {"status": "capturing", "authoritative": False}
+        assert value["session_capture"] == {"status": "capturing", "detail": "full", "authoritative": False}
     assert len({row["logical_session_id"] for row in events(tmp_path)}) == 2
     state = session_logging.load_state_for_argv(["--target", str(tmp_path)])
     local = tmp_path / ".agentic-workspace/local"
@@ -214,6 +226,220 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
     assert missing_before == {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
 
 
+def test_native_io_export_roundtrips_delivered_bytes_and_reports_gaps(tmp_path, shared_core_binary, monkeypatch):
+    """Protect loss of diagnostic content at the native capture/export boundary."""
+    from aw_maintainer import session_diagnostics as reader
+
+    configured(tmp_path, "absolute")
+    monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "native-io-roundtrip")
+    monkeypatch.delenv("AW_SESSION_LOGGING_DISABLE", raising=False)
+    supplied = []
+    for projection in ("full", "compact", "carried"):
+        # The large request/result crosses both the event and old inline bound.
+        task = "harmless-task-å-" * 6000 if projection == "compact" else f"Harmless {projection} task"
+        request = {"start": {"target": str(tmp_path), "task": task, "projection": projection}}
+        raw = (json.dumps(request, ensure_ascii=False, indent=2) + "\n").encode()
+        result = subprocess.run([str(shared_core_binary)], input=raw, capture_output=True, timeout=30)
+        assert result.returncode == 0, result.stderr
+        supplied.append((raw, result))
+        if projection == "carried":
+            delivered = json.loads(result.stdout)
+            assert delivered["view"]["session_capture"]["detail"] == "full"
+            assert "session_capture" not in json.dumps(delivered["carriage"])
+    for request in (
+        {
+            "invoke": {
+                "target": str(tmp_path),
+                "task": "Harmless invoke argument",
+                "invocation": {"operation_id": "distinctive-diagnostic-argument"},
+            }
+        },
+        {"start": {"target": str(tmp_path), "task": "Harmless error task", "unexpected": True}},
+    ):
+        raw = json.dumps(request, ensure_ascii=False).encode()
+        result = subprocess.run([str(shared_core_binary)], input=raw, capture_output=True, timeout=30)
+        supplied.append((raw, result))
+    assert supplied[-1][1].returncode == 2
+    assert b"invalid-source-decision" in supplied[-1][1].stderr
+    rows = events(tmp_path)
+    assert len(rows) == len(supplied)
+    assert any(len(result.stdout) > 65536 for _, result in supplied)
+    for row, (raw, result) in zip(rows, supplied, strict=True):
+        entry = row["payload"]["entry"]
+        reference = entry["artifact"]
+        artifact_bytes = (tmp_path / reference["path"]).read_bytes()
+        assert len(artifact_bytes) == reference["bytes"]
+        assert hashlib.sha256(artifact_bytes).hexdigest() == reference["sha256"]
+        artifact = json.loads(artifact_bytes)
+        assert artifact["request"].encode() == raw
+        assert artifact["stdout"].encode() == result.stdout
+        assert artifact["stderr"].encode() == result.stderr
+        assert entry["output_digest"] == hashlib.sha256(result.stdout + result.stderr).hexdigest()
+        config = json.loads(artifact["configuration"])
+        assert config["effective_logging_policy"] == {"enabled": True, "detail": "full", "path_mode": "absolute"}
+        assert config["local_sources"] and config["runtime"]["bundled_payload_revision"]
+
+    state = reader.load_state_for_argv(["--target", str(tmp_path)])
+    exported = reader.export_session_log(state=state)
+    assert exported["manifest"]["diagnostic_content"]["content_complete_for_recorded_commands"]
+    assert exported["artifact_count"] == len(rows)
+    with gzip.open(tmp_path / exported["path"], "rt", encoding="utf-8") as stream:
+        export_events = [json.loads(line) for line in stream]
+    for row in rows:
+        entry = row["payload"]["entry"]
+        artifact = json.loads((tmp_path / entry["artifact"]["path"]).read_bytes())
+        for name in ("request", "stdout", "stderr", "configuration"):
+            chunks = [
+                event["payload"]
+                for event in export_events
+                if event["event_type"] == "output.chunk"
+                and event["payload"]["entry_id"] == entry["id"]
+                and event["payload"]["stream"] == name
+            ]
+            chunks.sort(key=lambda chunk: chunk["chunk_index"])
+            content = "".join(chunk["text"] for chunk in chunks)
+            expected = reader._normalized_export_text(state=state, text=artifact[name])
+            assert content == expected
+            assert hashlib.sha256(content.encode()).hexdigest() == chunks[0]["stream_sha256"]
+            assert hashlib.sha256(artifact[name].encode()).hexdigest() == chunks[0]["source_stream_sha256"]
+            assert len(chunks) == chunks[0]["chunk_count"]
+    # Explicit omission and damaged/missing blobs cannot look like full capture.
+    omitted = reader.export_session_log(state=state, include_artifacts=False)
+    assert not omitted["manifest"]["diagnostic_content"]["content_complete_for_recorded_commands"]
+    artifact_path = tmp_path / rows[0]["payload"]["entry"]["artifact"]["path"]
+    artifact_path.write_bytes(artifact_path.read_bytes() + b" ")
+    damaged = reader.export_session_log(state=state)
+    assert "damaged" in {entry["status"] for entry in damaged["manifest"]["artifact_coverage"]}
+    assert not damaged["manifest"]["diagnostic_content"]["content_complete_for_recorded_commands"]
+    artifact_path.write_bytes(b'{"interrupted":')
+    malformed = reader.export_session_log(state=state)
+    assert "damaged" in {entry["status"] for entry in malformed["manifest"]["artifact_coverage"]}
+    artifact_path.unlink()
+    missing = reader.export_session_log(state=state)
+    assert "missing" in {entry["status"] for entry in missing["manifest"]["artifact_coverage"]}
+    assert not missing["manifest"]["diagnostic_content"]["content_complete_for_recorded_commands"]
+
+
+def test_explicit_metadata_logging_discloses_omitted_bodies(tmp_path, shared_core_binary, monkeypatch):
+    from aw_maintainer import session_diagnostics as reader
+
+    configured(tmp_path, detail="metadata")
+    monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "private-session-secret")
+    result = call(shared_core_binary, tmp_path, task="Harmless metadata omission")
+    assert json.loads(result.stdout)["session_capture"] == {"status": "capturing", "detail": "metadata", "authoritative": False}
+    entry = events(tmp_path)[0]["payload"]["entry"]
+    assert entry["storage_mode"] == "metadata-only" and "artifact" not in entry
+    assert "request body" in entry["omissions"]
+    exported = reader.export_session_log(state=reader.load_state_for_argv(["--target", str(tmp_path)]))
+    content = exported["manifest"]["diagnostic_content"]
+    assert content["capture_levels"] == ["metadata"]
+    assert content["body_omission_command_ids"] == [entry["id"]]
+    assert not content["content_complete_for_recorded_commands"]
+
+
+def test_export_preserves_legacy_artifact_text_digest_framing(tmp_path):
+    from aw_maintainer import session_diagnostics as reader
+
+    session = {"session_id": "legacy-fixture", "log_path": ".agentic-workspace/local/logs/aw-session-legacy-fixture/session.md"}
+    path = Path(session["log_path"]).parent / "artifacts/legacy.json"
+    absolute = tmp_path / path
+    absolute.parent.mkdir(parents=True)
+    payload = {"kind": "agentic-workspace/session-log-output-artifact/v1", "stdout": "Historical harmless output\n", "stderr": ""}
+    text = json.dumps(payload, indent=2)
+    # Established writer hashes text, then writes a terminal newline; Windows
+    # text mode converts framing newlines. This must not damage valid old logs.
+    body = (text.replace("\n", "\r\n") + "\r\n").encode()
+    absolute.write_bytes(body)
+    entry = {
+        "id": "legacy-entry",
+        "artifact": {"path": path.as_posix(), "bytes": len(text.encode()), "sha256": hashlib.sha256(text.encode()).hexdigest()},
+    }
+    chunks, coverage = reader._artifact_chunk_events(
+        state=reader.SessionLoggingState(tmp_path), session=session, entries=[entry], include_artifacts=True
+    )
+    assert coverage[0]["status"] == "included-as-output-chunks"
+    assert coverage[0]["integrity_basis"] == "legacy-json-text-framing"
+    assert coverage[0]["observed_artifact_sha256"] == hashlib.sha256(body).hexdigest()
+    assert "".join(event["payload"]["text"] for event in chunks if event["payload"]["stream"] == "stdout") == payload["stdout"]
+
+
+def test_full_export_reads_rotated_and_child_artifacts_once(tmp_path, monkeypatch):
+    """Existing logical-tree selection must retain every physical body's content."""
+    from aw_maintainer import session_diagnostics as reader
+
+    identity = "logical-tree-reader-fixture"
+    monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", identity)
+    key = hashlib.sha256(("fixture-salt\0" + identity).encode()).hexdigest()
+    logical = "logical-" + key[:24]
+    registry = {"kind": reader.SESSION_REGISTRY_KIND, "salt": "fixture-salt", "sessions": {}, "logical_sessions": {}}
+    groups = {logical: [], "logical-child": []}
+    streams = {logical: [], "logical-child": []}
+    for index, (physical, owner) in enumerate((("first", logical), ("rotated", logical), ("child", "logical-child"))):
+        session = {
+            "kind": reader.SESSION_RECORD_KIND,
+            "session_id": physical,
+            "logical_session_id": owner,
+            "parent_logical_session_id": logical if physical == "child" else "",
+            "prior_session_id": "first" if physical == "rotated" else "",
+            "created_at": f"2026-10-03T00:00:0{index}+00:00",
+            "log_path": f".agentic-workspace/local/logs/aw-session-{physical}/session.md",
+            "event_stream_path": f".agentic-workspace/local/session-logging/logical-sessions/{owner}/events.jsonl",
+        }
+        log = tmp_path / session["log_path"]
+        log.parent.mkdir(parents=True)
+        log.write_text("# Reader fixture\n")
+        artifact = log.parent / "artifacts/io.json"
+        artifact.parent.mkdir()
+        body = json.dumps(
+            {
+                "kind": "agentic-workspace/session-command-io/v1",
+                "request": f"Harmless {physical} request",
+                "stdout": f"Harmless {physical} result",
+                "stderr": "",
+                "configuration": "{}",
+            }
+        ).encode()
+        artifact.write_bytes(body)
+        entry = {
+            "id": physical,
+            "detail": "full",
+            "storage_mode": "raw-local-artifact",
+            "artifact": {"path": artifact.relative_to(tmp_path).as_posix(), "sha256": hashlib.sha256(body).hexdigest(), "bytes": len(body)},
+        }
+        event = reader._synthetic_export_event(
+            session=session, event_type="command.completed", sequence=index + 1, timestamp=session["created_at"], payload={"entry": entry}
+        )
+        event.pop("recovered_from")
+        streams[owner].append(event)
+        groups[owner].append(session)
+    registry["sessions"][key] = groups[logical][-1]
+    for owner, sessions in groups.items():
+        registry["logical_sessions"][key if owner == logical else "child-key"] = {
+            "logical_session_id": owner,
+            "parent_logical_session_id": logical if owner == "logical-child" else "",
+            "sessions": sessions,
+            "event_stream_path": sessions[0]["event_stream_path"],
+        }
+        stream = tmp_path / sessions[0]["event_stream_path"]
+        stream.parent.mkdir(parents=True)
+        stream.write_text("".join(json.dumps(event) + "\n" for event in streams[owner]))
+    path = tmp_path / reader.SESSION_REGISTRY_PATH
+    path.write_text(json.dumps(registry))
+    exported = reader.export_session_log(state=reader.SessionLoggingState(tmp_path))
+    assert set(exported["session_ids"]) == {"first", "rotated", "child"}
+    assert exported["artifact_count"] == 3
+    assert not exported["manifest"]["excluded_artifacts"]
+    assert exported["manifest"]["diagnostic_content"]["content_complete_for_recorded_commands"]
+    with gzip.open(tmp_path / exported["path"], "rt", encoding="utf-8") as handle:
+        events_out = [json.loads(line) for line in handle]
+    requests = [
+        event["payload"]["text"]
+        for event in events_out
+        if event["event_type"] == "output.chunk" and event["payload"]["stream"] == "request"
+    ]
+    assert sorted(requests) == ["Harmless child request", "Harmless first request", "Harmless rotated request"]
+
+
 @pytest.mark.parametrize(
     "settings,override,enabled,mode",
     [
@@ -227,7 +453,7 @@ def test_shared_logging_policy(settings, override, enabled, mode, shared_core_bi
     from aw_maintainer.native_conformance import session_logging_policy
 
     result = session_logging_policy({"local": {"session_logging": settings}, "disable_override": override})
-    assert result == {"enabled": enabled, "path_mode": mode}
+    assert result == {"enabled": enabled, "path_mode": mode, "detail": "full"}
 
 
 def test_native_logging_disabled_overhead_is_measured_without_residue(tmp_path, shared_core_binary):
@@ -263,6 +489,7 @@ def test_native_logging_disabled_overhead_is_measured_without_residue(tmp_path, 
     [
         '[session_logging]\nenabled = "true"\n',
         '[session_logging]\nenabled = true\npath_mode = "unknown"\n',
+        '[session_logging]\nenabled = true\ndetail = "unknown"\n',
         "malformed = [",
     ],
 )
