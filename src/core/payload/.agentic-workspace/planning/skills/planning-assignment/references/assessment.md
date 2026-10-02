@@ -15,8 +15,12 @@ Supply the concrete result and proof classes the task needs, using the current
 owner's supported vocabulary. For example, code changes use `unapplied-patch`,
 not an invented `patch` class. Empty template defaults do not describe a code
 change. Preserve the returned carriage while supplying the comparative assessment;
-repeating only the task text loses the requirements just supplied. A local choice
-under binding policy needs this same assessment and current admission.
+repeating only the task text loses the requirements just supplied. Inspect the
+returned determination before answering a comparison. A sole eligible executor
+or uniquely dominant standing preference settles the choice mechanically; its
+compatibility comparison request is optional. Answer only an unresolved choice
+or a source-permitted exception with the actual preparation, coupling or repair
+tradeoff. Continue locally only when current admission allows it.
 
 ```agentic-owner-reference
 {"kind":"request","owner":"assignment","id":"assignment/task-requirements"}

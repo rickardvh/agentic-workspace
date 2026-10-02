@@ -163,6 +163,7 @@ fn read_inputs(
     }
     Ok(json!(inputs))
 }
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn inputs_view(
     target: &Path,
     work: &Value,
@@ -171,6 +172,7 @@ pub(crate) fn inputs_view(
     submitted: Option<&Value>,
     contract: &Value,
     baseline: Option<&Value>,
+    defaults: Option<&Value>,
 ) -> Result<Value, CoreError> {
     let patch = requirements["requirements"]["required_result_classes"]
         .as_array()
@@ -195,6 +197,20 @@ pub(crate) fn inputs_view(
     );
     let mut inputs = json!([]);
     let mut gaps = Vec::new();
+    let derived;
+    let submitted = if let (None, Some(defaults)) = (submitted, defaults) {
+        template["arguments"]["input_refs"] = defaults["input_refs"].clone();
+        if patch {
+            template["arguments"]["mutation_paths"] = defaults["mutation_paths"].clone();
+        }
+        template["arguments"]["reason"] = json!(
+            "Confirm the source-derived inputs suffice for this bounded outcome and the receiver's access."
+        );
+        derived = template.clone();
+        Some(&derived)
+    } else {
+        submitted
+    };
     if let Some(value) = submitted {
         crate::prepare_request_value(
             json!({"request":value,"current_work":work,"capability_contract":contract}),
@@ -407,6 +423,13 @@ pub(crate) fn view(
         packet = crate::assignment_packet::seal(&packet)?;
     }
     let declaration = &selected["execution"]["owner_declaration"];
+    if requirements["source_work"]["status"] == "ready" {
+        packet["assignment_identity"]["origin_task"] = json!(task);
+        packet["assignment_identity"]["source_work"] = requirements["source_work"].clone();
+        packet["assignment_identity"]["human_intent"] =
+            json!(requirements["source_work"]["outcome"].to_string());
+        packet = crate::assignment_packet::seal(&packet)?;
+    }
     if declaration["owner_kind"] == "human" {
         if selected["transport"] != "manual" {
             return Err(CoreError::new("human-owned tasks require manual handoff"));

@@ -23,6 +23,17 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
+          "analysis": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["question", "input_refs", "stop_conditions"],
+            "properties": {
+              "question": { "type": "string", "minLength": 1, "maxLength": 8192 },
+              "input_refs": { "type": "array", "maxItems": 7, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+              "stop_conditions": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 2048 } }
+            },
+            "description": "Bounded read-only investigation of this protocol's selected native receipt; analysis never satisfies proof or independent approval."
+          },
           "title": {
             "type": "string",
             "minLength": 1,

@@ -27,6 +27,7 @@ fn fields() -> Vec<&'static str> {
     fields
 }
 const OPTIONAL_MATERIAL: &[&str] = &[
+    "assignment_inputs",
     crate::planning_lifetime::FIELD,
     crate::planning_lifetime::PROPOSAL,
     "canonical_core",
@@ -103,12 +104,20 @@ pub(crate) fn retained_continuation_current(
     selected: &Value,
     request: &Value,
 ) -> Result<bool, CoreError> {
-    if request["arguments"]["answer"] != "continue-selected" {
+    let explicit_selection = request["request_kind"] == "planning/select-owner/v1";
+    if request["arguments"]["answer"] != "continue-selected" && !explicit_selection {
         return Ok(false);
     }
     let Some(reference) = selected["ref"].as_str() else {
         return Ok(false);
     };
+    if explicit_selection
+        && request["arguments"]["owner_ref"]
+            .as_str()
+            .is_some_and(|r| r != reference)
+    {
+        return Ok(false);
+    }
     let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
     let Some(held) = held_handoff(&body) else {
         return Ok(false);

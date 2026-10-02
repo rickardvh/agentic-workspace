@@ -34,6 +34,9 @@ def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_cor
     task = call(reference=route["reference"])["value"]["requests"][0]
     task["arguments"]["required_result_classes"] = ["read-only"]
     offered = call(task)["task_requirements"]["assignment"]
+    assert offered["result"]["status"] == "assigned-current-target"
+    assert offered["result"]["determination"] == "sole-eligible-configuration"
+    assert offered["result"]["judgment"] is None
     request = offered["requests"][0]
     request[-1]["arguments"]["alternative"] = "local:internal"
     request[-1]["arguments"]["reason"] = "This bounded read requires no external capability; the current local configuration is sufficient."

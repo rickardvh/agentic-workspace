@@ -4,6 +4,7 @@
 use crate::{CoreError, attempt_store, compile_value, digest, operation_result_value};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use sha2::Digest;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -25,6 +26,111 @@ struct Input {
 
 fn error(message: impl ToString) -> CoreError {
     CoreError::new(message.to_string())
+}
+
+/// Only an explicitly selected owner with a typed execution definition supplies
+/// defaults. Arbitrary plan prose is never parsed into a task graph or authority.
+pub(crate) fn assignment_work(
+    target: &std::path::Path,
+    subject: Option<&Value>,
+) -> Result<Value, CoreError> {
+    let Some(subject) = subject else {
+        return Ok(Value::Null);
+    };
+    let state = &subject["state"];
+    let definition = &state["assignment_inputs"];
+    if !definition.is_object() {
+        return Ok(Value::Null);
+    }
+    let mut gaps = Vec::new();
+    let supplied = |value: &Value| {
+        !value.is_null()
+            && value.as_object().is_none_or(|v| !v.is_empty())
+            && value.as_array().is_none_or(|v| !v.is_empty())
+            && value.as_str().is_none_or(|v| !v.trim().is_empty())
+    };
+    for (value, question) in [
+        (
+            &state["outcome"]["intent"],
+            "Supply the selected slice's explicit intended outcome.",
+        ),
+        (
+            &state["scope"]["declared"],
+            "Supply the selected slice's explicit boundary and permitted work.",
+        ),
+        (
+            &state["proof"]["declared"],
+            "Supply the selected slice's acceptance/proof expectations; no worker proof authority is inferred.",
+        ),
+    ] {
+        if !supplied(value) {
+            gaps.push(question.to_owned());
+        }
+    }
+    if state["scope"]["owner_level"] != "slice" {
+        gaps.push("Select or shape one bounded slice owner before dispatch.".to_owned());
+    }
+    if state["frontier"]["blockers"]
+        .as_array()
+        .is_some_and(|b| !b.is_empty())
+    {
+        gaps.push("Selected work has unresolved blockers.".to_owned());
+    }
+    let root =
+        cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
+    let accepted = definition["accepted_dependencies"].as_array().unwrap();
+    for dependency in accepted {
+        let reference = dependency["reference"].as_str().unwrap();
+        match crate::native_verification::read(&root, reference) {
+            Ok(Some(bytes)) if format!("sha256:{:x}", sha2::Sha256::digest(&bytes)) == dependency["revision"].as_str().unwrap() => (),
+            _ => gaps.push(format!("Accepted prerequisite {reference} is missing or changed; readmit it before this work.")),
+        }
+    }
+    let dependencies = &state["dependencies"]["declared"];
+    if dependencies
+        .as_object()
+        .is_some_and(|d| d.keys().any(|k| k != "refs"))
+    {
+        gaps.push(
+            "Refine declared prerequisites into exact accepted source references.".to_owned(),
+        );
+    }
+    for reference in dependencies["refs"].as_array().into_iter().flatten() {
+        if !accepted.iter().any(|a| a["reference"] == *reference) {
+            gaps.push(format!(
+                "Declared prerequisite {reference} has no current accepted source."
+            ));
+        }
+    }
+    if definition["result_class"] == "read-only"
+        && definition["mutation_paths"]
+            .as_array()
+            .is_some_and(|p| !p.is_empty())
+    {
+        gaps.push("Read-only work cannot declare mutation paths.".to_owned());
+    }
+    let mut projected = definition.clone();
+    let mut refs = projected["input_refs"].as_array().unwrap().clone();
+    for dependency in accepted {
+        if !refs.contains(&dependency["reference"]) {
+            refs.push(dependency["reference"].clone());
+        }
+    }
+    if refs.len() > 8 {
+        gaps.push("Accepted prerequisite context exceeds eight captured inputs; shape a coherent bounded slice before export.".to_owned());
+    } else {
+        projected["input_refs"] = json!(refs);
+    }
+    let mut constraints = state["constraints"].clone();
+    constraints["canonical_core"] = state["canonical_core"].clone();
+    Ok(
+        json!({"status":if gaps.is_empty(){"ready"}else{"shaping-required"},"producer":"planning",
+        "work":{"id":subject["id"],"revision":subject["revision"]},"definition":projected,
+        "outcome":state["outcome"],"scope":state["scope"],"constraints":constraints,"dependencies":state["dependencies"],
+        "accepted_context":state["residual"]["continuation"],"proof":state["proof"],"next_action":state["frontier"]["next_action"],
+        "return_destination":"originating selected owner; use its current Planning adoption request after Assignment admission",
+        "gaps":gaps,"claim_boundary":"Source-shaped work and accepted prerequisite references only; no proof or completion authority."}),
+    )
 }
 
 fn semantic_subject(state: &Value) -> Value {
@@ -224,6 +330,9 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         "handoff": {"delegation": body["relationships"]["delegation"], "assignment": body["relationships"]["assignment"], "returned": body["relationships"]["returned"], "integration_pending": body["relationships"]["integration_pending"], "contracts": body["specialist_contracts"]},
         "residual": {"continuation": body["continuation"], "intent_continuity": body["intent_continuity"]}
     });
+    if let Some(inputs) = body.get("assignment_inputs") {
+        material["assignment_inputs"] = inputs.clone();
+    }
     // Consume the representation's existing typed assurance declarations only.
     // Absence is unknown, not an authoritative empty list. Keep their complete
     // values material, including constraints outside applicability selectors.
@@ -247,6 +356,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         material["residual"][crate::planning_lifetime::PROPOSAL] = proposal.clone();
     }
     let known = [
+        "assignment_inputs",
         "kind",
         "id",
         "title",
@@ -571,4 +681,35 @@ pub(crate) fn reconcile_retaining_checked(
     )?;
     result["custody"] = stored["custody"].clone();
     Ok(result)
+}
+
+#[cfg(test)]
+mod bounded_source_tests {
+    use super::*;
+
+    #[test]
+    fn missing_meaning_requires_source_refinement() {
+        let subject = json!({"id":"selected-child","revision":"current","state":{
+            "assignment_inputs":{"result_class":"read-only","input_refs":[],"mutation_paths":[],"required_proof_classes":[],"accepted_dependencies":[]},
+            "outcome":{"intent":{"outcome":"Interpret supplied rules"}},"scope":{"owner_level":"slice","declared":{"boundary":"Provided snapshot only"}},
+            "proof":{"declared":{"expectation":"Source-grounded findings"}},"canonical_core":{"hard_constraints":"Never invent policy"},
+            "constraints":{},"dependencies":{"declared":{"refs":[]}},"frontier":{"blockers":[]}}});
+        let ready = assignment_work(&std::env::temp_dir(), Some(&subject)).unwrap();
+        assert_eq!(ready["status"], "ready");
+        assert_eq!(
+            ready["constraints"]["canonical_core"],
+            subject["state"]["canonical_core"]
+        );
+        for path in [
+            "/state/outcome/intent",
+            "/state/scope/declared",
+            "/state/proof/declared",
+        ] {
+            let mut missing = subject.clone();
+            *missing.pointer_mut(path).unwrap() = json!({});
+            let questioned = assignment_work(&std::env::temp_dir(), Some(&missing)).unwrap();
+            assert_eq!(questioned["status"], "shaping-required");
+            assert_eq!(questioned["gaps"].as_array().unwrap().len(), 1);
+        }
+    }
 }

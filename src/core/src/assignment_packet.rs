@@ -27,6 +27,9 @@ pub fn worker_context(packet: &Value) -> Value {
     if !i["task_requirements"].is_null() {
         context["inputs"]["task_requirements"] = i["task_requirements"].clone();
     }
+    if i["source_work"].is_object() {
+        context["inputs"]["source_work"] = i["source_work"].clone();
+    }
     context
 }
 pub fn integrity(packet: &Value) -> Result<String, CoreError> {

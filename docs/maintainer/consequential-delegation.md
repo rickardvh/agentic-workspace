@@ -32,9 +32,14 @@ execution_guarantees = ["reasoning.general", "context.large"]
 transports = [{ kind = "manual" }]
 ```
 
-Required guarantees narrow eligibility before comparative judgement. Matched
-preferences inform the agent's comparison among eligible alternatives; they do
-not grant execution, safety or proof authority. A manual-only target can win,
+Required guarantees narrow eligibility before comparative judgement. One eligible
+configuration settles the choice directly. A unique configuration whose matched
+preferences strictly include every peer's matched preferences also settles it;
+preferences have no inferred weights. Ties, incomparable preferences and unknown
+feasibility request a bounded comparison. A local exception to preferences uses
+the existing comparison with its concrete preparation, coupling or repair cost.
+Existing comparison requests remain supported. Preferences grant no execution,
+safety or proof authority. A manual-only target can win,
 and the retained current target can win when it satisfies the requirements.
 Availability and economics remain local facts, never shared routing policy.
 

@@ -58,6 +58,7 @@ pub(crate) fn view(
     let current_work = planning_subject
         .map(|s| json!({"id":s["id"],"revision":s["revision"]}))
         .unwrap_or_else(|| task_identity.clone());
+    let mut source_work = crate::planning::assignment_work(target, planning_subject)?;
     let mut required = configuration["assignment_requirements"]["required_execution_guarantees"]
         .as_array()
         .cloned()
@@ -108,6 +109,12 @@ pub(crate) fn view(
         "request_kind":"assignment/judge-task-requirements/v1","arguments":{
             "task_identity":task_identity,"current_work":current_work,"role":"executor",
             "required_result_classes":[],"required_proof_classes":[],"verification_identity":null}});
+    if source_work["status"] == "ready" {
+        template["arguments"]["required_result_classes"] =
+            json!([source_work["definition"]["result_class"]]);
+        template["arguments"]["required_proof_classes"] =
+            source_work["definition"]["required_proof_classes"].clone();
+    }
     if let Some(request) = request {
         crate::prepare_request_value(
             json!({"request":request,"current_work":transport_work,"capability_contract":contract}),
@@ -118,9 +125,13 @@ pub(crate) fn view(
             ));
         }
     }
-    let mut judgment = request
-        .map(|r| r["arguments"].clone())
-        .unwrap_or(Value::Null);
+    let mut judgment = request.map(|r| r["arguments"].clone()).unwrap_or_else(|| {
+        if source_work["status"] == "ready" {
+            template["arguments"].clone()
+        } else {
+            Value::Null
+        }
+    });
     let target_scope = judgment
         .as_object_mut()
         .and_then(|j| j.remove("target_scope"))
@@ -137,13 +148,37 @@ pub(crate) fn view(
         .or(nested.as_ref())
         .filter(|v| !v.is_null());
     let mut obligation = Value::Null;
-    if judgment["role"] == "evaluator" || selected_request.is_some() {
+    if judgment["role"] == "evaluator"
+        || selected_request.is_some()
+        || (request.is_none()
+            && verification["strategy"]["protocols"]
+                .as_object()
+                .is_some_and(|p| p.values().any(|v| v["analysis"].is_object())))
+    {
         obligation = crate::verification_requirements::resolve(
             json!({"target":target,"task":task,"changed_paths":changed,
-            "current_work":current_work,"role":judgment["role"].as_str().unwrap_or("evaluator"),"request":selected_request}),
+            "current_work":current_work,"role":judgment["role"].as_str().or_else(|| selected_request.and_then(|r|r["arguments"]["role"].as_str())).unwrap_or("executor"),"request":selected_request}),
             Some(transport_work),
             Some(contract),
         )?;
+        if obligation["source_work"].is_object() {
+            source_work = obligation["source_work"].clone();
+            template["arguments"]["required_result_classes"] = json!(["read-only"]);
+            template["arguments"]["required_proof_classes"] = json!([]);
+            template["arguments"]["verification_identity"] = json!({"id":obligation["verification"]["id"],"revision":obligation["verification"]["revision"]});
+            if request.is_none() && source_work["status"] == "ready" {
+                judgment = template["arguments"].clone();
+            }
+            if !judgment.is_null()
+                && (judgment["role"] != "executor"
+                    || judgment["required_result_classes"] != json!(["read-only"])
+                    || judgment["required_proof_classes"] != json!([]))
+            {
+                return Err(CoreError::new(
+                    "Verification investigation permits read-only analysis only; commands and repair use their existing separately scoped owner paths.",
+                ));
+            }
+        }
         if !obligation["verification"].is_null()
             && judgment["verification_identity"].is_null()
             && !judgment.is_null()
@@ -157,6 +192,14 @@ pub(crate) fn view(
         "judgment":judgment,"verification":obligation["verification"],
         "required_execution_guarantees":required}),
     )?;
+    if source_work["status"] == "shaping-required" {
+        result["status"] = json!("unresolved");
+        result["gaps"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!("selected-bounded-work-requires-shaping"));
+        result["revision"] = json!(digest(&json!([result, source_work]))?);
+    }
     if !posture.is_empty() {
         if result["status"] == "resolved"
             && posture.values().any(|p| p["independent_context"] == true)
@@ -175,15 +218,14 @@ pub(crate) fn view(
         input_request,
         contract,
         baseline,
+        source_work.get("definition"),
     )
     .map_err(|error| {
         error.dispatch_mismatch(crate::native_delegation::DispatchMismatch::AssignmentHandoff)
     })?;
     let mut input_requests = Vec::new();
-    if result["status"] == "resolved"
-        && let Some(task_request) = request
-    {
-        let mut packet = vec![task_request.clone()];
+    if result["status"] == "resolved" {
+        let mut packet = vec![request.cloned().unwrap_or_else(|| template.clone())];
         if let Some(verification_request) = verification_request {
             packet.push(verification_request.clone());
         }
@@ -213,11 +255,11 @@ pub(crate) fn view(
         let name = question["target"].as_str().expect("observed target");
         template["arguments"]["target_scope"][name] = json!({"status":"unresolved","reason":"Current task applicability has not been judged."});
     }
-    if let Some(task_request) = request
+    if result["status"] == "resolved"
         && let Some(choices) = execution["requests"].as_array_mut()
     {
         for choice in choices {
-            let mut prerequisites = vec![task_request.clone()];
+            let mut prerequisites = vec![request.cloned().unwrap_or_else(|| template.clone())];
             if let Some(obligation_request) = verification_request {
                 prerequisites.push(obligation_request.clone());
             }
@@ -229,7 +271,7 @@ pub(crate) fn view(
         }
     }
     Ok(
-        json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,"verification_requirements":obligation,
+        json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,"verification_requirements":obligation,"source_work":source_work,
         "execution_configurations":execution,"handoff_inputs":handoff_inputs,"remaining_owner_contracts":["current-native-best-fit-assignment-and-execution"],
         "claim_boundary":"Current task judgment only; no assignment choice, local implementation, launch or proof authority."}),
     )

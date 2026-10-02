@@ -23,6 +23,7 @@ pub(crate) const MATERIAL: &[&str] = &[
 pub(crate) const ASSURANCE: &[&str] =
     &["adaptive_assurance", "risk_registry_refs", "invariant_refs"];
 pub(crate) const OPTIONAL: &[&str] = &[
+    "assignment_inputs",
     crate::planning_lifetime::FIELD,
     crate::planning_lifetime::PROPOSAL,
 ];
