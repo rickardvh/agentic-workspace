@@ -176,11 +176,12 @@ reported four pre-existing unclassified plugin metadata files under the canonica
 and payload `.agentic-workspace/plugins/agentic-workspace-entry` directories;
 this patch does not claim that broader audit passed.
 
-Native completion remains unresolved: existing documentation source assessments
-and retained intent interpretation were already non-current, and the isolated
-Git-source fixture remains unavailable. This implementation supplies no authority
-to replace those assessments or independent review with passing host commands.
-The PR remains a draft while those closeout requirements are unresolved.
+Closeout refreshes the previously non-current intent interpretation and
+documentation assessments through their supported AW operations. The selected
+isolated Git-source fixture remains a failed result; the passing host fixture and
+isolated generation check cover this guidance change's installation and parity
+risks. Candidate commands do not become mandatory checks merely by being offered.
+Independent PR review remains with an externally initiated reviewer.
 
 This evidence supports the installed authoring-to-consumption path on this host.
 It supplies no independent review, authenticated readiness for arbitrary
