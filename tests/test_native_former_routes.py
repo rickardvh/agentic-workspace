@@ -244,6 +244,41 @@ def test_former_selection_requires_exact_current_agent_request(
     assert receipt_schema["type"] == "string" and receipt_schema["pattern"].startswith("^proof://local/")
     analysis_receipt_bytes = len(json.dumps(analysis_request)) - len(json.dumps(without_analysis_receipt))
     assert 0 < analysis_receipt_bytes < 250, analysis_receipt_bytes
+    # Manual carriage is six explicit requests and two local effect operations,
+    # not a quiet-work queue. Attribute only their full introspection schemas.
+    delegation = next(owner for owner in contract["owners"] if owner["owner"] == "delegation")
+    manual_kinds = {
+        "delegation/retain-manual/v1",
+        "delegation/report-manual/v1",
+        "delegation/read-manual-result/v1",
+        "delegation/settle-manual/v1",
+        "delegation/dispose-manual/v1",
+        "delegation/retire-manual/v1",
+    }
+    manual_requests = [row for row in delegation["requests"] if row["kind"] in manual_kinds]
+    manual_operation_ids = {"delegation.record-manual", "delegation.retire-manual"}
+    manual_operations = [row for row in delegation["operations"] if row["id"] in manual_operation_ids]
+    assert len(manual_requests) == 6 and len(manual_operations) == 2
+    without_manual_carriage = copy.deepcopy(non_resource_contract)
+    without_manual_carriage["owners"] = [
+        {
+            **owner,
+            "requests": [row for row in owner["requests"] if row["kind"] not in manual_kinds],
+            "operations": [row for row in owner["operations"] if row["id"] not in manual_operation_ids],
+            "effects": [row for row in owner["effects"] if row["id"] != "delegation-carriage"],
+        }
+        if owner["owner"] == "delegation"
+        else owner
+        for owner in without_manual_carriage["owners"]
+    ]
+    without_manual_carriage["restriction_authorities"] = [
+        {**owner, "affects": [effect for effect in owner["affects"] if effect != "effect:delegation-carriage"]}
+        if owner["owner"] == "delegation"
+        else owner
+        for owner in without_manual_carriage["restriction_authorities"]
+    ]
+    manual_bytes = len(json.dumps(non_resource_contract)) - len(json.dumps(without_manual_carriage))
+    assert 0 < manual_bytes < 4_500, manual_bytes
     schema_extensions = (
         retention_bytes
         + discovery_bytes
@@ -254,6 +289,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + plugin_bytes
         + assignment_input_bytes
         + analysis_receipt_bytes
+        + manual_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
@@ -286,7 +322,11 @@ def test_former_selection_requires_exact_current_agent_request(
     assert selection_requests[0]["arguments"] == {}
     assert len(json.dumps(selection_requests)) < 650
     state["planning"] = {key: value for key, value in state["planning"].items() if key != "selection_requests"}
-    # Retention and current-evidence each contribute two bounded effect revisions.
+    # Retention/current-evidence and manual carriage contribute named bounded
+    # effect revisions, never unsolicited task state or a manual queue.
+    manual_revisions = {key: value for key, value in first["decision_packet"]["operation_revisions"].items() if key in manual_operation_ids}
+    assert set(manual_revisions) == manual_operation_ids
+    assert len(json.dumps(manual_revisions)) < 250
     state["decision_packet"] = {
         **first["decision_packet"],
         "operation_revisions": {
@@ -301,6 +341,7 @@ def test_former_selection_requires_exact_current_agent_request(
                 "verification.retire-receipts",
                 "verification.recover-retirement",
                 *evidence_operations,
+                *manual_operation_ids,
             }
         },
     }

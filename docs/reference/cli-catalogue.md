@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:4a4d37acfa2bbce9b896a1c786f4b89296546913790e9d4effee08d7eed462a9`
+- Contract digest: `sha256:01907d2f79bc13f791bba936488c18bb7bb1fb7a8e3877c24662fb0aabbd78d1`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -13,7 +13,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | Command | Requires JSON input | Purpose |
 | --- | --- | --- |
 | `agentic-workspace setup` | no | Add or refresh AW in this repository; show the proposal and ask before writing. |
-| `agentic-workspace worker` | yes | Project bounded worker entry, expand an exact captured input, or assemble unproven return re-entry from a sealed Assignment packet. |
+| `agentic-workspace worker` | yes | Present worker entry or a complete manual snapshot, expand an exact captured input, or wrap new return material with host-held Assignment identity. |
 | `agentic-workspace resources` | yes | Propose with a resource request; execute by passing the exact returned action envelope unchanged to --input. Explicit context flags must match; omitted context comes from the envelope. |
 | `agentic-workspace start` | no | Resolve the current operating decision. |
 | `agentic-workspace invoke` | yes | Invoke the exact operation returned by the current owner. |

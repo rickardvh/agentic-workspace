@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep passive delegation targets latent until current work needs Assignment, share manual state reads and suppress retired continuation noise while preserving exact recovery."

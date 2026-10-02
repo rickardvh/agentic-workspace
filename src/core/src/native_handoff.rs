@@ -55,7 +55,10 @@ pub(crate) fn admission(
     contract: &Value,
 ) -> Result<Value, CoreError> {
     let judgment = submitted.iter().find(|r| r["request_kind"] == JUDGE_RETURN);
-    if execution["status"] != "current-executed-observation" {
+    if !matches!(
+        execution["status"].as_str(),
+        Some("current-executed-observation" | "current-reported-observation")
+    ) {
         if judgment.is_some() {
             return Err(CoreError::new(
                 "current executed result required before Assignment judgment",
@@ -66,7 +69,9 @@ pub(crate) fn admission(
     let source = digest(&json!({"work":work,"execution":execution}))?;
     let mut prerequisites = submitted
         .iter()
-        .filter(|r| r["request_kind"] != JUDGE_RETURN)
+        .filter(|r| {
+            r["request_kind"] != JUDGE_RETURN && r["request_kind"] != crate::native_manual::FINISH
+        })
         .cloned()
         .collect::<Vec<_>>();
     let mut status = "judgment-required";
@@ -85,10 +90,22 @@ pub(crate) fn admission(
             Some("reject-result") => "rejected",
             _ => return Err(CoreError::new("unsupported Assignment return judgment")),
         };
+        if execution["recipient_eligible"] == false && status == "admitted-for-use" {
+            return Err(CoreError::new(
+                "Human-owned work requires explicitly reported human-produced material; a model or unknown producer cannot satisfy that assignment. Preserve the report and use repair/reject judgment.",
+            ));
+        }
+        if status == "admitted-for-use"
+            && execution["returned"]["stop_conditions_hit"]
+                .as_array()
+                .is_some_and(|s| !s.is_empty())
+        {
+            status = "admitted-partial-observation";
+        }
     }
     prerequisites.push(request(
         JUDGE_RETURN,
-        json!({"answer":"use-result","reason":""}),
+        json!({"answer":if execution["recipient_eligible"]==false{"repair-required"}else{"use-result"},"reason":""}),
         work,
         &source,
         contract,
@@ -341,6 +358,12 @@ pub(crate) fn view(
                         | "assignment/observe-readonly-return/v1"
                         | "delegation/dispatch/v1"
                         | "delegation/read-result/v1"
+                        | crate::native_manual::EXPORT
+                        | crate::native_manual::REPORT
+                        | crate::native_manual::READ
+                        | crate::native_manual::FINISH
+                        | crate::native_manual::DISPOSE
+                        | crate::native_manual::RETIRE
                         | "delegation/reconcile-prior-result/v1"
                         | "assignment/judge-return/v1"
                         | "planning/adopt-return/v1"
@@ -484,7 +507,12 @@ pub(crate) fn view(
         }
         observation = json!({"status":"current-unproven-observation","returned":result,"assignment_identity":identity,"proof_current":false,"completion_allowed":false,"authenticated_reviewer":false});
     }
+    let manual_presentation = if selected["transport"] == "manual" {
+        crate::worker_entry::view(&json!({"action":"manual","packet":packet}))?
+    } else {
+        Value::Null
+    };
     Ok(
-        json!({"status":if observation.is_null(){if patch {"exported-patch"} else {"exported-read-only"}}else{"returned-unproven"},"packet":packet,"observation":observation,"requests":[],"claim_boundary":"Seal binds source and assignment integrity only. Return is an unproven observation; local implementation, Verification and Planning completion remain unavailable."}),
+        json!({"status":if observation.is_null(){if patch {"exported-patch"} else {"exported-read-only"}}else{"returned-unproven"},"packet":packet,"manual_presentation":manual_presentation,"observation":observation,"requests":[],"claim_boundary":"Seal binds source and assignment integrity only. Return is an unproven observation; local implementation, Verification and Planning completion remain unavailable."}),
     )
 }

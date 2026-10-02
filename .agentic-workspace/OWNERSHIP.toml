@@ -377,6 +377,14 @@ uninstall_policy = "preserve-current-owner-state"
 kind = "structured-local-owner"
 module = "workspace"
 ownership = "module_managed"
+path = ".agentic-workspace/local/delegation-manual/"
+uninstall_policy = "preserve-current-owner-state"
+lifetime = "pending-or-needed-evidence; exact delegation retirement after safe disposition"
+
+[[managed_surfaces]]
+kind = "structured-local-owner"
+module = "workspace"
+ownership = "module_managed"
 path = ".agentic-workspace/local/patch-integrations/"
 uninstall_policy = "preserve-current-owner-state"
 

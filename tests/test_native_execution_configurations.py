@@ -28,6 +28,44 @@ def fixture(root: Path):
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_passive_targets_are_latent_until_explicit_opportunity(tmp_path, shared_core_binary, native_cli, surface):
+    source, _, context = fixture(tmp_path)
+    source.write_text(source.read_text().replace('assignment_policy="required-best-fit"', 'assignment_policy="local-preferred"'))
+
+    def call(**extra):
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+
+    initial = call()
+    assert initial["configuration"]["assignment_requirements"]["configured"] is True
+    requirements = initial["task_requirements"]
+    assert requirements["status"] == "not-applicable" and requirements["requests"] == []
+    assert requirements["assignment"]["status"] == "not-applicable"
+    assert "result" not in requirements and "execution_configurations" not in requirements
+    assert not any(row["owner"] in {"assignment", "delegation"} for row in initial["decision_packet"]["blockers"])
+    assert not any(row["entry"]["skill_id"] == "planning-assignment" for row in initial.get("activation", {}).get("candidates", []))
+    assert call()["decision_packet"] == initial["decision_packet"]
+    opportunity = requirements["opportunity_request"]
+    opportunity["arguments"]["required_result_classes"] = ["read-only"]
+    active = call(request=opportunity)
+    assert active["task_requirements"]["result"]["status"] == "resolved"
+    assert active["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+    with pytest.raises(AssertionError, match="stale|changed|identity"):
+        call(task="A different requested outcome", request=opportunity)
+    assert not (tmp_path / "marker.txt").exists() and not (tmp_path / ".agentic-workspace/local").exists()
+
+    # Source-required executor guarantees remain relevant without an opportunity.
+    source.write_text(source.read_text().replace("[delegation]\n", '[delegation]\nrequired_execution_guarantees=["bounded"]\n'))
+    assert call()["task_requirements"]["requests"]
+    source.write_text(
+        source.read_text()
+        .replace('required_execution_guarantees=["bounded"]\n', "")
+        .replace('assignment_policy="local-preferred"', 'assignment_policy="best-fit-advisory"')
+    )
+    advisory = call()["task_requirements"]
+    assert advisory["requests"] and "result" in advisory["assignment"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, shared_core_binary, native_cli, surface):
     source, executable, context = fixture(tmp_path)
 
@@ -229,7 +267,11 @@ def test_internal_binding_requires_current_host_facts_before_local_comparison(tm
 
     (tmp_path / "probe-called.txt").unlink()
     source.write_text(bound.replace('assignment_policy="required-best-fit"', 'assignment_policy="local-preferred"'))
-    requirements()
+    passive = call()["task_requirements"]
+    assert passive["status"] == "not-applicable" and "execution_configurations" not in passive
+    opportunity = passive["opportunity_request"]
+    opportunity["arguments"]["required_result_classes"] = ["read-only"]
+    assert call(opportunity)["task_requirements"]["execution_configurations"]
     assert not (tmp_path / "probe-called.txt").exists()
     source.write_text(bound.replace("safe_to_auto_run_commands=true", "safe_to_auto_run_commands=false"))
     requirements()

@@ -95,6 +95,16 @@ def call(surface, core, cli, root, request=None):
     return consume(surface, core, cli, context)
 
 
+def test_required_policy_without_targets_still_blocks_implementation(tmp_path, shared_core_binary, native_cli):
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text('[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="missing"\n')
+    current = call("native", shared_core_binary, native_cli, tmp_path)
+    assert current["configuration"]["assignment_requirements"]["configured"] is False
+    assert current["configuration"]["assignment_policy"]["binding"] is True
+    assert any(row["code"] == "binding-policy-current-target-unresolved" for row in current["decision_packet"]["blockers"])
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_declared_shared_local_overlay_is_current_and_missing_never_absent(tmp_path, shared_core_binary, native_cli, surface):
     root = tmp_path / "repo"
@@ -129,7 +139,8 @@ def test_manual_owner_consumes_current_transport_authority(tmp_path, shared_core
     source.parent.mkdir()
     source.write_text('[delegation]\ntransport_authority="manual"\n[delegation_targets.worker]\ntransports=[{kind="manual"}]\n')
     initial = call("native", shared_core_binary, native_cli, tmp_path)
-    request = initial["task_requirements"]["requests"][0]
+    assert initial["task_requirements"]["status"] == "not-applicable"
+    request = initial["task_requirements"]["opportunity_request"]
     request["arguments"]["required_result_classes"] = ["read-only"]
     current = call("native", shared_core_binary, native_cli, tmp_path, request)
     targets = current["task_requirements"]["execution_configurations"]["manual_targets"]

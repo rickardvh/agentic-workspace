@@ -132,8 +132,25 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     prior["input_schema"]["required"] = json!(["custody", "disposition"]);
     let operation = json!({"id":OP,"semantic_revision":"native-delegation-v2","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"packet":{"type":"object"},"execution":{"type":"object"}},"required":["target","packet","execution"],"additionalProperties":false},"effects":["delegation-execution"],"reads":["delegation"],"result_kind":"agentic-workspace/delegation-execution/v1"});
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"delegation","revision":digest(&json!([declaration,read,prior,operation]))?,"requests":[declaration,read,prior],"operations":[operation],"domains":["delegation"],"effects":[{"id":"delegation-execution","domain":"delegation"}]}]});
-    result["restriction_authorities"] =
-        json!([{"owner":"delegation","affects":["effect:delegation-execution"]}]);
+    let owner = &mut result["owners"][0];
+    owner["requests"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_manual::declarations());
+    owner["operations"]
+        .as_array_mut()
+        .unwrap()
+        .push(crate::native_manual::operation());
+    owner["operations"]
+        .as_array_mut()
+        .unwrap()
+        .push(crate::native_manual::retirement_operation());
+    owner["effects"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"delegation-carriage","domain":"delegation"}));
+    owner["revision"] = json!(digest(owner)?);
+    result["restriction_authorities"] = json!([{"owner":"delegation","affects":["effect:delegation-execution","effect:delegation-carriage"]}]);
     result["revision"] = json!(digest(&result)?);
     Ok(result)
 }
@@ -145,7 +162,35 @@ pub(crate) fn view(
     handoff: &Value,
     submitted: &[Value],
     contract: &Value,
+    manual_state: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    if requirements["assignment"]["result"]["selected"]["configuration"]["transport"] == "manual" {
+        return crate::native_manual::view(
+            target,
+            work,
+            requirements,
+            handoff,
+            submitted,
+            contract,
+            manual_state,
+        );
+    }
+    if submitted.iter().any(|r| {
+        matches!(
+            r["request_kind"].as_str(),
+            Some(
+                crate::native_manual::EXPORT
+                    | crate::native_manual::REPORT
+                    | crate::native_manual::READ
+                    | crate::native_manual::FINISH
+                    | crate::native_manual::DISPOSE
+            )
+        )
+    }) {
+        return Err(error(
+            "Manual continuation requires its exact current manual Assignment; automation cannot substitute another executor.",
+        ));
+    }
     let owner = contract["owners"]
         .as_array()
         .unwrap()

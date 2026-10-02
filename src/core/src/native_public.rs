@@ -206,6 +206,8 @@ fn resolve_selected(
                 .is_some_and(crate::native_independent::linked)
                 && !crate::native_resource_owner::operation(&i["operation_id"])
                 && i["operation_id"] != "delegation.dispatch"
+                && i["operation_id"] != crate::native_manual::OP
+                && i["operation_id"] != crate::native_manual::RETIRE_OP
                 && i["operation_id"] != crate::native_patch::OP
                 && i["operation_id"] != crate::native_intent_write::WRITE
                 && i["operation_id"] != crate::native_intent_write::RECOVERY
@@ -1377,6 +1379,14 @@ fn resolve_selected(
         }
     }
     contributions.push(verification["contribution"].clone());
+    let manual_state = crate::native_manual::state(target, &input.task, &input.changed)?;
+    let assignment_requested = requests.iter().any(|r| {
+        r["owner"] == "assignment"
+            || r["owner"] == "delegation"
+            || r["request_kind"] == "verification/requirements/v1"
+    }) || manual_state
+        .as_ref()
+        .is_some_and(|s| s["retirement"]["status"] != "retired");
     let mut requirements = native_requirements::view(
         target,
         &input.task,
@@ -1401,6 +1411,7 @@ fn resolve_selected(
         }),
         &contract,
         baseline,
+        assignment_requested,
     )
     .map_err(|error| error.dispatch_mismatch(DispatchMismatch::CurrentWork))?;
     if let Some(invocation) = input
@@ -1411,12 +1422,11 @@ fn resolve_selected(
         crate::native_delegation::validate_execution_context(invocation, &requirements)?;
     }
     contributions.push(startup_adapter["contribution"].clone());
-    requirements["bounded_outcome_evidence"] =
-        if configuration["assignment_requirements"]["configured"] == true {
-            crate::native_assignment::outcome_evidence(&input.task, &planning, &verification)?
-        } else {
-            json!([])
-        };
+    requirements["bounded_outcome_evidence"] = if requirements["status"] != "not-applicable" {
+        crate::native_assignment::outcome_evidence(&input.task, &planning, &verification)?
+    } else {
+        json!([])
+    };
     let mut assignment = crate::native_assignment::view(
         &work,
         &configuration,
@@ -1449,6 +1459,7 @@ fn resolve_selected(
         &handoff,
         &requests,
         &contract,
+        manual_state.as_ref(),
     )?;
     if !delegation["observed_invocation"].is_null() {
         let original = delegation["observed_invocation"].clone();
@@ -1472,6 +1483,64 @@ fn resolve_selected(
         .remove("observed_invocation");
     let mut admission =
         crate::native_handoff::admission(&work, &delegation["observation"], &requests, &contract)?;
+    let manual_continuation = crate::native_manual::continuation(
+        manual_state.as_ref(),
+        requests.iter().any(|r| {
+            r["request_kind"].as_str().is_some_and(|k| {
+                [
+                    crate::native_manual::EXPORT,
+                    crate::native_manual::REPORT,
+                    crate::native_manual::READ,
+                    crate::native_manual::FINISH,
+                    crate::native_manual::DISPOSE,
+                    crate::native_manual::RETIRE,
+                ]
+                .contains(&k)
+            })
+        }),
+    )?;
+    if !manual_continuation.is_null() {
+        delegation["manual_continuation"] = manual_continuation;
+    }
+    let retirement = crate::native_manual::retirement(
+        target,
+        &input.task,
+        &input.changed,
+        &work,
+        &requests,
+        &contract,
+        &json!({"planning":planning,"planning_detail":planning_detail,"memory":memory,"verification":verification}),
+        manual_state.as_ref(),
+    )?;
+    if !retirement.is_null() {
+        if retirement["contribution"].is_object() {
+            delegation["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .extend(
+                    retirement["contribution"]["actions"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .cloned(),
+                );
+            delegation["contribution"]["settled"] = json!(false);
+        }
+        delegation["retirement"] = retirement;
+    }
+    if delegation["observation"]["status"] == "current-reported-observation" {
+        let settlement = crate::native_manual::settle(
+            target, &work, &handoff, &admission, &requests, &contract,
+        )?;
+        if settlement.is_object() {
+            delegation["settlement_requests"] = json!([settlement["request"]]);
+            delegation["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .push(settlement["action"].clone());
+            delegation["contribution"]["settled"] = json!(false);
+        }
+    }
     if admission["result_use_allowed"] == true {
         assignment_contribution["blockers"]
             .as_array_mut()
@@ -2193,6 +2262,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
         && invocation["operation_id"] != "delegation.dispatch"
+        && invocation["operation_id"] != crate::native_manual::OP
+        && invocation["operation_id"] != crate::native_manual::RETIRE_OP
         && invocation["operation_id"] != crate::native_patch::OP
         && invocation["operation_id"] != crate::native_intent_write::WRITE
         && invocation["operation_id"] != crate::native_intent_write::RECOVERY
@@ -2420,6 +2491,36 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         result["value"]["reentry"] =
             crate::native_delegation::result_reentry(&executed, invocation)?;
         return Ok(result);
+    }
+    if invocation["operation_id"] == crate::native_manual::OP {
+        progress.entered_effect_owner = true;
+        let executed = crate::native_manual::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
+        result["value"]["reentry"] = crate::native_manual::result_reentry(&executed, invocation)?;
+        return Ok(result);
+    }
+    if invocation["operation_id"] == crate::native_manual::RETIRE_OP {
+        progress.entered_effect_owner = true;
+        let executed =
+            crate::native_manual::retire(&target, &current["decision_packet"], invocation, || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            })?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
     }
     if matches!(
         invocation["operation_id"].as_str(),
