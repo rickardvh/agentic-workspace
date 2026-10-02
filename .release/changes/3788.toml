@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Activate repository dogfooding from bounded observations of material AW friction, while quiet work stays quiet."

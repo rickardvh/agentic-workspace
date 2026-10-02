@@ -58,6 +58,11 @@ When a source/test finding, correction, unmet prerequisite or useful improvement
 could change what happens next, include it in the `material` input to `start`
 before losing it or taking the dependent action. See
 [how to supply a finding](references/ordinary.md#current-material-and-needs).
+An applicable repository observation procedure may also ask for material friction
+or waste even when the original task can continue; eventual success does not erase
+that finding. Nominate observed facts before their context disappears, without
+requiring a proven defect or predicted recurrence. Do not scan or call merely to
+establish that no signal exists.
 Follow the returned restrictions and relevant procedure choices. Current policy
 determines whether to repair, report or take no action; a finding grants no write.
 

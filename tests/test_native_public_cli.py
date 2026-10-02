@@ -1246,6 +1246,43 @@ def test_internal_finding_has_current_dependencies_without_retention(tmp_path, s
         consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
 
 
+def test_repo_dogfooding_observation_routes_without_quiet_residue(tmp_path, shared_core_binary, native_cli):
+    from aw_maintainer.activation_index import synchronize
+
+    source = ROOT / "tools/skills/self-improvement-dogfooding"
+    folder = tmp_path / "tools/skills/self-improvement-dogfooding"
+    shutil.copytree(source, folder)
+    registry = folder.parent / "REGISTRY.json"
+    registry.write_text(
+        json.dumps({"skills": [{"id": source.name, "path": f"{source.name}/SKILL.md", "procedure_resource": "procedure.md"}]}),
+        encoding="utf-8",
+    )
+    synchronize(registry)
+    assert not synchronize(ROOT / "tools/skills/REGISTRY.json", check=True)
+    context = {"target": str(tmp_path), "task": "Add the requested report field"}
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    quiet = consume("native", shared_core_binary, native_cli, context)
+    assert "activation" not in quiet
+    finding = {
+        "id": "redundant-proof",
+        "kind": "observation",
+        "summary": "The requested field is implemented, but AW required the same unrelated proof twice for unchanged inputs.",
+        "source": {"producer": "acting-agent", "reference": "current proof results", "coverage": "bounded"},
+    }
+    current = consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
+    candidate = current["activation"]["candidates"][0]
+    assert candidate["entry"]["resource"] == "tools/skills/self-improvement-dogfooding/procedure.md"
+    assert candidate["status"] == "applicability-required"
+    request = current["activation"]["requests"][0]
+    request["arguments"]["judgments"][0].update(status="applicable", reason="Observed incidental AW proof waste.")
+    selected = consume("native", shared_core_binary, native_cli, {**context, "material": [finding], "request": request})
+    assert selected["activation"]["candidates"][0]["status"] == "applicable"
+    assert selected["decision_packet"]["blockers"] == quiet["decision_packet"]["blockers"]
+    request["arguments"]["judgments"][0].update(status="no-retention", reason="The bounded owner already repaired the duplicated proof.")
+    assert "activation" not in consume("native", shared_core_binary, native_cli, {**context, "material": [finding], "request": request})
+    assert before == {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
 def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_core_binary, native_cli):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
     subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes", "--format", "json"], check=True, capture_output=True)

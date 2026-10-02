@@ -1,20 +1,41 @@
 {
-  "schema_version": "skill-registry.v1",
+  "activation_index": [
+    {
+      "activation": {
+        "applicability": "An externally initiated review needs an eligible independent reviewer and current proof.",
+        "occasions": [
+          "need"
+        ],
+        "outcome": "Independent bounded findings and current review judgment; implementation custody cannot review itself."
+      },
+      "id": "pr-review-recheck",
+      "path": "pr-review-recheck/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        "github/pr/review"
+      ]
+    },
+    {
+      "activation": {
+        "applicability": "Current work in the AW repository exposes an incidental material defect, friction or wasted work attributable to AW, outside the adopted task outcome, even when that task can still succeed.",
+        "occasions": [
+          "observation"
+        ],
+        "outcome": "One bounded repair, evidence/conformance repair, distinct issue/follow-up, or human product-shaping decision is dispositioned through its existing owner; the original task continues. Weak findings may be dismissed without retention. Activation grants no write, proof, publication or closure authority."
+      },
+      "id": "self-improvement-dogfooding",
+      "path": "self-improvement-dogfooding/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "semantic_routes": [
+        null
+      ]
+    }
+  ],
   "owner": "repo-local-tool-skills",
-  "source_kind": "repo-owned-tool-skills",
+  "schema_version": "skill-registry.v1",
   "skills": [
     {
-      "id": "foundation-stability-check",
-      "path": "foundation-stability-check/SKILL.md",
-      "scope": "repo-owned",
-      "stability": "repo-managed",
-      "summary": "recheck current Planning and Memory ownership when install or operational-state authority may have shifted",
       "activation_hints": {
-        "verbs": [
-          "recheck",
-          "verify",
-          "audit"
-        ],
         "nouns": [
           "planning ownership",
           "memory ownership",
@@ -25,32 +46,24 @@
           "recheck Planning and Memory ownership",
           "check for competing operational state"
         ],
-        "when": [
-          "a change touches Planning or Memory install/state authority",
-          "suspected competing operational source"
-        ]
-      }
-    },
-    {
-      "id": "ownership-ledger-check",
-      "path": "ownership-ledger-check/SKILL.md",
-      "scope": "repo-owned",
-      "stability": "repo-managed",
-      "summary": "recheck the workspace ownership ledger against current planning, memory, and module boundaries",
-      "semantic_routes": [
-        {
-          "id": "workspace/ownership/audit",
-          "match": "exact",
-          "priority": 10,
-          "description": "Audit workspace ownership and module boundaries."
-        }
-      ],
-      "activation_hints": {
         "verbs": [
           "recheck",
           "verify",
           "audit"
         ],
+        "when": [
+          "a change touches Planning or Memory install/state authority",
+          "suspected competing operational source"
+        ]
+      },
+      "id": "foundation-stability-check",
+      "path": "foundation-stability-check/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "recheck current Planning and Memory ownership when install or operational-state authority may have shifted"
+    },
+    {
+      "activation_hints": {
         "nouns": [
           "ownership ledger",
           "module boundaries",
@@ -60,24 +73,32 @@
           "check ownership ledger",
           "audit workspace ownership"
         ],
+        "verbs": [
+          "recheck",
+          "verify",
+          "audit"
+        ],
         "when": [
           "ownership drift",
           "boundary ambiguity"
         ]
-      }
+      },
+      "id": "ownership-ledger-check",
+      "path": "ownership-ledger-check/SKILL.md",
+      "scope": "repo-owned",
+      "semantic_routes": [
+        {
+          "description": "Audit workspace ownership and module boundaries.",
+          "id": "workspace/ownership/audit",
+          "match": "exact",
+          "priority": 10
+        }
+      ],
+      "stability": "repo-managed",
+      "summary": "recheck the workspace ownership ledger against current planning, memory, and module boundaries"
     },
     {
-      "id": "path-consolidation-check",
-      "path": "path-consolidation-check/SKILL.md",
-      "scope": "repo-owned",
-      "stability": "repo-managed",
-      "summary": "verify that module-managed Planning and Memory install roots remain consolidated under .agentic-workspace",
       "activation_hints": {
-        "verbs": [
-          "verify",
-          "align",
-          "consolidate"
-        ],
         "nouns": [
           "installed roots",
           "payload paths",
@@ -88,67 +109,49 @@
           "verify Planning and Memory install roots",
           "verify install boundaries align"
         ],
+        "verbs": [
+          "verify",
+          "align",
+          "consolidate"
+        ],
         "when": [
           "install or payload topology changes",
           "former operational path may be reintroduced"
         ]
-      }
+      },
+      "id": "path-consolidation-check",
+      "path": "path-consolidation-check/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "verify that module-managed Planning and Memory install roots remain consolidated under .agentic-workspace"
     },
     {
-      "id": "pr-review-recheck",
-      "path": "pr-review-recheck/SKILL.md",
-      "procedure_resource": "procedure.md",
       "executable": {
+        "dependencies": [
+          "docs/maintainer/testing-strategy.md"
+        ],
         "entrypoint": {
           "kind": "file",
           "path": "tools/skills/pr-review-recheck/prepare.py"
-        },
-        "dependencies": [
-          "docs/maintainer/testing-strategy.md"
-        ]
+        }
       },
+      "id": "pr-review-recheck",
+      "path": "pr-review-recheck/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "repo-owned",
-      "stability": "repo-managed",
-      "summary": "independently assess a PR after establishing reviewer eligibility and current evidence",
       "semantic_routes": [
         {
+          "description": "Apply the repository's independent PR-review eligibility procedure.",
           "id": "github/pr/review",
           "match": "exact",
-          "priority": 10,
-          "description": "Apply the repository's independent PR-review eligibility procedure."
-        }
-      ]
-    },
-    {
-      "id": "github-issue-shaping",
-      "path": "github-issue-shaping/SKILL.md",
-      "scope": "repo-owned",
-      "stability": "repo-managed",
-      "summary": "define the problem, complete scope, evidence and closure rule before creating or updating an issue",
-      "semantic_routes": [
-        {
-          "id": "github/issues/create",
-          "match": "exact",
-          "priority": 10,
-          "description": "Create repository issues through the repo-owned shaping and creation procedure."
-        },
-        {
-          "id": "github/issues/refine",
-          "match": "exact",
-          "priority": 10,
-          "description": "Refine an existing repository issue through its current shaping procedure."
+          "priority": 10
         }
       ],
+      "stability": "repo-managed",
+      "summary": "independently assess a PR after establishing reviewer eligibility and current evidence"
+    },
+    {
       "activation_hints": {
-        "verbs": [
-          "shape",
-          "refine",
-          "split",
-          "prune",
-          "update",
-          "create",
-          "file"
-        ],
         "nouns": [
           "github issue",
           "issue lane",
@@ -166,25 +169,43 @@
           "add concrete suggestions",
           "final satisfaction"
         ],
+        "verbs": [
+          "shape",
+          "refine",
+          "split",
+          "prune",
+          "update",
+          "create",
+          "file"
+        ],
         "when": [
           "turning findings into durable issue shape",
           "refining existing issues",
           "deciding issue hierarchy or closure boundaries"
         ]
-      }
+      },
+      "id": "github-issue-shaping",
+      "path": "github-issue-shaping/SKILL.md",
+      "scope": "repo-owned",
+      "semantic_routes": [
+        {
+          "description": "Create repository issues through the repo-owned shaping and creation procedure.",
+          "id": "github/issues/create",
+          "match": "exact",
+          "priority": 10
+        },
+        {
+          "description": "Refine an existing repository issue through its current shaping procedure.",
+          "id": "github/issues/refine",
+          "match": "exact",
+          "priority": 10
+        }
+      ],
+      "stability": "repo-managed",
+      "summary": "define the problem, complete scope, evidence and closure rule before creating or updating an issue"
     },
     {
-      "id": "self-improvement-dogfooding",
-      "path": "self-improvement-dogfooding/SKILL.md",
-      "scope": "repo-owned",
-      "stability": "repo-managed",
-      "summary": "decide whether a new incidental finding needs a bounded repair, an issue or human product direction",
       "activation_hints": {
-        "verbs": [
-          "triage",
-          "diagnose",
-          "route"
-        ],
         "nouns": [
           "dogfooding finding",
           "friction signal",
@@ -197,45 +218,25 @@
           "handle finding discovered while dogfooding",
           "new improvement finding outside the current task"
         ],
+        "verbs": [
+          "triage",
+          "diagnose",
+          "route"
+        ],
         "when": [
           "current work exposed a concrete incidental defect or friction outside its planned outcome",
           "single observed dogfooding finding needs routing"
         ]
-      }
-    },
-    {
-      "id": "github-issue-creation",
-      "path": "github-issue-creation/SKILL.md",
-      "executable": {
-        "entrypoint": {
-          "kind": "file",
-          "path": ".agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py"
-        },
-        "dependencies": [
-          ".github/ISSUE_TEMPLATE/01-direction-proposal.yml",
-          ".github/ISSUE_TEMPLATE/02-bug-regression.yml",
-          ".github/ISSUE_TEMPLATE/03-review-friction.yml",
-          "pyproject.toml",
-          "uv.lock"
-        ]
       },
+      "id": "self-improvement-dogfooding",
+      "path": "self-improvement-dogfooding/SKILL.md",
+      "procedure_resource": "procedure.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "prepare the current issue form, publish authorized fields and verify the created issue",
-      "semantic_routes": [
-        {
-          "id": "github/issues/create",
-          "match": "exact",
-          "priority": 20,
-          "description": "Create repository issues through the repo-owned shaping and creation procedure."
-        }
-      ],
+      "summary": "decide whether a new incidental finding needs a bounded repair, an issue or human product direction"
+    },
+    {
       "activation_hints": {
-        "verbs": [
-          "create",
-          "file",
-          "open"
-        ],
         "nouns": [
           "github issue",
           "issue template",
@@ -250,29 +251,44 @@
           "issue template",
           "create issues"
         ],
+        "verbs": [
+          "create",
+          "file",
+          "open"
+        ],
         "when": [
           "creating external tracker items",
           "turning findings into GitHub issues",
           "filing dogfooding friction"
         ]
-      }
+      },
+      "executable": {
+        "dependencies": [
+          ".github/ISSUE_TEMPLATE/01-direction-proposal.yml",
+          ".github/ISSUE_TEMPLATE/02-bug-regression.yml",
+          ".github/ISSUE_TEMPLATE/03-review-friction.yml",
+          "pyproject.toml",
+          "uv.lock"
+        ],
+        "entrypoint": {
+          "kind": "file",
+          "path": ".agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py"
+        }
+      },
+      "id": "github-issue-creation",
+      "path": "github-issue-creation/SKILL.md",
+      "scope": "repo-owned",
+      "semantic_routes": [
+        {
+          "description": "Create repository issues through the repo-owned shaping and creation procedure.",
+          "id": "github/issues/create",
+          "match": "exact",
+          "priority": 20
+        }
+      ],
+      "stability": "repo-managed",
+      "summary": "prepare the current issue form, publish authorized fields and verify the created issue"
     }
   ],
-  "activation_index": [
-    {
-      "id": "pr-review-recheck",
-      "path": "pr-review-recheck/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        "github/pr/review"
-      ],
-      "activation": {
-        "occasions": [
-          "need"
-        ],
-        "applicability": "An externally initiated review needs an eligible independent reviewer and current proof.",
-        "outcome": "Independent bounded findings and current review judgment; implementation custody cannot review itself."
-      }
-    }
-  ]
+  "source_kind": "repo-owned-tool-skills"
 }
