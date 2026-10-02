@@ -577,7 +577,7 @@ fn resolve_selected(
     } else {
         Value::Null
     };
-    let contract = combined_contract(&[
+    let mut fragments = [
         &crate::native_activation::contract()?,
         &procedure_contract,
         &config_write_contract,
@@ -593,7 +593,29 @@ fn resolve_selected(
         &crate::native_delegation::contract()?,
         &independent.contract,
         &resource_contract,
-    ])?;
+    ];
+    let mut contract = combined_contract(&fragments)?;
+    if executing
+        && !procedure_selected
+        && requests
+            .iter()
+            .any(|r| r["capability_revision"] != contract["revision"])
+    {
+        // Discovery exposes the advisory procedure request shapes without
+        // making that presentation context an effect dependency. A retained
+        // source request can bind the composition with those shapes present.
+        // Reconstruct only that exact composition from CURRENT declarations;
+        // never rewrite the request or accept a former owner/operation contract.
+        let retained_procedure_contract = crate::native_procedure_answer::contract()?;
+        fragments[1] = &retained_procedure_contract;
+        let retained = combined_contract(&fragments)?;
+        if requests
+            .iter()
+            .any(|r| r["capability_revision"] == retained["revision"])
+        {
+            contract = retained;
+        }
+    }
     if input
         .invocation
         .as_ref()
@@ -2121,6 +2143,244 @@ fn combined_contract(contracts: &[&Value]) -> Result<Value, CoreError> {
     }
     combined["revision"] = json!(digest(&combined)?);
     Ok(combined)
+}
+
+#[cfg(test)]
+mod fresh_action_tests {
+    use super::*;
+
+    struct Fixture(PathBuf);
+    impl Fixture {
+        fn new() -> Self {
+            let root = std::env::temp_dir().join(format!(
+                "aw-fresh-action-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            let fixture = Self(root);
+            fixture.write(".agentic-workspace/config.toml", "[workspace]\nagent_instructions_file='AGENTS.md'\n[assurance]\ndefault_level='medium'\nagent_may_escalate=true\n");
+            fixture.write("AGENTS.md", "Preserve current source requirements.");
+            fixture.write("docs/note.md", "current");
+            fixture.write("tools/skills/REGISTRY.json", &json!({"skills":[{"id":"note","path":"note/SKILL.md","semantic_routes":["note/change"],"procedure_resource":"procedure.md"}]}).to_string());
+            fixture.write("tools/skills/note/SKILL.md", "Read procedure.md.");
+            fixture.write("tools/skills/note/procedure.md", &format!("```agentic-procedure\n{}\n```\n", json!({"kind":"agentic-workspace/procedure/v1","id":"note","question":"Is the change visible?","branches":[{"id":"yes","description":"Visible change","next":"visible.md"}]})));
+            fixture.write(
+                "tools/skills/note/visible.md",
+                "Describe the visible change.",
+            );
+            let command = if cfg!(windows) {
+                "Add-Content -Path marker.txt -Value executed"
+            } else {
+                "echo executed >> marker.txt"
+            };
+            fixture.write(".agentic-workspace/verification/manifest.toml", &format!("schema_version='agentic-workspace/verification-manifest/v1'\n[assurance.proof_profiles.selected]\nrequired_commands=['{command}']\n"));
+            fixture
+        }
+        fn write(&self, path: &str, bytes: &str) {
+            let path = self.0.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, bytes).unwrap();
+        }
+        fn context(&self) -> Value {
+            json!({"target":self.0,"task":"Check bounded documentation","changed":["docs/note.md"]})
+        }
+        fn start(&self, request: Value) -> Value {
+            let mut context = self.context();
+            if !request.is_null() {
+                context["request"] = request;
+            }
+            start(context).unwrap()
+        }
+        fn discovered(&self) -> (Value, Value) {
+            let initial = self.start(Value::Null);
+            let mut request = initial["semantic_routes"]["requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| r["request_kind"] == "semantic-routes/discover/v1")
+                .unwrap()
+                .clone();
+            request["arguments"] = json!({"parent":"note/change"});
+            (self.start(request.clone()), request)
+        }
+        fn execution(&self, action: &Value) -> Value {
+            let mut context = self.context();
+            context["invocation"] = action.clone();
+            context
+        }
+        fn reject_without_proof(&self, context: Value) {
+            let result = invoke_operating(context);
+            assert_eq!(
+                result["effect_outcome"]["status"], "rejected-before-effect",
+                "{result}"
+            );
+            assert!(!self.0.join("marker.txt").exists());
+            assert!(
+                !self
+                    .0
+                    .join(".agentic-workspace/local/proof-receipts/runs")
+                    .exists()
+            );
+        }
+    }
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn selected_profile_with_startup_source_invokes_once() {
+        let fixture = Fixture::new();
+        let (discovered, discovery) = fixture.discovered();
+        let mut strategy = discovered["verification"]["strategy_request"].clone();
+        strategy["arguments"] = json!({"level":"high","profile_ids":["selected"],"reason":"Check the selected documentation profile."});
+        let selected = fixture.start(json!([discovery.clone(), strategy]));
+        let mut requests = selected["verification"]["execution_requests"][0]
+            .as_array()
+            .unwrap()
+            .clone();
+        requests.push(discovery);
+        let ready = fixture.start(json!(requests));
+        let action = &ready["decision_packet"]["primary_action"];
+        assert_eq!(action["operation_id"], "proof.report");
+        assert_eq!(
+            action["source_requests"],
+            ready["startup_adapter"]["requests"]
+        );
+        let execution = fixture.execution(action);
+        let (input, target) = input(execution.clone()).unwrap();
+        let base = fixture.start(Value::Null);
+        let extra: Vec<_> = ready["capability_contract"]["owners"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|o| {
+                !base["capability_contract"]["owners"]
+                    .as_array()
+                    .unwrap()
+                    .contains(o)
+            })
+            .collect();
+        assert_eq!(
+            extra,
+            vec![&crate::native_procedure_answer::contract().unwrap()["owners"][0]]
+        );
+        for field in ["claim_authorities", "restriction_authorities"] {
+            assert_eq!(
+                base["capability_contract"][field],
+                ready["capability_contract"][field]
+            );
+        }
+        let current = resolve(&input, &target, true).unwrap();
+        eprintln!(
+            "issued={} passive={} invoke={} differing-owner=procedure",
+            ready["capability_contract"]["revision"],
+            base["capability_contract"]["revision"],
+            current["capability_contract"]["revision"]
+        );
+        assert_eq!(ready["capability_contract"], current["capability_contract"]);
+
+        fixture.write("AGENTS.md", "Changed startup requirements.");
+        fixture.reject_without_proof(execution.clone());
+        fixture.write("AGENTS.md", "Preserve current source requirements.");
+        let mut changed_task = execution.clone();
+        changed_task["task"] = json!("Different outcome");
+        fixture.reject_without_proof(changed_task);
+        let manifest = ".agentic-workspace/verification/manifest.toml";
+        let original = std::fs::read_to_string(fixture.0.join(manifest)).unwrap();
+        fixture.write(manifest, &original.replace("marker.txt", "different.txt"));
+        fixture.reject_without_proof(execution.clone());
+        fixture.write(manifest, &original);
+        let mut wrong = execution.clone();
+        wrong["invocation"]["source_requests"][0]["capability_revision"] = json!("sha256:unissued");
+        fixture.reject_without_proof(wrong);
+        let mut wrong = execution.clone();
+        wrong["invocation"]["source_requests"][0]["owner_revision"] = json!("sha256:unissued");
+        fixture.reject_without_proof(wrong);
+        let mut changed_contract = ready["capability_contract"].clone();
+        let owner = changed_contract["owners"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|o| o["owner"] == "verification")
+            .unwrap();
+        let operation = owner["operations"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|o| o["id"] == "proof.report")
+            .unwrap();
+        operation["semantic_revision"] = json!("changed-proof-contract");
+        changed_contract["revision"] = json!(digest(&changed_contract).unwrap());
+        assert!(crate::prepare_request_value(json!({"request":action["source_requests"][0],"current_work":ready["current_work"],"capability_contract":changed_contract})).is_err());
+
+        // Procedure presentation is not a governing proof/source dependency.
+        fixture.write(
+            "tools/skills/note/visible.md",
+            "Different unrelated presentation.",
+        );
+        let result = invoke_operating(execution.clone());
+        assert_eq!(result["effect_outcome"]["status"], "committed", "{result}");
+        assert_eq!(result["value"]["process"]["status"], "passed");
+        assert_eq!(result["value"]["publication"]["status"], "local");
+        assert!(result["value"]["publication"]["reference"].is_string());
+        assert_eq!(result["continuation_status"], "current");
+        assert_eq!(
+            result["value"]["claim_boundary"]["completion_claim_allowed"],
+            false
+        );
+        assert_eq!(invoke_operating(execution)["value"], result["value"]);
+        assert_eq!(
+            std::fs::read_to_string(fixture.0.join("marker.txt"))
+                .unwrap()
+                .lines()
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn configuration_write_keeps_exact_startup_dependency_after_discovery() {
+        let fixture = Fixture::new();
+        let (discovered, discovery) = fixture.discovered();
+        let request = discovered["configuration_write"]["creation_discovery_request"].clone();
+        let fields = fixture.start(json!([discovery.clone(), request]));
+        let mut edit = fields["configuration_write"]["creation_requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["key"] == "workspace.cli_invoke")
+            .unwrap()
+            .clone();
+        edit["arguments"]["value"] = json!("exact-native");
+        let proposal = fixture.start(json!([discovery.clone(), edit]));
+        let mut answer =
+            proposal["decision_packet"]["decision_request"]["response_request"].clone();
+        answer["arguments"]["answer"] = json!("authorize-write");
+        let ready = fixture.start(json!([discovery, answer]));
+        let action = &ready["decision_packet"]["primary_action"];
+        assert_eq!(action["operation_id"], "configuration.write");
+        assert!(
+            action["source_requests"]
+                .as_array()
+                .unwrap()
+                .contains(&ready["startup_adapter"]["requests"][0])
+        );
+        let source = action["arguments"]["request"]["arguments"]["source"]
+            .as_str()
+            .unwrap();
+        let result = invoke_operating(fixture.execution(action));
+        assert_eq!(result["effect_outcome"]["status"], "committed", "{result}");
+        assert!(
+            std::fs::read_to_string(fixture.0.join(source))
+                .unwrap()
+                .contains("exact-native")
+        );
+    }
 }
 
 #[derive(Default)]
