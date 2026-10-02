@@ -5,9 +5,16 @@ This subskill owns the merged intent/work-shape decision. [Work-shape vocabulary
 
 ## Current owner preparation
 
-Use the configured AW invocation with `start --target . --task "<task>"
---projection full --format json`, repeating `--changed` for known paths. Read
-effective `configuration.clarification.mode` and the current owner's restrictions.
+Use the current compact startup decision first. If clarification posture or
+restrictions are missing, use the configured AW invocation with
+`start --target . --task "<task>" --format json`, repeating `--changed` for known
+paths. Read the returned restrictions and exact requests. Follow the returned
+configuration detail reference only when effective `clarification.mode` is not
+already available; use the startup skill's [exact owner procedure](../../workspace-startup/references/owners.md)
+to answer a routed question with the same work context and prior answers.
+Keep continuations compact. Use carried transport only when its machine data
+stays outside model-visible output, and full projection only for deliberate broad
+diagnosis that needs the expanded owner state.
 The agent or human judges whether work is clear, ambiguous, or requires an owner
 decision. No language-specific helper or executable-launch parsing is needed.
 If native execution is unavailable, follow the startup skill's conservative
