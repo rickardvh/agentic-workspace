@@ -157,6 +157,9 @@ def layer_currentness(base, head, files, declarations, owner_evidence=()):
         status = evidence.get("status") if evidence else "unknown"
         if status not in {"current", "stale"} or not (evidence or {}).get("evidence_ref"):
             status = "unknown"
+        base_status = (evidence or {}).get("base_status", "unknown")
+        if base_status not in {"current", "stale"} or not (evidence or {}).get("base_evidence_ref"):
+            base_status = "unknown"
         obligations.append(
             {
                 "owner": declaration["owner"],
@@ -166,6 +169,17 @@ def layer_currentness(base, head, files, declarations, owner_evidence=()):
                 "paths": touched,
                 "status": status,
                 "evidence": evidence,
+                "base_status": base_status,
+                "attribution": "resolved"
+                if status == "current"
+                else "inherited"
+                if base_status == "stale"
+                else "introduced"
+                if base_status == "current"
+                else "unknown",
+                "declaration": declaration.get("declaration"),
+                "relation_id": declaration.get("relation_id"),
+                "trigger": "policy-source-change" if declaration.get("relation_id") in touched else "governing-source-change",
                 "boundary": "reported owner result for this PR only; not independent review or integration proof",
             }
         )
@@ -173,20 +187,112 @@ def layer_currentness(base, head, files, declarations, owner_evidence=()):
 
 
 def currentness_declarations(baseline):
-    # The trusted repository's existing System Intent source declaration selects
-    # the check. Additional owners are admitted as explicit reviewer obligations.
+    # Trusted source declarations nominate existing owners; the reviewer supplies
+    # their exact observations. No domain state is inferred here.
     path = ".agentic-workspace/system-intent/intent.toml"
-    tree = set(git("ls-tree", "-r", "--name-only", baseline).decode().splitlines())
-    if path not in tree:
+    tree = set(
+        git("ls-tree", "-r", "--name-only", baseline, "--", path, ".agentic-workspace/config.toml", ".agentic-workspace/instructions")
+        .decode()
+        .splitlines()
+    )
+    declarations = []
+    if path in tree:
+        source = tomllib.loads(git("show", f"{baseline}:{path}").decode("utf-8"))
+        declarations.append(
+            {
+                "owner": "system_intent",
+                "check": "system_intent current source reconciliation",
+                "sources": [row["path"] for row in source.get("source_records", []) if "path" in row] + [path],
+            }
+        )
+    config_path = ".agentic-workspace/config.toml"
+    config = tomllib.loads(git("show", f"{baseline}:{config_path}").decode("utf-8")) if config_path in tree else {}
+    admitted = config.get("assurance", {}).get("instruction_revision")
+    # Only repository instruction objects from the trusted snapshot and its
+    # existing source-owner admission. No worktree scan or head helper executes.
+    instruction_paths = sorted(
+        name for name in tree if name.startswith(".agentic-workspace/instructions/") and name.endswith(".md") and name.count("/") == 2
+    )
+    if admitted:
+        admitted_tree = set(git("ls-tree", "-r", "--name-only", admitted, "--", ".agentic-workspace/instructions").decode().splitlines())
+        instruction_paths = sorted(
+            set(instruction_paths)
+            | {
+                name
+                for name in admitted_tree
+                if name.startswith(".agentic-workspace/instructions/") and name.endswith(".md") and name.count("/") == 2
+            }
+        )
+    for instruction in instruction_paths:
+        current = git("show", f"{baseline}:{instruction}") if instruction in tree else None
+        content = git("show", f"{admitted}:{instruction}") if admitted and instruction in admitted_tree else current
+        if content is None:
+            continue
+        sources = governing_sources(content)
+        if not sources:
+            continue
+        declarations.append(
+            {
+                "owner": "verification",
+                "check": f"Verification source reconciliation: {instruction}",
+                "relation_id": instruction,
+                "sources": [*sources, instruction],
+                "declaration": {
+                    "path": instruction,
+                    "baseline": baseline,
+                    "revision": digest(content),
+                    "admitted_revision": admitted,
+                    "baseline_revision": digest(current) if current is not None else None,
+                    "snapshot": "admitted" if admitted else "trusted-baseline-only",
+                    "matches_baseline": content == current,
+                },
+            }
+        )
+    return declarations
+
+
+def governing_sources(content):
+    """Nominate existing relations from the scoped instruction list syntax.
+
+    This reads source names only; Verification interprets currentness, scope and
+    semantic reconciliation. Unsupported metadata is a collection gap.
+    """
+    lines = content.decode("utf-8").splitlines()
+    if not lines or lines[0] != "---":
         return []
-    source = tomllib.loads(git("show", f"{baseline}:{path}").decode("utf-8"))
-    return [
-        {
-            "owner": "system_intent",
-            "check": "system_intent current source reconciliation",
-            "sources": [row["path"] for row in source.get("source_records", []) if "path" in row] + [path],
-        }
-    ]
+    fields, field = {}, None
+    for line in lines[1:]:
+        if line == "---":
+            return fields.get("governed_by", [])
+        value = line.strip()
+        if not value or value.startswith("#"):
+            continue
+        if not line.startswith((" ", "-")) and ":" in value:
+            field, rest = value.split(":", 1)
+            if field in fields or field not in {"paths", "routes", "read", "reconcile", "governed_by", "use", "checks", "protect"}:
+                raise ValueError("unsupported trusted scoped instruction metadata")
+            fields[field] = []
+            rest = rest.strip()
+            if not rest:
+                continue
+            if not (rest.startswith("[") and rest.endswith("]")):
+                raise ValueError("unsupported trusted scoped instruction list")
+            values = [item.strip() for item in rest[1:-1].split(",") if item.strip()]
+        else:
+            if field is None or not value.startswith("-"):
+                raise ValueError("unsupported trusted scoped instruction item")
+            values = [value[1:].strip()]
+        for value in values:
+            value = value.strip("'\"")
+            if field == "governed_by" and (
+                not value
+                or value.startswith(("/", "~"))
+                or any(char in value for char in "\\:*?[]")
+                or any(part in {"", ".", ".."} for part in value.split("/"))
+            ):
+                raise ValueError("invalid trusted governing source reference")
+            fields[field].append(value)
+    raise ValueError("unterminated trusted scoped instruction metadata")
 
 
 def prepare(repo, number, baseline, *, previous=None, owner_evidence=(), owner_obligations=()):
@@ -277,9 +383,13 @@ def prepare(repo, number, baseline, *, previous=None, owner_evidence=(), owner_o
         evidence["files"]["status"] = "unavailable"
         evidence["files"]["reason"] = "incomplete or duplicate changed-file set; transport limit or moved subject"
     packet["guidance"] = guidance(baseline, files)
-    packet["owner_currentness"] = layer_currentness(
-        base, head, files, [*currentness_declarations(baseline), *owner_obligations], owner_evidence
-    )
+    try:
+        declarations = currentness_declarations(baseline)
+        packet["owner_currentness_discovery"] = {"status": "observed", "baseline": baseline}
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        declarations = []
+        packet["owner_currentness_discovery"] = {"status": "unavailable", "reason": str(exc), "baseline": baseline}
+    packet["owner_currentness"] = layer_currentness(base, head, files, [*declarations, *owner_obligations], owner_evidence)
     packet["helper"] = {"path": HELPER, "baseline": baseline, "revision": digest(git("show", f"{baseline}:{HELPER}"))}
     packet["linked_references"] = [{"repository": owner, "number": issue} for owner, issue in references(pr.get("body") or "", repo)]
     for owner, issue in references(pr.get("body") or "", repo):
@@ -291,6 +401,8 @@ def prepare(repo, number, baseline, *, previous=None, owner_evidence=(), owner_o
     final = observe(f"{prefix}/pulls/{number}")
     packet["status"] = "observed" if all(item["status"] == "observed" for item in evidence.values()) else "partial"
     if any(item["status"] != "observed" for item in packet["guidance"]):
+        packet["status"] = "partial"
+    if packet["owner_currentness_discovery"]["status"] != "observed":
         packet["status"] = "partial"
     packet["subject_unavailable_fields"] = [key for key in ["draft", "merged"] if not isinstance(pr.get(key), bool)]
     if packet["subject_unavailable_fields"]:
@@ -304,7 +416,12 @@ def prepare(repo, number, baseline, *, previous=None, owner_evidence=(), owner_o
     packet["subject_recheck"] = {key: value for key, value in final.items() if key != "value"}
     packet["observed_until"] = datetime.now(timezone.utc).isoformat()
     identities = {key: digest(value) for key, value in evidence.items()}
-    identities.update(subject=subject["revision"], guidance=digest(packet["guidance"]), helper=packet["helper"]["revision"])
+    identities.update(
+        subject=subject["revision"],
+        guidance=digest(packet["guidance"]),
+        helper=packet["helper"]["revision"],
+        owner_currentness=digest([packet["owner_currentness_discovery"], packet["owner_currentness"]]),
+    )
     packet["identities"] = identities
     packet["file_identities"] = {row["filename"]: digest(row) for row in files}
     packet["delta"] = {"mode": "full", "reason": "no usable prior comparison"}

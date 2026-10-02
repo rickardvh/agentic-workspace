@@ -19,6 +19,69 @@ SPEC.loader.exec_module(review)
 BASELINE = "a" * 40
 
 
+def test_trusted_governing_source_discovery_and_layer_attribution(remote, monkeypatch):
+    instruction = ".agentic-workspace/instructions/documentation.md"
+    guide = "docs/documentation-style-guide.md"
+    admitted = "f" * 40
+    content = (
+        b"---\npaths: [docs/**]\ngoverned_by:\n  - docs/documentation-style-guide.md\n---\nUse the existing source reconciliation owner.\n"
+    )
+    old_git = review.git
+    calls = []
+
+    def git(*args):
+        calls.append(args)
+        if args[0] == "ls-tree":
+            return old_git(*args) + (instruction + "\n.agentic-workspace/config.toml\n").encode()
+        if args[-1] == f"{BASELINE}:.agentic-workspace/config.toml":
+            return f'[assurance]\ninstruction_revision="{admitted}"\n'.encode()
+        if args[-1] in {f"{BASELINE}:{instruction}", f"{admitted}:{instruction}"}:
+            return content
+        return old_git(*args)
+
+    monkeypatch.setattr(review, "git", git)
+    remote["files"] = [{"filename": guide}]
+    remote["pr"]["changed_files"] = 1
+    packet = review.prepare("owner/repo", 17, BASELINE)
+    obligation = packet["owner_currentness"][0]
+    base, head = "c" * 40, "b" * 40
+    assert obligation["owner"] == "verification" and obligation["relation_id"] == instruction
+    assert obligation["paths"] == [guide] and obligation["status"] == "unknown"
+    assert obligation["declaration"]["snapshot"] == "admitted" and obligation["declaration"]["matches_baseline"] is True
+    evidence = {
+        "owner": "verification",
+        "check": obligation["check"],
+        "base": base,
+        "head": head,
+        "base_status": "current",
+        "base_evidence_ref": "owner://base",
+        "status": "stale",
+        "evidence_ref": "owner://head",
+    }
+    stale = review.prepare("owner/repo", 17, BASELINE, owner_evidence=[evidence])["owner_currentness"][0]
+    assert stale["status"] == "stale" and stale["attribution"] == "introduced"
+    repaired = review.prepare("owner/repo", 17, BASELINE, owner_evidence=[{**evidence, "status": "current"}])["owner_currentness"][0]
+    assert repaired["status"] == "current" and repaired["attribution"] == "resolved"
+    assert (
+        review.prepare("owner/repo", 17, BASELINE, owner_evidence=[{**evidence, "head": "downstream"}])["owner_currentness"][0]["status"]
+        == "unknown"
+    )
+    inherited = review.prepare("owner/repo", 17, BASELINE, owner_evidence=[{**evidence, "base_status": "stale"}])["owner_currentness"][0]
+    assert inherited["attribution"] == "inherited"
+    for consumer in ["docs/consumer.md", "unrelated.txt"]:
+        remote["files"] = [{"filename": consumer}]
+        assert review.prepare("owner/repo", 17, BASELINE, owner_evidence=[{**evidence, "base_status": "stale"}])["owner_currentness"] == []
+    remote["files"] = [{"filename": instruction}]
+    policy = review.prepare("owner/repo", 17, BASELINE)["owner_currentness"][0]
+    assert policy["trigger"] == "policy-source-change" and policy["status"] == "unknown"
+    assert policy["declaration"]["revision"] == review.digest(content)
+    assert not any(head in arg for args in calls for arg in args)
+    # Unsupported trusted metadata cannot silently erase obligations.
+    content = b"---\ngoverned_by: invalid\n---\n"
+    partial = review.prepare("owner/repo", 17, BASELINE)
+    assert partial["status"] == "partial" and partial["owner_currentness_discovery"]["status"] == "unavailable"
+
+
 def test_two_layer_currentness_uses_the_owner_at_each_subject(tmp_path, shared_core_binary, native_cli):
     """One native owner scenario: upper repair cannot discharge lower source drift."""
     mirror = ".agentic-workspace/system-intent/intent.toml"
@@ -232,7 +295,7 @@ def test_trusted_loader_never_executes_worktree_replacement_and_eligibility_stay
     assert "eligibility must be established" in json.loads(result.stdout)["reason"]
 
 
-def test_review_owner_identity_uses_native_planning_selection(tmp_path, shared_core_binary, monkeypatch):
+def test_review_owner_identity_does_not_select_remembered_planning_state(tmp_path, shared_core_binary, monkeypatch):
     from aw_maintainer.review_topology import current_review_owner_identity
 
     monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
@@ -244,7 +307,6 @@ def test_review_owner_identity_uses_native_planning_selection(tmp_path, shared_c
     (plan.parent.parent / "state.toml").write_text(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{ref}"\nstatus="active"\n', encoding="utf-8"
     )
-    assert current_review_owner_identity(tmp_path) == {
-        "owner_ref": ref,
-        "owner_revision": "sha256:" + hashlib.sha256(plan.read_bytes()).hexdigest(),
-    }
+    # A historical aggregate is not current work selection. The native Planning
+    # owner keeps this remembered plan inert for an ordinary observation task.
+    assert current_review_owner_identity(tmp_path) == {}
