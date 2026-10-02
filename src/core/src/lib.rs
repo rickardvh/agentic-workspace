@@ -40,6 +40,8 @@ mod native_material;
 mod native_measurement;
 #[path = "modules/memory/native_memory.rs"]
 mod native_memory;
+#[path = "modules/memory/native_memory_candidates.rs"]
+mod native_memory_candidates;
 #[path = "modules/memory/native_memory_capture.rs"]
 mod native_memory_capture;
 #[path = "modules/memory/native_memory_learning.rs"]

@@ -197,6 +197,33 @@ fn resolve_selected(
             requests.push(route);
         }
     }
+    if executing
+        && input.invocation.as_ref().is_some_and(|i| {
+            matches!(
+                i["operation_id"].as_str(),
+                Some("memory.capture-advisory" | "memory.recover-advisory")
+            )
+        })
+        && let Some(route) = input
+            .invocation
+            .as_ref()
+            .and_then(|i| i["arguments"]["binding"].get("route_request"))
+    {
+        if route["owner"] != "semantic-routes"
+            || route["request_kind"] != "semantic-routes/select/v1"
+        {
+            return Err(CoreError::new(
+                "advisory activity dependency must be an exact semantic selection",
+            ));
+        }
+        if let Some(existing) = requests.iter().find(|r| r["owner"] == "semantic-routes") {
+            if existing != route {
+                return Err(CoreError::new("conflicting advisory activity dependency"));
+            }
+        } else {
+            requests.push(route.clone());
+        }
+    }
     let retained_baseline = crate::native_delegation::retained_packet(target, &requests)?;
     let baseline = baseline.or(retained_baseline.as_ref());
     if executing
@@ -231,6 +258,7 @@ fn resolve_selected(
                 && i["operation_id"] != "memory.recover-decision"
                 && i["operation_id"] != "memory.capture-advisory"
                 && i["operation_id"] != "memory.recover-advisory"
+                && i["operation_id"] != crate::native_memory_candidates::OP
                 && i["operation_id"] != "decision-continuity.capture-decision"
                 && i["operation_id"] != "decision-continuity.recover-decision"
                 && i["operation_id"] != crate::native_source_reconciliation::OP
@@ -708,7 +736,7 @@ fn resolve_selected(
                 crate::native_memory_capture::Destination::Advisory,
             ),
         ] {
-            let capture = crate::native_memory_capture::view_for(
+            let capture = crate::native_memory_capture::view_for_selected(
                 target,
                 &work,
                 &decision_scope,
@@ -734,6 +762,10 @@ fn resolve_selected(
                         )
                     )
                 }),
+                (destination == crate::native_memory_capture::Destination::Advisory)
+                    .then(|| request_for("semantic-routes"))
+                    .flatten()
+                    .filter(|r| r["request_kind"] == "semantic-routes/select/v1"),
             )?;
             if capture["contribution"]["actions"]
                 .as_array()
@@ -1654,6 +1686,44 @@ fn resolve_selected(
     contributions.push(assignment_contribution);
     contributions.push(system_intent["contribution"].clone());
     if available("memory") {
+        let candidates = crate::native_memory_candidates::view(
+            target,
+            &work,
+            &material,
+            &input.changed,
+            &route_fact,
+            &configuration,
+            &contract,
+            &verification,
+            requests.iter().find(|r| {
+                r["owner"] == "memory"
+                    && r["request_kind"] == crate::native_memory_candidates::REQUEST
+            }),
+        )?;
+        if !candidates.is_null() {
+            if candidates["selected"]
+                .as_array()
+                .is_some_and(|s| !s.is_empty())
+                || requests
+                    .iter()
+                    .any(|r| r["request_kind"] == crate::native_memory_candidates::REQUEST)
+                || candidates["requests"]
+                    .as_array()
+                    .is_some_and(|s| s.iter().any(|r| r["arguments"]["operation"] == "consider"))
+            {
+                memory["contribution"]["relevant"] = json!(true);
+            }
+            if let Some(actions) = candidates["contribution"]["actions"].as_array() {
+                if !memory["contribution"]["actions"].is_array() {
+                    memory["contribution"]["actions"] = json!([]);
+                }
+                memory["contribution"]["actions"]
+                    .as_array_mut()
+                    .unwrap()
+                    .extend(actions.iter().cloned());
+            }
+            memory["candidates"] = candidates;
+        }
         let learning = crate::native_memory_learning::view(
             target,
             &work,
@@ -1911,6 +1981,12 @@ fn resolve_selected(
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
     }
+    // Optional nomination templates include a capture time. Detail references
+    // bind current evidence/owner state, not the wall clock of a newly generated
+    // template. Every selected request/action still receives normal admission.
+    if let Some(candidates) = memory_identity["candidates"].as_object_mut() {
+        candidates.remove("requests");
+    }
     if material["items"]
         .as_array()
         .is_some_and(|items| !items.is_empty())
@@ -1933,7 +2009,7 @@ fn resolve_selected(
     }
     // Memory capture fragments have already joined the same composed decision.
     // Publish their exact requests/results, not a second copy of internal authority.
-    for capture in ["capture", "advisory_capture", "future_value"] {
+    for capture in ["capture", "advisory_capture", "future_value", "candidates"] {
         if let Some(object) = public["memory"]
             .get_mut(capture)
             .and_then(Value::as_object_mut)
@@ -1980,6 +2056,18 @@ fn resolve_selected(
     Ok(public)
 }
 
+pub(crate) fn owner_request_key(request: &Value) -> String {
+    let owner = request["owner"].as_str().unwrap_or("");
+    if matches!(
+        owner,
+        "verification" | "planning" | "assignment" | "delegation"
+    ) {
+        format!("{owner}:{}", request["request_kind"].as_str().unwrap_or(""))
+    } else {
+        owner.to_owned()
+    }
+}
+
 fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     let Some(request) = request else {
         return Ok(vec![]);
@@ -2007,15 +2095,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     }
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
-        let owner = request["owner"].as_str().unwrap();
-        let key = if matches!(
-            owner,
-            "verification" | "planning" | "assignment" | "delegation"
-        ) {
-            format!("{owner}:{}", request["request_kind"].as_str().unwrap())
-        } else {
-            owner.to_owned()
-        };
+        let key = owner_request_key(request);
         if !owners.insert(key) {
             return Err(CoreError::new(
                 "supply at most one current request per owner and Verification request kind",
@@ -2173,7 +2253,23 @@ fn finish_invocation(
             context["changed"] = json!(changed);
             #[cfg(test)]
             crate::native_frontier::built("post-effect-continuation");
-            let current = start_selected(context.clone(), &progress.resolution);
+            let current =
+                start_selected(context.clone(), &progress.resolution).and_then(|current| {
+                    if let Some(request) = crate::native_memory_candidates::publication_completion(
+                        &current["memory"]["candidates"],
+                        invocation,
+                        &outcome,
+                    )? {
+                        // Publication is committed. Preparing its separately
+                        // invoked subtraction is mechanical, through the same
+                        // current owner/constraint checks as ordinary entry.
+                        context["request"] = request;
+                        let mut ready = start_selected(context.clone(), &progress.resolution)?;
+                        ready["memory"]["candidates"]["completion_prepared"] = json!(true);
+                        return Ok(ready);
+                    }
+                    Ok(current)
+                });
             Ok(attach_continuation(result, current, &context))
         }
         Err(error) => {
@@ -2281,6 +2377,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "memory.recover-decision"
         && invocation["operation_id"] != "memory.capture-advisory"
         && invocation["operation_id"] != "memory.recover-advisory"
+        && invocation["operation_id"] != crate::native_memory_candidates::OP
         && invocation["operation_id"] != "decision-continuity.capture-decision"
         && invocation["operation_id"] != "decision-continuity.recover-decision"
         && invocation["operation_id"] != crate::native_source_reconciliation::OP
@@ -2390,6 +2487,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 | "memory.recover-decision"
                 | "memory.capture-advisory"
                 | "memory.recover-advisory"
+                | "memory.update-candidates"
                 | "decision-continuity.capture-decision"
                 | "decision-continuity.recover-decision"
         )
@@ -2422,6 +2520,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 invocation,
                 revalidate,
             )?
+        } else if invocation["operation_id"] == crate::native_memory_candidates::OP {
+            crate::native_memory_candidates::execute(&target, invocation, revalidate)?
         } else if invocation["source_owner"] == "system-intent" {
             crate::native_intent_write::execute(
                 &target,

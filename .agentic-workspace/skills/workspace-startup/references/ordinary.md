@@ -92,6 +92,13 @@ the current owner or required host capability is unavailable.
 
 ## Specialised skills and semantic routes
 
+During setup, investigation or test planning with no edited files, select the
+relevant existing semantic activity before the dependent action when stored advice
+could prevent an expensive search or mistaken assumption. Use the current
+semantic-route request; do not invent edited paths. Small selected advice arrives
+with its source and validity limits. Reuse sufficient current advice without a
+per-turn call, and check live environment facts separately from historical notes.
+
 Select a known useful leaf directly, or inspect one relevant route branch. Follow
 its returned procedure reference; do not load every skill or rediscover module
 topology. Exact paths and owner facts take precedence over lexical hints. A changed

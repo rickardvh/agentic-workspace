@@ -126,12 +126,67 @@ def test_former_selection_requires_exact_current_agent_request(
     consequence = [
         row["input_schema"]["properties"]["receiving_consequence"]
         for row in memory["requests"]
-        if "receiving_consequence" in row["input_schema"].get("properties", {})
+        if row["kind"] == "memory/dispose-future-value/v1" and "receiving_consequence" in row["input_schema"].get("properties", {})
     ]
     assert len(consequence) == 1
     assert set(consequence[0]["required"]) == {"claim", "evidence_reference", "proof_subject"}
     consequence_bytes = len(json.dumps({"receiving_consequence": consequence[0]}))
     assert consequence_bytes < 400
+    # Local candidates add one bounded request and one effect schema to full
+    # introspection. Attribute that exact named delta; candidate rows must not
+    # enlarge unrelated ordinary state or compact responses below.
+    candidate_requests = [row for row in memory["requests"] if row["kind"] == "memory/consider-observation/v1"]
+    candidate_operations = [row for row in memory["operations"] if row["id"] == "memory.update-candidates"]
+    assert len(candidate_requests) == 1 and len(candidate_operations) == 1
+    without_consolidation = copy.deepcopy(candidate_requests[0])
+    candidate_properties = without_consolidation["input_schema"]["properties"]
+    consolidation_keys = {
+        "advisory_material",
+        "revise_source",
+        "source_revision",
+        "validity_review",
+        "publication",
+        "receiving_source",
+        "receiving_consequence",
+        "candidate_evidence_requests",
+    }
+    assert consolidation_keys <= candidate_properties.keys()
+    for key in consolidation_keys:
+        candidate_properties.pop(key)
+    for operation in ("consolidate", "complete", "defer"):
+        candidate_properties["operation"]["enum"].remove(operation)
+    candidate_consolidation_bytes = len(json.dumps(candidate_requests[0])) - len(json.dumps(without_consolidation))
+    assert 0 < candidate_consolidation_bytes < 1_800, candidate_consolidation_bytes
+    candidate_bytes = sum(len(json.dumps(row)) for row in [without_consolidation, *candidate_operations])
+    assert 0 < candidate_bytes < 2_000, candidate_bytes
+    # Future advice adds three optional authored properties to its existing
+    # capture schema. Bound only that delta, not the whole preexisting publisher.
+    advisory = next(row for row in memory["requests"] if row["kind"] == "memory/capture-advisory/v1")
+    without_activity_cues = copy.deepcopy(advisory)
+    advisory_properties = without_activity_cues["input_schema"]["properties"]["material"]["properties"]
+    cues = {key: advisory_properties.pop(key) for key in ("routes_from", "semantic_routes", "origin")}
+    assert all(cues[key]["type"] == "array" for key in ("routes_from", "semantic_routes"))
+    assert cues["origin"]["type"] == "object"
+    activity_cue_bytes = len(json.dumps(advisory)) - len(json.dumps(without_activity_cues))
+    assert 0 < activity_cue_bytes < 700, activity_cue_bytes
+    # Consolidation additionally permits bounded origins and an explicit current
+    # revision review. Keep those fields out of the earlier cue allowance.
+    without_revision = copy.deepcopy(without_activity_cues)
+    revision_properties = without_revision["input_schema"]["properties"]
+    origins = revision_properties["material"]["properties"].pop("origins")
+    assert origins["type"] == "array" and origins["maxItems"] == 16
+    for key in ("revise_source", "source_revision", "validity_review"):
+        assert revision_properties.pop(key)["type"] == "string"
+    advisory_revision_bytes = len(json.dumps(without_activity_cues)) - len(json.dumps(without_revision))
+    assert 0 < advisory_revision_bytes < 900, advisory_revision_bytes
+    # Candidate-originated publication carries only a bounded identity list.
+    # Its exact delta cannot consume the earlier revision or baseline budgets.
+    without_candidate_continuation = copy.deepcopy(without_revision)
+    completion_ids = without_candidate_continuation["input_schema"]["properties"].pop("candidate_ids")
+    assert completion_ids["maxItems"] == 16 and completion_ids["uniqueItems"] is True
+    assert completion_ids["items"]["maxLength"] == 72
+    candidate_continuation_bytes = len(json.dumps(without_revision)) - len(json.dumps(without_candidate_continuation))
+    assert 0 < candidate_continuation_bytes < 230, candidate_continuation_bytes
     # Explicit Planning history discovery keeps unrelated entry quiet. It adds
     # one read-only introspection schema, not another retirement/recovery effect.
     # Bound that named delta separately; preserve the existing four-entry owner
@@ -290,6 +345,11 @@ def test_former_selection_requires_exact_current_agent_request(
         + assignment_input_bytes
         + analysis_receipt_bytes
         + manual_bytes
+        + candidate_bytes
+        + activity_cue_bytes
+        + candidate_consolidation_bytes
+        + advisory_revision_bytes
+        + candidate_continuation_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
@@ -322,6 +382,16 @@ def test_former_selection_requires_exact_current_agent_request(
     assert selection_requests[0]["arguments"] == {}
     assert len(json.dumps(selection_requests)) < 650
     state["planning"] = {key: value for key, value in state["planning"].items() if key != "selection_requests"}
+    # Full Memory detail offers only the bounded candidate read envelope until
+    # relevant material or a current scoped selection exists. No candidate rows
+    # or candidate effect revision may leak into this unrelated entry.
+    candidate_detail = state["memory"]["candidates"]
+    assert candidate_detail["status"] == "available" and candidate_detail["selected"] == []
+    assert len(candidate_detail["requests"]) == 1
+    assert candidate_detail["requests"][0]["arguments"] == {"operation": "read"}
+    assert len(json.dumps(candidate_detail)) < 900
+    assert "memory.update-candidates" not in first["decision_packet"]["operation_revisions"]
+    state["memory"] = {key: value for key, value in state["memory"].items() if key != "candidates"}
     # Retention/current-evidence and manual carriage contribute named bounded
     # effect revisions, never unsolicited task state or a manual queue.
     manual_revisions = {key: value for key, value in first["decision_packet"]["operation_revisions"].items() if key in manual_operation_ids}

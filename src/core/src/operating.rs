@@ -454,6 +454,67 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
+    let candidates = &full["memory"]["candidates"];
+    if candidates["selected"]
+        .as_array()
+        .is_some_and(|s| !s.is_empty())
+        || candidates["publication_request"].is_object()
+        || candidates["completion_prepared"] == true
+    {
+        let mut budget = 16384usize;
+        let observations = candidates["selected"].as_array().into_iter().flatten().map(|row| {
+            let size = serde_json::to_vec(row).unwrap().len();
+            if size <= budget.min(4096) { budget -= size; row.clone() }
+            else { json!({"id":row["observation"]["id"],"status":"selected-detail-deferred","currentness":row["currentness"]}) }
+        }).collect::<Vec<_>>();
+        result["candidate_context"] = json!({"observations":observations,
+            "reference":result["detail_refs"]["/memory"],"next":"Compare scopes and current sources. Use the returned next_step only when justified; defer or deliberate discard may be sufficient. Publication and candidate subtraction remain separate effects.",
+            "authority":"Unconfirmed local evidence for consideration; no current-state, policy or task-custody authority."});
+        if candidates["completion_prepared"] == true {
+            if let Some(action) = entries(full, context)?.into_iter().find(|entry| {
+                action_selector(entry["selector"].as_str().unwrap())
+                    && entry["envelope"]["source_owner"] == "memory"
+                    && entry["envelope"]["operation_id"] == crate::native_memory_candidates::OP
+                    && entry["envelope"]["arguments"]["request"]["arguments"]["operation"]
+                        == "complete"
+            }) {
+                result["candidate_context"]["next"] = json!(
+                    "Publication is committed. Inspect and invoke the separately prepared cleanup action to subtract only the absorbed candidates."
+                );
+                result["candidate_context"]["next_step"] = json!({"operation":"complete",
+                    "reference":action["reference"],"transport":"invoke",
+                    "validation":"current-publication-and-candidates",
+                    "use":"Publication custody, source/dependency validity and the exact candidate state have already been rechecked for this cleanup action. Inspect the action and invoke this reference with this continuation's context/carriage; no Memory or activity reread is needed to reconstruct confirmation. Changed work or source still requires fresh resolution and is rechecked before subtraction."});
+            }
+        } else {
+            let request = if candidates["publication_request"].is_object() {
+                Some(&candidates["publication_request"])
+            } else {
+                candidates["requests"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|r| r["arguments"]["operation"] == "consolidate")
+            };
+            if let Some(request) = request {
+                let selector = format!("request:memory:{}", digest(request)?);
+                result["candidate_context"]["next_step"] = json!({
+                "operation":if request["request_kind"] == "memory/capture-advisory/v1" {"publish"} else {"consolidate"},
+                "reference":reference(context, &selector, request)?,
+                "answer_shape":if request["request_kind"] == "memory/capture-advisory/v1" { json!({}) } else {
+                    json!({"advisory_material":{"id":"<bounded identity>","lesson":"<supported reusable conclusion>","rationale":"<future value>","dependency_paths":["<current validity source>"],"routes_from":["<deliberate path cue>"],"semantic_routes":["<existing activity cue>"]}})
+                },
+                "use":if request["request_kind"] == "memory/capture-advisory/v1" {
+                    "Use this exact reference with current context/carriage and an empty object answer to submit the filled material for the publisher's confirmation question."
+                } else {
+                    "Use this exact reference with current context/carriage and the small answer shape. Choose routes_from or semantic_routes deliberately; candidate origins are already carried. An optional authored origin must include producer, reference and coverage (bounded, partial or unknown). Defer or justified discard may be sufficient."
+                }});
+                if let Some(question) = candidates.get("next") {
+                    result["candidate_context"]["judgment"] = question.clone();
+                }
+            }
+        }
+    }
     if let Some(maintenance) = context.get("maintenance") {
         result["reentry"]["maintenance"] = maintenance.clone();
     }
@@ -714,8 +775,7 @@ fn use_selected(
             None => vec![],
         };
         requests.retain(|request| {
-            !(request["owner"] == answered["owner"]
-                && request["request_kind"] == answered["request_kind"])
+            native_public::owner_request_key(request) != native_public::owner_request_key(&answered)
         });
         requests.push(answered);
         next["request"] = json!(requests);
@@ -1287,6 +1347,45 @@ mod tests {
             "reference":selected
         }));
         assert!(stale.is_err());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn carried_route_selection_replaces_completed_discovery() {
+        let root = temp_root("route-carriage");
+        std::fs::create_dir_all(root.join("tools/skills/checks")).unwrap();
+        std::fs::write(root.join("tools/skills/REGISTRY.json"),
+            r#"{"skills":[{"id":"checks","path":"checks/SKILL.md","semantic_routes":["repository/checks"]}]}"#).unwrap();
+        std::fs::write(
+            root.join("tools/skills/checks/SKILL.md"),
+            "Inspect current test prerequisites.",
+        )
+        .unwrap();
+        let first =
+            start(json!({"target":root,"task":"Prepare repository checks","projection":"carried"}))
+                .unwrap();
+        let discovery = start(json!({"request":first["carriage"],"reference":"owner:request:semantic-routes:semantic-routes/discover/v1"})).unwrap();
+        let discovered = start(json!({"request":first["carriage"],"reference":discovery["reference"],"answer":{"parent":"repository"},"projection":"carried"})).unwrap();
+        let choice = start(json!({"request":discovered["carriage"],"reference":"owner:request:semantic-routes:semantic-routes/select/v1"})).unwrap();
+        let selected = start(json!({"request":discovered["carriage"],"reference":choice["reference"],"answer":{"posture":"selected","routes":["repository/checks"]},"projection":"carried"})).unwrap();
+        assert_eq!(
+            selected["view"]["decision_packet"]["semantic_task_routes"]["status"],
+            "current"
+        );
+        assert_eq!(
+            selected["view"]["decision_packet"]["semantic_task_routes"]["routes"],
+            json!(["repository/checks"])
+        );
+        assert_eq!(
+            selected["carriage"]["context"]["request"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|r| r["owner"] == "semantic-routes")
+                .count(),
+            1
+        );
+        assert!(!root.join(".agentic-workspace/local").exists());
         std::fs::remove_dir_all(root).unwrap();
     }
 

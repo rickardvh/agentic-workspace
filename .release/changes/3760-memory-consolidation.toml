@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Consolidate bounded observations into current advisory knowledge, revise existing advice safely, and subtract candidates only after confirmed publication or checked absorption."
