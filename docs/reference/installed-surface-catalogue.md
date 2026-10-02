@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:9c5a04434226403bb6043ef99338279d21402941101092207394260e9e642075`
+- Contract digest: `sha256:cfe89b79e416a03ae0d1177c00ec8dde216a2cd53901e0fc3826f355b7a7a78c`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -35,6 +35,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/package.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Selectively loaded repository working-rule authoring procedure |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/other.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -111,6 +112,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/package.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
+- `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`

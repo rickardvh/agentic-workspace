@@ -92,6 +92,15 @@ the current owner or required host capability is unavailable.
 
 ## Specialised skills and semantic routes
 
+Before build/test or other dependent work, apply the repository's relevant
+prerequisite instruction or already-used skill even when there are no edits.
+Select its existing activity/semantic route when needed; do not invent changed
+paths to trigger lockfile guidance. Determine applicability separately from input
+freshness, output validity and live readiness. Reuse sufficient observations and
+self-preparing commands. If an enduring rule is missing during requested setup
+or correction, use [working rules](../../workspace-setup-jumpstart/references/working-rules.md)
+to establish that connection once; ordinary entry needs no prerequisite census.
+
 During setup, investigation or test planning with no edited files, select the
 relevant existing semantic activity before the dependent action when stored advice
 could prevent an expensive search or mistaken assumption. Use the current

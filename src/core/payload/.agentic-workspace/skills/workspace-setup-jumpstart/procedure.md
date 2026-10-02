@@ -7,6 +7,11 @@
   "question": "Which requested behaviour or reported setup gap needs attention?",
   "branches": [
     {
+      "id": "working-rules",
+      "description": "Preserve an evidenced repository prerequisite before the action that needs it",
+      "next": "references/working-rules.md"
+    },
+    {
       "id": "selection",
       "description": "Identify the setting responsible for the requested behaviour",
       "next": "references/selection.md"

@@ -58,6 +58,15 @@ A saved setting is only part of the check. For an executable location, also veri
 
 ## Add a reusable procedure
 
+For working conventions such as preparing dependencies before tests, ask the
+agent to connect the rule to the action that needs it, including a test run with
+no file changes. It should reuse existing instructions and commands, favour a
+command that already prepares its environment, and verify a fresh consumer.
+Unchanged inputs alone do not establish surviving outputs or a running service.
+Machine readiness stays local; no additional AW module is needed. The installed
+[working-rule procedure](../.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md)
+explains authoring and recovery choices.
+
 A rule says what must hold. A skill explains how to perform a recurring kind of work.
 
 For example, a change-note skill can tell an agent to compare the patch with accepted behaviour and draft a user-facing note only when behaviour changed. Keep that method in repository-owned files, such as `tools/skills/change-note/SKILL.md`, rather than editing an installed AW skill.

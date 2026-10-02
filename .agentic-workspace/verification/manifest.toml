@@ -46,7 +46,44 @@ disposition = "route"
 # Native Verification copies only these inputs and enforces read-only source.
 [execution]
 kind = "docker-readonly-source-v1"
-inputs = ["src", "tests", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "pyproject.toml", "uv.lock", "README.md", "LICENSE", ".agentic-workspace/skills", ".agentic-workspace/planning/skills", ".agentic-workspace/planning/schemas/planning-execplan.schema.json"]
+# Exact missing inputs of the declared generation and startup checks.
+# Supplement existing directory coverage without local state or Git history.
+inputs = [
+  "src",
+  "tests",
+  "Cargo.toml",
+  "Cargo.lock",
+  "rust-toolchain.toml",
+  "pyproject.toml",
+  "uv.lock",
+  "README.md",
+  "LICENSE",
+  ".agentic-workspace/skills",
+  ".agentic-workspace/planning/skills",
+  ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+  ".agentic-workspace/OWNERSHIP.toml",
+  ".agentic-workspace/READING.json",
+  ".agentic-workspace/WORKFLOW.md",
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/docs/jumpstart-contract.md",
+  ".agentic-workspace/docs/module-map.md",
+  ".agentic-workspace/docs/setup-findings-contract.md",
+  ".agentic-workspace/docs/workspace-config-contract.md",
+  ".agentic-workspace/fallback/no-cli-policy.json",
+  ".agentic-workspace/fallback/no_cli_startup.py",
+  ".agentic-workspace/memory/skills/REGISTRY.json",
+  ".agentic-workspace/memory/skills/memory-capture/procedure.md",
+  ".agentic-workspace/memory/skills/memory-hygiene/procedure.md",
+  ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
+  ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json",
+  ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md",
+  ".agentic-workspace/system-intent/WORKFLOW.md",
+  ".agentic-workspace/verification/manifest.toml",
+  ".gitattributes",
+  "AGENTS.md",
+  "tools/skills/REGISTRY.json",
+  "tools/skills/pr-review-recheck/procedure.md",
+]
 scratch_paths = ["target"]
 [execution.environment]
 RUSTUP_TOOLCHAIN = "1.98.1"

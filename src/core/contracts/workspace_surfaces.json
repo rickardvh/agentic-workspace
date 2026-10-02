@@ -28,6 +28,7 @@
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
@@ -419,6 +420,19 @@
       "materialization": {
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Selectively loaded repository working-rule authoring procedure",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md"
       }
     },
     {
@@ -1141,6 +1155,7 @@
       ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+      ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
       ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
       ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",

@@ -14,12 +14,14 @@ The canonical boundary contract is `.agentic-workspace/docs/extraction-and-disco
 
 ## Check the boundary
 
-Run the source/payload/install check from the repository root:
+Check the declared source-to-payload derivation from the repository root:
 
 ```bash
-uv run python src/tooling/check/check_source_payload_operational_install.py --format json --strict
+uv run python src/tooling/generate/generate_agent_interface.py --check
 ```
 
-Use its report to locate a mismatch in the owning source or generated copy.
+Use its drift report to locate a mismatch in the owning source or generated copy.
+This checks generation parity; native Configuration's repository-adoption and
+`reconcile-payload` operations establish the installed footprint separately.
 Preserve intentional local state differences; the check does not authorise
 replacing Planning records or Memory notes with packaged defaults.

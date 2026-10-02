@@ -1,5 +1,11 @@
 ## Decide which source should change
 
+For an enduring repository prerequisite, use
+[working rules](../../workspace-setup-jumpstart/references/working-rules.md)
+to merge the rule into existing guidance and reach a later consumer before its
+dependent action, including tasks with no edits. Keep machine readiness local;
+do not save it as a shared rule or Configuration assessment.
+
 Use the finding's actual dependency to choose the destination. For example, fix
 a broken implementation in code; publish a repository rule as an instruction;
 clarify a repeatable method in its skill. Saving advice elsewhere does not fix
