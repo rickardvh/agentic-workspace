@@ -371,3 +371,118 @@ publication/subtraction regression now exercises selected activity with no edite
 files, rejects a forged selection, confirms publication before subtraction, and
 retains forged-revision, changed-task and interrupted-cleanup checks. This failed
 reader remains counted and is not claimed as a cost improvement or completion.
+
+## Third layer compression: fresh completed comparison
+
+The new, independently started reader exercised repaired product commit
+`bd13bc5430067a3b6bbaac3c3c44969712d3ea60`. Paired core SHA-256:
+`cfd18fae25e9298db81004a30fc68f7bfb3a351ba5ad80909017f3482e89120b`;
+CLI SHA-256 remains
+`a96b31319b014a4bcf4ff5b947174aed67e5903fab5e4d8c2481ed78e18c5f93`.
+Only evidence documentation changed after that product subject. The recreated
+fixture had the same source bytes and two candidate roles as the failed
+compression fixture, with a separate paired runtime and six author seed calls.
+The exact ordinary task prompt above was unchanged. The reader received no
+semantic coaching and a 37-call ceiling from the outset, matching the original
+exercise's eventual ceiling; it required no extension or restarted task.
+
+| Same-scenario reader | Native attempts | Raw response bytes | Committed effects | Outcome |
+| --- | ---: | ---: | ---: | --- |
+| Original third layer | 35 | 500,167 | 3 | Published, confirmed, completed setup; separately discarded migration. |
+| First compression attempt | 23 | 502,857 | 0 | Preserved candidates after rejected publication; defect repaired. |
+| Repaired fresh reader | 35 | 924,847 | 3 | Published and recalled setup advice before subtraction; separately discarded migration. |
+
+**There is no demonstrated reduction in total reader calls or response bytes.**
+The final run used the same 35 calls and 424,680 more bytes (about 85% more).
+The two compression exercises together cost 58 reader attempts and 1,427,704
+response bytes; the unsuccessful attempt is not excluded from that work cost.
+These are bounded observations from separate fresh contexts and a recreated
+scenario, not a controlled causal comparison, provider study or amortized-value
+claim. Model identity, token usage and monetary cost were not exposed.
+
+The final run had 30 exit-zero responses and five rejected CLI inputs: two exact
+context/reference conflicts, one projection conflict, an origin missing required
+coverage, and an unquoted JSON choice. All preceded effects. The missing coverage
+was reader-authored material; the current publisher correctly rejected it. Its
+schema read then cost 96,520 bytes. The reader also reobserved current activity,
+Memory and Configuration after publication and inspected a separate unfinished
+Configuration assessment after cleanup (the final detail alone cost 80,718
+bytes). Those costs remain included, rather than explained away or subtracted.
+
+| Call | Input and observed result | Raw bytes |
+| --- | --- | ---: |
+| 1 | Current explicit task/material. | 23,664 |
+| 2 | Context/reference conflict; rejected. | 110 |
+| 3 | Another context/reference conflict; rejected. | 110 |
+| 4 | Context/projection conflict; rejected. | 111 |
+| 5 | Corrected carried work context. | 30,855 |
+| 6 | Current semantic root detail. | 2,655 |
+| 7 | Current Configuration route. | 17,100 |
+| 8 | Repository discovery; material temporarily omitted. | 14,552 |
+| 9 | Checks leaf detail. | 3,351 |
+| 10 | Restored material and selected checks/setup activities; both candidates visible. | 34,676 |
+| 11 | Unnecessary Planning detail; no incumbent. | 2,869 |
+| 12 | Current Memory sources and requests. | 8,312 |
+| 13 | Exact compact consolidation reference; setup only; publication reference offered. | 36,579 |
+| 14 | Exact publication reference with malformed optional origin; rejected. | 219 |
+| 15 | Fresh selected candidate context. | 34,676 |
+| 16 | Publisher schema detail. | 96,520 |
+| 17 | Corrected bounded material; setup-only consolidation. | 36,621 |
+| 18 | Exact next publication reference; postimage/confirmation question. | 49,835 |
+| 19 | Non-JSON choice; rejected. | 73 |
+| 20 | Corrected exact confirmation; publication action offered. | 55,271 |
+| 21 | Exact publication invocation committed; exact completion input offered. | 31,918 |
+| 22 | Old selection under changed post-publication scope; stale, no cleanup. | 32,017 |
+| 23 | Current Memory detail; source exists, route unmatched. | 5,589 |
+| 24 | Current Configuration detail; assessment remains separate. | 17,100 |
+| 25 | Current semantic requests. | 2,750 |
+| 26 | Current activities selected; saved advice delivered. | 36,667 |
+| 27 | Exact published source/revision recalled before cleanup. | 13,688 |
+| 28 | Current candidate request with confirmed publication and additional receiving evidence; completion prepared. | 53,411 |
+| 29 | Exact setup subtraction committed; migration remains. | 28,104 |
+| 30 | Fresh current selected context; migration only. | 35,570 |
+| 31 | Separate justified migration discard prepared. | 45,548 |
+| 32 | Exact discard committed; candidates empty. | 28,104 |
+| 33 | Final current activity/advice selection. | 33,542 |
+| 34 | Separate matching Configuration assessment read. | 31,962 |
+| 35 | Separate assessment detail; no integration effect or completion claim. | 80,718 |
+
+The reader followed the supplied consolidation/publication references without
+the earlier publication-identity ambiguity. After publication it received the
+filled completion input but chose to reacquire activity/recall and construct a
+current completion request with additional receiving evidence. Thus this fresh
+trace proves publication and safe subtraction; it does **not** demonstrate use
+of the direct completion input or a cheaper total journey. The extended existing
+regression separately exercises that exact input, including its stale/forged
+rejections. The new continuation removes the requirement to reconstruct IDs and
+source/revision; this reader's additional navigation is still counted.
+
+Publication source:
+`.agentic-workspace/memory/repo/domains/native-7e510fefd8ef268d1c670c13666eb3454f4e67a4adbd7cd3f611a9a63d8e4ccb.md`.
+Its actual SHA-256 equals committed revision
+`62488494965602294c8e833e7e8e9acbe3359f176f33813561692385628dcb86`.
+The reader read the saved note/manifest after call 21 and confirmed recall at
+26–27 before requesting subtraction at 28. The author independently checked
+that hash, exactly one manifest entry and actual empty candidate state. Policy
+is the validity dependency; paths and existing activities are deliberate recall
+cues. Currentness remains review-required with no admitted baseline; retention
+and recall do not prove factual currentness, live readiness or governing authority.
+
+The run spanned about 9 minutes 50 seconds of native calls. Exact vectors,
+copied inputs from call 13 onward, carrier provenance, native UTC timestamps,
+exit statuses and all raw stdout/stderr were audited separately. Raw streams were
+copied as bytes before display; the total is 924,224 stdout plus 623 stderr bytes.
+Displayed truncations and large historical author-file reads were disclosed;
+file-read cost is outside the native-response byte metric. Python was absent
+from the reader's PATH, so it used .NET process streams; no native host launch
+failure occurred. No service contact, implementation read, effect retry or direct
+managed write occurred. Source logs, policy and readiness remain. The unrelated
+Configuration assessment remains unfinished, as does #3191's natural payoff.
+
+On the repaired product, 25 focused native Memory tests, 11 operating tests,
+42 public capture/disposition/declaration cases and all 29 four-surface
+former-route cases pass. Locked binaries, native source checks, generated
+guidance parity and commit hooks pass. Existing response ceilings are retained;
+the optional bounded publication IDs' schema delta is separately attributed.
+Hosted exact-head proof and independent recheck remain separate from this
+reader's outcome and from any claim of reduced total interaction cost.
