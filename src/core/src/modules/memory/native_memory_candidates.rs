@@ -708,6 +708,20 @@ mod tests {
     #[test]
     fn ordinary_feedback_consolidates_then_subtracts_only_confirmed_material() {
         let f = Fixture::new();
+        std::fs::create_dir_all(f.0.join("tools/skills/checks")).unwrap();
+        std::fs::write(
+            f.0.join("tools/skills/checks/SKILL.md"),
+            "Inspect current fixture policy and readiness before checks.",
+        )
+        .unwrap();
+        std::fs::create_dir_all(f.0.join(".agentic-workspace")).unwrap();
+        std::fs::write(
+            f.0.join(".agentic-workspace/config.toml"),
+            "[modules]\nenabled=[\"planning\",\"memory\",\"verification\"]\n",
+        )
+        .unwrap();
+        std::fs::write(f.0.join("tools/skills/REGISTRY.json"),
+            serde_json::to_vec(&json!({"skills":[{"id":"checks","path":"checks/SKILL.md","semantic_routes":["repository/checks"]}]})).unwrap()).unwrap();
         std::fs::write(
             f.0.join("service-policy.md"),
             "Use the shared fixture service; check its current status.",
@@ -733,6 +747,7 @@ mod tests {
         capture["arguments"]["uncertainty"] =
             json!("One environment observation; check current runtime and policy before reuse.");
         capture["arguments"]["paths"] = json!(["tests/fixture/**"]);
+        capture["arguments"]["semantic_routes"] = json!(["repository/checks"]);
         invoke(&input, &start(&input, capture));
         let ordinary = json!({"target":f.0,"task":"Prepare fixture checks","changed":["tests/fixture/check.rs"]});
         let selected = start(&ordinary, Value::Null);
@@ -758,6 +773,17 @@ mod tests {
         let publication = considered["memory"]["candidates"]["publication_request"].clone();
         assert_eq!(publication["arguments"]["candidate_ids"], ids);
         let mut compact_input = ordinary.clone();
+        compact_input["changed"] = json!([]);
+        let unselected = start(&compact_input, Value::Null);
+        let mut selection = unselected["semantic_routes"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["request_kind"] == "semantic-routes/select/v1")
+            .unwrap()
+            .clone();
+        selection["arguments"] = json!({"posture":"selected","routes":["repository/checks"]});
+        compact_input["request"] = selection;
         compact_input["projection"] = json!("carried");
         let compact = crate::operating::start(compact_input).unwrap();
         let step = &compact["view"]["candidate_context"]["next_step"];
@@ -773,6 +799,23 @@ mod tests {
             "reference":proposal["view"]["decision_packet"]["decision_request"]["reference"],
             "answer":"confirm-retention","projection":"carried"}))
         .unwrap();
+        let mut forged = ready["carriage"]["envelopes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|entry| {
+                entry["reference"]
+                    == ready["view"]["decision_packet"]["primary_action"]["reference"]
+            })
+            .unwrap()["envelope"]
+            .clone();
+        forged["arguments"]["binding"]["route_request"]["arguments"]["routes"] = json!([]);
+        assert!(
+            crate::native_public::invoke_checked(
+                json!({"target":f.0,"task":ordinary["task"],"invocation":forged})
+            )
+            .is_err()
+        );
         let published = crate::operating::invoke(json!({"invocation":ready["carriage"],
             "reference":ready["view"]["decision_packet"]["primary_action"]["reference"],"projection":"carried"})).unwrap();
         assert_eq!(published["effect_outcome"]["status"], "committed");

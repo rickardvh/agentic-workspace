@@ -852,6 +852,22 @@ pub(crate) fn view_for(
     context: (Destination, &Value),
     request: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    view_for_selected(
+        target, work, scope, config, contract, context, request, None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn view_for_selected(
+    target: &Path,
+    work: &Value,
+    scope: &[String],
+    config: &Value,
+    contract: &Value,
+    context: (Destination, &Value),
+    request: Option<&Value>,
+    selection: Option<&Value>,
+) -> Result<Value, CoreError> {
     let (destination, context) = context;
     let owner = contract["owners"]
         .as_array()
@@ -983,7 +999,7 @@ pub(crate) fn view_for(
             .filter(|r| r["request_kind"] == destination.recover())
             .collect();
         if recoveries.len() == 1 {
-            return match view_for(
+            return match view_for_selected(
                 target,
                 work,
                 scope,
@@ -991,6 +1007,7 @@ pub(crate) fn view_for(
                 contract,
                 (destination, context),
                 Some(recoveries[0]),
+                selection,
             ) {
                 Ok(mut current) => {
                     // Eager action preparation must preserve the exact recovery
@@ -1254,6 +1271,9 @@ pub(crate) fn view_for(
             binding["applicability"] = advisory_applicability(material, scope)?;
             if let Some(ids) = args.get("candidate_ids") {
                 binding["candidate_ids"] = ids.clone();
+            }
+            if let Some(selection) = selection {
+                binding["route_request"] = selection.clone();
             }
             if revising {
                 binding["source_before"] = source_before;

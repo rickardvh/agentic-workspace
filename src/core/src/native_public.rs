@@ -197,6 +197,33 @@ fn resolve_selected(
             requests.push(route);
         }
     }
+    if executing
+        && input.invocation.as_ref().is_some_and(|i| {
+            matches!(
+                i["operation_id"].as_str(),
+                Some("memory.capture-advisory" | "memory.recover-advisory")
+            )
+        })
+        && let Some(route) = input
+            .invocation
+            .as_ref()
+            .and_then(|i| i["arguments"]["binding"].get("route_request"))
+    {
+        if route["owner"] != "semantic-routes"
+            || route["request_kind"] != "semantic-routes/select/v1"
+        {
+            return Err(CoreError::new(
+                "advisory activity dependency must be an exact semantic selection",
+            ));
+        }
+        if let Some(existing) = requests.iter().find(|r| r["owner"] == "semantic-routes") {
+            if existing != route {
+                return Err(CoreError::new("conflicting advisory activity dependency"));
+            }
+        } else {
+            requests.push(route.clone());
+        }
+    }
     let retained_baseline = crate::native_delegation::retained_packet(target, &requests)?;
     let baseline = baseline.or(retained_baseline.as_ref());
     if executing
@@ -709,7 +736,7 @@ fn resolve_selected(
                 crate::native_memory_capture::Destination::Advisory,
             ),
         ] {
-            let capture = crate::native_memory_capture::view_for(
+            let capture = crate::native_memory_capture::view_for_selected(
                 target,
                 &work,
                 &decision_scope,
@@ -735,6 +762,10 @@ fn resolve_selected(
                         )
                     )
                 }),
+                (destination == crate::native_memory_capture::Destination::Advisory)
+                    .then(|| request_for("semantic-routes"))
+                    .flatten()
+                    .filter(|r| r["request_kind"] == "semantic-routes/select/v1"),
             )?;
             if capture["contribution"]["actions"]
                 .as_array()
