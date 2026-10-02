@@ -72,6 +72,33 @@ failure class.
 
 Selecting a test for this patch does not automatically put it in ordinary CI.
 
+## Keep patch evidence with its existing owner
+
+Decide separately whether validation needs a durable document. Ordinary patch
+evidence belongs with focused tests and native Verification receipts, a concise
+PR or issue explanation, and ignored local raw data when reproduction needs it.
+Use the existing evidence owner for authenticated execution, currentness and
+reuse; GitHub prose supplies review context and does not replace its required
+receipts or reconciliation. Keep bulky logs, fixture controllers and diagnostic
+exports local unless an existing owner explicitly promotes a bounded result.
+
+Before adding a checked-in report, name the future repository consumer and what
+decision that document will support after this PR closes. A maintained contract,
+reusable operational reference or accepted design boundary used across PRs can
+justify durable material. Update an adequate existing reference first. Needing
+independent review, issue closure or a place to summarise test runs does not by
+itself justify another document. With no future reference use, retain sufficient
+current proof and review context without adding an issue-specific maintainer page.
+
+For example, a three-layer implementation can keep each layer's focused receipt,
+finite reader observation and proof limits with its own evidence owner and PR,
+while raw reproduction data remains in task-owned scratch. It needs no separate
+governed report for each layer. A maintained testing or runtime reference used by
+future implementers and reviewers has a different purpose and may warrant an
+update. New or changed durable documentation still follows the repository's normal
+documentation guidance and required source reconciliation; this choice creates
+no exemption, new evidence class or permission to discard useful historical sources.
+
 ## Explain the choice in the PR
 
 A short paragraph or table should say:
