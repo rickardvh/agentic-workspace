@@ -2,12 +2,6 @@
   "owner": "memory",
   "declarations": [
     {
-      "path": ".agentic-workspace/local/memory-candidates",
-      "scope": "subtree",
-      "class": "mutable-state",
-      "lifetime": "bounded-local"
-    },
-    {
       "path": ".agentic-workspace/memory/SKILLS.md",
       "scope": "exact",
       "class": "managed-support",

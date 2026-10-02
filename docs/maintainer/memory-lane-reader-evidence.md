@@ -115,6 +115,14 @@ deterministic validation are separate costs. The current runtime SHA-256 values:
 
 Later evidence-only commits change neither this code nor its shipped guidance.
 
+The next hosted step exposed redundant enclave classification: Memory's candidate
+subtree declaration overlapped the workspace's existing `.agentic-workspace/local`
+local-only preservation declaration during repository adoption. The foundation
+removes that redundant declaration; candidate storage, effect ownership and
+ordinary request semantics are unchanged. Existing adoption/filter guards and
+enclave tests cover convergence and preserved local state. This subsequent
+classification correction is separate from the reader's recorded binary subject.
+
 Hosted Merge proof also exposed an unaccounted fixed introspection delta in the
 former-route size test. The existing test now bounds the candidate request/effect
 schemas to 2 KB and the empty full-detail read envelope to 900 bytes separately.
