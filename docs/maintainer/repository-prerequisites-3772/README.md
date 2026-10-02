@@ -15,11 +15,11 @@ Git fixture inside task-owned scratch. Installation reported `applied` with no
 conflicts. The installed working-rule reference had SHA-256
 `0bd12c9f30f0ffc98e9c634524d237fd940e21f520f05523b8c263c3235e8f94`.
 
-[fixture.py](fixture.py) preserves the controller used for these observations,
-with its scratch and native executable paths supplied as arguments. It creates
-a small local wheel and a unittest importing its value. No dependency download
-is needed. The README gives the real test command, prohibits modifying supplied
-wheels to hide preparation failure, and preserves an explicit AW opt-out.
+The task-local controller created a small local wheel and a unittest importing
+its value. Its script and raw observations remain in retained task-owned scratch
+for inspection; no one-off controller is retained in the repository. No dependency
+download was needed. The README gives the real test command, prohibits modifying
+supplied wheels to hide preparation failure, and preserves an explicit AW opt-out.
 No readiness stamp or application-owned preparation record is involved.
 
 The author received:
@@ -141,71 +141,74 @@ configuration-admission cases deselected). The exact startup/Memory command
 passed all 32 cases on the host, where its Git-source prerequisite is available;
 its isolated execution is reported below.
 Generation parity and Markdown checks passed. No prose snapshots, keyword tests
-or new ordinary CI cases were added. The controller is an on-demand evidence
-fixture, not a bundled environment-management helper.
+or new ordinary CI cases were added. The one-off controller is retained only
+with the raw task evidence.
 
-Native Verification's first generation execution failed because the configured
-image tried to create `.venv` under read-only source. The first corrected image
-then exposed the missing native pair. Those failed receipts are retained as
-`c28d0b515b32f3cb` and `e0f26ca3d1623651`. Preparation now uses an image containing
-`uv sync --locked --all-groups` and a current paired Cargo build, with explicit
-Python source paths and the prepared environment selected during read-only proof.
-The image remains machine-local. The existing proof snapshot input list was also
-missing the declared generation sources; it now includes the necessary package
-guidance, registries, source ledger and Git attributes, excluding local state.
-The isolated generation command establishes temporary bare Git metadata in its
-writable `target` scratch volume for the read profile's built-in blob hashing;
-it reads the snapshot's attributes
-without copying the maintainer's Git database or writing the source volume.
-This fixed generation's Git-identity failure (`7ff842cc1684a987`); the selected
-isolated generation check subsequently passed (`5bfebf10eb7d87eb`), and its final
-target-volume form passed again (`9c83b637c948da8b`).
-The first isolated startup check then exposed omitted `AGENTS.md` and repository
-configuration inputs (receipt `7f4117d40569eda9`, 27 passed and five missing-file
-failures). These declared inputs now accompany the selected source snapshot.
-Its second execution passed 31 cases but the stateful Git-source fixture failed
-because it fetches the repository's exact admitted commit from the snapshot root,
-which has no Git database (`818c69500c3332c5`). Temporary metadata for blob hashing
-does not supply that commit. The fixture assertion remains intact; this report
-does not claim that isolated startup route passed or that native closeout was
-admitted. No runtime mechanism or proof floor was added. The stale maintainer
-command was corrected to the existing generation check.
+Native Verification exposed incomplete prerequisites in the existing isolated
+proof setup. The first generation receipt failed on read-only environment
+preparation (`c28d0b515b32f3cb`); subsequent attempts exposed the missing native
+pair (`e0f26ca3d1623651`) and Git identity (`7ff842cc1684a987`). A prepared,
+machine-local tool image resolved environment and binary preparation. Temporary
+manifest changes supplied additional source files and bare Git metadata; generation
+then passed (`5bfebf10eb7d87eb`, `9c83b637c948da8b`, `82cf39112ad59eec`). Those
+passes describe the temporary configuration, not the current restored manifest.
+
+The isolated startup check first failed on omitted root instructions and
+configuration (`7f4117d40569eda9`, 27 passed, five failed). After supplying those
+files, 31 cases passed and the stateful source fixture still failed: it fetches
+the exact admitted commit from the snapshot root, which has no Git database
+(`818c69500c3332c5`). The assertion remains intact. The full host suite passed
+32 cases, but that result does not satisfy the selected isolated proof.
+
+Independent review identified this as an unresolved closeout requirement and
+requested removal of the incomplete Verification repair. The snapshot input list,
+scenario hint and generation command have been restored to their pre-PR values.
+This guidance leaf does not introduce a new snapshot contract or carry the
+incomplete infrastructure expansion. The stale maintainer command correction
+remains. The selected isolated proof requires a complete, proportionate repair
+through Verification before this PR can be marked ready or close #3772.
+Rerunning the exact startup command after restoring the manifest failed again
+(`0a31b068e96288ab`, exit 1, 32 session-setup errors): its shared fixture could
+not complete the native Cargo build in that snapshot. No test pass is inferred
+from that run; the earlier Git-source failure also remains unresolved.
 
 A changed-file structured inventory check passed. The full inventory audit
 reported four pre-existing unclassified plugin metadata files under the canonical
 and payload `.agentic-workspace/plugins/agentic-workspace-entry` directories;
 this patch does not claim that broader audit passed.
 
-Closeout refreshes the previously non-current intent interpretation and
-documentation assessments through their supported AW operations. The selected
-isolated Git-source fixture remains a failed result; the passing host fixture and
-isolated generation check cover this guidance change's installation and parity
-risks. Candidate commands do not become mandatory checks merely by being offered.
-Independent PR review remains with an externally initiated reviewer.
+The retained intent interpretation and documentation assessments were refreshed
+through their supported AW operations. The isolated proof gap remains open;
+the passing host checks and finite consumer observations are bounded evidence,
+not a waiver of that requirement. PR #3773 remains a draft. Independent review
+belongs to an externally initiated reviewer.
 
 This evidence supports the installed authoring-to-consumption path on this host.
 It supplies no independent review, authenticated readiness for arbitrary
-environments, provider/OS matrix or lifetime-savings claim. Proof stops once the
-behavioural distinctions, focused repository checks and package parity are
-established; broader testing needs a named uncovered risk.
+environments, provider/OS matrix or lifetime-savings claim. The remaining isolated
+proof gap prevents completion even though the finite behavioural exercise passed.
 
 ## Reproduce the finite exercise
 
-Use one task-owned scratch directory, denoted `<scratch>`, and a current native
-pair. Create `<scratch>/fixture`, initialise Git there, then run native
-`setup --target <scratch>/fixture --yes`. From the source root:
-
-```text
-uv run python docs/maintainer/repository-prerequisites-3772/fixture.py <scratch> init <native-cli>
-```
+Use a task-owned scratch directory and a current native pair. Create a fresh Git
+fixture and run native `setup --target <fixture> --yes`. Supply a small local
+wheel containing a version value, a locked Python project importing it in one
+unittest, and a README naming the test command above. Preserve the AW opt-out
+and prohibit modifying a broken supplied wheel to hide preparation failure.
 
 Run the author prompt above once with `codex exec --ephemeral --json` from the
-fixture, retaining its event stream. Then run the ordinary test prompt in a fresh
-session for each state. The controller stages `change`, `missing` and `fail`
-establish those states; a label such as `current-after` writes a bounded snapshot.
-After failure, run the unrelated prompt `Explain what this repository demonstrates
-in one sentence.` in another fresh session. `contrasts` and `interrupt` are
-controller-only observations. Preserve the first failures and evaluate actual
-events and environment metadata, not command mentions or agent claims alone.
-Dispose of the exact task resource through its resource owner after retaining
-the useful report. Do not put this provider exercise in ordinary CI.
+fixture, retaining its event stream. Run the ordinary test prompt in a fresh
+session for each state: prepared 1.0.0; inputs and lock changed to 2.0.0 while
+retaining the old environment; environment removed; then a locked 3.0.0 wheel
+corrupted. Record test events and environment file hashes and modification times.
+After failure, run `Explain what this repository demonstrates in one sentence.`
+in another fresh session. For the controller contrasts, interrupt preparation
+before acknowledgement, delete a generated output without changing its source,
+and stop a local listener without changing its configuration.
+
+Preserve first failures and evaluate actual events and environment metadata,
+not command mentions or agent claims alone. The original controller and raw
+streams remain in task-owned scratch
+`1dc9bea44ad4584fdb24b8a8d202316f3afea9e624bdd10ace9d01c5c798eba7`.
+Dispose of the task resource through its resource owner after the open review
+and proof requirements are resolved. Do not put this provider exercise in CI.

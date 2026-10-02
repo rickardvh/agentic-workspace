@@ -46,18 +46,7 @@ disposition = "route"
 # Native Verification copies only these inputs and enforces read-only source.
 [execution]
 kind = "docker-readonly-source-v1"
-inputs = [
-  "src", "tests", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
-  "pyproject.toml", "uv.lock", "README.md", "LICENSE", "AGENTS.md", "SYSTEM_INTENT.md",
-  ".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml",
-  ".agentic-workspace/skills", ".agentic-workspace/planning/skills",
-  ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
-  ".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/READING.json",
-  ".agentic-workspace/plugins", ".agentic-workspace/WORKFLOW.md",
-  ".agentic-workspace/docs", ".agentic-workspace/fallback",
-  ".agentic-workspace/system-intent/WORKFLOW.md", ".agentic-workspace/memory/skills",
-  "tools/skills", ".gitattributes",
-]
+inputs = ["src", "tests", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "pyproject.toml", "uv.lock", "README.md", "LICENSE", ".agentic-workspace/skills", ".agentic-workspace/planning/skills", ".agentic-workspace/planning/schemas/planning-execplan.schema.json"]
 scratch_paths = ["target"]
 [execution.environment]
 RUSTUP_TOOLCHAIN = "1.98.1"
@@ -86,7 +75,7 @@ fail_evidence_labels = [
   "context_authority_drift",
   "generated_context_drift",
 ]
-automation_hint = "Use the aw_context_consistency protocol's selected commands; isolated generation prepares temporary Git metadata before checking source parity."
+automation_hint = "uv run pytest tests/test_native_memory_declarations.py tests/test_native_startup_adapter.py -q && uv run python src/tooling/generate/generate_agent_interface.py --check"
 
 [scenarios.authoritative_validation_run]
 protocol_id = "authoritative_validation"
@@ -422,7 +411,7 @@ non_goals = [
 ]
 commands = [
   "uv run pytest tests/test_native_memory_declarations.py tests/test_native_startup_adapter.py -q",
-  "git init --bare --quiet target/aw-generation.git && GIT_DIR=\"$PWD/target/aw-generation.git\" GIT_WORK_TREE=\"$PWD\" uv run python src/tooling/generate/generate_agent_interface.py --check",
+  "uv run python src/tooling/generate/generate_agent_interface.py --check",
 ]
 review_aids = [
   "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
