@@ -504,7 +504,7 @@ fn execute_checked(
     observe("published")?;
     root.remove_file(PREPARED).map_err(err)?;
     Ok(
-        json!({"outcome":{"status":"applied","effects":["memory-state"],"value":{"kind":"agentic-memory/candidate-effect/v1",
+        json!({"post_effect_changed_paths":[STATE,PREPARED,LOCK,temp],"outcome":{"status":"applied","effects":["memory-state"],"value":{"kind":"agentic-memory/candidate-effect/v1",
         "post_revision":binding["post_revision"],"remaining":binding["postimage"]["candidates"].as_array().unwrap().len(),"authority":"none"}}}),
     )
 }
@@ -581,6 +581,13 @@ mod tests {
             applied["effect_outcome"]["status"], "committed",
             "{applied}"
         );
+        assert_eq!(applied["continuation_status"], "current", "{applied}");
+        assert!(
+            applied["continuation"]["context"]["changed"]
+                .as_array()
+                .unwrap()
+                .contains(&json!(STATE))
+        );
         let quiet = crate::native_public::start(
             json!({"target":f.0,"task":"Inspect unrelated documentation"}),
         )
@@ -612,7 +619,8 @@ mod tests {
         discard["arguments"]["reason"] =
             json!("One-off fixture observation; no future conclusion needed.");
         let ready = crate::native_public::start(json!({"target":f.0,"task":"Change the fixture test", "changed":["tests/fixture.rs"],"request":discard})).unwrap();
-        crate::native_public::invoke_checked(json!({"target":f.0,"task":"Change the fixture test", "changed":["tests/fixture.rs"],"invocation":ready["decision_packet"]["primary_action"]})).unwrap();
+        let discarded = crate::native_public::invoke_checked(json!({"target":f.0,"task":"Change the fixture test", "changed":["tests/fixture.rs"],"invocation":ready["decision_packet"]["primary_action"]})).unwrap();
+        assert_eq!(discarded["continuation_status"], "current", "{discarded}");
         assert!(
             snapshot(&Dir::open_ambient_dir(&f.0, ambient_authority()).unwrap())
                 .unwrap()
