@@ -145,3 +145,119 @@ def test_oversized_selected_domain_detail_is_explicitly_blocked(tmp_path: Path, 
     assert not any(row["owner"] == "verification" for row in result["decision_packet"]["pending_consequences"]["actions"])
     assert "large detail" not in json.dumps(result)
     assert source.exists()
+
+
+def test_repo_test_evidence_review_keeps_mechanical_proof_with_current_owner(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path
+) -> None:
+    # Use the real source declarations, including their reference closure. This
+    # checks policy selection once, not transport parity or a new path registry.
+    text = (ROOT / ".agentic-workspace/verification/manifest.toml").read_text()
+    sections = [
+        "scenarios.test_evidence_decision_review",
+        "protocols.test_evidence_decision",
+        "proof_routes.test_evidence_decision",
+        "assurance.proof_profiles.workspace_behavior",
+        "assurance.proof_profiles.verification_behavior",
+        "assurance.proof_profiles.test_evidence_change",
+        "assurance.requirements.test_evidence_change_decision",
+        "assurance.domain_proof_lanes.native_public_owners",
+        "assurance.domain_proof_lanes.verification_package_behavior",
+        "assurance.domain_proof_lanes.compact_output_contract",
+        "assurance.domain_proof_lanes.test_evidence_decision",
+    ]
+    declarations = []
+    for section in sections:
+        start = text.index(f"[{section}]")
+        end = text.find("\n[", start + 1)
+        declarations.append(text[start : end if end >= 0 else None])
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    source.parent.mkdir(parents=True)
+    source.write_text('schema_version="agentic-workspace/verification-manifest/v1"\n' + "\n".join(declarations))
+    (source.parent.parent / "config.toml").write_text("[assurance]\nstrict_closeout=true\n")
+    actual = tomllib.loads(source.read_text())
+    lanes = actual["assurance"]["domain_proof_lanes"]
+    fixed_suite = "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q"
+
+    def observe(paths):
+        return consume(
+            "native",
+            shared_core_binary,
+            native_cli,
+            {"target": str(tmp_path), "task": "Inspect this bounded change", "changed": paths},
+        )["verification"]
+
+    def check(paths, mechanical_owner, *, review=True):
+        view = observe(paths)
+        routes = view["strategy"]["proof_routes"]
+        selected = {row["arguments"]["route_id"]: [] for row in view["execution_requests"]}
+        for row in view["execution_requests"]:
+            selected[row["arguments"]["route_id"]].append(row["arguments"]["command"])
+        assert fixed_suite not in [command for commands in selected.values() for command in commands]
+        assert "test_evidence_decision" not in selected and "domain:test_evidence_decision" not in selected
+        requirements = view["assurance_applicability"]["requirements"]
+        evidence_review = next(row for row in requirements if row["id"] == "test_evidence_change_decision")
+        assert (evidence_review["status"] == "applicable") == review
+        if review:
+            assert "test_evidence_decision" in view["strategy"]["protocols"]
+            assert routes["test_evidence_decision"]["commands"] == []
+            profile = next(row for row in view["strategy_control"]["selected_profiles"] if row["id"] == "test_evidence_change")
+            assert profile["selected_by"] == "binding-requirement" and profile["required_count"] == 0
+            assert view["strategy_control"]["obligations"] == []
+            assert evidence_review["source_requirement"]["required_evidence"] == ["verification_proof_decision_review"]
+        else:
+            assert "test_evidence_decision" not in view["strategy"]["protocols"]
+        if mechanical_owner:
+            assert selected[f"domain:{mechanical_owner}"] == lanes[mechanical_owner]["commands"]
+        else:
+            assert selected == {}
+        return view
+
+    check(["tests/test_native_verification_strategy.py"], "native_public_owners")
+    check(["tests/test_review_preparation.py"], None)
+    check(["src/core/src/operating.rs", "tests/test_native_operating_carriage.py"], "compact_output_contract")
+    cleanup = check(["tests/test_review_preparation.py"], None)
+    # Existing evidence can support a semantic test-only cleanup review without
+    # manufacturing a command. This is not independent review or whole-work
+    # completion; the remaining assurance/reviewer owner remains separate.
+    context = {"target": str(tmp_path), "task": "Inspect this bounded change", "changed": ["tests/test_review_preparation.py"]}
+    request = cleanup["claim_review"]["request"]
+    request["arguments"] = {
+        "disposition": "satisfied",
+        "reason": "The cleanup retains the existing maintainer-review behavior evidence; no distinct mechanical risk needs a new run.",
+        "evidence_refs": [],
+    }
+    proposed = consume("native", shared_core_binary, native_cli, {**context, "request": request})
+    decision = next(
+        row for row in proposed["decision_packet"]["pending_consequences"]["decisions"] if row["id"] == "verification-claim-review"
+    )
+    answer = decision["response_request"]
+    answer["arguments"]["answer"] = "confirm"
+    reviewed = consume("native", shared_core_binary, native_cli, {**context, "request": answer})
+    assert reviewed["verification"]["claim_review"]["status"] == "current"
+    assert reviewed["verification"]["execution_requests"] == []
+    assert reviewed["decision_packet"]["claim_boundary"]["allowed"] == []
+    check(["src/core/src/operating.rs"], "compact_output_contract", review=False)
+
+    # Representative layer paths from the merged #3774–#3776 implementation PRs
+    # #3777–#3779. The native owner may offer its declared conformance command;
+    # test-evidence review itself never selects the old standalone strategy run.
+    check(
+        [
+            ".agentic-workspace/skills/workspace-intent-discovery/references/intent.md",
+            "src/core/payload/.agentic-workspace/skills/workspace-intent-discovery/references/intent.md",
+            "docs/maintainer/compact-intent-3774.md",
+        ],
+        None,
+        review=False,
+    )
+    check(
+        [
+            "src/core/src/modules/verification/native_proof.rs",
+            "src/core/src/modules/verification/proof_executor.rs",
+            "tests/test_native_proof_producer.py",
+        ],
+        "native_public_owners",
+    )
+    check(["tools/skills/pr-review-recheck/prepare.py", "tests/test_review_preparation.py"], None)
+    assert not (tmp_path / ".agentic-workspace/local").exists()

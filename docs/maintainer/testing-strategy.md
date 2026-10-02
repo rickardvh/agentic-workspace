@@ -7,6 +7,15 @@ apply.
 
 A passing command supports only the behaviour it actually exercises.
 
+Changing a test also requires a semantic evidence decision: explain why added,
+removed, merged or converted coverage is sufficient. That review does not require
+an executable command of its own. Use the changed behaviour's existing proof
+owner, reuse current evidence when sufficient, and retain the review through
+Verification's current judgment. Run Verification-strategy tests when that
+machinery changes or a named remaining risk needs them; an unrelated test edit
+does not make that suite relevant. A source-only change that leaves test evidence
+unchanged does not acquire this review merely because the repository has tests.
+
 ## Choose the right check
 
 1. **State what should now be true.** Be specific about the input and expected

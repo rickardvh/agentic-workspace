@@ -125,7 +125,12 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
                     .as_array()
                     .is_some_and(|refs| refs.contains(&json!(id)))
             });
-        if !covered {
+        // An explicitly manual-only protocol has no command to authenticate.
+        // Its semantic judgment and any separate producer requirement remain.
+        let manual_only = protocol["commands"]
+            .as_array()
+            .is_some_and(|commands| commands.is_empty());
+        if !covered && !manual_only {
             gaps.push(format!("protocol-evidence-required:{id}"));
         }
     }
