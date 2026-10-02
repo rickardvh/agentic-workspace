@@ -96,9 +96,11 @@ The approved #3765 re-review identified parent-lane quietness follow-ups. Passiv
 do not build task execution feasibility, comparative Assignment or outcome
 evidence until an explicit request, current binding, best-fit policy or
 source-shaped executor makes it relevant. Unconfigured work remains quiet.
-Each public resolution shares one exact manual state read across manual projection,
-continuation and retirement. Retired tombstones retain replay custody internally
-without adding public fields to later ordinary entry; pending and interrupted
+Ordinary projection shares one initial authenticated manual state read across
+continuation and retirement. Explicit export/report stages retain their additional
+held-state revalidation before constructing an effect. Retired tombstones retain
+replay custody internally without adding public fields to later ordinary entry;
+pending and interrupted
 work stays visible. The runtime construction check measures the omitted builder
 and single read in full and frontier entry. The facade journeys exercise explicit
 opportunity, source-required guarantees, advisory policy and stale-work rejection.

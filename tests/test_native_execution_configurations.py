@@ -42,7 +42,7 @@ def test_passive_targets_are_latent_until_explicit_opportunity(tmp_path, shared_
     assert requirements["assignment"]["status"] == "not-applicable"
     assert "result" not in requirements and "execution_configurations" not in requirements
     assert not any(row["owner"] in {"assignment", "delegation"} for row in initial["decision_packet"]["blockers"])
-    assert not any("planning-assignment" in row.get("entry", "") for row in initial.get("activation", {}).get("candidates", []))
+    assert not any(row["entry"]["skill_id"] == "planning-assignment" for row in initial.get("activation", {}).get("candidates", []))
     assert call()["decision_packet"] == initial["decision_packet"]
     opportunity = requirements["opportunity_request"]
     opportunity["arguments"]["required_result_classes"] = ["read-only"]
