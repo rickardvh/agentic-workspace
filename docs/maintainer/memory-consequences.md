@@ -156,3 +156,27 @@ The native frontier construction observer checks zero large-body materialisation
 for compact entry and exactly one on selected Memory/proof expansion, including
 UTF-8 and CRLF chunk boundaries. Public stale/missing/dependency checks remain
 unchanged. Streaming hashing preserves the existing normalised source identity.
+
+### Disposition of the earlier seven failed calls
+
+The original exercise remains 24 native calls with seven failures. Its first
+reuse decision preceded advice; it is not evidence of early recall or agent-led
+consolidation. No successful rerun changes those observations.
+
+| Failure | Classification and existing owner | Disposition |
+| --- | --- | --- |
+| Semantic detail after discovery, with prior carriage omitted | Caller misuse; workspace operating carriage | `owners.md` already requires keeping the updated carriage after each answer. The reference depends on that context. No Memory repair is justified. |
+| Discover and select requests carried simultaneously | Generic AW interaction defect; `semantic-routes` selection and workspace operating carriage (`operating.rs`, `native_public.rs::owner_requests`) | Repaired in the second layer: automatic replacement and native ingress now share the same owner request key. Selection replaces completed read-only discovery; owners that accept multiple request kinds keep their prerequisites. The public carried discovery-to-selection regression and all 11 operating tests pass. This is a bounded existing-owner repair, not a new Memory subsystem. |
+| Memory detail after ordinary material | Memory interaction friction; Memory lazy detail identity in `native_public.rs` | A separate controlled reproduction found wall-clock nomination timestamps changing lazy detail identity. Foundation commit `b34c14d44` excludes request templates from that identity, with delayed expansion and changed-material rejection tested. The historical call's precise cause remains unproven. Current reader evidence below decides whether the promised path still encounters this friction. |
+| Memory detail after keep judgment | Memory interaction friction; same lazy detail owner | Same bounded repair and evidential limit as the preceding row. The two historical failures are counted separately. |
+| Projection flag conflicting with complete input context | Caller misuse; CLI exact-envelope ingress | `owners.md` already says to put projection in a complete context object and avoid conflicting flags. No state effect occurred. |
+| Carriage supplied without a recovery reference | Expected bounded rejection of malformed input; workspace operating reference selection | Recovery requires either an actual returned reference with its context or a fresh explicit task/target resolution. No effect was retried. Existing guidance suffices. |
+| Empty recovery reference | Expected bounded rejection of malformed input; same owner | An empty string is not a returned reference. The same existing recovery instruction applies. |
+
+The earlier `procedure-path-undeclared` observation is a fixture authoring defect,
+owned by the repository-local tool-skill registry: the minimal checks entry omitted
+its procedure path. The replacement fixture declares the path and supplies that
+procedure. It does not change route validity rules or load all notes.
+
+The per-layer replacement exercises, exact subjects and call costs are recorded in [Memory lane fresh-reader evidence](memory-lane-reader-evidence.md). The foundation now reports its fixed candidate effect paths so committed local replacements have a current continuation. The public finding/capture/discard journey checks this in addition to its bounded-storage assertions.
+
