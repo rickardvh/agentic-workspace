@@ -179,6 +179,14 @@ def test_former_selection_requires_exact_current_agent_request(
         assert revision_properties.pop(key)["type"] == "string"
     advisory_revision_bytes = len(json.dumps(without_activity_cues)) - len(json.dumps(without_revision))
     assert 0 < advisory_revision_bytes < 900, advisory_revision_bytes
+    # Candidate-originated publication carries only a bounded identity list.
+    # Its exact delta cannot consume the earlier revision or baseline budgets.
+    without_candidate_continuation = copy.deepcopy(without_revision)
+    completion_ids = without_candidate_continuation["input_schema"]["properties"].pop("candidate_ids")
+    assert completion_ids["maxItems"] == 16 and completion_ids["uniqueItems"] is True
+    assert completion_ids["items"]["maxLength"] == 72
+    candidate_continuation_bytes = len(json.dumps(without_revision)) - len(json.dumps(without_candidate_continuation))
+    assert 0 < candidate_continuation_bytes < 230, candidate_continuation_bytes
     # Explicit Planning history discovery keeps unrelated entry quiet. It adds
     # one read-only introspection schema, not another retirement/recovery effect.
     # Bound that named delta separately; preserve the existing four-entry owner
@@ -341,6 +349,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + activity_cue_bytes
         + candidate_consolidation_bytes
         + advisory_revision_bytes
+        + candidate_continuation_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000

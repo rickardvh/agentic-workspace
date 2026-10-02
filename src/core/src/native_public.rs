@@ -2222,7 +2222,17 @@ fn finish_invocation(
             context["changed"] = json!(changed);
             #[cfg(test)]
             crate::native_frontier::built("post-effect-continuation");
-            let current = start_selected(context.clone(), &progress.resolution);
+            let current =
+                start_selected(context.clone(), &progress.resolution).and_then(|mut current| {
+                    if let Some(request) = crate::native_memory_candidates::publication_completion(
+                        &current["memory"]["candidates"],
+                        invocation,
+                        &outcome,
+                    )? {
+                        current["memory"]["candidates"]["completion_request"] = request;
+                    }
+                    Ok(current)
+                });
             Ok(attach_continuation(result, current, &context))
         }
         Err(error) => {

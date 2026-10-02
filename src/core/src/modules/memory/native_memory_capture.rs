@@ -230,6 +230,8 @@ pub(crate) fn extend_destination(
         args["properties"]["revise_source"] = text.clone();
         args["properties"]["source_revision"] = text.clone();
         args["properties"]["validity_review"] = text.clone();
+        args["properties"]["candidate_ids"] = json!({"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,
+            "items":{"type":"string","minLength":1,"maxLength":72}});
     }
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"source":text,"record_revision":text},"required":["source","record_revision"]});
@@ -1250,6 +1252,9 @@ pub(crate) fn view_for(
         if destination == Destination::Advisory {
             binding["durable_owner"] = json!("advisory");
             binding["applicability"] = advisory_applicability(material, scope)?;
+            if let Some(ids) = args.get("candidate_ids") {
+                binding["candidate_ids"] = ids.clone();
+            }
             if revising {
                 binding["source_before"] = source_before;
                 if let Some(record) = retained(target, &source)? {

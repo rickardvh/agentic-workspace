@@ -454,19 +454,58 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
-    if full["memory"]["candidates"]["selected"]
+    let candidates = &full["memory"]["candidates"];
+    if candidates["selected"]
         .as_array()
         .is_some_and(|s| !s.is_empty())
+        || candidates["publication_request"].is_object()
+        || candidates["completion_request"].is_object()
     {
         let mut budget = 16384usize;
-        let observations = full["memory"]["candidates"]["selected"].as_array().unwrap().iter().map(|row| {
+        let observations = candidates["selected"].as_array().into_iter().flatten().map(|row| {
             let size = serde_json::to_vec(row).unwrap().len();
             if size <= budget.min(4096) { budget -= size; row.clone() }
             else { json!({"id":row["observation"]["id"],"status":"selected-detail-deferred","currentness":row["currentness"]}) }
         }).collect::<Vec<_>>();
         result["candidate_context"] = json!({"observations":observations,
-            "reference":result["detail_refs"]["/memory"],"next":"If this evidence changes current or future work, select the current memory.candidates.requests consolidate request from Memory detail. Compare scopes and current sources; publish or revise justified advice before completing its candidates. Defer or discard may be sufficient.",
+            "reference":result["detail_refs"]["/memory"],"next":"Compare scopes and current sources. Use the returned next_step only when justified; defer or deliberate discard may be sufficient. Publication and candidate subtraction remain separate effects.",
             "authority":"Unconfirmed local evidence for consideration; no current-state, policy or task-custody authority."});
+        if candidates["completion_request"].is_object() {
+            // This request is offered only by the just-committed effect owner.
+            // A fresh owner-reference lookup cannot reproduce that transient
+            // offer; carry its exact input through ordinary request validation.
+            let mut input = context.clone();
+            input["request"] = candidates["completion_request"].clone();
+            if carried {
+                input["projection"] = json!("carried");
+            }
+            result["candidate_context"]["next_step"] = json!({"operation":"complete",
+                "input":input,"use":"Submit this exact input through start. Memory rechecks publication and candidate state; inspect its returned cleanup action before invoking it."});
+        } else {
+            let request = if candidates["publication_request"].is_object() {
+                Some(&candidates["publication_request"])
+            } else {
+                candidates["requests"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|r| r["arguments"]["operation"] == "consolidate")
+            };
+            if let Some(request) = request {
+                let selector = format!("request:memory:{}", digest(request)?);
+                result["candidate_context"]["next_step"] = json!({
+                "operation":if request["request_kind"] == "memory/capture-advisory/v1" {"publish"} else {"consolidate"},
+                "reference":reference(context, &selector, request)?,"arguments":request["arguments"],
+                "use":if request["request_kind"] == "memory/capture-advisory/v1" {
+                    "Use this exact reference with current context/carriage and an empty object answer to submit the filled material for the publisher's confirmation question."
+                } else {
+                    "Use this exact reference with current context/carriage. For justified advice, answer with advisory_material containing id, lesson, rationale, dependency_paths and deliberate routes_from or semantic_routes. Defer or justified discard may be sufficient."
+                }});
+                if let Some(question) = candidates.get("next") {
+                    result["candidate_context"]["judgment"] = question.clone();
+                }
+            }
+        }
     }
     if let Some(maintenance) = context.get("maintenance") {
         result["reentry"]["maintenance"] = maintenance.clone();

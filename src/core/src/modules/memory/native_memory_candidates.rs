@@ -356,6 +356,7 @@ fn view_at(
                     None,
                 )?;
                 let mut publication = capture["requests"][0].clone();
+                publication["arguments"]["candidate_ids"] = json!(ids);
                 publication["arguments"]["material"] = args["advisory_material"].clone();
                 publication["arguments"]["material"]["origins"] = json!(
                     state["candidates"]
@@ -541,6 +542,43 @@ fn view_at(
     Ok(result)
 }
 
+/// Constructible next input, not a cleanup action. Only a committed native
+/// publisher supplies the bound candidate identities; normal completion still
+/// reobserves candidates, publication custody and validity before subtraction.
+pub(crate) fn publication_completion(
+    candidates: &Value,
+    invocation: &Value,
+    outcome: &Value,
+) -> Result<Option<Value>, CoreError> {
+    if !matches!(
+        invocation["operation_id"].as_str(),
+        Some("memory.capture-advisory" | "memory.recover-advisory")
+    ) || outcome["status"] != "applied"
+        || invocation["arguments"]["binding"]["disposition"] == "no-retention"
+    {
+        return Ok(None);
+    }
+    let Some(ids) = invocation["arguments"]["binding"]["candidate_ids"]
+        .as_array()
+        .filter(|ids| !ids.is_empty() && ids.len() <= COUNT)
+    else {
+        return Ok(None);
+    };
+    let Some(mut request) = candidates["requests"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|r| r["arguments"]["operation"] == "read")
+        .cloned()
+    else {
+        return Ok(None);
+    };
+    request["arguments"] = json!({"operation":"complete","candidate_ids":ids,
+        "publication":{"source":outcome["value"]["source"],"revision":outcome["value"]["post_revision"]}});
+    request["id"] = json!(format!("{REQUEST}:{}", digest(&request["arguments"])?));
+    Ok(Some(request))
+}
+
 pub(crate) fn write_scope() -> Vec<String> {
     [STATE, PREPARED, LOCK]
         .into_iter()
@@ -718,31 +756,53 @@ mod tests {
         consolidation["arguments"]["advisory_material"] = json!({"id":"shared-fixture","lesson":"Read service-policy.md and inspect current service status before provisioning the shared fixture.","rationale":"Avoid the redundant provisioning found during setup; the earlier running observation is historical.","dependency_paths":["service-policy.md"],"routes_from":["tests/fixture/**"]});
         let considered = start(&ordinary, consolidation);
         let publication = considered["memory"]["candidates"]["publication_request"].clone();
-        let proposal = start(&ordinary, publication);
-        let mut answer =
-            proposal["decision_packet"]["decision_request"]["response_request"].clone();
-        answer["arguments"]["answer"] = json!("confirm-retention");
-        let published = invoke(&ordinary, &start(&ordinary, answer));
+        assert_eq!(publication["arguments"]["candidate_ids"], ids);
+        let mut compact_input = ordinary.clone();
+        compact_input["projection"] = json!("carried");
+        let compact = crate::operating::start(compact_input).unwrap();
+        let step = &compact["view"]["candidate_context"]["next_step"];
+        assert_eq!(step["operation"], "consolidate");
+        let considered = crate::operating::start(json!({"request":compact["carriage"],
+            "reference":step["reference"],"answer":{"advisory_material":publication["arguments"]["material"]},"projection":"carried"})).unwrap();
+        let step = &considered["view"]["candidate_context"]["next_step"];
+        assert_eq!(step["operation"], "publish");
+        let proposal = crate::operating::start(json!({"request":considered["carriage"],
+            "reference":step["reference"],"answer":{},"projection":"carried"}))
+        .unwrap();
+        let ready = crate::operating::start(json!({"request":proposal["carriage"],
+            "reference":proposal["view"]["decision_packet"]["decision_request"]["reference"],
+            "answer":"confirm-retention","projection":"carried"}))
+        .unwrap();
+        let published = crate::operating::invoke(json!({"invocation":ready["carriage"],
+            "reference":ready["view"]["decision_packet"]["primary_action"]["reference"],"projection":"carried"})).unwrap();
+        assert_eq!(published["effect_outcome"]["status"], "committed");
         assert_eq!(
             std::fs::read(f.0.join(STATE)).unwrap(),
             before,
             "publication cannot prematurely drop candidates"
         );
-        let fresh = start(&ordinary, Value::Null);
-        let mut complete = fresh["memory"]["candidates"]["requests"]
-            .as_array()
+        let step = &published["continuation"]["result"]["view"]["candidate_context"]["next_step"];
+        assert_eq!(step["operation"], "complete");
+        let mut completion_input = step["input"].clone();
+        completion_input
+            .as_object_mut()
             .unwrap()
-            .iter()
-            .find(|r| r["arguments"]["operation"] == "read")
-            .unwrap()
-            .clone();
-        complete["arguments"] = json!({"operation":"complete","candidate_ids":ids,"publication":{"source":published["value"]["source"],"revision":published["value"]["post_revision"]}});
-        let mut forged = complete.clone();
-        forged["arguments"]["publication"]["revision"] = json!("sha256:invented");
-        let mut invalid = ordinary.clone();
-        invalid["request"] = forged;
+            .remove("projection");
+        assert_eq!(
+            completion_input["request"]["arguments"]["candidate_ids"],
+            ids
+        );
+        assert_eq!(
+            completion_input["request"]["arguments"]["publication"]["revision"],
+            published["value"]["post_revision"]
+        );
+        let mut invalid = completion_input.clone();
+        invalid["request"]["arguments"]["publication"]["revision"] = json!("sha256:invented");
         assert!(crate::native_public::start(invalid).is_err());
-        let ready = start(&ordinary, complete);
+        let mut stale = completion_input.clone();
+        stale["task"] = json!("Different task");
+        assert!(crate::native_public::start(stale).is_err());
+        let ready = crate::native_public::start(completion_input).unwrap();
         let action = &ready["decision_packet"]["primary_action"];
         assert!(
             execute_checked(
