@@ -132,6 +132,14 @@ def test_former_selection_requires_exact_current_agent_request(
     assert set(consequence[0]["required"]) == {"claim", "evidence_reference", "proof_subject"}
     consequence_bytes = len(json.dumps({"receiving_consequence": consequence[0]}))
     assert consequence_bytes < 400
+    # Local candidates add one bounded request and one effect schema to full
+    # introspection. Attribute that exact named delta; candidate rows must not
+    # enlarge unrelated ordinary state or compact responses below.
+    candidate_requests = [row for row in memory["requests"] if row["kind"] == "memory/consider-observation/v1"]
+    candidate_operations = [row for row in memory["operations"] if row["id"] == "memory.update-candidates"]
+    assert len(candidate_requests) == 1 and len(candidate_operations) == 1
+    candidate_bytes = sum(len(json.dumps(row)) for row in [*candidate_requests, *candidate_operations])
+    assert 0 < candidate_bytes < 2_000, candidate_bytes
     # Explicit Planning history discovery keeps unrelated entry quiet. It adds
     # one read-only introspection schema, not another retirement/recovery effect.
     # Bound that named delta separately; preserve the existing four-entry owner
@@ -290,6 +298,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + assignment_input_bytes
         + analysis_receipt_bytes
         + manual_bytes
+        + candidate_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
@@ -322,6 +331,16 @@ def test_former_selection_requires_exact_current_agent_request(
     assert selection_requests[0]["arguments"] == {}
     assert len(json.dumps(selection_requests)) < 650
     state["planning"] = {key: value for key, value in state["planning"].items() if key != "selection_requests"}
+    # Full Memory detail offers only the bounded candidate read envelope until
+    # relevant material or a current scoped selection exists. No candidate rows
+    # or candidate effect revision may leak into this unrelated entry.
+    candidate_detail = state["memory"]["candidates"]
+    assert candidate_detail["status"] == "available" and candidate_detail["selected"] == []
+    assert len(candidate_detail["requests"]) == 1
+    assert candidate_detail["requests"][0]["arguments"] == {"operation": "read"}
+    assert len(json.dumps(candidate_detail)) < 900
+    assert "memory.update-candidates" not in first["decision_packet"]["operation_revisions"]
+    state["memory"] = {key: value for key, value in state["memory"].items() if key != "candidates"}
     # Retention/current-evidence and manual carriage contribute named bounded
     # effect revisions, never unsolicited task state or a manual queue.
     manual_revisions = {key: value for key, value in first["decision_packet"]["operation_revisions"].items() if key in manual_operation_ids}

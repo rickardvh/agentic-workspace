@@ -114,3 +114,11 @@ deterministic validation are separate costs. The current runtime SHA-256 values:
 - Paired core: `7651992b34387f0c51dc52dd323464a4b271745931d10c5558375a6c0df44470`.
 
 Later evidence-only commits change neither this code nor its shipped guidance.
+
+Hosted Merge proof also exposed an unaccounted fixed introspection delta in the
+former-route size test. The existing test now bounds the candidate request/effect
+schemas to 2 KB and the empty full-detail read envelope to 900 bytes separately.
+It still enforces the original 81/86 KB baseline contract, 28 KB remaining state
+and 6 KB compact ceilings, and forbids candidate rows/effect revisions at unrelated
+entry. All 29 former-route cases pass locally across four surfaces. This test-only
+adjustment changes neither the reader's product subject nor shipped guidance.
