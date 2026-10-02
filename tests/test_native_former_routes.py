@@ -140,6 +140,16 @@ def test_former_selection_requires_exact_current_agent_request(
     assert len(candidate_requests) == 1 and len(candidate_operations) == 1
     candidate_bytes = sum(len(json.dumps(row)) for row in [*candidate_requests, *candidate_operations])
     assert 0 < candidate_bytes < 2_000, candidate_bytes
+    # Future advice adds three optional authored properties to its existing
+    # capture schema. Bound only that delta, not the whole preexisting publisher.
+    advisory = next(row for row in memory["requests"] if row["kind"] == "memory/capture-advisory/v1")
+    without_activity_cues = copy.deepcopy(advisory)
+    advisory_properties = without_activity_cues["input_schema"]["properties"]["material"]["properties"]
+    cues = {key: advisory_properties.pop(key) for key in ("routes_from", "semantic_routes", "origin")}
+    assert all(cues[key]["type"] == "array" for key in ("routes_from", "semantic_routes"))
+    assert cues["origin"]["type"] == "object"
+    activity_cue_bytes = len(json.dumps(advisory)) - len(json.dumps(without_activity_cues))
+    assert 0 < activity_cue_bytes < 700, activity_cue_bytes
     # Explicit Planning history discovery keeps unrelated entry quiet. It adds
     # one read-only introspection schema, not another retirement/recovery effect.
     # Bound that named delta separately; preserve the existing four-entry owner
@@ -299,6 +309,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + analysis_receipt_bytes
         + manual_bytes
         + candidate_bytes
+        + activity_cue_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000

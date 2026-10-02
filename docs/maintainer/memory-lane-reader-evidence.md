@@ -207,3 +207,9 @@ historical setup nor migration log, ran no services/checks and invoked no manage
 effect. Only simulated status changed. This demonstrates next-action correctness
 and early advice arrival, without a counterfactual time-saving or long-term value
 claim. The separately scoped fixture installation assessment remains unfinished.
+
+The existing former-route budget test separately attributes the three new
+optional advice properties (`routes_from`, `semantic_routes`, `origin`) to a
+700-byte full-schema ceiling. It preserves the baseline contract and ordinary
+response ceilings. All 29 four-surface cases pass on this layer; this test-only
+addition leaves the fresh-reader product subject unchanged.
