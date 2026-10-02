@@ -217,7 +217,7 @@
         }
       ],
       "stability": "contract-backed-projection",
-      "summary": "Resolve a reported setup gap or requested setting, then verify the affected behaviour.",
+        "summary": "Resolve setup or a requested setting, preserve evidenced repository working rules, and verify the consumer.",
       "visibility": "routed-on-demand"
     },
     {

@@ -1,5 +1,11 @@
 ## Current native method
 
+For an evidenced repository working convention, first use
+[working rules](working-rules.md) to choose the existing instruction or procedure
+and its later consumer. Configuration assessments exclude launch/module readiness;
+they are not environment preparation records. Use the Configuration request below
+only for an actual supported setting or instruction concern.
+
 Select `configuration_write.behavior_request` from current native context and supply
 the relevant `concern`: `instructions`, `diagnostics`, `assignment`, `modules`,
 `invocation`, or `preferences`. Select by the human outcome, not task-word matching.
