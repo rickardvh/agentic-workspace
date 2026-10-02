@@ -231,6 +231,7 @@ fn resolve_selected(
                 && i["operation_id"] != "memory.recover-decision"
                 && i["operation_id"] != "memory.capture-advisory"
                 && i["operation_id"] != "memory.recover-advisory"
+                && i["operation_id"] != crate::native_memory_candidates::OP
                 && i["operation_id"] != "decision-continuity.capture-decision"
                 && i["operation_id"] != "decision-continuity.recover-decision"
                 && i["operation_id"] != crate::native_source_reconciliation::OP
@@ -1654,6 +1655,43 @@ fn resolve_selected(
     contributions.push(assignment_contribution);
     contributions.push(system_intent["contribution"].clone());
     if available("memory") {
+        let candidates = crate::native_memory_candidates::view(
+            target,
+            &work,
+            &material,
+            &input.changed,
+            &route_fact,
+            &configuration,
+            &contract,
+            requests.iter().find(|r| {
+                r["owner"] == "memory"
+                    && r["request_kind"] == crate::native_memory_candidates::REQUEST
+            }),
+        )?;
+        if !candidates.is_null() {
+            if candidates["selected"]
+                .as_array()
+                .is_some_and(|s| !s.is_empty())
+                || requests
+                    .iter()
+                    .any(|r| r["request_kind"] == crate::native_memory_candidates::REQUEST)
+                || candidates["requests"]
+                    .as_array()
+                    .is_some_and(|s| s.iter().any(|r| r["arguments"]["operation"] == "consider"))
+            {
+                memory["contribution"]["relevant"] = json!(true);
+            }
+            if let Some(actions) = candidates["contribution"]["actions"].as_array() {
+                if !memory["contribution"]["actions"].is_array() {
+                    memory["contribution"]["actions"] = json!([]);
+                }
+                memory["contribution"]["actions"]
+                    .as_array_mut()
+                    .unwrap()
+                    .extend(actions.iter().cloned());
+            }
+            memory["candidates"] = candidates;
+        }
         let learning = crate::native_memory_learning::view(
             target,
             &work,
@@ -1933,7 +1971,7 @@ fn resolve_selected(
     }
     // Memory capture fragments have already joined the same composed decision.
     // Publish their exact requests/results, not a second copy of internal authority.
-    for capture in ["capture", "advisory_capture", "future_value"] {
+    for capture in ["capture", "advisory_capture", "future_value", "candidates"] {
         if let Some(object) = public["memory"]
             .get_mut(capture)
             .and_then(Value::as_object_mut)
@@ -2281,6 +2319,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "memory.recover-decision"
         && invocation["operation_id"] != "memory.capture-advisory"
         && invocation["operation_id"] != "memory.recover-advisory"
+        && invocation["operation_id"] != crate::native_memory_candidates::OP
         && invocation["operation_id"] != "decision-continuity.capture-decision"
         && invocation["operation_id"] != "decision-continuity.recover-decision"
         && invocation["operation_id"] != crate::native_source_reconciliation::OP
@@ -2390,6 +2429,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 | "memory.recover-decision"
                 | "memory.capture-advisory"
                 | "memory.recover-advisory"
+                | "memory.update-candidates"
                 | "decision-continuity.capture-decision"
                 | "decision-continuity.recover-decision"
         )
@@ -2422,6 +2462,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 invocation,
                 revalidate,
             )?
+        } else if invocation["operation_id"] == crate::native_memory_candidates::OP {
+            crate::native_memory_candidates::execute(&target, invocation, revalidate)?
         } else if invocation["source_owner"] == "system-intent" {
             crate::native_intent_write::execute(
                 &target,

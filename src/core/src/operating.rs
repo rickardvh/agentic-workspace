@@ -454,6 +454,19 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
+    if full["memory"]["candidates"]["selected"]
+        .as_array()
+        .is_some_and(|s| !s.is_empty())
+    {
+        let mut budget = 16384usize;
+        let observations = full["memory"]["candidates"]["selected"].as_array().unwrap().iter().map(|row| {
+            let size = serde_json::to_vec(row).unwrap().len();
+            if size <= budget.min(4096) { budget -= size; row.clone() }
+            else { json!({"id":row["observation"]["id"],"status":"selected-detail-deferred","currentness":row["currentness"]}) }
+        }).collect::<Vec<_>>();
+        result["candidate_context"] = json!({"observations":observations,
+            "reference":result["detail_refs"]["/memory"],"authority":"Unconfirmed local evidence for consideration; no current-state, policy or task-custody authority."});
+    }
     if let Some(maintenance) = context.get("maintenance") {
         result["reentry"]["maintenance"] = maintenance.clone();
     }

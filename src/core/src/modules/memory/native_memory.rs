@@ -565,6 +565,7 @@ pub(crate) fn public_view(
         .as_array_mut()
         .unwrap()
         .extend(crate::native_memory_retention::declarations());
+    crate::native_memory_candidates::extend_owner(owner)?;
     owner["revision"] = json!(crate::digest(&json!([
         owner["requests"],
         owner["operations"]

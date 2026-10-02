@@ -1,5 +1,18 @@
 ## Other destinations and bounded method changes
 
+For a noteworthy observation whose value remains uncertain, reuse the supplied
+`material` and select `memory.candidates.requests`. Its consideration request
+keeps the observation and origin; no permanent lesson or recurrence forecast is
+needed. If losing it would discard a concrete learning opportunity, change the
+request to `capture`, identify a future path/activity cue and the uncertainty,
+and confirm that the material is optional. Invoke the returned exact action only
+when the task permits writes. The local working set survives a pause for at most
+14 days; it holds at most 16 observations and 64 KiB. It can evict older optional
+material. Read/discard and foreground expiry cleanup use that same request.
+Accepted instructions, task commitments and uncertain effects need their existing
+durable source or Planning record and cannot depend on this expirable set.
+Reuse current material while it suffices; deliberate no-retention needs no write.
+
 For useful advisory knowledge, use `memory.advisory_capture.requests`: supply the
 bounded lesson, its future value and exact dependency paths. Memory publishes an
 advisory note and its selective manifest entry; it does not decide policy. For a

@@ -1,5 +1,17 @@
 # Answer a returned question about a lesson
 
+An ordinary supplied finding reaches this choice through the correction procedure.
+Use its existing observation and consequence once: correct the controlling source,
+retain useful advice immediately, save nothing, or preserve uncertain optional
+material through `memory.candidates.requests`. Candidate reads return historical,
+unconfirmed evidence, never earlier work authority or current service availability.
+Use exact candidate identities for deliberate discard. `maintain` removes expired
+optional rows in an authorised foreground action; passive reads do not renew age
+or write. A returned `recover` request completes an interrupted local replacement
+before another mutation. Unknown or conflicting files are preserved for inspection.
+Local candidates do not automatically travel with a worktree or another machine;
+carry needed handoff evidence explicitly or save it through its durable owner.
+
 Use this path when a check returns `future_value_candidate` with a `lesson` and
 `rationale`, and the current result asks what to do with it. Read that exact
 candidate and its evidence before deciding whether it would help a later task.

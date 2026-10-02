@@ -284,12 +284,17 @@ pub fn restrict_pending(
                     | "memory.recover-decision"
                     | "memory.capture-advisory"
                     | "memory.recover-advisory"
+                    | "memory.update-candidates"
                     | "decision-continuity.capture-decision"
                     | "decision-continuity.recover-decision"
             )
         )
     }) {
-        let writes = crate::native_memory_capture::write_scope(action)?;
+        let writes = if action["operation_id"] == crate::native_memory_candidates::OP {
+            crate::native_memory_candidates::write_scope()
+        } else {
+            crate::native_memory_capture::write_scope(action)?
+        };
         for source in view["sources"].as_array().into_iter().flatten() {
             let metadata = &source["metadata"];
             let patterns = strings(&metadata["paths"]);

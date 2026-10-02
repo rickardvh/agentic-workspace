@@ -20,6 +20,26 @@ original write. Multiple unresolved transactions retain their explicit choices.
 
 ## Explicit future-value observations
 
+Ordinary observations supplied through `material` also reach
+`memory.candidates.requests`, through the existing correction procedure. Nomination
+uses the supplied summary and provenance; it needs no permanent lesson or forecast.
+Capture requires deliberate optionality, uncertainty and future applicability.
+Accepted commitments and uncertain effects must remain with their durable owner.
+There is no automatic tool-output collector or second activation question.
+
+The local working set has 16 rows, 64 KiB of serialized state and a 14-day age
+limit. Same-event replay keeps the original row and timestamp. Reads do not write
+or refresh age; expired rows are excluded. Authorised capture evicts oldest optional
+rows before writing, while `maintain` removes expired rows in the foreground.
+Attributable files are fixed: `state.json` (64 KiB), `state.tmp` (64 KiB),
+`prepared.json` (68 KiB), and a zero-byte lock, at most 196 KiB in total. A single
+pending replacement precedes new mutations. Recovery checks exact preimages and
+postimages; unknown files and conflicting source bytes remain preserved.
+No-signal entry opens none of these files; path/activity selection reads only the
+bounded set, presenting matches as unconfirmed historical evidence. Dependency
+drift requires review, and present service availability always needs a live check.
+Local files are ignored and do not establish portable handoff continuity.
+
 A source-declared native Verification command may emit complete JSON stdout with
 `future_value_candidate: {"lesson": "...", "rationale": "..."}`. Both nonempty
 strings are bounded to 2048 bytes; total stdout is bounded to 8192 bytes and must
