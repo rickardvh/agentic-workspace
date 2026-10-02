@@ -1379,6 +1379,14 @@ fn resolve_selected(
         }
     }
     contributions.push(verification["contribution"].clone());
+    let manual_state = crate::native_manual::state(target, &input.task, &input.changed)?;
+    let assignment_requested = requests.iter().any(|r| {
+        r["owner"] == "assignment"
+            || r["owner"] == "delegation"
+            || r["request_kind"] == "verification/requirements/v1"
+    }) || manual_state
+        .as_ref()
+        .is_some_and(|s| s["retirement"]["status"] != "retired");
     let mut requirements = native_requirements::view(
         target,
         &input.task,
@@ -1403,6 +1411,7 @@ fn resolve_selected(
         }),
         &contract,
         baseline,
+        assignment_requested,
     )
     .map_err(|error| error.dispatch_mismatch(DispatchMismatch::CurrentWork))?;
     if let Some(invocation) = input
@@ -1413,12 +1422,11 @@ fn resolve_selected(
         crate::native_delegation::validate_execution_context(invocation, &requirements)?;
     }
     contributions.push(startup_adapter["contribution"].clone());
-    requirements["bounded_outcome_evidence"] =
-        if configuration["assignment_requirements"]["configured"] == true {
-            crate::native_assignment::outcome_evidence(&input.task, &planning, &verification)?
-        } else {
-            json!([])
-        };
+    requirements["bounded_outcome_evidence"] = if requirements["status"] != "not-applicable" {
+        crate::native_assignment::outcome_evidence(&input.task, &planning, &verification)?
+    } else {
+        json!([])
+    };
     let mut assignment = crate::native_assignment::view(
         &work,
         &configuration,
@@ -1451,6 +1459,7 @@ fn resolve_selected(
         &handoff,
         &requests,
         &contract,
+        manual_state.as_ref(),
     )?;
     if !delegation["observed_invocation"].is_null() {
         let original = delegation["observed_invocation"].clone();
@@ -1474,8 +1483,22 @@ fn resolve_selected(
         .remove("observed_invocation");
     let mut admission =
         crate::native_handoff::admission(&work, &delegation["observation"], &requests, &contract)?;
-    let manual_continuation =
-        crate::native_manual::continuation(target, &input.task, &input.changed)?;
+    let manual_continuation = crate::native_manual::continuation(
+        manual_state.as_ref(),
+        requests.iter().any(|r| {
+            r["request_kind"].as_str().is_some_and(|k| {
+                [
+                    crate::native_manual::EXPORT,
+                    crate::native_manual::REPORT,
+                    crate::native_manual::READ,
+                    crate::native_manual::FINISH,
+                    crate::native_manual::DISPOSE,
+                    crate::native_manual::RETIRE,
+                ]
+                .contains(&k)
+            })
+        }),
+    )?;
     if !manual_continuation.is_null() {
         delegation["manual_continuation"] = manual_continuation;
     }
@@ -1487,6 +1510,7 @@ fn resolve_selected(
         &requests,
         &contract,
         &json!({"planning":planning,"planning_detail":planning_detail,"memory":memory,"verification":verification}),
+        manual_state.as_ref(),
     )?;
     if !retirement.is_null() {
         if retirement["contribution"].is_object() {

@@ -65,3 +65,7 @@ pointer; a later lifecycle retires the preceding receipt too. Unknown files are
 preserved. If entry reports `retiring`, follow its exact recovery invocation;
 never scan or delete this namespace yourself. Package adoption and removal preserve
 this local state for its current owner.
+
+Retired pointers remain internal replay/recovery barriers. Ordinary entry omits
+their continuation and retirement fields; an exact manual request can still
+recover its receipt, and pending or interrupted carriage stays visible.

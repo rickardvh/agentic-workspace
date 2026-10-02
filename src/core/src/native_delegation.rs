@@ -162,6 +162,7 @@ pub(crate) fn view(
     handoff: &Value,
     submitted: &[Value],
     contract: &Value,
+    manual_state: Option<&Value>,
 ) -> Result<Value, CoreError> {
     if requirements["assignment"]["result"]["selected"]["configuration"]["transport"] == "manual" {
         return crate::native_manual::view(
@@ -171,6 +172,7 @@ pub(crate) fn view(
             handoff,
             submitted,
             contract,
+            manual_state,
         );
     }
     if submitted.iter().any(|r| {

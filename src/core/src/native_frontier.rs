@@ -34,6 +34,39 @@ mod tests {
         (value, work)
     }
     #[test]
+    fn passive_profiles_skip_assignment_construction_and_share_manual_read() {
+        let root = std::env::temp_dir().join(format!(
+            "aw-passive-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(root.join(".agentic-workspace")).unwrap();
+        let local = root.join(".agentic-workspace/config.local.toml");
+        std::fs::write(&local, "[delegation]\nassignment_policy='local-preferred'\n[delegation_targets.local]\ntransports=[{kind='internal'}]\n").unwrap();
+        let context = json!({"target":root,"task":"Explain ordinary local work"});
+        for resolution in [Resolution::Full, Resolution::Frontier(None)] {
+            crate::native_manual::TEST_STATE_READS.with(|v| v.set(0));
+            let (quiet, work) = observe(context.clone(), resolution);
+            assert_eq!(crate::native_manual::TEST_STATE_READS.with(|v| v.get()), 1);
+            assert!(!work.contains(&"assignment-requirements"));
+            assert_eq!(quiet["task_requirements"]["status"], "not-applicable");
+            assert!(quiet["task_requirements"]["execution_configurations"].is_null());
+            let mut opportunity = quiet["task_requirements"]["opportunity_request"].clone();
+            opportunity["arguments"]["required_result_classes"] = json!(["read-only"]);
+            let mut selected = context.clone();
+            selected["request"] = opportunity;
+            crate::native_manual::TEST_STATE_READS.with(|v| v.set(0));
+            let (active, work) = observe(selected, Resolution::Full);
+            assert!(work.contains(&"assignment-requirements"));
+            assert_eq!(crate::native_manual::TEST_STATE_READS.with(|v| v.get()), 1);
+            assert_eq!(active["task_requirements"]["result"]["status"], "resolved");
+        }
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
     fn optional_builders_are_bypassed_and_selected_proof_keeps_exact_authority() {
         let root = std::env::temp_dir().join(format!(
             "aw-frontier-{}-{}",

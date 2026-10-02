@@ -11,6 +11,13 @@ stays local. Separate why delegation helps from whether any target is currently
 eligible. Request current task requirements and Assignment assessment; do not
 nominate or authorize a target in the method itself.
 
+Configured targets alone remain latent under `local-preferred`. Ordinary entry
+offers `task_requirements.opportunity_request` without constructing worker
+feasibility or a comparative assessment. For a concrete bounded delegation
+opportunity, fill that current task-requirements request and follow the resulting
+owner requests. Best-fit policies, current bindings and source-required executors
+retain their existing relevance. Configuration alone does not select a worker.
+
 Supply the concrete result and proof classes the task needs, using the current
 owner's supported vocabulary. For example, code changes use `unapplied-patch`,
 not an invented `patch` class. Empty template defaults do not describe a code

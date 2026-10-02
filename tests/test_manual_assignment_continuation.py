@@ -224,7 +224,8 @@ def test_manual_snapshot_fresh_return_and_authority(tmp_path, shared_core_binary
         assert retired["value"]["status"] == "retired"
         assert not any((tmp_path / f["path"]).exists() for f in files)
         assert call(invocation=action)["value"] == retired["value"]
-        assert call()["task_requirements"]["delegation"]["manual_continuation"]["status"] == "retired"
+        fresh = call()["task_requirements"]["delegation"]
+        assert "manual_continuation" not in fresh and "retirement" not in fresh
         return retired
 
     unknown = config.parent / "local/delegation-runs/unknown.keep"

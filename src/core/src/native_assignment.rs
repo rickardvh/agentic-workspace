@@ -184,7 +184,10 @@ pub(crate) fn view(
         .iter()
         .find(|o| o["owner"] == "assignment")
         .unwrap();
-    if configuration["assignment_requirements"]["configured"] != true && policy["binding"] != true {
+    if (requirements["status"] == "not-applicable"
+        || configuration["assignment_requirements"]["configured"] != true)
+        && policy["binding"] != true
+    {
         if request.is_some() {
             return Err(CoreError::new(
                 "assignment assessment has no current configured scope",

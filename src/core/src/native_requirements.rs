@@ -41,6 +41,7 @@ pub(crate) fn view(
     input_request: Option<&Value>,
     contract: &Value,
     baseline: Option<&Value>,
+    requested: bool,
 ) -> Result<Value, CoreError> {
     if configuration["assignment_requirements"]["configured"] != true {
         if request.is_some()
@@ -58,7 +59,6 @@ pub(crate) fn view(
     let current_work = planning_subject
         .map(|s| json!({"id":s["id"],"revision":s["revision"]}))
         .unwrap_or_else(|| task_identity.clone());
-    let mut source_work = crate::planning::assignment_work(target, planning_subject)?;
     let mut required = configuration["assignment_requirements"]["required_execution_guarantees"]
         .as_array()
         .cloned()
@@ -109,6 +109,25 @@ pub(crate) fn view(
         "request_kind":"assignment/judge-task-requirements/v1","arguments":{
             "task_identity":task_identity,"current_work":current_work,"role":"executor",
             "required_result_classes":[],"required_proof_classes":[],"verification_identity":null}});
+    // Profiles are latent capability. Enter comparative/execution construction
+    // only for a current opportunity, binding policy or source-shaped executor.
+    let relevant = requested
+        || configuration["assignment_policy"]["assignment_policy"] != "local-preferred"
+        || !required.is_empty()
+        || posture.values().any(|p| p["independent_context"] == true)
+        || planning_subject.is_some_and(|s| s["state"]["assignment_inputs"].is_object())
+        || verification["strategy"]["protocols"]
+            .as_object()
+            .is_some_and(|p| p.values().any(|v| v["analysis"].is_object()));
+    if !relevant {
+        return Ok(
+            json!({"status":"not-applicable","requests":[],"opportunity_request":template,
+            "claim_boundary":"Configured targets remain latent. Submit current task requirements only for a concrete delegation opportunity; no assessment, binding or execution authority is inferred."}),
+        );
+    }
+    #[cfg(test)]
+    crate::native_frontier::built("assignment-requirements");
+    let mut source_work = crate::planning::assignment_work(target, planning_subject)?;
     if source_work["status"] == "ready" {
         template["arguments"]["required_result_classes"] =
             json!([source_work["definition"]["result_class"]]);

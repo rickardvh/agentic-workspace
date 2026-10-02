@@ -13,6 +13,10 @@ pub(crate) const OP: &str = "delegation.record-manual";
 pub(crate) const RETIRE: &str = "delegation/retire-manual/v1";
 pub(crate) const RETIRE_OP: &str = "delegation.retire-manual";
 const EFFECT: &str = "delegation-carriage";
+#[cfg(test)]
+thread_local! {
+    pub(crate) static TEST_STATE_READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 fn err(e: impl ToString) -> CoreError {
     CoreError::new(e.to_string())
 }
@@ -81,6 +85,8 @@ fn pointer(packet: &Value) -> Result<String, CoreError> {
     ))
 }
 fn held(target: &Path, path: &str) -> Result<Option<Value>, CoreError> {
+    #[cfg(test)]
+    TEST_STATE_READS.with(|v| v.set(v.get() + 1));
     let root = Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(err)?;
     let Some(bytes) = crate::native_verification::read(&root, path).map_err(err)? else {
         return Ok(None);
@@ -116,7 +122,9 @@ fn held(target: &Path, path: &str) -> Result<Option<Value>, CoreError> {
         } else {
             return Err(err("Unknown manual retirement state; preserve."));
         }
-        return Ok(Some(json!({"retirement":link})));
+        return Ok(Some(
+            json!({"retirement":link,"pointer_revision":crate::native_intent::hash(&bytes)}),
+        ));
     }
     if link["kind"] != "agentic-workspace/manual-continuation/v1" {
         return Err(err(
@@ -166,23 +174,24 @@ fn held(target: &Path, path: &str) -> Result<Option<Value>, CoreError> {
         ));
     }
     Ok(Some(
-        json!({"record":record,"custody":link["custody"],"committed":committed,"history":link.get("history").cloned().unwrap_or_else(||json!([link["custody"]])),"previous_retirement":link["previous_retirement"]}),
+        json!({"record":record,"custody":link["custody"],"committed":committed,"history":link.get("history").cloned().unwrap_or_else(||json!([link["custody"]])),"previous_retirement":link["previous_retirement"],"pointer_revision":crate::native_intent::hash(&bytes)}),
     ))
 }
-pub(crate) fn continuation(
+pub(crate) fn state(
     target: &Path,
     task: &str,
     changed: &[String],
-) -> Result<Value, CoreError> {
-    let identity = crate::direct_task::subject(task, changed)?;
-    let path = format!(
-        ".agentic-workspace/local/delegation-manual/{}.json",
-        digest(&identity)?.replace(':', "-")
-    );
-    let Some(held) = held(target, &path)? else {
+) -> Result<Option<Value>, CoreError> {
+    held(target, &task_pointer(task, changed)?)
+}
+pub(crate) fn continuation(held: Option<&Value>, explicit: bool) -> Result<Value, CoreError> {
+    let Some(held) = held else {
         return Ok(Value::Null);
     };
     if held["retirement"].is_object() {
+        if held["retirement"]["status"] == "retired" && !explicit {
+            return Ok(Value::Null);
+        }
         return Ok(
             json!({"status":held["retirement"]["status"],"packet_revision":held["retirement"]["packet_revision"],"claim_boundary":"Snapshot carriage retired or exact local retirement pending; no external execution or completion is inferred."}),
         );
@@ -227,6 +236,7 @@ pub(crate) fn view(
     handoff: &Value,
     submitted: &[Value],
     contract: &Value,
+    state: Option<&Value>,
 ) -> Result<Value, CoreError> {
     let packet = &handoff["packet"];
     let mut out = json!({"status":"manual-export","requests":[],"observation":null,"observed_invocation":null,"contribution":{"owner":"delegation","revision":digest(packet)?,"settled":true,"actions":[]},"claim_boundary":"Manual preparation/reporting never proves execution identity or supplies proof/approval/completion."});
@@ -237,7 +247,7 @@ pub(crate) fn view(
     }
     let read = submitted.iter().find(|r| r["request_kind"] == READ);
     let returned = &handoff["observation"]["returned"];
-    let mut previous = held(target, &pointer(packet)?)?;
+    let mut previous = state.cloned();
     if previous
         .as_ref()
         .is_some_and(|h| h["retirement"].is_object())
@@ -676,9 +686,10 @@ pub(crate) fn retirement(
     submitted: &[Value],
     contract: &Value,
     owners: &Value,
+    state: Option<&Value>,
 ) -> Result<Value, CoreError> {
     let path = task_pointer(task, changed)?;
-    let Some(held) = held(target, &path)? else {
+    let Some(held) = state else {
         return Ok(Value::Null);
     };
     if held["retirement"].is_object() {
@@ -707,7 +718,7 @@ pub(crate) fn retirement(
                 json!({"status":link["status"],"contribution":{"owner":"delegation","revision":source,"settled":false,"actions":[action]},"recovery_invocation":invocation}),
             );
         }
-        return Ok(json!({"status":"retired"}));
+        return Ok(Value::Null);
     }
     let stage = &held["record"]["outcome"]["value"]["status"];
     if held["committed"] != true
@@ -797,11 +808,8 @@ pub(crate) fn retirement(
     if files.len() > 20 {
         return Err(err("Manual retirement exceeds exact file bound; preserve."));
     }
-    let pointer_bytes = crate::native_verification::read(&root, &path)
-        .map_err(err)?
-        .ok_or_else(|| err("Manual pointer unavailable"))?;
     let source = digest(
-        &json!({"work":work,"pointer_revision":crate::native_intent::hash(&pointer_bytes),"files":files,"owner_references":references(owners,&files)}),
+        &json!({"work":work,"pointer_revision":held["pointer_revision"],"files":files,"owner_references":references(owners,&files)}),
     )?;
     let template = request(
         RETIRE,
@@ -832,7 +840,7 @@ pub(crate) fn retirement(
         if r["arguments"]["pending_work"] == true || r["arguments"]["evidence_needed"] == true {
             out["status"] = json!("retirement-held-by-disposition");
         } else {
-            out["contribution"] = json!({"owner":"delegation","revision":source,"settled":false,"actions":[{"operation_id":RETIRE_OP,"dependency_revision":source,"arguments":{"target":target,"pointer":path,"pointer_revision":crate::native_intent::hash(&pointer_bytes),"packet_revision":held["record"]["outcome"]["value"]["packet_revision"],"files":files,"reason":r["arguments"]["reason"]},"effects":[EFFECT],"source_requests":[r]}]});
+            out["contribution"] = json!({"owner":"delegation","revision":source,"settled":false,"actions":[{"operation_id":RETIRE_OP,"dependency_revision":source,"arguments":{"target":target,"pointer":path,"pointer_revision":held["pointer_revision"],"packet_revision":held["record"]["outcome"]["value"]["packet_revision"],"files":files,"reason":r["arguments"]["reason"]},"effects":[EFFECT],"source_requests":[r]}]});
         }
     }
     Ok(out)

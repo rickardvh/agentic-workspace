@@ -91,6 +91,26 @@ sources keep their smaller limit and effect custody still authenticates both.
 
 ## Lane delivery
 
+The approved #3765 re-review identified parent-lane quietness follow-ups. Passive
+`local-preferred` targets now expose only the existing opportunity request; they
+do not build task execution feasibility, comparative Assignment or outcome
+evidence until an explicit request, current binding, best-fit policy or
+source-shaped executor makes it relevant. Unconfigured work remains quiet.
+Each public resolution shares one exact manual state read across manual projection,
+continuation and retirement. Retired tombstones retain replay custody internally
+without adding public fields to later ordinary entry; pending and interrupted
+work stays visible. The runtime construction check measures the omitted builder
+and single read in full and frontier entry. The facade journeys exercise explicit
+opportunity, source-required guarantees, advisory policy and stale-work rejection.
+Manual lifecycle, cleanup and interrupted-recovery coverage is retained. These
+changes do not expand the unrelated Planning expectation correction.
+
+The follow-up validation passed 207 focused public-journey cases across the review
+and regression runs, 21 catalogue/interface checks and 202 Rust tests (three
+subprocess-only fixtures remain intentionally ignored by the ordinary harness).
+Clippy passed with warnings denied; generated interfaces/catalogues, native source
+boundaries, Markdown, Python lint/type checks and Rust formatting are current.
+
 The four stacked slices cover policy, Planning, Verification and manual delivery.
 The live worker exercise is shared evidence for the lane. Independent review and
 merge remain outside implementer authority. Parent-lane closeout also retains the
