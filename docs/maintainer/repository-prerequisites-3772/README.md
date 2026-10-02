@@ -160,33 +160,56 @@ the exact admitted commit from the snapshot root, which has no Git database
 (`818c69500c3332c5`). The assertion remains intact. The full host suite passed
 32 cases, but that result does not satisfy the selected isolated proof.
 
-Independent review identified this as an unresolved closeout requirement and
-requested removal of the incomplete Verification repair. The snapshot input list,
-scenario hint and generation command have been restored to their pre-PR values.
-This guidance leaf does not introduce a new snapshot contract or carry the
-incomplete infrastructure expansion. The stale maintainer command correction
-remains. The selected isolated proof requires a complete, proportionate repair
-through Verification before this PR can be marked ready or close #3772.
-Rerunning the exact startup command after restoring the manifest failed again
-(`0a31b068e96288ab`, exit 1, 32 session-setup errors): its shared fixture could
-not complete the native Cargo build in that snapshot. No test pass is inferred
-from that run; the earlier Git-source failure also remains unresolved.
+Independent review correctly rejected treating the selected isolated check as
+optional and requested removal of the incomplete repair. The broad directory
+additions, changed scenario hint and temporary bare-Git generation command were
+removed. Restoring the original snapshot exposed its missing native build inputs
+again (`0a31b068e96288ab`, exit 1, 32 session-setup errors).
+
+The complete repair preserves both original commands and every assertion. It adds
+22 exact files, about 160 KB per snapshot: missing declared portable and maintenance
+generation sources, activation-registry procedures, the startup fixture's root
+instructions, configuration and Verification manifest, and Git attributes.
+Existing directory coverage is reused. No whole documentation, plugin, fallback,
+Memory or tool-skill directory is added, and no local state or Git history is copied
+into a proof snapshot.
+
+The machine-local, immutable tool image contains a genuine 9,327,147-byte shallow
+Git repository fetched from this checkout at the configured decision-record commit
+`b4838e325757e523edbdccc51c27a769b8293f43`. Standard Git configuration maps the
+snapshot root's fetch URL to that repository and supplies Git discovery
+for the read-only worktree. It serves real commit objects; no fake Git command,
+test monkeypatch, skip or weakened revision assertion is involved. Git metadata
+stays in the read-only image. Changing the configured commit requires preparing
+and pinning a new image, rather than treating the old success as current.
+
+Configuration's exact edit operation pinned image
+`sha256:664812a80e822cf8a41798b18b7b4f2990da1d0d340247a2c65306f9bf322dab`.
+Native Verification then passed the full isolated startup/Memory command, including
+the formerly failing Git-source test: 32 passed (`cb35f3af834641d2`). The unchanged
+plain generation command also passed (`a214ca0b25bbcb8e`). Both ran in the existing
+Linux executor with network disabled, read-only source and image, dropped
+privileges, and only the existing temporary/scratch mounts writable. These are
+actual isolated executions, not substituted host results. The source prerequisite
+and Git-source failures are resolved. The stale maintainer command correction
+remains.
 
 A changed-file structured inventory check passed. The full inventory audit
 reported four pre-existing unclassified plugin metadata files under the canonical
 and payload `.agentic-workspace/plugins/agentic-workspace-entry` directories;
 this patch does not claim that broader audit passed.
 
-The retained intent interpretation and documentation assessments were refreshed
-through their supported AW operations. The isolated proof gap remains open;
-the passing host checks and finite consumer observations are bounded evidence,
-not a waiver of that requirement. PR #3773 remains a draft. Independent review
+The retained intent interpretation and documentation assessments are refreshed
+through their supported AW operations. The finite consumer observations and passing
+isolated checks establish their bounded behaviours; independent PR review still
 belongs to an externally initiated reviewer.
 
 This evidence supports the installed authoring-to-consumption path on this host.
 It supplies no independent review, authenticated readiness for arbitrary
-environments, provider/OS matrix or lifetime-savings claim. The remaining isolated
-proof gap prevents completion even though the finite behavioural exercise passed.
+environments, provider/OS matrix or lifetime-savings claim. The proof strategy keeps
+the existing high requirement for proof integrity and uses the focused declaration
+checks and actual isolated runs for this repair. Broader testing requires a named
+uncovered behaviour.
 
 ## Reproduce the finite exercise
 
@@ -210,5 +233,20 @@ Preserve first failures and evaluate actual events and environment metadata,
 not command mentions or agent claims alone. The original controller and raw
 streams remain in task-owned scratch
 `1dc9bea44ad4584fdb24b8a8d202316f3afea9e624bdd10ace9d01c5c798eba7`.
-Dispose of the task resource through its resource owner after the open review
-and proof requirements are resolved. Do not put this provider exercise in CI.
+Dispose of the task resource through its resource owner after the review's evidence
+retention is resolved. Do not put this provider exercise in CI.
+
+For the isolated checks, prepare the existing locked uv environment and current
+native pair in a tool image. Fetch the configured decision-record commit into a
+shallow Git repository there; verify the fetched object has that exact identity.
+Set its worktree to `<snapshot-root>`, put `gitdir: <image-git-dir>` in the image's
+`.git` discovery file at the filesystem root, and use Git's
+`url.<image-git-dir>.insteadOf=<snapshot-root>` mapping. These placeholders name
+the executor's source mount and the prepared image's actual Git directory.
+Set `GIT_DISCOVERY_ACROSS_FILESYSTEM=1` and select the image's Git configuration
+through `GIT_CONFIG_GLOBAL`. Its explicit `safe.directory` entries are the known
+image filesystem root, snapshot mount and image Git directory; no wildcard
+exception is needed. Keep the image read-only and pin its immutable identity through
+Configuration. Native Verification stages the declared current sources separately
+and runs the original commands. The prepared image does not certify later source
+or configuration changes.
