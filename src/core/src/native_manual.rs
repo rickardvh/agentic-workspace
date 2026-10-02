@@ -10,6 +10,8 @@ pub(crate) const READ: &str = "delegation/read-manual-result/v1";
 pub(crate) const FINISH: &str = "delegation/settle-manual/v1";
 pub(crate) const DISPOSE: &str = "delegation/dispose-manual/v1";
 pub(crate) const OP: &str = "delegation.record-manual";
+pub(crate) const RETIRE: &str = "delegation/retire-manual/v1";
+pub(crate) const RETIRE_OP: &str = "delegation.retire-manual";
 const EFFECT: &str = "delegation-carriage";
 fn err(e: impl ToString) -> CoreError {
     CoreError::new(e.to_string())
@@ -55,7 +57,11 @@ pub(crate) fn declarations() -> Vec<Value> {
         json!({"kind":READ,"result_kind":"agentic-workspace/manual-result-observation/v1","input_schema":shape(json!({"custody":{"type":"object"}}),json!(["custody"]))}),
         json!({"kind":FINISH,"result_kind":"agentic-workspace/manual-carriage/v1","input_schema":shape(json!({"admission_revision":{"type":"string"}}),json!(["admission_revision"]))}),
         json!({"kind":DISPOSE,"result_kind":"agentic-workspace/manual-carriage/v1","input_schema":shape(json!({"custody":{"type":"object"},"reason":{"type":"string","minLength":1,"maxLength":2048}}),json!(["custody","reason"]))}),
+        json!({"kind":RETIRE,"result_kind":"agentic-workspace/manual-retirement/v1","input_schema":shape(json!({"custody":{"type":"object"},"pending_work":{"type":"boolean"},"evidence_needed":{"type":"boolean"},"reason":{"type":"string","minLength":1,"maxLength":2048}}),json!(["custody","pending_work","evidence_needed","reason"]))}),
     ]
+}
+pub(crate) fn retirement_operation() -> Value {
+    json!({"id":RETIRE_OP,"semantic_revision":"manual-retirement-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"pointer":{"type":"string"},"pointer_revision":{"type":"string"},"packet_revision":{"type":"string"},"files":{"type":"array","maxItems":20,"items":{"type":"object"}},"reason":{"type":"string"}},"required":["target","pointer","pointer_revision","packet_revision","files","reason"],"additionalProperties":false},"effects":[EFFECT],"reads":["delegation"],"result_kind":"agentic-workspace/manual-retirement/v1"})
 }
 pub(crate) fn operation() -> Value {
     json!({"id":OP,"semantic_revision":"manual-carriage-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"packet":{"type":"object"},"stage":{"enum":["exported","reported","admitted-for-use","admitted-partial-observation","repair-required","rejected","disposed"]},"returned":{"type":["object","null"]},"provenance":{"type":["object","null"]},"admission":{"type":["object","null"]}},"required":["target","packet","stage","returned","provenance","admission"],"additionalProperties":false},"effects":[EFFECT],"reads":["delegation"],"result_kind":"agentic-workspace/manual-carriage/v1"})
@@ -80,6 +86,38 @@ fn held(target: &Path, path: &str) -> Result<Option<Value>, CoreError> {
         return Ok(None);
     };
     let link: Value = serde_json::from_slice(&bytes).map_err(err)?;
+    if link["kind"] == "agentic-workspace/manual-retirement/v1" {
+        if link["status"] == "retired" {
+            let record = crate::attempt_store::inspect_committed(
+                &target.to_string_lossy(),
+                link["custody"].clone(),
+            )?;
+            if record["invocation"] != link["invocation"]
+                || record["outcome"]["value"]["status"] != "retired"
+                || record["invocation"]["operation_id"] != RETIRE_OP
+                || record["invocation"]["source_owner"] != "delegation"
+            {
+                return Err(err("Manual retirement custody differs; preserve."));
+            }
+        } else if link["status"] == "retiring" {
+            let prepared = crate::attempt_store::prepare_commit(
+                &target.to_string_lossy(),
+                link["custody"].clone(),
+                retirement_outcome(&link["invocation"]),
+            )?;
+            if prepared["record"]["invocation"] != link["invocation"]
+                || prepared["custody"] != link["planned_custody"]
+                || link["invocation"]["operation_id"] != RETIRE_OP
+                || link["invocation"]["source_owner"] != "delegation"
+                || link["invocation"]["arguments"]["pointer"] != path
+            {
+                return Err(err("Manual retiring custody differs; preserve."));
+            }
+        } else {
+            return Err(err("Unknown manual retirement state; preserve."));
+        }
+        return Ok(Some(json!({"retirement":link})));
+    }
     if link["kind"] != "agentic-workspace/manual-continuation/v1" {
         return Err(err(
             "Manual continuation custody unresolved; preserve it for its owner.",
@@ -128,7 +166,7 @@ fn held(target: &Path, path: &str) -> Result<Option<Value>, CoreError> {
         ));
     }
     Ok(Some(
-        json!({"record":record,"custody":link["custody"],"committed":committed}),
+        json!({"record":record,"custody":link["custody"],"committed":committed,"history":link.get("history").cloned().unwrap_or_else(||json!([link["custody"]])),"previous_retirement":link["previous_retirement"]}),
     ))
 }
 pub(crate) fn continuation(
@@ -144,6 +182,11 @@ pub(crate) fn continuation(
     let Some(held) = held(target, &path)? else {
         return Ok(Value::Null);
     };
+    if held["retirement"].is_object() {
+        return Ok(
+            json!({"status":held["retirement"]["status"],"packet_revision":held["retirement"]["packet_revision"],"claim_boundary":"Snapshot carriage retired or exact local retirement pending; no external execution or completion is inferred."}),
+        );
+    }
     let invocation = &held["record"]["invocation"];
     if held["committed"] != true {
         return Ok(
@@ -195,6 +238,31 @@ pub(crate) fn view(
     let read = submitted.iter().find(|r| r["request_kind"] == READ);
     let returned = &handoff["observation"]["returned"];
     let mut previous = held(target, &pointer(packet)?)?;
+    if previous
+        .as_ref()
+        .is_some_and(|h| h["retirement"].is_object())
+    {
+        let retired = &previous.as_ref().unwrap()["retirement"];
+        if retired["status"] != "retired" || retired["packet_revision"] == digest(packet)? {
+            out["status"] = json!("manual-carriage-retired-or-retiring");
+            return Ok(out);
+        }
+        previous = None;
+    }
+    if previous.as_ref().is_some_and(|h| {
+        h["record"]["invocation"]["arguments"]["packet"] != *packet
+            && matches!(
+                h["record"]["outcome"]["value"]["status"].as_str(),
+                Some("admitted-for-use" | "repair-required" | "rejected" | "disposed")
+            )
+    }) && !submitted.iter().any(|r| r["request_kind"] == DISPOSE)
+    {
+        out["status"] = json!("prior-manual-retirement-required");
+        out["next_route"] = json!(
+            "Use the current manual retirement request after preserving needed owner evidence; terminal carriage cannot be overwritten."
+        );
+        return Ok(out);
+    }
     if let Some(disposed) = previous.as_ref().filter(|h| {
         h["record"]["outcome"]["value"]["status"] == "disposed"
             && submitted.iter().any(|r| r["request_kind"] == DISPOSE)
@@ -307,6 +375,16 @@ pub(crate) fn view(
                 "This manual assignment already has a retained return; recover and disposition it before replacing material.",
             ));
         }
+        if previous.as_ref().is_some_and(|h| {
+            h["record"]["invocation"]["arguments"]["packet"] == *packet
+                && h["record"]["invocation"]["arguments"]["stage"]
+                    == if reporting { "reported" } else { "exported" }
+                && h["record"]["invocation"]["source_requests"] != json!(submitted)
+        }) {
+            return Err(err(
+                "Manual stage is already retained; recover its exact reentry instead of creating another carriage copy.",
+            ));
+        }
         let action = json!({"operation_id":OP,"dependency_revision":source,"arguments":{"target":target,"packet":packet,"stage":if reporting{"reported"}else{"exported"},"returned":if reporting{returned.clone()}else{Value::Null},"provenance":if reporting{value["arguments"].clone()}else{Value::Null},"admission":null},"effects":[EFFECT],"source_requests":submitted});
         out["contribution"]["actions"] = json!([action]);
         out["contribution"]["settled"] = json!(false);
@@ -382,6 +460,25 @@ pub(crate) fn execute(
     let root = Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(err)?;
     let path = pointer(packet)?;
     let previous = held(target, &path)?;
+    let mut history = previous
+        .as_ref()
+        .and_then(|h| h["history"].as_array())
+        .cloned()
+        .unwrap_or_default();
+    let previous_retirement = previous.as_ref().map_or(Value::Null, |h| {
+        if h["retirement"].is_object() {
+            h["retirement"]["custody"].clone()
+        } else {
+            h["previous_retirement"].clone()
+        }
+    });
+    let paths = crate::attempt_store::write_paths(invocation)?;
+    let known_stage = history.iter().any(|c| c["attempt"]["path"] == paths[0]);
+    if !known_stage && history.len() >= 4 {
+        return Err(err(
+            "Manual lifecycle exceeds four retained stages; preserve and disposition existing evidence before replacement.",
+        ));
+    }
     let run = format!(
         ".agentic-workspace/local/delegation-runs/manual-{}.json",
         digest(&invocation["idempotency_key"])?.replace(':', "-")
@@ -490,6 +587,11 @@ pub(crate) fn execute(
             &json!({"custody":prepared["custody"],"outcome":outcome}),
         )?;
         let link = json!({"kind":"agentic-workspace/manual-continuation/v1","packet_revision":digest(packet)?,"custody":prepared["custody"],"terminal":terminal});
+        let mut link = link;
+        history.retain(|c| c["attempt"]["path"] != paths[0]);
+        history.push(prepared["custody"].clone());
+        link["history"] = json!(history);
+        link["previous_retirement"] = previous_retirement.clone();
         write_continuation(&root, &path, &invocation["idempotency_key"], &link)?;
         crate::attempt_store::commit(
             json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
@@ -513,8 +615,331 @@ pub(crate) fn execute(
                     > rank(&committed["record"]["outcome"]["value"]["status"])
     }) {
         let link = json!({"kind":"agentic-workspace/manual-continuation/v1","packet_revision":digest(packet)?,"custody":committed["custody"]});
+        let mut link = link;
+        history.retain(|c| c["attempt"]["path"] != paths[0]);
+        history.push(committed["custody"].clone());
+        link["history"] = json!(history);
+        link["previous_retirement"] = previous_retirement;
         write_continuation(&root, &path, &invocation["idempotency_key"], &link)?;
     }
+    Ok(
+        json!({"outcome":committed["record"]["outcome"],"custody":committed["custody"],"post_effect_changed_paths":[]}),
+    )
+}
+
+fn task_pointer(task: &str, changed: &[String]) -> Result<String, CoreError> {
+    Ok(format!(
+        ".agentic-workspace/local/delegation-manual/{}.json",
+        digest(&crate::direct_task::subject(task, changed)?)?.replace(':', "-")
+    ))
+}
+fn references(value: &Value, files: &[Value]) -> bool {
+    match value {
+        Value::String(s) => files
+            .iter()
+            .any(|f| s.contains(f["path"].as_str().unwrap())),
+        Value::Array(a) => a.iter().any(|v| references(v, files)),
+        Value::Object(o) => o.values().any(|v| references(v, files)),
+        _ => false,
+    }
+}
+fn add_file(
+    root: &Dir,
+    files: &mut Vec<Value>,
+    path: &str,
+    expected: Option<&Value>,
+) -> Result<(), CoreError> {
+    if let Some(bytes) = crate::native_verification::read(root, path).map_err(err)? {
+        let revision = json!(crate::native_intent::hash(&bytes));
+        if expected.is_some_and(|r| r != &revision) {
+            return Err(err(
+                "Manual retirement source changed; preserve exact evidence.",
+            ));
+        }
+        let file = json!({"path":path,"revision":revision});
+        if !files.contains(&file) {
+            files.push(file);
+        }
+    } else if expected.is_some() {
+        return Err(err(
+            "Manual retirement evidence missing; recover custody before cleanup.",
+        ));
+    }
+    Ok(())
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn retirement(
+    target: &Path,
+    task: &str,
+    changed: &[String],
+    work: &Value,
+    submitted: &[Value],
+    contract: &Value,
+    owners: &Value,
+) -> Result<Value, CoreError> {
+    let path = task_pointer(task, changed)?;
+    let Some(held) = held(target, &path)? else {
+        return Ok(Value::Null);
+    };
+    if held["retirement"].is_object() {
+        let link = &held["retirement"];
+        if link["status"] == "retiring" || submitted.iter().any(|r| r["request_kind"] == RETIRE) {
+            let invocation = &link["invocation"];
+            if references(
+                owners,
+                invocation["arguments"]["files"]
+                    .as_array()
+                    .ok_or_else(|| err("Retirement cleanup set missing"))?,
+            ) {
+                return Ok(json!({"status":"retirement-held-by-current-owner"}));
+            }
+            if invocation["source_requests"][0]["task_identity"] != *work {
+                return Err(err(
+                    "Manual retirement belongs to different current work; preserve.",
+                ));
+            }
+            crate::prepare_request_value(
+                json!({"request":invocation["source_requests"][0],"current_work":work,"capability_contract":contract}),
+            )?;
+            let source = &invocation["source_requests"][0]["source_revision"];
+            let action = json!({"operation_id":RETIRE_OP,"dependency_revision":source,"arguments":invocation["arguments"],"effects":invocation["effects"],"source_requests":invocation["source_requests"]});
+            return Ok(
+                json!({"status":link["status"],"contribution":{"owner":"delegation","revision":source,"settled":false,"actions":[action]},"recovery_invocation":invocation}),
+            );
+        }
+        return Ok(json!({"status":"retired"}));
+    }
+    let stage = &held["record"]["outcome"]["value"]["status"];
+    if held["committed"] != true
+        || !matches!(
+            stage.as_str(),
+            Some("admitted-for-use" | "repair-required" | "rejected" | "disposed")
+        )
+    {
+        if submitted.iter().any(|r| r["request_kind"] == RETIRE) {
+            return Err(err(
+                "Pending, partial or uncertain manual carriage cannot be retired.",
+            ));
+        }
+        return Ok(Value::Null);
+    }
+    let root = Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(err)?;
+    let mut files = Vec::new();
+    let history = held["history"]
+        .as_array()
+        .ok_or_else(|| err("Manual lifecycle custody missing; preserve."))?;
+    if history.is_empty() || history.len() > 4 {
+        return Err(err("Manual lifecycle custody exceeds bound; preserve."));
+    }
+    let mut custodies = history.clone();
+    if held["previous_retirement"].is_object() {
+        custodies.push(held["previous_retirement"].clone());
+    }
+    for custody in custodies {
+        let record =
+            crate::attempt_store::inspect_committed(&target.to_string_lossy(), custody.clone())?;
+        let operation = &record["invocation"]["operation_id"];
+        if record["invocation"]["source_owner"] != "delegation"
+            || ![json!(OP), json!(RETIRE_OP)].contains(operation)
+        {
+            return Err(err(
+                "Manual retirement requires exact delegation-owned custody; preserve.",
+            ));
+        }
+        if operation == OP && pointer(&record["invocation"]["arguments"]["packet"])? != path {
+            return Err(err(
+                "Manual retirement custody belongs to another task; preserve.",
+            ));
+        }
+        if operation == RETIRE_OP && record["invocation"]["arguments"]["pointer"] != path {
+            return Err(err(
+                "Previous retirement belongs to another task; preserve.",
+            ));
+        }
+        for key in ["attempt", "committed"] {
+            add_file(
+                &root,
+                &mut files,
+                custody[key]["path"]
+                    .as_str()
+                    .ok_or_else(|| err("Exact retirement evidence path missing"))?,
+                Some(&custody[key]["revision"]),
+            )?;
+        }
+        if operation == OP {
+            let carrier = format!(
+                ".agentic-workspace/local/delegation-runs/manual-{}.json",
+                digest(&record["invocation"]["idempotency_key"])?.replace(':', "-")
+            );
+            for reference in [&carrier, &format!("{carrier}.terminal.json")] {
+                if let Some(bytes) =
+                    crate::native_verification::read(&root, reference).map_err(err)?
+                {
+                    let body: Value = serde_json::from_slice(&bytes).map_err(err)?;
+                    if reference == &carrier {
+                        if body["invocation"] != record["invocation"]
+                            || body["custody"]["attempt"] != custody["attempt"]
+                        {
+                            return Err(err(
+                                "Manual carrier differs from lifecycle custody; preserve.",
+                            ));
+                        }
+                    } else if body["custody"] != custody || body["outcome"] != record["outcome"] {
+                        return Err(err(
+                            "Manual terminal differs from lifecycle custody; preserve.",
+                        ));
+                    }
+                    add_file(&root, &mut files, reference, None)?;
+                }
+            }
+        }
+    }
+    if files.len() > 20 {
+        return Err(err("Manual retirement exceeds exact file bound; preserve."));
+    }
+    let pointer_bytes = crate::native_verification::read(&root, &path)
+        .map_err(err)?
+        .ok_or_else(|| err("Manual pointer unavailable"))?;
+    let source = digest(
+        &json!({"work":work,"pointer_revision":crate::native_intent::hash(&pointer_bytes),"files":files,"owner_references":references(owners,&files)}),
+    )?;
+    let template = request(
+        RETIRE,
+        json!({"custody":held["custody"],"pending_work":true,"evidence_needed":true,"reason":""}),
+        work,
+        &source,
+        contract,
+    );
+    let mut out = json!({"status":"retirement-disposition-required","requests":[template],"claim_boundary":"Settlement does not make evidence disposable. Preserve pending work and needed evidence through its owner before explicit retirement."});
+    if references(owners, &files) {
+        out["status"] = json!("retirement-held-by-current-owner");
+        out["requests"] = json!([]);
+        return Ok(out);
+    }
+    if let Some(r) = submitted.iter().find(|r| r["request_kind"] == RETIRE) {
+        validate(r, work, &source, contract)?;
+        if r["arguments"]["custody"] != held["custody"]
+            || r["arguments"]["reason"]
+                .as_str()
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+        {
+            return Err(err(
+                "Retirement requires exact current custody and an explicit evidence disposition.",
+            ));
+        }
+        if r["arguments"]["pending_work"] == true || r["arguments"]["evidence_needed"] == true {
+            out["status"] = json!("retirement-held-by-disposition");
+        } else {
+            out["contribution"] = json!({"owner":"delegation","revision":source,"settled":false,"actions":[{"operation_id":RETIRE_OP,"dependency_revision":source,"arguments":{"target":target,"pointer":path,"pointer_revision":crate::native_intent::hash(&pointer_bytes),"packet_revision":held["record"]["outcome"]["value"]["packet_revision"],"files":files,"reason":r["arguments"]["reason"]},"effects":[EFFECT],"source_requests":[r]}]});
+        }
+    }
+    Ok(out)
+}
+
+fn retirement_outcome(invocation: &Value) -> Value {
+    let args = &invocation["arguments"];
+    json!({"status":"applied","effects":[EFFECT],"value":{"kind":"agentic-workspace/manual-retirement/v1","status":"retired","packet_revision":args["packet_revision"],"removed_files":args["files"].as_array().map_or(0, Vec::len),"claim_boundary":{"proof":false,"independent_review":false,"completion":false}}})
+}
+pub(crate) fn retire(
+    target: &Path,
+    decision: &Value,
+    invocation: &Value,
+    mut revalidate: impl FnMut() -> Result<(), CoreError>,
+) -> Result<Value, CoreError> {
+    let root = Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(err)?;
+    let args = &invocation["arguments"];
+    let path = args["pointer"]
+        .as_str()
+        .ok_or_else(|| err("Manual retirement pointer missing"))?;
+    let bytes = crate::native_verification::read(&root, path)
+        .map_err(err)?
+        .ok_or_else(|| err("Manual retirement pointer unavailable; preserve"))?;
+    let link: Value = serde_json::from_slice(&bytes).map_err(err)?;
+    let recovering = link["kind"] == "agentic-workspace/manual-retirement/v1";
+    if recovering && link["invocation"] != *invocation {
+        return Err(err(
+            "Manual retirement differs from retained invocation; preserve.",
+        ));
+    }
+    if !recovering && args["pointer_revision"] != crate::native_intent::hash(&bytes) {
+        return Err(err(
+            "Manual continuation changed before retirement; preserve.",
+        ));
+    }
+    revalidate()?;
+    let replay_custody = if recovering
+        && link["planned_custody"]["committed"]["path"]
+            .as_str()
+            .is_some_and(|p| root.exists(p))
+    {
+        link["planned_custody"].clone()
+    } else if recovering {
+        link["custody"].clone()
+    } else {
+        Value::Null
+    };
+    let admission = crate::attempt_store::admit(
+        json!({"target":target,"decision":decision,"invocation":invocation,"custody":replay_custody}),
+    )?;
+    if admission["disposition"] == "replay" {
+        if link["status"] == "retiring" {
+            let mut completed = link.clone();
+            completed["status"] = json!("retired");
+            completed["custody"] = admission["custody"].clone();
+            write_continuation(&root, path, &invocation["idempotency_key"], &completed)?;
+        }
+        return Ok(
+            json!({"outcome":admission["record"]["outcome"],"custody":admission["custody"],"post_effect_changed_paths":[]}),
+        );
+    }
+    // Validate the whole remaining set before removing any byte. During exact
+    // recovery absence is expected; changed or unknown material is preserved.
+    for file in args["files"]
+        .as_array()
+        .ok_or_else(|| err("Exact cleanup set missing"))?
+    {
+        let reference = file["path"]
+            .as_str()
+            .ok_or_else(|| err("Cleanup reference missing"))?;
+        if let Some(bytes) = crate::native_verification::read(&root, reference).map_err(err)? {
+            if file["revision"] != crate::native_intent::hash(&bytes) {
+                return Err(err(
+                    "Manual retirement material changed; preserve and recover exact owner state.",
+                ));
+            }
+        } else if !recovering {
+            return Err(err(
+                "Manual retirement material disappeared; preserve and recover.",
+            ));
+        }
+    }
+    let outcome = retirement_outcome(invocation);
+    let planned = crate::attempt_store::prepare_commit(
+        &target.to_string_lossy(),
+        admission["custody"].clone(),
+        outcome.clone(),
+    )?;
+    let mut retiring = json!({"kind":"agentic-workspace/manual-retirement/v1","status":"retiring","packet_revision":args["packet_revision"],"invocation":invocation,"custody":admission["custody"],"planned_custody":planned["custody"]});
+    write_continuation(&root, path, &invocation["idempotency_key"], &retiring)?;
+    for file in args["files"].as_array().unwrap() {
+        let reference = file["path"].as_str().unwrap();
+        if let Some(bytes) = crate::native_verification::read(&root, reference).map_err(err)? {
+            if file["revision"] != crate::native_intent::hash(&bytes) {
+                return Err(err(
+                    "Manual retirement material changed during cleanup; preserve and recover.",
+                ));
+            }
+            root.remove_file(reference).map_err(err)?;
+        }
+    }
+    let committed = crate::attempt_store::commit(
+        json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
+    )?;
+    retiring["status"] = json!("retired");
+    retiring["custody"] = committed["custody"].clone();
+    write_continuation(&root, path, &invocation["idempotency_key"], &retiring)?;
     Ok(
         json!({"outcome":committed["record"]["outcome"],"custody":committed["custody"],"post_effect_changed_paths":[]}),
     )

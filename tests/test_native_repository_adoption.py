@@ -228,9 +228,11 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     planning_call(invocation=selected["decision_packet"]["primary_action"])
     preserved_planning = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file() and "planning" in p.parts}
     ordinary = planning_call(task="Set up Agentic Workspace in this repository")
-    assert ordinary["planning"]["task_relation"] == "unresolved"
+    # A remembered owner is advisory until this different task selects it.
+    assert ordinary["planning"]["task_relation"] == "no-incumbent"
+    assert ordinary["planning"]["selected_owner"] is None
     maintenance = planning_call(task="Any wording", maintenance="configuration")
-    assert maintenance["planning"]["task_relation"] == "independent"
+    assert maintenance["planning"]["task_relation"] == "no-incumbent"
     assert maintenance["planning"]["status"] == "direct"
     assert maintenance["planning"]["selected_owner"] is None
     policy = tmp_path / ".agentic-workspace/config.toml"
@@ -313,6 +315,17 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
 
 
 def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_path, shared_core_binary, native_cli):
+    manual = ".agentic-workspace/local/delegation-manual/"
+    for ledger in (
+        ROOT / ".agentic-workspace/OWNERSHIP.toml",
+        ROOT / "src/core/contracts/portable_ownership.toml",
+        ROOT / "src/core/payload/.agentic-workspace/OWNERSHIP.toml",
+    ):
+        row = next(row for row in tomllib.loads(ledger.read_text())["managed_surfaces"] if row["path"] == manual)
+        assert row["module"] == "workspace" and row["ownership"] == "module_managed"
+        assert row["kind"] == "structured-local-owner"
+        assert row["uninstall_policy"] == "preserve-current-owner-state"
+        assert row["lifetime"].startswith("pending-or-needed-evidence;")
     source = json.loads((ROOT / "src/tooling/contracts/source_maintenance_surfaces.json").read_text())
     host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
     required = set(source["payload_files"] + source["necessary_surface_files"])
@@ -726,6 +739,8 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
         ".agentic-workspace/verification/evidence/proof.json": b"{}",
         ".agentic-workspace/custom/plugin/config.txt": b"custom extension",
         ".agentic-workspace/local/scratch/retained.bin": b"\xfflocal custody",
+        ".agentic-workspace/local/delegation-manual/pending.json": b'{"pending":"manual assignment"}',
+        ".agentic-workspace/local/delegation-manual/retiring.json": b'{"pending":"exact cleanup recovery"}',
     }
     if not host_declarations:
         for ref in (
@@ -793,7 +808,18 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
 
     assert read()["status"] == "unadopted"
     prepared = action("adopt")
-    removals = prepared["arguments"]["binding"]["state"]["enclave"]["removals"]
+    enclave = prepared["arguments"]["binding"]["state"]["enclave"]
+    removals = enclave["removals"]
+    for name in ("pending.json", "retiring.json"):
+        ref = f".agentic-workspace/local/delegation-manual/{name}"
+        assert ref not in removals
+        # Local owner subtrees are classified without enumerating their contents.
+        _, row = max(
+            ((path, row) for path, row in enclave["entries"].items() if ref.startswith(path + "/")),
+            key=lambda item: len(item[0]),
+        )
+        assert row["owner"] == "workspace" and row["scope"] == "subtree"
+        assert row["class"] == "local-only" and row["lifetime"] == "local"
     assert set([retired, ".agentic-workspace/unknown.txt", ".agentic-workspace/unknown-link", *stale]) <= set(removals)
     forged = copy.deepcopy(prepared)
     forged["arguments"]["binding"]["state"]["updates"]["AGENTS.md"]["after"] = "Forged"

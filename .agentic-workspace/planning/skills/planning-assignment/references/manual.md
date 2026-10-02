@@ -49,3 +49,19 @@ that owner only after pending carriage and needed evidence are safely retained o
 dispositioned. The manual continuation stores one reference for this task, not a
 queue or permanent transcript archive. Host framing, token use and external product
 execution remain unknown unless actually observed.
+
+The workspace-owned, local-only `.agentic-workspace/local/delegation-manual/`
+pointer preserves pending carriage and exact interrupted recovery. Terminal
+settlement or prior disposition offers `delegation.retirement`; it does not make
+the evidence disposable. Preserve material through any owner that still needs it.
+Use the exact retirement request only when no pending work or needed evidence
+remains, setting both disposition flags false and recording the reason. Current
+Planning, Memory or Verification references block retirement. Partial or uncertain
+carriage remains protected.
+
+The resulting owner action removes only the authenticated lifecycle's exact
+packet-bearing effect and run files. It leaves a small retirement receipt and
+pointer; a later lifecycle retires the preceding receipt too. Unknown files are
+preserved. If entry reports `retiring`, follow its exact recovery invocation;
+never scan or delete this namespace yourself. Package adoption and removal preserve
+this local state for its current owner.

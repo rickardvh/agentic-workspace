@@ -21,9 +21,14 @@ fn contract() -> Value {
         .expect("host surface contract")
 }
 fn bytes(root: &Dir, path: &str) -> Result<Option<String>, CoreError> {
-    crate::native_planning::read(root, path)?
-        .map(|b| String::from_utf8(b).map_err(err))
-        .transpose()
+    // The prepared package invocation carries a complete bounded payload, not
+    // one Planning decision source. Keep ordinary sources at their smaller bound.
+    let bytes = if path == RECORD {
+        crate::native_verification::read(root, path).map_err(err)?
+    } else {
+        crate::native_planning::read(root, path)?
+    };
+    bytes.map(|b| String::from_utf8(b).map_err(err)).transpose()
 }
 fn revision(text: &Option<String>) -> Value {
     text.as_ref()
@@ -101,10 +106,11 @@ fn committed(target: &Path, root: &Dir, record: &Value) -> Result<bool, CoreErro
         record["custody"].clone(),
         outcome(&record["invocation"]),
     )?;
-    if bytes(
+    if crate::native_verification::read(
         root,
         prepared["custody"]["committed"]["path"].as_str().unwrap(),
-    )?
+    )
+    .map_err(err)?
     .is_none()
     {
         return Ok(false);

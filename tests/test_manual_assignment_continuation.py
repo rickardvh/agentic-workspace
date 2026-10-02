@@ -91,6 +91,7 @@ def test_manual_snapshot_fresh_return_and_authority(tmp_path, shared_core_binary
     assert retained["status"] == "applied"
     assert call(invocation=retain_action)["value"] == retained["value"]
     assert not (config.parent / "planning").exists()
+    assert "retirement" not in call()["task_requirements"]["delegation"]
 
     # Discard all initiating packet/request context. The native owner locates
     # only this task's retained continuation, without consulting parent chat.
@@ -168,6 +169,7 @@ def test_manual_snapshot_fresh_return_and_authority(tmp_path, shared_core_binary
     assert call()["task_requirements"]["delegation"]["manual_continuation"]["status"] == admission["status"]
     if partial:
         # A newer snapshot cannot erase the pending partial assignment.
+        assert "retirement" not in call()["task_requirements"]["delegation"]
         source.write_text("Changed policy.\n")
         requirements = call()["task_requirements"]["requests"][0]
         requirements["arguments"]["required_result_classes"] = ["read-only"]
@@ -194,3 +196,107 @@ def test_manual_snapshot_fresh_return_and_authority(tmp_path, shared_core_binary
     with pytest.raises(AssertionError, match="changed|stale"):
         call(judgment)
     assert call()["task_requirements"]["delegation"]["manual_continuation"]["status"] == ("disposed" if partial else admission["status"])
+
+    def retire_current():
+        retirement = call()["task_requirements"]["delegation"]["retirement"]["requests"][0]
+        retirement["arguments"]["reason"] = (
+            "The original owner no longer needs this synthetic material; no pending work or evidence references remain."
+        )
+        held = call(retirement)["task_requirements"]["delegation"]["retirement"]
+        assert held["status"] == "retirement-held-by-disposition"
+        for pending_work, evidence_needed in ((False, True), (True, False)):
+            retirement["arguments"].update(pending_work=pending_work, evidence_needed=evidence_needed)
+            held = call(retirement)["task_requirements"]["delegation"]["retirement"]
+            assert held["status"] == "retirement-held-by-disposition"
+        retirement["arguments"].update(pending_work=False, evidence_needed=False)
+        current = call(retirement)
+        action = next(a for a in current["decision_packet"]["ready_actions"] if a["operation_id"] == "delegation.retire-manual")
+        files = action["arguments"]["files"]
+        # Changed evidence invalidates the exact deletion set, before any removal.
+        victim = tmp_path / files[0]["path"]
+        original = victim.read_bytes()
+        victim.write_bytes(original + b" ")
+        with pytest.raises(AssertionError, match="custody|evidence|changed"):
+            call(invocation=action)
+        assert all((tmp_path / f["path"]).exists() for f in files)
+        victim.write_bytes(original)
+        retired = call(invocation=action)
+        assert retired["value"]["status"] == "retired"
+        assert not any((tmp_path / f["path"]).exists() for f in files)
+        assert call(invocation=action)["value"] == retired["value"]
+        assert call()["task_requirements"]["delegation"]["manual_continuation"]["status"] == "retired"
+        return retired
+
+    unknown = config.parent / "local/delegation-runs/unknown.keep"
+    unknown.write_bytes(b"Unrelated material must be preserved.")
+    retired = retire_current()
+    assert unknown.read_bytes() == b"Unrelated material must be preserved."
+    if not human and not partial:
+        # All original snapshots are already gone. Withhold the local cleanup
+        # commit and recover from its small, exact owner journal in a fresh turn.
+        pointer = next((config.parent / "local/delegation-manual").glob("*.json"))
+        link = json.loads(pointer.read_bytes())
+        link["status"] = "retiring"
+        link["custody"]["committed"] = None
+        pointer.write_text(json.dumps(link))
+        (tmp_path / link["planned_custody"]["committed"]["path"]).unlink()
+        original_link = pointer.read_bytes()
+        link["invocation"]["arguments"]["files"][0]["path"] = ".agentic-workspace/local/delegation-runs/unknown.keep"
+        pointer.write_text(json.dumps(link))
+        with pytest.raises(AssertionError, match="custody|differs"):
+            call()
+        assert unknown.read_bytes() == b"Unrelated material must be preserved."
+        pointer.write_bytes(original_link)
+        recovery = call()["task_requirements"]["delegation"]["retirement"]["recovery_invocation"]
+        assert call(invocation=recovery)["value"] == retired["value"]
+
+        # Repeat distinct assignments for the same direct task. Each lifecycle
+        # retires its full snapshots and its predecessor's small cleanup receipt.
+        for index in range(2):
+            source.write_bytes((f"Current loan duration: {21 + index} days.\n" + "Context line.\n" * 1000).encode())
+            requirements = call()["task_requirements"]["requests"][0]
+            requirements["arguments"]["required_result_classes"] = ["read-only"]
+            inputs = call(requirements)["task_requirements"]["handoff_inputs"]["requests"][0]
+            inputs[-1]["arguments"].update(
+                input_refs=["policy.txt"], complete=False, reason="This synthetic snapshot supplies the complete authorised context."
+            )
+            inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
+            inputs[-1]["arguments"]["complete"] = True
+            export = call(inputs)["task_requirements"]["handoff"]["requests"][0]
+            offered = call(export)
+            retention = offered["task_requirements"]["delegation"]["requests"][0]
+            call(invocation=call(retention)["decision_packet"]["primary_action"])
+            packet = call()["task_requirements"]["delegation"]["manual_continuation"]["packet"]
+            wrapped = worker(
+                "return",
+                packet,
+                material={
+                    "summary": f"The current loan duration is {21 + index} days.",
+                    "patch": "",
+                    "changed_paths": [],
+                    "stop_conditions_hit": [],
+                },
+            )
+            report = call(wrapped["reentry"]["request"])["task_requirements"]["delegation"]["requests"][0]
+            report[-1]["arguments"] = {
+                "producer_kind": "agent",
+                "reported_delivery": True,
+                "reported_execution": True,
+                "provenance": "Synthetic explicitly reported material.",
+            }
+            call(invocation=call(report)["decision_packet"]["primary_action"])
+            fresh = call()["task_requirements"]["delegation"]["manual_continuation"]
+            judgment = call(fresh["reentry"]["request"])["task_requirements"]["assignment"]["result_admission"]["requests"][0]
+            judgment[-1]["arguments"] = {"answer": "use-result", "reason": "The new material matches the captured policy."}
+            settlement = call(judgment)["task_requirements"]["delegation"]["settlement_requests"][0]
+            call(invocation=call(settlement)["decision_packet"]["primary_action"])
+            retire_current()
+            residue = [
+                *pointer.parent.glob("*.json"),
+                *(config.parent / "local/effects").glob("*.json"),
+                *(config.parent / "local/delegation-runs").glob("manual-*.json"),
+            ]
+            assert len(residue) == 3
+            assert sum(p.stat().st_size for p in residue) < 30_000
+            assert all(b"Context line." not in p.read_bytes() for p in residue)
+            assert unknown.read_bytes() == b"Unrelated material must be preserved."

@@ -67,6 +67,28 @@ snapshot carries every supplied byte and no inaccessible lazy references or
 transport envelope. This is a synthetic manual-protocol exercise; no interactive
 ChatGPT Pro or other external product was run or authenticated.
 
+The blocking review on #3765 prompted an explicit source/portable/payload declaration
+for the local manual pointer and owner-mediated terminal retirement. Settlement
+does not itself discard evidence: disposition defaults protect pending work and
+needed evidence, and current Planning, Memory or Verification references hold
+cleanup. Partial and uncertain carriage stays recoverable. Retirement validates
+the exact bounded custody chain before removing its packet-bearing attempt/result,
+run and terminal files; unknown material stays untouched. A small authenticated
+journal recovers interrupted deletion/commit without another external execution.
+
+The manual journeys exercise protected disposition, changed evidence rejection,
+cleanup replay and missing-commit recovery. Three successive lifecycles of one
+direct task leave exactly three small files (the pointer and latest cleanup
+attempt/result), below 30 KB, with no captured input content. The next retirement
+also removes its predecessor's cleanup receipt. Repository adoption/removal
+journeys classify pending and retiring pointers as workspace-owned local state and
+preserve their bytes, with and without independent host declarations. Unresolved
+or unauthenticated residue remains preserved rather than inferred disposable.
+The larger package payload exposed the prepared-adoption carrier crossing the
+single decision-source read limit. Only that carrier and its exact committed
+receipt use the existing larger, link-confined bounded reader; ordinary decision
+sources keep their smaller limit and effect custody still authenticates both.
+
 ## Lane delivery
 
 The four stacked slices cover policy, Planning, Verification and manual delivery.

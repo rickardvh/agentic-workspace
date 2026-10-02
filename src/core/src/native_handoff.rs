@@ -363,6 +363,7 @@ pub(crate) fn view(
                         | crate::native_manual::READ
                         | crate::native_manual::FINISH
                         | crate::native_manual::DISPOSE
+                        | crate::native_manual::RETIRE
                         | "delegation/reconcile-prior-result/v1"
                         | "assignment/judge-return/v1"
                         | "planning/adopt-return/v1"

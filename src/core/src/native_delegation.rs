@@ -141,6 +141,10 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
         .as_array_mut()
         .unwrap()
         .push(crate::native_manual::operation());
+    owner["operations"]
+        .as_array_mut()
+        .unwrap()
+        .push(crate::native_manual::retirement_operation());
     owner["effects"]
         .as_array_mut()
         .unwrap()

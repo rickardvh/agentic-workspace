@@ -207,6 +207,7 @@ fn resolve_selected(
                 && !crate::native_resource_owner::operation(&i["operation_id"])
                 && i["operation_id"] != "delegation.dispatch"
                 && i["operation_id"] != crate::native_manual::OP
+                && i["operation_id"] != crate::native_manual::RETIRE_OP
                 && i["operation_id"] != crate::native_patch::OP
                 && i["operation_id"] != crate::native_intent_write::WRITE
                 && i["operation_id"] != crate::native_intent_write::RECOVERY
@@ -1478,13 +1479,41 @@ fn resolve_selected(
     if !manual_continuation.is_null() {
         delegation["manual_continuation"] = manual_continuation;
     }
+    let retirement = crate::native_manual::retirement(
+        target,
+        &input.task,
+        &input.changed,
+        &work,
+        &requests,
+        &contract,
+        &json!({"planning":planning,"planning_detail":planning_detail,"memory":memory,"verification":verification}),
+    )?;
+    if !retirement.is_null() {
+        if retirement["contribution"].is_object() {
+            delegation["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .extend(
+                    retirement["contribution"]["actions"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .cloned(),
+                );
+            delegation["contribution"]["settled"] = json!(false);
+        }
+        delegation["retirement"] = retirement;
+    }
     if delegation["observation"]["status"] == "current-reported-observation" {
         let settlement = crate::native_manual::settle(
             target, &work, &handoff, &admission, &requests, &contract,
         )?;
         if settlement.is_object() {
             delegation["settlement_requests"] = json!([settlement["request"]]);
-            delegation["contribution"]["actions"] = json!([settlement["action"]]);
+            delegation["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .push(settlement["action"].clone());
             delegation["contribution"]["settled"] = json!(false);
         }
     }
@@ -2210,6 +2239,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "planning.update-recover"
         && invocation["operation_id"] != "delegation.dispatch"
         && invocation["operation_id"] != crate::native_manual::OP
+        && invocation["operation_id"] != crate::native_manual::RETIRE_OP
         && invocation["operation_id"] != crate::native_patch::OP
         && invocation["operation_id"] != crate::native_intent_write::WRITE
         && invocation["operation_id"] != crate::native_intent_write::RECOVERY
@@ -2455,6 +2485,18 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         result["value"]["reentry"] = crate::native_manual::result_reentry(&executed, invocation)?;
         return Ok(result);
+    }
+    if invocation["operation_id"] == crate::native_manual::RETIRE_OP {
+        progress.entered_effect_owner = true;
+        let executed =
+            crate::native_manual::retire(&target, &current["decision_packet"], invocation, || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            })?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
     }
     if matches!(
         invocation["operation_id"].as_str(),
