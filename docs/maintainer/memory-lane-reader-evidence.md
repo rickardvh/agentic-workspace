@@ -486,3 +486,39 @@ guidance parity and commit hooks pass. Existing response ceilings are retained;
 the optional bounded publication IDs' schema delta is separately attributed.
 Hosted exact-head proof and independent recheck remain separate from this
 reader's outcome and from any claim of reduced total interaction cost.
+
+## Final narrow pass: publication returns prepared, separate cleanup
+
+Comment #3770/5953197557 keeps correctness accepted but requires the ordinary
+path to take fewer than 35 native calls without materially exceeding the original
+500,167 response bytes. This last pass changes only post-publication preparation
+and compact presentation; the approved lower layers are unchanged.
+
+Product subject: `4bcc8b032d80b01d9448e09128fe436c1eb894d8`. Paired core SHA-256:
+`109c6b13629701b0fe3262edd2283a7aa0f21886988c6d6dafa00ffbf810648f`.
+The CLI hash remains the same. The publisher first commits through its existing
+operation. Its returned IDs/source/revision then form the exact completion
+request, which is immediately resolved through the ordinary current owners and
+constraints. The post-effect continuation contains a separately invoked cleanup
+action, not another mutation or a caller-authored assertion of confirmation.
+Compact output identifies that action/reference and states which current
+publication/candidate checks have already occurred. Invocation still reobserves
+changed work, source validity and candidate state. Failure to prepare cleanup
+preserves the committed publication and never authorizes its retry.
+
+Compact consolidation/publication next steps no longer echo immutable argument
+material. They supply exact references and small caller answer shapes; the
+publication answer is an empty object. Candidate origins remain carried, with
+the required coverage named when an optional extra origin is authored.
+
+The existing composed journey was extended rather than adding a permanent test.
+It checks that publication leaves candidate bytes intact, obtains the prepared
+action directly from the continuation, rejects changed policy/work and forged
+publication, preserves interrupted subtraction/recovery, and invokes the
+revision's cleanup directly through carried operating output without another
+preparation call. Presentation assertions cover the absent argument echo and
+exact reference/answer transport, not prose wording. All 25 focused native Memory
+tests, 11 operating tests, 42 public Memory cases and 29 four-surface response
+budget cases pass. Source/interface parity, locked binaries and commit hooks
+pass. These deterministic results support the separate, current cleanup path;
+one final fresh-reader exercise supplies the remaining behaviour/cost evidence.
