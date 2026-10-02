@@ -2254,13 +2254,19 @@ fn finish_invocation(
             #[cfg(test)]
             crate::native_frontier::built("post-effect-continuation");
             let current =
-                start_selected(context.clone(), &progress.resolution).and_then(|mut current| {
+                start_selected(context.clone(), &progress.resolution).and_then(|current| {
                     if let Some(request) = crate::native_memory_candidates::publication_completion(
                         &current["memory"]["candidates"],
                         invocation,
                         &outcome,
                     )? {
-                        current["memory"]["candidates"]["completion_request"] = request;
+                        // Publication is committed. Preparing its separately
+                        // invoked subtraction is mechanical, through the same
+                        // current owner/constraint checks as ordinary entry.
+                        context["request"] = request;
+                        let mut ready = start_selected(context.clone(), &progress.resolution)?;
+                        ready["memory"]["candidates"]["completion_prepared"] = json!(true);
+                        return Ok(ready);
                     }
                     Ok(current)
                 });

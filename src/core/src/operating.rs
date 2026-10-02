@@ -459,7 +459,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         .as_array()
         .is_some_and(|s| !s.is_empty())
         || candidates["publication_request"].is_object()
-        || candidates["completion_request"].is_object()
+        || candidates["completion_prepared"] == true
     {
         let mut budget = 16384usize;
         let observations = candidates["selected"].as_array().into_iter().flatten().map(|row| {
@@ -470,17 +470,22 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         result["candidate_context"] = json!({"observations":observations,
             "reference":result["detail_refs"]["/memory"],"next":"Compare scopes and current sources. Use the returned next_step only when justified; defer or deliberate discard may be sufficient. Publication and candidate subtraction remain separate effects.",
             "authority":"Unconfirmed local evidence for consideration; no current-state, policy or task-custody authority."});
-        if candidates["completion_request"].is_object() {
-            // This request is offered only by the just-committed effect owner.
-            // A fresh owner-reference lookup cannot reproduce that transient
-            // offer; carry its exact input through ordinary request validation.
-            let mut input = context.clone();
-            input["request"] = candidates["completion_request"].clone();
-            if carried {
-                input["projection"] = json!("carried");
+        if candidates["completion_prepared"] == true {
+            if let Some(action) = entries(full, context)?.into_iter().find(|entry| {
+                action_selector(entry["selector"].as_str().unwrap())
+                    && entry["envelope"]["source_owner"] == "memory"
+                    && entry["envelope"]["operation_id"] == crate::native_memory_candidates::OP
+                    && entry["envelope"]["arguments"]["request"]["arguments"]["operation"]
+                        == "complete"
+            }) {
+                result["candidate_context"]["next"] = json!(
+                    "Publication is committed. Inspect and invoke the separately prepared cleanup action to subtract only the absorbed candidates."
+                );
+                result["candidate_context"]["next_step"] = json!({"operation":"complete",
+                    "reference":action["reference"],"transport":"invoke",
+                    "validation":"current-publication-and-candidates",
+                    "use":"Publication custody, source/dependency validity and the exact candidate state have already been rechecked for this cleanup action. Inspect the action and invoke this reference with this continuation's context/carriage; no Memory or activity reread is needed to reconstruct confirmation. Changed work or source still requires fresh resolution and is rechecked before subtraction."});
             }
-            result["candidate_context"]["next_step"] = json!({"operation":"complete",
-                "input":input,"use":"Submit this exact input through start. Memory rechecks publication and candidate state; inspect its returned cleanup action before invoking it."});
         } else {
             let request = if candidates["publication_request"].is_object() {
                 Some(&candidates["publication_request"])
@@ -495,11 +500,14 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 let selector = format!("request:memory:{}", digest(request)?);
                 result["candidate_context"]["next_step"] = json!({
                 "operation":if request["request_kind"] == "memory/capture-advisory/v1" {"publish"} else {"consolidate"},
-                "reference":reference(context, &selector, request)?,"arguments":request["arguments"],
+                "reference":reference(context, &selector, request)?,
+                "answer_shape":if request["request_kind"] == "memory/capture-advisory/v1" { json!({}) } else {
+                    json!({"advisory_material":{"id":"<bounded identity>","lesson":"<supported reusable conclusion>","rationale":"<future value>","dependency_paths":["<current validity source>"],"routes_from":["<deliberate path cue>"],"semantic_routes":["<existing activity cue>"]}})
+                },
                 "use":if request["request_kind"] == "memory/capture-advisory/v1" {
                     "Use this exact reference with current context/carriage and an empty object answer to submit the filled material for the publisher's confirmation question."
                 } else {
-                    "Use this exact reference with current context/carriage. For justified advice, answer with advisory_material containing id, lesson, rationale, dependency_paths and deliberate routes_from or semantic_routes. Defer or justified discard may be sufficient."
+                    "Use this exact reference with current context/carriage and the small answer shape. Choose routes_from or semantic_routes deliberately; candidate origins are already carried. An optional authored origin must include producer, reference and coverage (bounded, partial or unknown). Defer or justified discard may be sufficient."
                 }});
                 if let Some(question) = candidates.get("next") {
                     result["candidate_context"]["judgment"] = question.clone();
