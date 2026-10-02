@@ -521,4 +521,113 @@ exact reference/answer transport, not prose wording. All 25 focused native Memor
 tests, 11 operating tests, 42 public Memory cases and 29 four-surface response
 budget cases pass. Source/interface parity, locked binaries and commit hooks
 pass. These deterministic results support the separate, current cleanup path;
-one final fresh-reader exercise supplies the remaining behaviour/cost evidence.
+The single final fresh-reader exercise below supplies the bounded behaviour/cost
+observation. No further reader or semantic coaching followed it.
+
+### Final ordinary reader result
+
+The reader received the same ordinary prompt used for the preceding third-layer
+comparison:
+
+> Finish the open fixture setup investigation now that followup-run.txt supplies
+> the missing result. Compare the earlier observations with current policy and
+> readiness. Preserve one supported reusable conclusion through the existing
+> workflow, and remove finished temporary investigation evidence only after its
+> receiving result is confirmed. Assess the completed isolated migration
+> experiment separately; avoid retaining duplicates or unrelated conclusions.
+
+The recreated fixture preserves the preceding source bytes and roles, including
+the historical author envelopes. It is not a byte-identical clone of the original
+baseline fixture. The paired runtime was frozen before the reader began, after
+deterministic validation. The reader inspected startup/owner guidance, the current
+follow-up, policy, status and historical setup/migration logs, then the existing
+checks procedure and candidate comparison. No service contact, implementation
+inspection, direct managed write or committed-effect retry occurred.
+
+| Observation | Native attempts | Raw UTF-8 response bytes | Committed effects |
+| --- | ---: | ---: | ---: |
+| Original third layer | 35 | 500,167 | 3 |
+| First compression attempt, failed | 23 | 502,857 | 0 |
+| Preceding completed compression | 35 | 924,847 | 3 |
+| Single final narrow pass | 23 | 441,406 | 3 |
+
+The final observation meets the requested fewer-than-35 calls and no material
+growth above 500,167 bytes: 12 fewer attempts and 58,761 fewer bytes (about 34%
+and 12%, respectively). Failed attempts remain included. All three compression
+exercises together cost 81 calls and 1,869,110 response bytes; their authoring,
+file-read and model costs are not represented by this native-response metric.
+This is one bounded ordinary-path observation, not a controlled economic claim
+or #3191's natural lifetime payoff.
+
+| Call | Input and observed result | Raw stdout + stderr bytes |
+| --- | --- | ---: |
+| 1 | Full input plus conflicting projection flag; rejected. | 111 |
+| 2 | Corrected explicit task/material; current startup. | 24,518 |
+| 3 | Current semantic discovery detail. | 2,655 |
+| 4 | Exact route-selection request. | 1,525 |
+| 5 | Selected repository/checks; candidate history surfaced. | 28,670 |
+| 6 | Memory detail; supported candidate/publication requests. | 7,536 |
+| 7 | Configuration detail; assessment due, refresh not required. | 17,082 |
+| 8 | Exact Configuration assessment request. | 1,550 |
+| 9 | Assessment read; no integration completion established. | 29,276 |
+| 10 | Exact consolidation reference with bounded material and setup-only candidate ID. | 30,362 |
+| 11 | Exact publication reference with empty answer; postimage and confirmation question. | 46,504 |
+| 12 | Object supplied to bounded choice; rejected. | 97 |
+| 13 | Unquoted/non-JSON choice; rejected. | 73 |
+| 14 | Exact JSON-string confirmation; publication action offered. | 52,506 |
+| 15 | Publication invocation committed; current separate cleanup action offered. | 33,423 |
+| 16 | Refreshed carried cleanup context after checking receiving source/hash. | 39,774 |
+| 17 | Exact current route request for receiving recall. | 1,525 |
+| 18 | Checks activity selected; exact saved source delivered, advisory only. | 42,489 |
+| 19 | Separately invoked prepared setup subtraction; migration remains. | 21,758 |
+| 20 | Full input plus conflicting reference; rejected. | 110 |
+| 21 | Corrected current candidate read template. | 1,497 |
+| 22 | Separate deliberate migration discard prepared. | 36,607 |
+| 23 | Exact discard invocation committed; zero candidates. | 21,758 |
+
+Call 15's compact continuation directly supplied `operation: complete`,
+`transport: invoke`, `validation: current-publication-and-candidates`, and cleanup
+reference `sha256:35fc062e35f6565bbc2551f3675422f4fe3fab37f6e7b2cc8877cde21a0d44fe`.
+Its current context already contained the sealed setup candidate ID and confirmed
+publication source/revision. The reader still refreshed that context and selected
+activity for recall at calls 16–18. Those calls remain counted. It preserved the
+prepared completion request rather than constructing new confirmation arguments
+or reopening Memory/Configuration to reconstruct them. Call 19 used the current
+action after that refresh. The deterministic journey separately exercises direct
+invocation from the original publication continuation with no intervening start.
+
+Publication source:
+`.agentic-workspace/memory/repo/domains/native-1015324b448f14b4e8b1c378115abe9da8b75a9f24cc6bda118418f5593edbb0.md`.
+Actual SHA-256 matches committed revision
+`de9b07b8bd889ba5a5ee87ef9bae7ee51a17477dbdbf4e91101783c4dfc487f1`.
+The reader checked the source bytes/hash after call 15 and exact recall at call
+18 before setup subtraction at 19. The author independently checked that hash,
+one manifest declaration, the three committed effect outcomes, and actual empty
+`.agentic-workspace/local/memory-candidates/state.json` after call 23.
+
+One bounded setup conclusion retains the two observations and their limits,
+deliberate `tests/fixture` and `repository/checks` recall cues, and policy/procedure
+dependencies. Migration received no note: its completed isolated experiment and
+removed stub add no future value beyond current policy. Original logs and author
+envelopes remain untouched; subtraction concerns temporary owner-managed
+candidates. Recall is advisory and `review-required` with no admitted currentness
+baseline; it certifies neither factual truth nor future/live readiness.
+Configuration integration remains unassessed and is not claimed complete.
+
+The native interval was 13:30:19–13:35:29 UTC on 2026-10-02, about 5 minutes
+10 seconds. Raw streams were copied as bytes before display: 441,015 stdout plus
+391 stderr bytes. Display truncation at calls 14 and 18 did not truncate the saved
+streams. Every original argument vector, exit status, UTC timestamp and raw
+response/error was audited separately. Per-call input snapshots were reconstructed
+after execution from saved responses and unchanged authored context; they were
+not contemporaneous snapshots, and were labelled accordingly.
+
+All four native failures are retained above and here with their original codes:
+call 1, `invalid-cli-input`, "explicit projection conflicts with the exact input
+envelope"; call 12, `invalid-source-decision`, "answer is not a returned bounded
+choice"; call 13, `invalid-cli-input`, "--answer must be JSON"; call 20,
+`invalid-cli-input`, "explicit reference conflicts with the exact input envelope".
+One PowerShell wrapper expression error preceded any native launch and is outside
+the native attempt count. There was no native host rejection or permission prompt.
+The disposable raw audit was reconciled into this bounded durable ledger before
+resource cleanup. Independent recheck and exact-head hosted proof remain separate.
