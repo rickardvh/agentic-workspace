@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep freshly issued source-dependent actions invokable after optional procedure discovery without weakening source, task or capability currentness checks."
