@@ -312,3 +312,62 @@ long-term payoff remain open; neither is claimed by these three committed effect
 The existing former-route test bounds consolidation's additional schema delta
 to 1.8 KB and advisory origins/revision fields to 900 bytes, preserving all prior
 schema, empty-detail and compact ceilings. All 29 four-surface cases pass locally.
+
+## Third layer compression: preserved failed attempt
+
+Review comment #3770/5951940311 requests one bounded compression pass on the
+third layer; the approved first and second layers remain unchanged. Compact and
+carried candidate context now supplies the exact consolidation reference, the
+filled publication reference, and, after publication commits, an exact completion
+input carrying the selected IDs and confirmed source/revision. Publication and
+subtraction remain separate effects. The completion owner rechecks the receiving
+result; a proposal or answered question cannot remove candidates.
+
+The first compression reader exercised product commit
+`a335d0e816c8a04816e34f5c626f0c6342ca4ebc`, paired core SHA-256
+`728e2c460b0cf0bb48b075163f71118afa146b9b196c2fd2616a223394ded81b`.
+It received the exact ordinary prompt above, with a 24-call ceiling and no
+semantic coaching. The original disposable fixture had been removed after its
+evidence was recorded. This exercise recreated the same two observation roles,
+policy/readiness, follow-up, activity and unrelated control; it is a same-scenario
+comparison, not a byte-identical fixture or controlled economic experiment.
+Author seeding again used six separate native calls, with no durable advice.
+
+This run stopped incomplete after **23 native attempts and 502,857 raw UTF-8
+stdout/stderr bytes**, about 5 minutes 44 seconds. Its archive filenames 02–24
+cover all 23 attempts; the starting number is a logging-wrapper artifact, not an
+omitted call. Three CLI inputs failed (projection conflict, stale discovery
+reference, and an unquoted JSON choice); an additional successful CLI response
+reported a rejected publication before effect. Zero effects committed.
+
+| Attempts | Input and observed result |
+| --- | --- |
+| 1–2 | Projection conflict, then corrected current work/material; no effect. |
+| 3–7 | Route discovery, checks leaf, Memory detail, and unnecessary Planning detail. |
+| 8–11 | Stale discovery reference rejected; exact current request resolved and Memory branch discovered through a large full projection. |
+| 12–15 | Activity selection, current candidate read reference, then both historical observations and the compact consolidation reference. |
+| 16–17 | Selected checks and Memory capture before the retention action. |
+| 18–19 | Setup-only consolidation followed the supplied exact publication reference; postimage and confirmation question inspected. |
+| 20–21 | Unquoted choice rejected; corrected JSON choice returned an exact publication action. |
+| 22 | Exact carried invocation rejected before effect: answer did not bind the reobserved proposal. |
+| 23 | Selected activity reobserved; no cleanup or effect retry. |
+
+The reader checked that the receiving source and manifest were absent and both
+original candidates remained. It separately judged migration already covered by
+current policy, but performed neither publication nor candidate discard. It read
+the current policy, readiness, logs, follow-up, startup/owner/resource/correction
+procedures, candidate and publication guidance, and selected activity. It made no
+service contact, product implementation read or direct managed write. Full output
+and two large carried views were truncated only in display; their complete bytes
+were counted. No observed host launch or filesystem failure explains this stop.
+
+The defect was a lost exact activity-selection dependency on advisory effects.
+No-edit work has a selected decision context at proposal time; dropping that
+selection during effect reobservation reconstructs a different context and
+correctly rejects the answer as stale. The repair seals the validated selection
+in the advisory publication binding and reobserves that typed dependency during
+capture/recovery. It does not treat a caller assertion as authority. The existing
+publication/subtraction regression now exercises selected activity with no edited
+files, rejects a forged selection, confirms publication before subtraction, and
+retains forged-revision, changed-task and interrupted-cleanup checks. This failed
+reader remains counted and is not claimed as a cost improvement or completion.
