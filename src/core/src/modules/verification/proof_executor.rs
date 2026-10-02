@@ -218,10 +218,121 @@ fn scratch_paths(
     Ok(paths)
 }
 
-pub(crate) fn observe(target: &Path, config: &Value) -> Result<Value, CoreError> {
+fn source_prerequisites(
+    files: &BTreeMap<String, Vec<u8>>,
+    subject: &Value,
+) -> Result<(), CoreError> {
+    for declaration in subject["requirements"].as_array().into_iter().flatten() {
+        for input in declaration["source_inputs"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let path = input
+                .as_str()
+                .filter(|p| relative(p))
+                .ok_or_else(|| err("proof-prerequisite-source-invalid"))?;
+            if !files.contains_key(path) {
+                return Err(err(format!("proof-prerequisite-source-missing:{path}")));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn image_path(value: &Value) -> Result<&str, CoreError> {
+    value
+        .as_str()
+        .filter(|p| p.strip_prefix('/').is_some_and(relative))
+        .ok_or_else(|| err("proof-prerequisite-image-path-invalid"))
+}
+
+// Only fixed, cheap capability checks run here. No source code or selected
+// command executes, and no host/source mounts or writable image are supplied.
+fn image_prerequisites(image: &str, subject: &Value) -> Result<(), CoreError> {
+    let prefix = [
+        "create",
+        "--pull=never",
+        "--network=none",
+        "--read-only",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+        "--pids-limit=32",
+        "--memory=64m",
+        "--cpus=1",
+        "--user=10001:10001",
+    ];
+    for declaration in subject["requirements"].as_array().into_iter().flatten() {
+        let executables: Vec<&str> = declaration["image_executables"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(image_path)
+            .collect::<Result<_, _>>()?;
+        if !executables.is_empty() {
+            let mut args = prefix.to_vec();
+            args.extend(["--entrypoint=/bin/sh", image, "-ec",
+                "for p do test -f \"$p\" && test -x \"$p\" || { printf '%s\\n' \"$p\"; exit 61; }; done", "prerequisites"]);
+            args.extend(executables);
+            let result = capability_probe(&args)?;
+            if result["status"] != "passed" {
+                return Err(err(format!(
+                    "proof-prerequisite-image-executable-missing:{}",
+                    result["output"]["stdout"]["tail"]
+                )));
+            }
+        }
+        let git = &declaration["git_subject"];
+        if !git.is_null() {
+            let path = image_path(&git["path"])?;
+            let revision = git["revision"]
+                .as_str()
+                .filter(|r| r.len() == 40 && r.bytes().all(|b| b.is_ascii_hexdigit()))
+                .ok_or_else(|| err("proof-prerequisite-git-revision-invalid"))?;
+            let safe = format!("safe.directory={path}");
+            let mut args = prefix.to_vec();
+            args.extend([
+                "--entrypoint=/usr/bin/git",
+                image,
+                "-c",
+                &safe,
+                "-C",
+                path,
+                "rev-parse",
+                "--verify",
+                "HEAD",
+            ]);
+            let result = capability_probe(&args)?;
+            if result["status"] != "passed"
+                || result["output"]["stdout"]["tail"].as_str().map(str::trim) != Some(revision)
+            {
+                return Err(err(format!(
+                    "proof-prerequisite-git-subject-unavailable:{path}@{revision}"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn capability_probe(args: &[&str]) -> Result<Value, CoreError> {
+    let id = checked(args)?;
+    let mut resources = Resources {
+        containers: vec![id.clone()],
+        volume: None,
+    };
+    let result = run(&["start", "--attach", &id], Duration::from_secs(10))?;
+    resources.cleanup()?;
+    Ok(result)
+}
+
+pub(crate) fn observe(target: &Path, config: &Value, subject: &Value) -> Result<Value, CoreError> {
     if config["kind"] != KIND {
         return Err(err("proof-executor-kind-unsupported"));
     }
+    let files = snapshot(target, config)?;
+    source_prerequisites(&files, subject)?;
+    let scratch = scratch_paths(config, &files)?;
     let image = config["image"]
         .as_str()
         .ok_or_else(|| err("proof-executor-image-required"))?;
@@ -246,11 +357,15 @@ pub(crate) fn observe(target: &Path, config: &Value) -> Result<Value, CoreError>
     if daemon["OSType"] != "linux" {
         return Err(err("proof-executor-linux-required"));
     }
-    let files = snapshot(target, config)?;
-    let scratch = scratch_paths(config, &files)?;
+    image_prerequisites(
+        details["Id"]
+            .as_str()
+            .ok_or_else(|| err("proof-executor-image-id-missing"))?,
+        subject,
+    )?;
     Ok(
         json!({"kind":KIND,"transport":crate::native_proof::binary(&docker()?)?,"image":details["Id"],"daemon":daemon["ID"],"source_revision":identity(&files)?,
-        "configuration":config,"host_mounts":false,"network":"none","source_access":"read-only",
+        "configuration":config,"constructibility_subject":subject,"host_mounts":false,"network":"none","source_access":"read-only",
         "temporary_storage_bytes":536870912_u64 + scratch.len() as u64 * 2147483648_u64,"max_processes":128}),
     )
 }
@@ -288,7 +403,8 @@ pub(crate) fn execute(
 ) -> Result<Value, CoreError> {
     let observed = &invocation["arguments"]["selection"]["proof_subject"]["runtime"]["executor"];
     let config = &observed["configuration"];
-    if observe(target, config)? != *observed {
+    let subject = &observed["constructibility_subject"];
+    if subject["command"] != command || observe(target, config, subject)? != *observed {
         return Err(err("proof-executor-changed-before-launch"));
     }
     let files = snapshot(target, config)?;
@@ -453,6 +569,19 @@ mod tests {
         std::fs::write(path.join("source/input"), "current").unwrap();
         let files = snapshot(&path, &json!({"inputs":["source"]})).unwrap();
         assert_eq!(files["source/input"], b"current");
+        let subject = json!({"requirements":[{"source_inputs":["source/input"]}]});
+        assert!(source_prerequisites(&files, &subject).is_ok());
+        for missing in ["source/omitted", "../outside"] {
+            assert!(
+                source_prerequisites(
+                    &files,
+                    &json!({"requirements":[{"source_inputs":[missing]}]})
+                )
+                .is_err()
+            );
+        }
+        assert!(image_path(&json!("/usr/bin/git")).is_ok());
+        assert!(image_path(&json!("/usr/../outside")).is_err());
         assert!(snapshot(&path, &json!({"inputs":["../outside"]})).is_err());
         assert!(scratch_paths(&json!({"scratch_paths":["source"]}), &files).is_err());
         assert!(scratch_paths(&json!({"scratch_paths":["source/input/child"]}), &files).is_err());

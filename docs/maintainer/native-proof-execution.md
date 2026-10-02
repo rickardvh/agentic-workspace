@@ -10,6 +10,27 @@ The first native publication acquires an absent canonical receipt index exclusiv
 
 Ordinary results contain bounded process facts and an exact hashed artefact reference; output detail remains in the existing local run artefact. Process exit never produces task judgement, human acceptance, or independent review. Native freshness proves the declared source/command and observed producer/shell scope only. Nested tool environments, unresolved dependency selectors, and unsupported strategy obligations remain explicit gaps. Thus selected-command coverage is not complete strategy or claim sufficiency.
 
+An isolated route or protocol may declare `execution_prerequisites`. Declare exact
+repository files in `source_inputs`, absolute image executable paths in
+`image_executables`, and an immutable image Git subject as
+`git_subject = { path = "<absolute image directory>", revision = "<full commit SHA>" }`
+(replace both placeholders with the prepared image's actual values).
+For example, a startup check that reads `tests/conftest.py` and invokes an installed
+native pair declares those files and executables; a check depending on an admitted
+Git source also declares that image subject. These are execution requirements,
+separate from policy authority references that the command need not read.
+
+Selection checks that every declared source file is in the actual confined
+snapshot and performs fixed, bounded image capability probes without mounting
+host or source material. Missing files, executables or Git identity yield a named
+capability gap before the selected command becomes executable. Probes use the
+read-only immutable image, no network, a restricted user and native resource
+cleanup. The observation binds the exact route, command, protocol declarations,
+snapshot, configuration and image; launch revalidates it and committed proof
+continues to use the existing receipt lifecycle. Changed prerequisites require
+new observation. Undeclared command-internal dependencies remain runtime failures;
+the executor does not infer shell or Python dependency graphs.
+
 ## Proof boundary
 
 `tests/test_native_proof_producer.py` exercises native CLI, Python, Node, and JSON entry points, actual execution, immutable publication, fresh-process replay, current-source invalidation, exact command and runtime tampering rejection, existing index preservation, real interrupted execution, and failed/timeout retention. These deterministic host fixtures do not prove independent acceptance or the configured checkout's complete stateful Verification lifecycle. They do not establish that validation is cheaper than recomputation for a real expensive proof; that measurement remains required by #2981.

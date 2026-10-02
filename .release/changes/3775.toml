@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reject isolated selected proof before command launch when declared source, image runtime or immutable Git prerequisites are missing."

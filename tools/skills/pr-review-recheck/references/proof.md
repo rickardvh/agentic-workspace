@@ -16,6 +16,21 @@ Workflow source tests establish wiring, not trusted dispatch or model execution.
   discovered from changed paths or review obligations; each entry supplies
   `owner`, `check`, and `sources`. These are reviewer observations, never
   arbitrary executable commands or a replacement domain interpreter.
+  Preparation also discovers `governed_by` relations from the trusted repository's
+  admitted scoped instructions. Its check names the existing Verification source
+  reconciliation and `relation_id`; use that owner, never a second corpus audit.
+  Declaration provenance records the admitted Git snapshot and whether its bytes
+  match the trusted baseline. Byte differences nominate policy inspection; only
+  the existing owner decides whether the declaration and reconciliation are current.
+  Changes to an instruction declaration itself are policy-source changes. Inspect
+  those against the trusted declaration; new PR-head metadata supplies no reviewer
+  authority. Missing/stale discovery or owner evidence cannot support readiness.
+  Record `base_status` and `base_evidence_ref` from that same owner's exact base
+  observation when attributing debt. A current base with unresolved changed-head
+  coverage introduces debt; a stale base is inherited. Unknown base evidence
+  remains unknown. An unrelated change or ordinary governed consumer does not
+  acquire a whole-relation obligation from this discovery rule. Preserve inherited
+  gaps and block only the current action or claim that depends on them.
 - For independently mergeable stacked PRs, a downstream integration result
   cannot satisfy a lower layer's obligation. Report the stale/unknown PR layer
   separately from any current integration head. Reconcile in the introducing
@@ -23,7 +38,8 @@ Workflow source tests establish wiring, not trusted dispatch or model execution.
   Recheck only affected owner-sensitive subjects. An unrelated stack needs no
   all-owner matrix. Missing runtime, source objects, or owner evidence stays
   `unknown` and cannot support merge readiness. Preparation selects System
-  Intent sources from the trusted owner's existing source records; it does not
+  Intent sources from the trusted owner's existing source records and governing
+  sources from trusted scoped declarations; it does not
   infer currentness from whether a mirror file appears in the diff.
 - CI and reported validation;
 - focused tests for changed behavior;
