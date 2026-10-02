@@ -214,6 +214,11 @@ pub(crate) fn extend_destination(
         "required":["id","decision","consequence","rationale","alternatives","dependency_paths","supersedes"]});
     if destination == Destination::Advisory {
         material = json!({"type":"object","additionalProperties":false,"properties":{"id":{"type":"string","minLength":1,"maxLength":256},"lesson":text,"rationale":text,"dependency_paths":strings},"required":["id","lesson","rationale","dependency_paths"]});
+        material["properties"]["routes_from"] = strings.clone();
+        material["properties"]["semantic_routes"] = strings.clone();
+        material["properties"]["origin"] = json!({"type":"object","additionalProperties":false,
+            "properties":{"producer":text,"reference":text,"revision":text,"coverage":{"enum":["bounded","partial","unknown"]}},
+            "required":["producer","reference","coverage"]});
     }
     let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"material":material,"disposition":{"enum":["retain","no-retention"]},"answer":{"enum":[destination.answer(),"defer"]},"proposal_revision":text},"required":["material"]});
@@ -261,11 +266,53 @@ fn dependencies(root: &Dir, paths: &Value) -> Result<Value, CoreError> {
     }
     Ok(result)
 }
+fn advisory_applicability(material: &Value, scope: &[String]) -> Result<Value, CoreError> {
+    let explicit =
+        material.get("routes_from").is_some() || material.get("semantic_routes").is_some();
+    let paths = if explicit {
+        material["routes_from"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+    } else {
+        scope
+            .iter()
+            .filter_map(|s| s.strip_prefix("path:"))
+            .map(|s| json!(s))
+            .collect()
+    };
+    let routes = material["semantic_routes"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    for path in &paths {
+        let path = path
+            .as_str()
+            .ok_or_else(|| err("Advisory path cue must be a string"))?;
+        crate::decision_source::relative(path)?;
+        if ["*", "**", "**/*"].contains(&path) {
+            return Err(err(
+                "Choose a scoped future activity/path; blanket repository advice is not a default",
+            ));
+        }
+    }
+    for route in &routes {
+        let route = route
+            .as_str()
+            .ok_or_else(|| err("Advisory activity cue must be a string"))?;
+        crate::route_ids(
+            vec![route.strip_suffix("/**").unwrap_or(route).to_owned()],
+            "advisory semantic_routes",
+        )?;
+    }
+    Ok(json!({"routes_from":paths,"semantic_routes":routes}))
+}
 fn manifest_postimage(
     root: &Dir,
     source: &str,
     scope: &[String],
     advisory_dependencies: Option<&Value>,
+    applicability: Option<&Value>,
 ) -> Result<(Value, String), CoreError> {
     let before = read(root, MANIFEST)?;
     let text = std::str::from_utf8(before.as_deref().unwrap_or(b"version=1\n")).map_err(err)?;
@@ -305,6 +352,10 @@ fn manifest_postimage(
         "routes_from":scope.iter().filter_map(|s|s.strip_prefix("path:")).collect::<Vec<_>>()});
     if let Some(dependencies) = advisory_dependencies {
         entry = json!({"note_type":"domain","routes_from":scope.iter().filter_map(|s|s.strip_prefix("path:")).collect::<Vec<_>>(),"dependencies":dependencies});
+        if let Some(cues) = applicability {
+            entry["routes_from"] = cues["routes_from"].clone();
+            entry["semantic_routes"] = cues["semantic_routes"].clone();
+        }
     }
     let entry = toml_edit::ser::to_document(&entry).map_err(err)?;
     notes.insert(source, toml_edit::Item::Table(entry.as_table().clone()));
@@ -491,7 +542,8 @@ fn material_bytes(material: &Value, binding: &Value) -> Result<Vec<u8>, CoreErro
         {
             return Err(err("advisory capture cannot introduce a decision record"));
         }
-        return Ok(format!("# Advisory knowledge\n\n{}\n\n## Future value\n\n{}\n\nMaterial authorship is unattributed. Retention was admitted through the current owner request; this note grants no decision, policy, proof or completion authority.\n", lesson, material["rationale"].as_str().unwrap()).into_bytes());
+        let origin = material.get("origin").map(|o|format!("\n\nEvidence origin (caller-asserted, not authenticated): `{}`. Historical source identity does not establish current runtime availability.\n",serde_json::to_string(o).unwrap())).unwrap_or_default();
+        return Ok(format!("# Advisory knowledge\n\n{}\n\n## Future value\n\n{}{}\n\nMaterial authorship is unattributed. Retention was admitted through the current owner request; this note grants no decision, policy, proof or completion authority.\n", lesson, material["rationale"].as_str().unwrap(),origin).into_bytes());
     }
     let basis = digest(&json!([binding["semantics"], material, binding]))?;
     let historical_human = matches!(
@@ -602,12 +654,12 @@ fn retained(target: &Path, source: &str) -> Result<Option<Value>, CoreError> {
     crate::schema_validator(schema, "retained decision answer")?
         .validate(&request["arguments"])
         .map_err(err)?;
-    if !binding["scope"]
-        .as_array()
-        .is_some_and(|rows| !rows.is_empty() && rows.iter().all(Value::is_string))
-        || !binding["dependencies"]
-            .as_object()
-            .is_some_and(|rows| rows.values().all(Value::is_string))
+    if !binding["scope"].as_array().is_some_and(|rows| {
+        (destination == Destination::Advisory || !rows.is_empty())
+            && rows.iter().all(Value::is_string)
+    }) || !binding["dependencies"]
+        .as_object()
+        .is_some_and(|rows| rows.values().all(Value::is_string))
         || !binding["manifest_postimage"].is_string()
         || !binding["policy_revision"].is_string()
     {
@@ -700,7 +752,7 @@ pub(crate) fn view_for(
         }
         return Ok(view);
     }
-    if scope.is_empty() {
+    if scope.is_empty() && destination != Destination::Advisory {
         view["status"] = json!("exact-decision-scope-required");
         if request.is_some() {
             return Err(err(
@@ -749,9 +801,13 @@ pub(crate) fn view_for(
                 let hint = read(&root, &marker(&source)?)?
                     .and_then(|b| serde_json::from_slice::<Value>(&b).ok());
                 if !hint.as_ref().is_some_and(|r| {
-                    r["invocation"]["arguments"]["binding"]["scope"]
+                    let binding = &r["invocation"]["arguments"]["binding"];
+                    binding["scope"]
                         .as_array()
                         .is_some_and(|rows| rows.iter().any(|s| scope.iter().any(|p| s == p)))
+                        || destination == Destination::Advisory
+                            && binding["work"] == *work
+                            && binding["scope"] == json!(scope)
                 }) {
                     continue;
                 }
@@ -886,6 +942,17 @@ pub(crate) fn view_for(
         )
     } else {
         let material = &args["material"];
+        if destination == Destination::Advisory && args["disposition"] != "no-retention" {
+            let cues = advisory_applicability(material, scope)?;
+            if cues["routes_from"].as_array().unwrap().is_empty()
+                && cues["semantic_routes"].as_array().unwrap().is_empty()
+            {
+                view["status"] = json!("future-applicability-required");
+                view["missing_judgment"] = json!({"question":"Under which existing activity or scoped path would this lesson change a later action? Supply routes_from or semantic_routes, or keep the observation provisional.","material":material});
+                view["requests"][0]["arguments"] = args.clone();
+                return Ok(view);
+            }
+        }
         if args["disposition"] != "no-retention"
             && context["records"]
                 .as_array()
@@ -921,6 +988,11 @@ pub(crate) fn view_for(
                 ));
             }
         }
+        let applicability = if destination == Destination::Advisory {
+            Some(advisory_applicability(material, scope)?)
+        } else {
+            None
+        };
         let (manifest_before, manifest_postimage) =
             if destination != Destination::Repository && args["disposition"] != "no-retention" {
                 manifest_postimage(
@@ -929,6 +1001,7 @@ pub(crate) fn view_for(
                     scope,
                     (destination == Destination::Advisory)
                         .then_some(&dependencies(&root, &material["dependency_paths"])?),
+                    applicability.as_ref(),
                 )?
             } else {
                 (Value::Null, String::new())
@@ -940,6 +1013,7 @@ pub(crate) fn view_for(
             "superseded_sources":material["supersedes"].as_array().into_iter().flatten().map(|old| context["admissions"].as_array().unwrap().iter().find(|a| a["id"] == old["id"] && a["material_revision"] == old["material_revision"]).unwrap().clone()).collect::<Vec<_>>()});
         if destination == Destination::Advisory {
             binding["durable_owner"] = json!("advisory");
+            binding["applicability"] = advisory_applicability(material, scope)?;
         }
         if destination == Destination::Repository {
             let convention = format!("{}/README.md", archive(config, destination)?);
@@ -1556,6 +1630,140 @@ mod tests {
     }
 
     #[test]
+    fn no_edit_advisory_authoring_reaches_future_activity_with_distinct_validity() {
+        let target = std::env::temp_dir().join(format!(
+            "aw-activity-advice-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(target.join("tools/skills")).unwrap();
+        std::fs::write(
+            target.join("tools/skills/REGISTRY.json"),
+            serde_json::to_vec(
+                &json!({"skills":[{"id":"checks","semantic_routes":["repository/checks"]}]}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(target.join("service-policy.md"),"Use the configured shared fixture service; check its current status before provisioning.").unwrap();
+        std::fs::write(target.join("service-status.txt"), "running").unwrap();
+        let context = json!({"target":target,"task":"Investigate fixture setup after redundant provisioning"});
+        let start = |request: Value| {
+            let mut input = context.clone();
+            input["request"] = request;
+            crate::native_public::start(input).unwrap()
+        };
+        let initial = start(Value::Null);
+        assert_eq!(
+            initial["memory"]["capture"]["status"],
+            "exact-decision-scope-required"
+        );
+        let mut request = initial["memory"]["advisory_capture"]["requests"][0].clone();
+        request["arguments"]["material"] = json!({"id":"fixture:shared-service","lesson":"Consult service-policy.md and check current service status before provisioning another fixture instance.",
+            "rationale":"The earlier investigation found a running shared service after redundant provisioning wasted setup work.","dependency_paths":["service-policy.md"],
+            "origin":{"producer":"acting-agent","reference":"fixture:redundant-provisioning","coverage":"bounded"}});
+        assert_eq!(
+            start(request.clone())["memory"]["advisory_capture"]["status"],
+            "future-applicability-required"
+        );
+        request["arguments"]["material"]["semantic_routes"] = json!(["repository/checks"]);
+        request["arguments"]["material"]["routes_from"] = json!(["tests/fixture/**"]);
+        let proposal = start(request);
+        assert_eq!(
+            proposal["memory"]["advisory_capture"]["proposal"]["binding"]["scope"],
+            json!([])
+        );
+        let mut answer =
+            proposal["decision_packet"]["decision_request"]["response_request"].clone();
+        answer["arguments"]["answer"] = json!("confirm-retention");
+        let ready = start(answer.clone());
+        let mut forged = answer;
+        forged["arguments"]["material"]["semantic_routes"] = json!(["repository/other"]);
+        assert!(
+            crate::native_public::start(
+                json!({"target":target,"task":context["task"],"request":forged})
+            )
+            .is_err()
+        );
+        let action = &ready["decision_packet"]["primary_action"];
+        let result = crate::native_public::invoke_checked(
+            json!({"target":target,"task":context["task"],"invocation":action}),
+        )
+        .unwrap();
+        assert_eq!(result["effect_outcome"]["status"], "committed");
+        let source = result["value"]["source"].as_str().unwrap();
+        let manifest: toml::Value =
+            toml::from_str(&std::fs::read_to_string(target.join(MANIFEST)).unwrap()).unwrap();
+        assert_eq!(
+            manifest["notes"][source]["semantic_routes"][0].as_str(),
+            Some("repository/checks")
+        );
+        assert_eq!(
+            manifest["notes"][source]["routes_from"][0].as_str(),
+            Some("tests/fixture/**")
+        );
+        let fresh_context = json!({"target":target,"task":"Prepare fixture checks without edits"});
+        let fresh = crate::native_public::start(fresh_context.clone()).unwrap();
+        let mut route = fresh["semantic_routes"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["request_kind"] == "semantic-routes/select/v1")
+            .unwrap()
+            .clone();
+        route["arguments"] = json!({"posture":"selected","routes":["repository/checks"]});
+        let mut routed = fresh_context;
+        routed["request"] = route;
+        let recalled = crate::native_public::start(routed.clone()).unwrap();
+        assert!(
+            recalled["memory"]["advisory_context"][0]["body"]
+                .as_str()
+                .unwrap()
+                .contains("check current service status")
+        );
+        assert!(
+            recalled["memory"]["advisory_context"][0]["body"]
+                .as_str()
+                .unwrap()
+                .contains("caller-asserted")
+        );
+        // Live state changes don't make the earlier running observation current.
+        std::fs::write(target.join("service-status.txt"), "stopped").unwrap();
+        assert_eq!(
+            crate::native_public::start(routed.clone()).unwrap()["memory"]["advisory_context"],
+            recalled["memory"]["advisory_context"]
+        );
+        let unrelated=crate::native_public::start(json!({"target":target,"task":"Inspect unrelated documentation","changed":["docs/other.md"]})).unwrap();
+        assert!(
+            unrelated["memory"]["selected_notes"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        assert!(unrelated["memory"].get("advisory_context").is_none());
+        std::fs::write(
+            target.join("service-policy.md"),
+            "Policy changed; original advice requires review.",
+        )
+        .unwrap();
+        let drift = crate::native_public::start(routed).unwrap();
+        assert!(
+            drift["memory"]["selected_notes"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            drift["memory"]["diagnostics"]
+                .to_string()
+                .contains("dependency changed")
+        );
+        std::fs::remove_dir_all(target).unwrap();
+    }
+    #[test]
     fn bounded_answer_publication_recovers_each_interruption() {
         for (stage, agent, advisory) in ["prepared", "source-published", "manifest-published"]
             .into_iter()
@@ -1575,7 +1783,7 @@ mod tests {
             ));
             std::fs::create_dir_all(&target).unwrap();
             let target = std::fs::canonicalize(target).unwrap();
-            let input = json!({"target":target,"task":"Exact fixture human decision","changed":["src/a.rs"]});
+            let input = json!({"target":target,"task":"Exact fixture human decision","changed":if advisory && !agent {json!([])} else {json!(["src/a.rs"])}});
             let start = |request: Option<Value>| {
                 let mut v = input.clone();
                 v["request"] = request.unwrap_or(Value::Null);
@@ -1590,6 +1798,10 @@ mod tests {
             request["arguments"]["material"] = json!({"id":"fixture:recovery","decision":"A deliberate fixture decision","consequence":"Preserve the fixture boundary","rationale":"Test interruption only; no actual repository decision.","alternatives":[],"dependency_paths":[],"supersedes":[]});
             if advisory {
                 request["arguments"]["material"] = json!({"id":"fixture:advisory-recovery","lesson":"Retain a bounded fixture observation","rationale":"Recovery fixture, no governing authority","dependency_paths":[]});
+                if !agent {
+                    request["arguments"]["material"]["semantic_routes"] = json!(["fixture/checks"]);
+                    request["arguments"]["material"]["routes_from"] = json!(["tests/fixture.rs"]);
+                }
             }
             let proposed = start(Some(request.clone()));
             let policy = target.join(".agentic-workspace/config.toml");
@@ -1660,7 +1872,9 @@ mod tests {
             crate::native_public::invoke_checked(invoke).unwrap();
             assert_eq!(
                 if advisory {
-                    start(None)["memory"]["selected_notes"].clone()
+                    if !agent {
+                        crate::native_public::start(json!({"target":target,"task":"Fresh relevant fixture consumer","changed":["tests/fixture.rs"]})).unwrap()["memory"]["selected_notes"].clone()
+                    } else { start(None)["memory"]["selected_notes"].clone() }
                 } else {
                     start(None)["decision_packet"]["decision_context"]["states"].clone()
                 }

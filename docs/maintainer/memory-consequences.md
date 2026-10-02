@@ -20,6 +20,19 @@ original write. Multiple unresolved transactions retain their explicit choices.
 
 ## Explicit future-value observations
 
+Advisory authoring also works without edited paths. Optional `origin` records
+asserted evidence provenance; `routes_from` and `semantic_routes` declare future
+retrieval applicability, while `dependency_paths` binds current source validity.
+The exact proposal binds all of these and the note/manifest postimages separately
+from publication authority. Without explicit cues, legacy edited-path authoring
+is unchanged. No-edit authoring asks for a future cue instead of inventing changed
+files or blanket scope. The existing reader delivers accepted advice for an
+agent-selected current activity before the dependent action, under its existing
+small-body budgets. No new route registry, feedback ledger or retrieval engine is
+introduced. Manifest parsing scales with bounded metadata; unrelated bodies are
+not delivered. A changed dependency suppresses reliance and exposes review evidence;
+historical runtime availability still requires a present-state check.
+
 Ordinary observations supplied through `material` also reach
 `memory.candidates.requests`, through the existing correction procedure. Nomination
 uses the supplied summary and provenance; it needs no permanent lesson or forecast.

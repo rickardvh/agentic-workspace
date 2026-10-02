@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Author advisory Memory from no-edit investigations and recall it through deliberate future activity and path cues."

@@ -565,12 +565,20 @@ pub(crate) fn public_view(
         .as_array_mut()
         .unwrap()
         .extend(crate::native_memory_retention::declarations());
+    if !capture_available {
+        crate::native_memory_capture::extend_destination(
+            owner,
+            crate::native_memory_capture::Destination::Advisory,
+        )?;
+    }
     crate::native_memory_candidates::extend_owner(owner)?;
     owner["revision"] = json!(crate::digest(&json!([
         owner["requests"],
         owner["operations"]
     ]))?);
     let owner_revision = contract["owners"][0]["revision"].clone();
+    contract["restriction_authorities"] =
+        json!([{"owner":"memory","affects":["task","effect:memory-state","claim:complete"]}]);
     contract["revision"] = json!(crate::digest(&contract)?);
     let validation = full_contract.unwrap_or(&contract);
     let mut requests = Vec::new();

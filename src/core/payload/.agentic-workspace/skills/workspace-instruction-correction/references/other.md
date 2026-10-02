@@ -14,7 +14,10 @@ durable source or Planning record and cannot depend on this expirable set.
 Reuse current material while it suffices; deliberate no-retention needs no write.
 
 For useful advisory knowledge, use `memory.advisory_capture.requests`: supply the
-bounded lesson, its future value and exact dependency paths. Memory publishes an
+bounded lesson, its future value and exact dependency paths. Authored `origin`,
+`routes_from` and `semantic_routes` separate the discovery source from where the
+lesson should next be recalled; a no-edit discovery needs deliberate future cues.
+Memory publishes an
 advisory note and its selective manifest entry; it does not decide policy. For a
 settled semantic choice, use `decision_sources.capture` when a stronger repository
 archive is configured, otherwise `memory.capture`. Preserve actual authorship,
