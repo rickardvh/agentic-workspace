@@ -130,3 +130,80 @@ It still enforces the original 81/86 KB baseline contract, 28 KB remaining state
 and 6 KB compact ceilings, and forbids candidate rows/effect revisions at unrelated
 entry. All 29 former-route cases pass locally across four surfaces. This test-only
 adjustment changes neither the reader's product subject nor shipped guidance.
+
+## Second layer: advice before the first setup decision
+
+Product subject: `06c53e414cbca1cc36f8335127a877aa0754c6bc`, the second-layer
+implementation before evidence-only ancestor additions/restacking. Its paired
+core SHA-256 is `1be9b423eec55bcbc1361aa25746fb01ea8f3d73dc43467776920d9cc416d662`;
+the CLI SHA-256 is the same as the first layer. First-layer evidence commits do
+not change these implementation or guidance bytes.
+
+The author first published one advisory lesson through the supported no-edit
+publisher (four native calls, separately from reader cost). It describes checking
+current policy/status before archive search or redundant provisioning, reuse
+while running, restart while stopped and separate migration scope. Origin is the
+bounded earlier setup log; future applicability is `repository/checks` and
+`tests/fixture`; validity depends on policy, not transient status. No candidate is
+required. The note hash after the reader finished still matches its published
+revision `0648542d477598ee18bb03ddec1d93e485193752ecd9d9e2154df990cedf8570`.
+
+Exact ordinary prompt:
+
+> Prepare the next action for this repository’s fixture checks. Use the current
+> activity’s relevant procedure before committing to a setup approach; avoid an
+> expensive historical setup search unless needed. First report the next action
+> with current readiness. Then simulate the configured instance stopping by setting
+> service-status.txt to stopped, and re-evaluate the next action from current facts.
+> Inspect the unrelated documentation control separately.
+
+The reader first read startup, the task sources and the existing checks procedure
+and registry. It made no edited-path assertion. It used current discovery and
+selection to choose `repository/checks`; call 6 delivered the small advice and
+procedure reference **before its first affected decision**. It then reported
+reuse of the running shared instance with no historical-log search. After changing
+the status to `stopped`, it reread live policy/status, supplied that observation,
+and chose restart of the configured instance followed by readiness verification.
+The already available unchanged advice was reused; it was not claimed redelivered
+or treated as present availability. The separate documentation entry supplied no
+service material or changed paths and delivered no setup advice. No author message
+followed the prompt.
+
+The reader made 16 native calls, including two rejected inputs, plus one host
+PowerShell parse failure before native execution. The ordered calls were:
+
+| Call | Input and observed result |
+| --- | --- |
+| 1 | No-edit carried startup: current facts, separate Configuration integration claim restriction, no advice yet. |
+| 2 | Semantic detail: exact discovery/select requests; mistaken carriage extraction recovered from raw call 1. |
+| 3 | Configuration detail: current assessment route, no task restriction waiver. |
+| 4 | Exact repository-branch discovery: accepted, branch detail stayed lazy. |
+| 5 | Current semantic selection identity: exact request reference. |
+| 6 | Selected `repository/checks`: procedure and advice delivered before first setup decision. |
+| 7 | Changed-status context plus projection flag: rejected; caller moved projection into context. |
+| 8 | Corrected current stopped observation: successful resolution; first advice reused with live sources. |
+| 9 | Current activation identity: exact applicability questions. |
+| 10 | Applicability/no-retention answers: accepted; no durable availability assertion. |
+| 11 | Separate no-edit documentation task: no service advice. |
+| 12 | Current Configuration assessment identity: read request only. |
+| 13 | Documentation semantic-selection identity: current request only. |
+| 14 | Assessment read: accepted, detail remained lazy. |
+| 15 | Invented route posture `no-match`: rejected; this is not an advertised semantic-route choice. |
+| 16 | Assessment detail: large saved output, no integration publication or completion claim. |
+
+The projection error is caller misuse covered by `owners.md`. The invalid route
+posture belongs to generic semantic selection/choice exposure, not Memory; no
+service advice was loaded by that rejection. Detail/carriage shape confusion,
+large setup detail and a missing compact activation description are named generic
+operating/Configuration/activation friction. None is an unexplained effect retry.
+The second layer repairs the earlier discovery/selection conflict by sharing the
+native owner request key with automatic carriage replacement; the regression and
+all 11 operating tests pass. The new publisher/reader/control journey also passes
+in the focused 25-test top-stack Memory run. Hosted proof remains separate.
+
+The reader read startup/owner/setup references, two config files, the five setup
+procedure/source/registry files, and unrelated documentation. It read neither
+historical setup nor migration log, ran no services/checks and invoked no managed
+effect. Only simulated status changed. This demonstrates next-action correctness
+and early advice arrival, without a counterfactual time-saving or long-term value
+claim. The separately scoped fixture installation assessment remains unfinished.
