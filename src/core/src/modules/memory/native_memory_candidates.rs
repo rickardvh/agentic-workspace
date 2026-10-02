@@ -533,6 +533,26 @@ mod tests {
         }
     }
     #[test]
+    fn carried_observation_detail_survives_clock_tick_with_current_sources() {
+        let f = Fixture::new();
+        let input = json!({"target":f.0,"task":"Investigate fixture setup","projection":"carried","material":[{"id":"setup-observation","kind":"observation","summary":"A fixture investigation found redundant service provisioning.","source":{"producer":"acting-agent","reference":"fixture:investigation","coverage":"bounded"}}]});
+        let first = crate::operating::start(input.clone()).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+        let expanded=crate::operating::start(json!({"request":first["carriage"],"reference":first["view"]["detail_refs"]["/memory"]})).unwrap();
+        assert_eq!(expanded["currentness"], "reobserved");
+        assert_eq!(
+            expanded["value"]["candidates"]["requests"][0]["arguments"]["operation"],
+            "consider"
+        );
+        assert!(!f.0.join(HOME).exists());
+        // Changed ordinary material is a different source, even when its path
+        // and task text remain unchanged. The old carriage doesn't grant access.
+        let mut changed = input;
+        changed["material"][0]["summary"] = json!("Current evidence changed.");
+        changed["reference"] = first["view"]["detail_refs"]["/memory"].clone();
+        assert!(crate::operating::start(changed).is_err());
+    }
+    #[test]
     fn public_no_edit_finding_reaches_capture_and_fresh_scoped_consideration() {
         let f = Fixture::new();
         let task = "Investigate the fixture test setup";

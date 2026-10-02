@@ -1949,6 +1949,12 @@ fn resolve_selected(
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
     }
+    // Optional nomination templates include a capture time. Detail references
+    // bind current evidence/owner state, not the wall clock of a newly generated
+    // template. Every selected request/action still receives normal admission.
+    if let Some(candidates) = memory_identity["candidates"].as_object_mut() {
+        candidates.remove("requests");
+    }
     if material["items"]
         .as_array()
         .is_some_and(|items| !items.is_empty())
