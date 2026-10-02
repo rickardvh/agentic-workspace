@@ -127,6 +127,28 @@ pub(crate) fn view(
     }
     #[cfg(test)]
     crate::native_frontier::built("assignment-requirements");
+    // Expose source restrictions with the first semantic question. Reading
+    // declarations needs no candidate construction or handoff preparation.
+    // Configuration already owns failed source admission. This optional
+    // question must not turn its recoverable blocker into a transport error.
+    let declarations = crate::native_assignment_policy::load(target).ok();
+    let scope_questions: Vec<_> = declarations
+        .as_ref()
+        .map(|source| &source.effective["delegation_targets"])
+        .and_then(Value::as_object)
+        .into_iter()
+        .flatten()
+        .filter(|(_, profile)| {
+            profile["forbidden_task_classes"]
+                .as_array()
+                .is_some_and(|classes| !classes.is_empty())
+        })
+        .map(|(name, profile)| {
+            json!({"target":name,"restrictions":profile["forbidden_task_classes"],
+                "answer_field":format!("target_scope.{name}"),
+                "choices":["applies","not-applicable","unresolved"]})
+        })
+        .collect();
     let mut source_work = crate::planning::assignment_work(target, planning_subject)?;
     if source_work["status"] == "ready" {
         template["arguments"]["required_result_classes"] =
@@ -290,7 +312,7 @@ pub(crate) fn view(
         }
     }
     Ok(
-        json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,"verification_requirements":obligation,"source_work":source_work,
+        json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,"target_scope_questions":scope_questions,"verification_requirements":obligation,"source_work":source_work,
         "execution_configurations":execution,"handoff_inputs":handoff_inputs,"remaining_owner_contracts":["current-native-best-fit-assignment-and-execution"],
         "claim_boundary":"Current task judgment only; no assignment choice, local implementation, launch or proof authority."}),
     )

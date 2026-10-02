@@ -6,6 +6,16 @@ about configured task prohibitions. Judge whether each restriction applies to
 this task and explain why. An unresolved restriction is not permission to use
 that target. These are task judgments, not configuration changes.
 
+For ordinary compact entry, use `assignment_context.next_step` directly. It
+contains the current semantic question, alternatives or source restrictions,
+answer fields and exact reference. Return `reentry` unchanged with that reference
+and your answer through `start --input`. The owner carries source identities and
+earlier answers; you need not open task-requirements detail or inspect request
+arrays. A caller that already keeps carriage may use the same reference with it.
+When `local_continuation_allowed` is true, continue direct work. A mechanically
+settled choice needs no comparison answer, self-assignment record or handoff.
+Non-local or unresolved admission still follows its current recovery.
+
 For a justified delegate choice, state the independent bounded outcome and what
 stays local. Separate why delegation helps from whether any target is currently
 eligible. Request current task requirements and Assignment assessment; do not
