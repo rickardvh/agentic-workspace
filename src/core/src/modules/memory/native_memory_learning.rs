@@ -68,6 +68,31 @@ fn receiving_consequence(args: &Value, verification: &Value) -> Result<Value, Co
     )
 }
 
+pub(crate) fn checked_receiving_consequence(
+    target: &Path,
+    args: &Value,
+    verification: &Value,
+) -> Result<Value, CoreError> {
+    let receiver = &args["receiving_source"];
+    let reference = receiver["reference"]
+        .as_str()
+        .ok_or_else(|| err("Stronger-owner completion needs exact receiving source evidence"))?;
+    crate::decision_source::relative(reference)?;
+    if reference.starts_with(".agentic-workspace/memory/") {
+        return Err(err("Memory is not a stronger receiving owner"));
+    }
+    let root =
+        cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(err)?;
+    let bytes = crate::native_planning::read(&root, reference)?
+        .ok_or_else(|| err("Receiving source missing"))?;
+    if crate::decision_source::hash(&bytes) != receiver["revision"] {
+        return Err(err("Receiving source changed"));
+    }
+    Ok(
+        json!({"receiving_source":receiver,"consequence":receiving_consequence(args, verification)?,"authority":"bounded semantic disposition; no independent review, promotion or completion grant"}),
+    )
+}
+
 /// Exact Verification prerequisites travel with the disposition/authorization,
 /// including handoff or fresh-process reentry. Each owner revalidates them.
 pub(crate) fn prerequisites(request: &Value) -> Result<Vec<Value>, CoreError> {
@@ -77,7 +102,10 @@ pub(crate) fn prerequisites(request: &Value) -> Result<Vec<Value>, CoreError> {
     if request["owner"] != "memory"
         || !matches!(
             request["request_kind"].as_str(),
-            Some(KIND | crate::native_memory_capture::ADVISORY_CAPTURE)
+            Some(
+                KIND | crate::native_memory_capture::ADVISORY_CAPTURE
+                    | crate::native_memory_candidates::REQUEST
+            )
         )
     {
         return Err(err(
@@ -186,22 +214,9 @@ pub(crate) fn view(
                 }
                 "stronger-owner" | "already-absorbed" => {
                     let receiver = &args["receiving_source"];
-                    let reference = receiver["reference"].as_str().ok_or_else(|| {
-                        err("stronger-owner disposition needs exact receiving source evidence")
-                    })?;
-                    crate::decision_source::relative(reference)?;
-                    if reference.starts_with(".agentic-workspace/memory/") {
-                        return Err(err("Memory is not a stronger receiving owner"));
-                    }
-                    let root =
-                        cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
-                            .map_err(err)?;
-                    let bytes = crate::native_planning::read(&root, reference)?
-                        .ok_or_else(|| err("receiving source missing"))?;
-                    if crate::decision_source::hash(&bytes) != receiver["revision"] {
-                        return Err(err("receiving source changed"));
-                    }
-                    let consequence = receiving_consequence(args, verification)?;
+                    let consequence =
+                        checked_receiving_consequence(target, args, verification)?["consequence"]
+                            .clone();
                     dispositions.push(json!({"candidate_revision":revision,"status":args["disposition"],"receiving_source":receiver,"reason":args["reason"],"retained":false,
                         "receiving_consequence":consequence,
                         "authority":"bounded semantic disposition supported by current Verification evidence; no source admission, authorship, policy, learned-skill promotion, independent review or completion grant"}));

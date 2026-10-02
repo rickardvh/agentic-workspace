@@ -37,10 +37,15 @@ pub(crate) fn extend_owner(owner: &mut Value) -> Result<(), CoreError> {
     let cues = json!({"type":"array","maxItems":16,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":2048}});
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":REQUEST,"result_kind":"agentic-memory/observation-consideration/v1","input_schema":{
         "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
-        "properties":{"operation":{"enum":["consider","capture","read","discard","maintain","recover"]},
+        "properties":{"operation":{"enum":["consider","capture","read","consolidate","complete","defer","discard","maintain","recover"]},
             "material_revision":text,"candidate_ids":cues,"consequence":text,"uncertainty":text,
             "paths":cues,"semantic_routes":cues,"captured_at":{"type":"integer","minimum":0},
-            "optional":{"const":true},"reason":text},"required":["operation"]}}));
+            "optional":{"const":true},"reason":text,"advisory_material":{"type":"object"},
+            "revise_source":text,"source_revision":text,"validity_review":text,
+            "publication":{"type":"object","additionalProperties":false,"properties":{"source":text,"revision":text},"required":["source","revision"]},
+            "receiving_source":{"type":"object","additionalProperties":false,"properties":{"reference":text,"revision":text},"required":["reference","revision"]},
+            "receiving_consequence":{"type":"object","additionalProperties":false,"properties":{"claim":text,"evidence_reference":text,"proof_subject":text},"required":["claim","evidence_reference","proof_subject"]},
+            "candidate_evidence_requests":{"type":"array","maxItems":8,"items":{"type":"object"}}},"required":["operation"]}}));
     owner["operations"].as_array_mut().unwrap().push(json!({"id":OP,"semantic_revision":"memory-bounded-local-candidates-v1",
         "input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
             "properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"}},"required":["target","request","binding"]},
@@ -177,6 +182,7 @@ pub(crate) fn view(
     routes: &Value,
     config: &Value,
     contract: &Value,
+    verification: &Value,
     request: Option<&Value>,
 ) -> Result<Value, CoreError> {
     match view_at(
@@ -187,6 +193,7 @@ pub(crate) fn view(
         routes,
         config,
         contract,
+        verification,
         request,
         now(),
     ) {
@@ -205,6 +212,7 @@ fn view_at(
     routes: &Value,
     config: &Value,
     contract: &Value,
+    verification: &Value,
     request: Option<&Value>,
     clock: u64,
 ) -> Result<Value, CoreError> {
@@ -279,9 +287,10 @@ fn view_at(
         .iter()
         .filter(|r| current(r, clock))
     {
-        if ids.is_some_and(|ids| ids.contains(&row["id"]))
-            || selectors(row, changed, routes)
-            || args["operation"] == "read" && ids.is_none()
+        if ids.map_or_else(
+            || selectors(row, changed, routes),
+            |ids| ids.contains(&row["id"]),
+        ) || args["operation"] == "read" && ids.is_none()
         {
             result["selected"]
                 .as_array_mut()
@@ -297,10 +306,101 @@ fn view_at(
             .map(|r| r["observation"]["id"].clone())
             .collect::<Vec<_>>();
         result["requests"].as_array_mut().unwrap().push(template(json!({"operation":"discard","candidate_ids":selected_ids,"reason":"<deliberate disposition>"})));
+        result["requests"].as_array_mut().unwrap().push(template(
+            json!({"operation":"consolidate","candidate_ids":selected_ids}),
+        ));
     }
     let Some(request) = request else {
         return Ok(result);
     };
+    if ["consolidate", "complete", "defer"]
+        .iter()
+        .any(|op| args["operation"] == *op)
+    {
+        let ids = ids
+            .filter(|ids| !ids.is_empty())
+            .ok_or_else(|| err("Consolidation requires exact candidate identities"))?;
+        if ids.iter().any(|id| {
+            !state["candidates"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|r| r["id"] == *id && current(r, clock))
+        }) {
+            result["status"] = json!("optional-evidence-unavailable");
+            return Ok(result);
+        }
+        if args["operation"] == "defer" {
+            result["status"] = json!("deferred");
+            return Ok(result);
+        }
+        if args["operation"] == "consolidate" {
+            result["status"] = json!("semantic-judgment-required");
+            result["next"] = json!({"choices":["new-advice","revise-advice","checked-stronger-owner","defer","discard"],
+                "question":"Compare the selected observations and current sources. Preserve differing scopes, origins and uncertainty; recurrence does not prove equivalence. Supply advisory_material only when a concrete future decision justifies publication. Publish first, then complete these exact candidates with the confirmed source/revision. Durable obsolete material uses the existing terminal disposition."});
+            if args["advisory_material"].is_object() {
+                let scope = changed
+                    .iter()
+                    .map(|p| format!("path:{p}"))
+                    .collect::<Vec<_>>();
+                let capture = crate::native_memory_capture::view_for(
+                    target,
+                    work,
+                    &scope,
+                    config,
+                    contract,
+                    (
+                        crate::native_memory_capture::Destination::Advisory,
+                        &Value::Null,
+                    ),
+                    None,
+                )?;
+                let mut publication = capture["requests"][0].clone();
+                publication["arguments"]["material"] = args["advisory_material"].clone();
+                publication["arguments"]["material"]["origins"] = json!(
+                    state["candidates"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .filter(|r| ids.contains(&r["id"]))
+                        .map(|r| r["material"]["source"].clone())
+                        .collect::<Vec<_>>()
+                );
+                // Keep deliberately supplied earlier provenance alongside this
+                // opportunity's origins. Deduplication is identity, not evidence
+                // corroboration; bounded publication still needs agent judgment.
+                for origin in args["advisory_material"]["origins"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                {
+                    let origins = publication["arguments"]["material"]["origins"]
+                        .as_array_mut()
+                        .unwrap();
+                    if !origins.contains(origin) {
+                        origins.push(origin.clone());
+                    }
+                }
+                if publication["arguments"]["material"]["origins"]
+                    .as_array()
+                    .unwrap()
+                    .len()
+                    > 16
+                {
+                    return Err(err(
+                        "Narrow the consolidation provenance to its relevant bounded opportunity",
+                    ));
+                }
+                for key in ["revise_source", "source_revision", "validity_review"] {
+                    if let Some(value) = args.get(key) {
+                        publication["arguments"][key] = value.clone();
+                    }
+                }
+                result["publication_request"] = publication;
+            }
+            return Ok(result);
+        }
+    }
     if ["read", "consider"]
         .iter()
         .any(|op| args["operation"] == *op)
@@ -396,11 +496,26 @@ fn view_at(
                 }
                 post["candidates"].as_array_mut().unwrap().remove(0);
             }
-        } else if args["operation"] == "discard" {
+        } else if args["operation"] == "discard" || args["operation"] == "complete" {
             let selected = ids
                 .filter(|ids| !ids.is_empty())
                 .ok_or_else(|| err("Discard requires exact candidate identities"))?;
-            if args["reason"].as_str().is_none_or(|s| s.trim().is_empty()) {
+            if args["operation"] == "complete" {
+                let confirmation = if args["publication"].is_object() {
+                    crate::native_memory_capture::confirmed_publication(
+                        target,
+                        args["publication"]["source"].as_str().unwrap(),
+                        &args["publication"]["revision"],
+                    )?
+                } else {
+                    crate::native_memory_learning::checked_receiving_consequence(
+                        target,
+                        &args,
+                        verification,
+                    )?
+                };
+                result["confirmation"] = confirmation;
+            } else if args["reason"].as_str().is_none_or(|s| s.trim().is_empty()) {
                 return Err(err("Discard requires a deliberate disposition"));
             }
             post["candidates"]
@@ -419,7 +534,7 @@ fn view_at(
         result["status"] = json!("unchanged");
         return Ok(result);
     }
-    let binding = json!({"before":before,"postimage":post,"post_revision":digest(&post)?,"prepared":prepared});
+    let binding = json!({"before":before,"postimage":post,"post_revision":digest(&post)?,"prepared":prepared,"confirmation":result["confirmation"]});
     result["status"] = json!("write-ready");
     result["contribution"]["actions"] = json!([{"operation_id":OP,"dependency_revision":digest(&json!([binding,request]))?,
         "arguments":{"target":target,"request":request,"binding":binding},"effects":["memory-state"],"source_requests":[request]}]);
@@ -553,6 +668,218 @@ mod tests {
         assert!(crate::operating::start(changed).is_err());
     }
     #[test]
+    fn ordinary_feedback_consolidates_then_subtracts_only_confirmed_material() {
+        let f = Fixture::new();
+        std::fs::write(
+            f.0.join("service-policy.md"),
+            "Use the shared fixture service; check its current status.",
+        )
+        .unwrap();
+        let input = json!({"target":f.0,"task":"Investigate redundant fixture provisioning","material":[{"id":"fixture-discovery","kind":"observation",
+            "summary":"Provisioning a second instance wasted work; the configured fixture service was already running.",
+            "source":{"producer":"acting-agent","reference":"fixture:investigation","coverage":"bounded"}}]});
+        let start = |input: &Value, request: Value| {
+            let mut i = input.clone();
+            i["request"] = request;
+            crate::native_public::start(i).unwrap()
+        };
+        let invoke = |input: &Value, ready: &Value| {
+            let mut i = input.clone();
+            i["invocation"] = ready["decision_packet"]["primary_action"].clone();
+            crate::native_public::invoke_checked(i).unwrap()
+        };
+        let initial = start(&input, Value::Null);
+        let mut capture = initial["memory"]["candidates"]["requests"][0].clone();
+        capture["arguments"]["operation"] = json!("capture");
+        capture["arguments"]["optional"] = json!(true);
+        capture["arguments"]["uncertainty"] =
+            json!("One environment observation; check current runtime and policy before reuse.");
+        capture["arguments"]["paths"] = json!(["tests/fixture/**"]);
+        invoke(&input, &start(&input, capture));
+        let ordinary = json!({"target":f.0,"task":"Prepare fixture checks","changed":["tests/fixture/check.rs"]});
+        let selected = start(&ordinary, Value::Null);
+        let request = selected["memory"]["candidates"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["operation"] == "consolidate")
+            .unwrap()
+            .clone();
+        let ids = request["arguments"]["candidate_ids"].clone();
+        let before = std::fs::read(f.0.join(STATE)).unwrap();
+        let mut deferred = request.clone();
+        deferred["arguments"]["operation"] = json!("defer");
+        assert_eq!(
+            start(&ordinary, deferred)["memory"]["candidates"]["status"],
+            "deferred"
+        );
+        assert_eq!(std::fs::read(f.0.join(STATE)).unwrap(), before);
+        let mut consolidation = request;
+        consolidation["arguments"]["advisory_material"] = json!({"id":"shared-fixture","lesson":"Read service-policy.md and inspect current service status before provisioning the shared fixture.","rationale":"Avoid the redundant provisioning found during setup; the earlier running observation is historical.","dependency_paths":["service-policy.md"],"routes_from":["tests/fixture/**"]});
+        let considered = start(&ordinary, consolidation);
+        let publication = considered["memory"]["candidates"]["publication_request"].clone();
+        let proposal = start(&ordinary, publication);
+        let mut answer =
+            proposal["decision_packet"]["decision_request"]["response_request"].clone();
+        answer["arguments"]["answer"] = json!("confirm-retention");
+        let published = invoke(&ordinary, &start(&ordinary, answer));
+        assert_eq!(
+            std::fs::read(f.0.join(STATE)).unwrap(),
+            before,
+            "publication cannot prematurely drop candidates"
+        );
+        let fresh = start(&ordinary, Value::Null);
+        let mut complete = fresh["memory"]["candidates"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["operation"] == "read")
+            .unwrap()
+            .clone();
+        complete["arguments"] = json!({"operation":"complete","candidate_ids":ids,"publication":{"source":published["value"]["source"],"revision":published["value"]["post_revision"]}});
+        let mut forged = complete.clone();
+        forged["arguments"]["publication"]["revision"] = json!("sha256:invented");
+        let mut invalid = ordinary.clone();
+        invalid["request"] = forged;
+        assert!(crate::native_public::start(invalid).is_err());
+        let ready = start(&ordinary, complete);
+        let action = &ready["decision_packet"]["primary_action"];
+        assert!(
+            execute_checked(
+                &f.0,
+                action,
+                &mut || Ok(()),
+                &mut |stage| if stage == "prepared" {
+                    Err(err("lost cleanup reply"))
+                } else {
+                    Ok(())
+                }
+            )
+            .is_err()
+        );
+        let pending = start(&ordinary, Value::Null);
+        let recovery = pending["memory"]["candidates"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["operation"] == "recover")
+            .unwrap()
+            .clone();
+        invoke(&ordinary, &start(&ordinary, recovery));
+        let current = start(&ordinary, Value::Null);
+        assert!(
+            current["memory"]["candidates"]["selected"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            current["memory"]["advisory_context"][0]["body"]
+                .as_str()
+                .unwrap()
+                .contains("inspect current service status")
+        );
+        assert!(
+            current["memory"]["advisory_context"][0]["body"]
+                .as_str()
+                .unwrap()
+                .contains("fixture:investigation")
+        );
+        assert_eq!(std::fs::read_dir(f.0.join(HOME)).unwrap().count(), 2);
+        // Actual contradiction arrives through the same ordinary material path,
+        // with the affected note as its source. Another suite's different scope
+        // must not get flattened into the fixture conclusion.
+        for (id, summary, path) in [
+            (
+                "runtime-correction",
+                "The shared fixture is stopped now; earlier availability cannot justify reuse without a current check.",
+                "tests/fixture/**",
+            ),
+            (
+                "isolated-observation",
+                "The isolated migration suite needs a dedicated service.",
+                "tests/migration/**",
+            ),
+        ] {
+            let feedback = json!({"target":f.0,"task":"Investigate current fixture setup","material":[{"id":id,"kind":"observation","summary":summary,
+                "source":{"producer":"acting-agent","reference":published["value"]["source"],"coverage":"bounded"}}]});
+            let mut capture =
+                start(&feedback, Value::Null)["memory"]["candidates"]["requests"][0].clone();
+            capture["arguments"]["operation"] = json!("capture");
+            capture["arguments"]["optional"] = json!(true);
+            capture["arguments"]["uncertainty"] =
+                json!("A scoped observation; runtime may change.");
+            capture["arguments"]["paths"] = json!([path]);
+            invoke(&feedback, &start(&feedback, capture));
+        }
+        let selected = start(&ordinary, Value::Null);
+        assert_eq!(
+            selected["memory"]["candidates"]["selected"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        let mut consolidate = selected["memory"]["candidates"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["operation"] == "consolidate")
+            .unwrap()
+            .clone();
+        let selected_ids = consolidate["arguments"]["candidate_ids"].clone();
+        consolidate["arguments"]["advisory_material"] = json!({"id":"shared-fixture","lesson":"Read service-policy.md and inspect current service status: reuse the shared fixture if running; otherwise restart the configured instance.","rationale":"The current stopped observation corrected a stale runtime interpretation. Isolated migration setup remains separately scoped.","dependency_paths":["service-policy.md"],"routes_from":["tests/fixture/**"],"origins":[{"producer":"acting-agent","reference":"fixture:investigation","coverage":"bounded"}]});
+        consolidate["arguments"]["revise_source"] = published["value"]["source"].clone();
+        consolidate["arguments"]["source_revision"] = published["value"]["post_revision"].clone();
+        let proposal = start(
+            &ordinary,
+            start(&ordinary, consolidate)["memory"]["candidates"]["publication_request"].clone(),
+        );
+        let mut answer =
+            proposal["decision_packet"]["decision_request"]["response_request"].clone();
+        answer["arguments"]["answer"] = json!("confirm-retention");
+        let revised = invoke(&ordinary, &start(&ordinary, answer));
+        assert_eq!(revised["value"]["source"], published["value"]["source"]);
+        let current = start(&ordinary, Value::Null);
+        let mut complete = current["memory"]["candidates"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["operation"] == "read")
+            .unwrap()
+            .clone();
+        complete["arguments"] = json!({"operation":"complete","candidate_ids":selected_ids,"publication":{"source":revised["value"]["source"],"revision":revised["value"]["post_revision"]}});
+        invoke(&ordinary, &start(&ordinary, complete));
+        let current = start(&ordinary, Value::Null);
+        let body = current["memory"]["advisory_context"][0]["body"]
+            .as_str()
+            .unwrap();
+        assert!(
+            body.contains("otherwise restart the configured instance")
+                && body.contains("fixture:investigation")
+        );
+        assert_eq!(
+            std::fs::read_dir(f.0.join(".agentic-workspace/memory/repo/domains"))
+                .unwrap()
+                .count(),
+            1
+        );
+        assert_eq!(
+            std::fs::read_dir(f.0.join(".agentic-workspace/local/effects"))
+                .unwrap()
+                .count(),
+            4
+        );
+        let remaining = snapshot(&Dir::open_ambient_dir(&f.0, ambient_authority()).unwrap())
+            .unwrap()
+            .0;
+        assert_eq!(remaining["candidates"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            remaining["candidates"][0]["material"]["id"],
+            "isolated-observation"
+        );
+    }
+    #[test]
     fn public_no_edit_finding_reaches_capture_and_fresh_scoped_consideration() {
         let f = Fixture::new();
         let task = "Investigate the fixture test setup";
@@ -654,6 +981,7 @@ mod tests {
                 &routes,
                 &config,
                 &contract,
+                &Value::Null,
                 request,
                 t,
             )
@@ -778,6 +1106,80 @@ mod tests {
         held.try_lock().unwrap();
         assert!(execute(&f.0, &action(&v), || Ok(())).is_err());
         drop(held);
+        execute(&f.0, &action(&v), || Ok(())).unwrap();
+        // The receiving owner has already made the actual correction. Its
+        // current Verification evidence, not copied text, permits subtraction.
+        std::fs::write(
+            f.0.join("fixture-policy.md"),
+            "Reuse the configured shared service after checking current status.",
+        )
+        .unwrap();
+        let receiver = json!({"reference":"fixture-policy.md","revision":crate::decision_source::hash(&std::fs::read(f.0.join("fixture-policy.md")).unwrap())});
+        let selected = resolve(&json!({}), None, clock + AGE + 102);
+        let mut completion = selected["requests"][0].clone();
+        completion["arguments"] = json!({"operation":"complete","candidate_ids":[selected["selected"][0]["observation"]["id"]],"receiving_source":receiver,
+            "receiving_consequence":{"claim":"The current fixture policy avoids redundant provisioning.","evidence_reference":"proof:fixture-policy","proof_subject":"fixture:current"}});
+        assert!(
+            view_at(
+                &f.0,
+                &work,
+                &json!({}),
+                &[],
+                &routes,
+                &config,
+                &contract,
+                &Value::Null,
+                Some(&completion),
+                clock + AGE + 102
+            )
+            .is_err()
+        );
+        let proof = json!({"evidence":[{"reference":"proof:fixture-policy","proof_subject":"fixture:current","checked_scope":{"claim":"selected-command-passed","source_inputs":[{"path":"fixture-policy.md"}]}}]});
+        let complete = view_at(
+            &f.0,
+            &work,
+            &json!({}),
+            &[],
+            &routes,
+            &config,
+            &contract,
+            &proof,
+            Some(&completion),
+            clock + AGE + 102,
+        )
+        .unwrap();
+        std::fs::write(f.0.join("fixture-policy.md"), "Changed receiving source.").unwrap();
+        assert!(
+            view_at(
+                &f.0,
+                &work,
+                &json!({}),
+                &[],
+                &routes,
+                &config,
+                &contract,
+                &proof,
+                Some(&completion),
+                clock + AGE + 102
+            )
+            .is_err()
+        );
+        execute(&f.0, &action(&complete), || {
+            Err(err("fresh receiving owner rejects drift"))
+        })
+        .unwrap_err();
+        std::fs::write(
+            f.0.join("fixture-policy.md"),
+            "Reuse the configured shared service after checking current status.",
+        )
+        .unwrap();
+        execute(&f.0, &action(&complete), || Ok(())).unwrap();
+        assert!(
+            snapshot(&root).unwrap().0["candidates"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
         std::fs::write(f.0.join(STATE), serde_json::to_vec(&state).unwrap()).unwrap();
         assert!(execute(&f.0, &action(&v), || Ok(())).is_err());
     }

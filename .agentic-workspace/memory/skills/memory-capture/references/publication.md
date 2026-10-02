@@ -12,7 +12,23 @@ instead of defaulting to the whole repository. Historical service availability
 never establishes that a service is running now. Keep exact commands and changing
 configuration in their current source, and check live state before relying on it.
 
-For an existing selected note or advisory fact, [Memory Hygiene](../../memory-hygiene/SKILL.md) supplies the native disposition path. Retaining a note does not rewrite its prose or confirm its truth. Promotion requires independently admitted receiving material and an exact authorized disposition.
+To revise ordinary declared advice, use the same advisory request with
+`revise_source` and the current exact `source_revision`. Read that source and its
+declaration first. Preserve the note ID, relevant provenance and legitimate
+scope differences; propose the complete replacement lesson and rationale with
+future cues and dependency paths. The exact proposal binds the source and manifest
+preimages. Governing decisions require their deciding owner. Changed validity
+dependencies require an explicit `validity_review` explaining why the revised
+advice still applies; merely refreshing hashes does not establish truth. Unchanged
+accepted material is quiet. After interruption use the returned recovery in the
+original work context; confirmed revision removes only prior owned publication
+receipts, leaving one current note and its necessary confirmation.
+
+For retain, promotion or terminal retirement, [Memory Hygiene](../../memory-hygiene/SKILL.md)
+supplies the existing disposition path. Metadata-only retain does not rewrite
+prose or confirm truth. Durable obsolete advice requires that terminal owner;
+candidate expiry cannot retire it. Promotion requires independently admitted
+receiving material and an exact authorised disposition.
 
 For a deliberately authored fallback decision, use the current `memory.capture.requests` entry of kind `memory/capture-decision/v1`. Supply only the requested semantic material: stable decision ID, decision, bounded consequence, rationale, alternatives, exact dependency paths, and any exact admitted supersession references. The owner derives scope from the current changed paths and constructs the destination, source and manifest postimages, dependencies, work, policy and capability bindings. A configured repository decision owner takes precedence; use its returned destination or preserve its explicit unsupported gap.
 

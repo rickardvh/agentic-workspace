@@ -1663,6 +1663,7 @@ fn resolve_selected(
             &route_fact,
             &configuration,
             &contract,
+            &verification,
             requests.iter().find(|r| {
                 r["owner"] == "memory"
                     && r["request_kind"] == crate::native_memory_candidates::REQUEST

@@ -465,7 +465,8 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             else { json!({"id":row["observation"]["id"],"status":"selected-detail-deferred","currentness":row["currentness"]}) }
         }).collect::<Vec<_>>();
         result["candidate_context"] = json!({"observations":observations,
-            "reference":result["detail_refs"]["/memory"],"authority":"Unconfirmed local evidence for consideration; no current-state, policy or task-custody authority."});
+            "reference":result["detail_refs"]["/memory"],"next":"If this evidence changes current or future work, select the current memory.candidates.requests consolidate request from Memory detail. Compare scopes and current sources; publish or revise justified advice before completing its candidates. Defer or discard may be sufficient.",
+            "authority":"Unconfirmed local evidence for consideration; no current-state, policy or task-custody authority."});
     }
     if let Some(maintenance) = context.get("maintenance") {
         result["reentry"]["maintenance"] = maintenance.clone();

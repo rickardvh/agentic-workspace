@@ -53,6 +53,36 @@ bounded set, presenting matches as unconfirmed historical evidence. Dependency
 drift requires review, and present service availability always needs a live check.
 Local files are ignored and do not establish portable handoff continuity.
 
+Selected candidates expose a bounded `consolidate` request. The acting agent
+compares the supplied evidence, scopes and current sources; there is no similarity
+classifier, recurrence threshold or automatic synthesis. A justified result
+returns the existing advisory publisher's request with selected evidence origins.
+Deferral is passive and does not renew age. Deliberate discard is a valid outcome.
+Confirmed publication precedes `complete` candidate subtraction; the owner checks
+current native publication, declaration and validity. Alternatively, actual
+stronger-owner absorption requires the existing exact receiving source and current
+Verification consequence. Copied text and proposed edits are insufficient.
+
+Advisory publication can revise one ordinary declared Memory note through
+`revise_source` and `source_revision`. It binds exact source/manifest preimages,
+preserves identity and unrelated declarations, and requires deliberate
+`validity_review` when dependency baselines change. Governing material keeps its
+deciding owner. An unchanged conclusion is quiet. A revision journal carries its
+complete replacement and only the previous owned receipt references; confirmation
+precedes their removal. Four interruption stages recover without duplicate
+publication. Repeated completed revisions retain one note, one stable journal,
+one current attempt/result pair and the shared zero-byte Memory lock. Unknown
+temporaries or changed receipts are preserved rather than treated as disposable.
+This guarantees process-interruption recovery at the tested publication stages,
+not power-loss durability or automatic repair of arbitrary partial bytes.
+
+Useful application, contradiction and inapplicability are ordinary supplied
+observations referencing the affected note and scope. They can refine or discard
+current meaning through the same path. Passive selection creates no feedback
+ledger, hit count, age renewal or usefulness prompt. Durable obsolete material
+still uses the existing terminal retirement owner; candidate expiry does not
+retire advice, commitments or pending publication effects.
+
 A source-declared native Verification command may emit complete JSON stdout with
 `future_value_candidate: {"lesson": "...", "rationale": "..."}`. Both nonempty
 strings are bounded to 2048 bytes; total stdout is bounded to 8192 bytes and must
@@ -78,6 +108,39 @@ successful disposition with no durable note. Without executable AW, read sources
 under the startup skill and leave runtime nomination/publication unestablished.
 
 ## Evidence and operating cost
+
+The #3758 lane uses one finite shared-fixture scenario. Permanent public journeys
+cover an ordinary finding, optional candidate capture, new advice, confirmed
+subtraction, contradictory runtime feedback and revision of that same note.
+A differently scoped migration observation survives separately. Companion owner
+checks cover same-event replay, capacity/expiry, dependency and source drift,
+stronger receiving evidence, publication/cleanup interruptions and bounded current
+receipt state. Activity recall and unrelated-work controls use the existing reader.
+
+One fresh reader started with the ordinary job of preparing fixture checks, using
+the shipped guidance and a configured native command. It chose reuse while the
+configured shared service was running, restart after its observed status changed
+to stopped, and no new retention for a one-off dedicated migration stub. No author
+reminder preceded those semantic decisions. The advice remained byte-identical;
+only the fixture status changed. The reader's first setup decision came from
+current policy/status before advice arrived; advice was available before the
+changed-status decision. This establishes scoped semantic behaviour, not saved
+search, successful first-action recall or natural long-term payoff. #3191 retains
+that separate question.
+
+The exercise made 24 native AW invocations: 23 resolution/answer attempts and one
+help call, including seven failures. It read source text 15 times across 11 files,
+with 12 follow-up reads after three entry reads, plus one hash verification.
+Errors included dropped prior answers, discovery/selection requests competing
+within one owner, malformed projection/recovery input and two stale Memory detail
+references despite carried context. A separate reproduction isolated a changing
+nomination timestamp in lazy detail identity; the #3759 foundation now excludes
+request templates from that identity and verifies delayed carried expansion while
+changed evidence still rejects the old reference. This does not establish the
+cause of every failed exercise call. The fixture's deliberately minimal checks
+registry also exposed `procedure-path-undeclared` while advice was delivered.
+These costs and limitations remain evidence, rather than being erased by a retry.
+The exercise is author validation; independent acceptance remains separate.
 
 Existing Memory owner tests cover interruption stages, policy drift and current
 selection, including actual historical underuse material. Two public journeys
