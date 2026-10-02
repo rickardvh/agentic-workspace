@@ -213,3 +213,102 @@ optional advice properties (`routes_from`, `semantic_routes`, `origin`) to a
 700-byte full-schema ceiling. It preserves the baseline contract and ordinary
 response ceilings. All 29 four-surface cases pass on this layer; this test-only
 addition leaves the fresh-reader product subject unchanged.
+
+## Third layer: publication confirmed before candidate subtraction
+
+Product subject: `b06902a68c87d3f79bbb44a878eb90b5bf81b427`, the complete third
+implementation before evidence/test-only ancestor additions and restacking.
+Paired core SHA-256:
+`f818c954c4bfe1876fcda1e01735da7e18280026970e3a3b58ebd96dbc8eb69f`;
+the CLI hash is the same as the first layer. The author seeded two optional
+observations through the native candidate owner (six calls), with no durable
+advice. The setup observation records a 12-minute duplicate provisioning run;
+the migration observation records a completed, isolated experiment. A later
+follow-up records that restarting the stopped configured instance restored
+readiness without another instance. The fixture used the existing checks route
+and source policy, not a new discovery index or Memory-specific task prompt.
+
+Exact ordinary prompt:
+
+> Finish the open fixture setup investigation now that followup-run.txt supplies
+> the missing result. Compare the earlier observations with current policy and
+> readiness. Preserve one supported reusable conclusion through the existing
+> workflow, and remove finished temporary investigation evidence only after its
+> receiving result is confirmed. Assess the completed isolated migration experiment
+> separately; avoid retaining duplicates or unrelated conclusions.
+
+The reader received the same fixture-only/no-service/no-implementation-read
+boundaries as the other exercises. It first read the current policy, readiness,
+logs and follow-up; then recovered the two historical candidates through current
+Memory, selected the existing checks activity, and judged their differing scopes.
+Current policy already covered migration isolation. It authored one bounded setup
+lesson with historical origins, deliberate future cues and policy validity;
+transient readiness was excluded from durable dependencies.
+
+The initial cap was 24 native calls. The reader stopped after call 23 with a
+publication request and zero effects. The author granted at most 14 additional
+calls (37 total) for the **unchanged task**, adding no semantic choice or protocol
+instructions. The reader used 12 more calls and completed at 35. This operational
+extension is part of the cost, not an omitted restart or a first-stage success.
+
+| Calls | Input and observed result |
+| --- | --- |
+| 1–2 | Explicit projection conflicted with exact context; corrected transport returned current facts, no effect. |
+| 3–6 | Current route detail/discovery; checks leaf discovered, with lazy branch detail. |
+| 7–8 | Selected setup/correction first; candidate cues required checks selection later. |
+| 9–11 | Memory, unneeded Planning, and separate Configuration detail; no retention/integration completion. |
+| 12–13 | Current candidate read request recovered both bounded observations. |
+| 14–16 | Old route reference rejected after context changed; resolved current reference and selected checks. |
+| 17–18 | Current Memory detail and consolidation identity supplied exact scoped request. |
+| 19–21 | Semantic comparison exchange, requirements detail and refreshed consolidation reference; zero effects. |
+| 22–23 | Setup-only authored proposal accepted; publication request supplied, still zero effects. Initial stop. |
+| 24 | Generic publication identity was ambiguous alongside candidate-specific request; no effect. |
+| 25–26 | Reader extracted wrong raw nesting and submitted null; successful CLI response yielded no proposal. Rechecked current detail. |
+| 27–28 | Correct exact publication request supplied; inspected postimage and confirmed retention. |
+| 29 | Exact native publisher committed one advisory and returned its source/revision. |
+| 30–31 | Current candidate completion request supplied the confirmed publication; owner rechecked it before returning subtraction. |
+| 32 | Exact completion committed: setup candidate removed, migration remained. |
+| 33–34 | Current request supplied separate justified migration discard. |
+| 35 | Exact discard committed: remaining candidates zero. |
+
+Publication source is
+`.agentic-workspace/memory/repo/domains/native-f9be722af53b0cdcd78b3ac6f45b83bc12abc4b9120314c3da899e88e5c8d8ed.md`.
+The saved note's SHA-256 equals the committed revision
+`38006fa981dbbc62415125397457e93a82e8096752b31e8a1c917cf323be699f`.
+The reader read that note and manifest **before** requesting setup subtraction;
+the owner independently checked receiving confirmation and validity. Final actual
+state is `{candidates: [], kind: agentic-memory/local-candidates/v1}`. The author
+independently checked both final state and note hash. The manifest has exactly one
+domain entry, policy dependency, scoped paths and the existing activity cues.
+No direct managed writes, duplicate note, service contact or unrelated lesson
+occurred. Source logs and current policy/status remain available.
+
+The total is 35 native calls: 33 successful responses and two rejected inputs;
+successes include ambiguity and the null-input mistake, neither an achieved task.
+There were three committed effects, no committed-effect retries, 500,167 raw
+output bytes and an audited interval of about 13 minutes 26 seconds including the
+stop/extension. Model identity and monetary/token usage were not exposed. The
+reader also read an excessively large historical author response, searched the
+wrong registry for a procedure, probed a missing local skills path, and read an
+unrelated unused dogfooding skill. Those costs remain visible in the raw ledger.
+
+Failure attribution: projection and stale reference rejection are expected caller
+misuse under the existing workspace carriage owner. Null input is reader transport
+misuse, recovered from the exact saved response without repeating an effect.
+Stable publication identity ambiguity and compact/detail navigation belong to
+generic operating request resolution; the current exact publication envelope
+provided the supported path. Planning/Configuration detours and registry lookup
+are generic navigation/fixture friction. No required Memory operation remained
+missing. The earlier Memory continuation and shared route carriage defects were
+repaired in the smallest applicable ancestors; all seven historical failures are
+separately classified in [memory-consequences.md](memory-consequences.md).
+
+This exercise establishes bounded semantic selection, confirmed retention and
+safe subtraction. Revision and stronger-owner paths have deterministic owner
+coverage; this reader chose new advice plus discard and is not evidence of having
+exercised every option. The separate fixture integration assessment and #3191
+long-term payoff remain open; neither is claimed by these three committed effects.
+
+The existing former-route test bounds consolidation's additional schema delta
+to 1.8 KB and advisory origins/revision fields to 900 bytes, preserving all prior
+schema, empty-detail and compact ceilings. All 29 four-surface cases pass locally.

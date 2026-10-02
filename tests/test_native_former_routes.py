@@ -126,7 +126,7 @@ def test_former_selection_requires_exact_current_agent_request(
     consequence = [
         row["input_schema"]["properties"]["receiving_consequence"]
         for row in memory["requests"]
-        if "receiving_consequence" in row["input_schema"].get("properties", {})
+        if row["kind"] == "memory/dispose-future-value/v1" and "receiving_consequence" in row["input_schema"].get("properties", {})
     ]
     assert len(consequence) == 1
     assert set(consequence[0]["required"]) == {"claim", "evidence_reference", "proof_subject"}
@@ -138,7 +138,26 @@ def test_former_selection_requires_exact_current_agent_request(
     candidate_requests = [row for row in memory["requests"] if row["kind"] == "memory/consider-observation/v1"]
     candidate_operations = [row for row in memory["operations"] if row["id"] == "memory.update-candidates"]
     assert len(candidate_requests) == 1 and len(candidate_operations) == 1
-    candidate_bytes = sum(len(json.dumps(row)) for row in [*candidate_requests, *candidate_operations])
+    without_consolidation = copy.deepcopy(candidate_requests[0])
+    candidate_properties = without_consolidation["input_schema"]["properties"]
+    consolidation_keys = {
+        "advisory_material",
+        "revise_source",
+        "source_revision",
+        "validity_review",
+        "publication",
+        "receiving_source",
+        "receiving_consequence",
+        "candidate_evidence_requests",
+    }
+    assert consolidation_keys <= candidate_properties.keys()
+    for key in consolidation_keys:
+        candidate_properties.pop(key)
+    for operation in ("consolidate", "complete", "defer"):
+        candidate_properties["operation"]["enum"].remove(operation)
+    candidate_consolidation_bytes = len(json.dumps(candidate_requests[0])) - len(json.dumps(without_consolidation))
+    assert 0 < candidate_consolidation_bytes < 1_800, candidate_consolidation_bytes
+    candidate_bytes = sum(len(json.dumps(row)) for row in [without_consolidation, *candidate_operations])
     assert 0 < candidate_bytes < 2_000, candidate_bytes
     # Future advice adds three optional authored properties to its existing
     # capture schema. Bound only that delta, not the whole preexisting publisher.
@@ -150,6 +169,16 @@ def test_former_selection_requires_exact_current_agent_request(
     assert cues["origin"]["type"] == "object"
     activity_cue_bytes = len(json.dumps(advisory)) - len(json.dumps(without_activity_cues))
     assert 0 < activity_cue_bytes < 700, activity_cue_bytes
+    # Consolidation additionally permits bounded origins and an explicit current
+    # revision review. Keep those fields out of the earlier cue allowance.
+    without_revision = copy.deepcopy(without_activity_cues)
+    revision_properties = without_revision["input_schema"]["properties"]
+    origins = revision_properties["material"]["properties"].pop("origins")
+    assert origins["type"] == "array" and origins["maxItems"] == 16
+    for key in ("revise_source", "source_revision", "validity_review"):
+        assert revision_properties.pop(key)["type"] == "string"
+    advisory_revision_bytes = len(json.dumps(without_activity_cues)) - len(json.dumps(without_revision))
+    assert 0 < advisory_revision_bytes < 900, advisory_revision_bytes
     # Explicit Planning history discovery keeps unrelated entry quiet. It adds
     # one read-only introspection schema, not another retirement/recovery effect.
     # Bound that named delta separately; preserve the existing four-entry owner
@@ -310,6 +339,8 @@ def test_former_selection_requires_exact_current_agent_request(
         + manual_bytes
         + candidate_bytes
         + activity_cue_bytes
+        + candidate_consolidation_bytes
+        + advisory_revision_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions < 86_000
