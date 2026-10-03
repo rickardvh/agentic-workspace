@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reject bare CLI invocation actions with missing work context before semantic resolution; preserve complete envelope, carriage and explicit original-context forms."

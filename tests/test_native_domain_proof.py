@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -47,6 +48,35 @@ def test_domain_source_executes_without_claim_and_rejects_drift(
     assert chosen["verification"]["strategy"]["proof_routes"]["domain:current"]["manual_evidence"] == ["domain-review"]
     invocation = chosen["decision_packet"]["primary_action"]
     assert invocation["operation_id"] == "proof.report"
+    if surface == "native":
+        encoded = json.dumps(invocation)
+        rejected = subprocess.run([str(native_cli), "invoke", "--input", "-"], input=encoded, text=True, capture_output=True, check=False)
+        assert rejected.returncode == 2
+        assert rejected.stdout == ""
+        assert json.loads(rejected.stderr)["error"]["code"] == "invalid-cli-input"
+        assert not (tmp_path / "count.txt").exists()
+        explicit = subprocess.run(
+            [
+                str(native_cli),
+                "invoke",
+                "--target",
+                context["target"],
+                "--task",
+                context["task"],
+                "--changed",
+                *context["changed"],
+                "--input",
+                "-",
+            ],
+            input=encoded,
+            text=True,
+            capture_output=True,
+            env={**os.environ, "PATH": os.environ["PATH"]},
+            check=True,
+        )
+        assert json.loads(explicit.stdout)["value"]["process"]["status"] == "passed"
+    # Native uses the complete envelope here; the explicit raw invocation above
+    # and this envelope must share the existing exactly-once execution result.
     result = call({**context, "invocation": invocation})
     assert result["value"]["process"]["status"] == "passed"
     assert result["value"]["claim_boundary"]["completion_claim_allowed"] is False
