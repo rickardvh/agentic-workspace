@@ -449,10 +449,11 @@ pub(crate) fn view(
             return Err(err("stale Planning disposition discovery"));
         }
     }
-    if planning["incumbent_owner"].is_null() && request.is_none() {
+    if request.is_none() {
         // Retirement is an explicit Planning concern, not startup ceremony for
-        // every task sharing a checkout. An exact retained effect still brings
-        // its own originating work into scope.
+        // every task sharing a checkout, including a selected active owner.
+        // Exact discovery still inventories all candidates and consumers. An
+        // interrupted effect still brings its originating work into scope.
         let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
         let pending_work = read(&root, PENDING)
             .ok()

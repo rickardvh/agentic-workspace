@@ -101,7 +101,7 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 
 ### Typed CLI and selector contract
 
-`typed_cli_selector_contract` merges typed result/process/session agreement with selector authority and fail-fast behaviour. A typed usage, validation, or failed direct-action result declares and returns the same nonzero status. Pre-execution rejection remains mutation-free and happens before expensive payload construction; an effectful failure additionally reports retry and mutation posture. The shared selector authority must advertise only executable fields and expose one bounded inventory/correction route. `invalid_selector_rejection_budget` adds the repo-local two-second cold-process median; the deterministic invariant separately caps the structured envelope through the shared selector contract.
+`typed_cli_selector_contract` merges typed result/process/session agreement with selector authority and fail-fast behaviour. A typed usage, validation, or failed direct-action result declares and returns the same nonzero status. Pre-execution rejection remains mutation-free and happens before expensive payload construction; an effectful failure additionally reports retry and mutation posture. The shared selector authority must advertise only executable fields and expose one bounded inventory/correction route. `invalid_selector_rejection_budget` adds the repo-local two-second cold-process median for rejecting an unknown operating detail reference through `start`; its seven fresh processes also check the typed nonzero error, bounded stderr and absence of target mutations. This replaces the retired upgrade selector fixture; the deterministic invariant separately caps the structured envelope through the shared selector contract.
 
 ### Proof execution integrity
 
@@ -109,7 +109,7 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 
 ### Selected Planning read budget
 
-`selected_planning_read_budget` retains the two-second cold-process median for maintained exact-selector fixtures. `selected_planning_scaling_budget` retains the 1,000-history ratio at no more than 1.20 of the empty-history control, with a small timing tolerance for sub-clock-resolution fixtures. Both remain Planning/Verification-owned and exclude provider refresh or environment installation.
+`selected_planning_read_budget` retains the two-second cold-process median for maintained exact-selector fixtures. `selected_planning_scaling_budget` retains the 1,000-history ratio at no more than 1.20 of the empty-history control, with a small timing tolerance for sub-clock-resolution fixtures. Both remain Planning/Verification-owned. The current producer uses a natively created and selected owner, reads its exact `/planning` detail in seven fresh native CLI processes, and compares zero with 1,000 unselected records in the retained closeout-evidence namespace. Fixed fixtures are prepared once before alternating sample order. Native binary build, fixture preparation, reference discovery, provider refresh and environment installation are excluded; process startup, request transport and response serialization are included. Explicit retirement discovery remains a separate operation. The producer emits only compact measurement JSON for the existing proof owner; it does not update historical evidence records.
 
 ### Direct work and optimisation guidance
 
@@ -127,7 +127,7 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 | --- | --- |
 | strongest source intent / revision | #2613, supplemented by #2916; `issues-2613-2916-orthogonality-v1`, current |
 | observable contract | duplicate same-question writers fail closed with a structural repair, while shared/local authority layers compose across their legal values |
-| mechanically enforceable subset | session path mode and subsystem assurance level expose one writable owner; classifier owner/source remains a constructible dependent choice; proof commands have one role; installed capability requirements have one owner; requirements have one terminal disposition; focused fixtures also exercise every shared/local assignment-policy pairing |
+| mechanically enforceable subset | current Rust `native_config::tests` cover closed source grammars, variant-specific transport fields, exact shared/local overrides and source currentness, shared trust admission that local input cannot shadow, and independent local safety ceilings; retired compatibility fixture names supply no current evidence |
 | remaining judgement | the broader retain/merge/derive/tag/remove audit, migration design, and proof that retained dimensions are genuinely independent |
 | rescope or retirement owner | #2613 for the general config model; #2916 for delegation controls; compatibility aliases retire through their owning schema migration |
 

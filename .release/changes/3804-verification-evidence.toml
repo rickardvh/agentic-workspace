@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Restore current acceptance measurement producers and configuration proof routes, and keep selected Planning reads independent of unrelated retirement history."

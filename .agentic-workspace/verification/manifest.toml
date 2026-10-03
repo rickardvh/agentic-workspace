@@ -46,7 +46,7 @@ disposition = "route"
 # Native Verification copies only these inputs and enforces read-only source.
 [execution]
 kind = "docker-readonly-source-v1"
-# Exact missing inputs of the declared generation and startup checks.
+# Exact inputs of declared generation, startup and native library checks.
 # Supplement existing directory coverage without local state or Git history.
 inputs = [
   "src",
@@ -71,6 +71,10 @@ inputs = [
   ".agentic-workspace/docs/workspace-config-contract.md",
   ".agentic-workspace/fallback/no-cli-policy.json",
   ".agentic-workspace/fallback/no_cli_startup.py",
+  ".agentic-workspace/instructions/workspace-operating.md",
+  ".agentic-workspace/instructions/workspace-ownership-audit.md",
+  ".agentic-workspace/memory/repo/manifest.toml",
+  ".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md",
   ".agentic-workspace/memory/skills/REGISTRY.json",
   ".agentic-workspace/memory/skills/memory-capture/procedure.md",
   ".agentic-workspace/memory/skills/memory-hygiene/procedure.md",
@@ -717,7 +721,7 @@ non_goals = [
   "A configuration proof does not satisfy unrelated policy requirements or supported-host delegation evidence.",
 ]
 commands = [
-  "uv run pytest tests/test_native_config_admission.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q",
+  "cargo test --locked -p agentic-workspace-core --lib native_config::tests",
 ]
 review_aids = [
   "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
@@ -2108,8 +2112,8 @@ requirement_class = "invariant"
 source_intent_ref = "https://github.com/rickardvh/agentic-workspace/issues/2613"
 source_intent_revision = "issues-2613-2916-orthogonality-v1"
 evidence_owner = "verification:workspace-config"
-detail_route = "uv run pytest tests/test_native_config_admission.py -k 'config_orthogonality or overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q"
-notes = "Independent writable config dimensions must compose for every legal value. Same-question aliases or dependent peers require one canonical owner, a tagged/derived shape, or finite migration; explicit repo/local authority layering and safety intersections remain legal. Maintained seed coverage includes session path-mode and subsystem-level aliases, classifier owner/source, proof command roles, installed capability ownership, terminal assurance dispositions, and the shared/local delegation matrix. This seeded mechanically enforceable subset does not close the general #2613 or delegation-specific #2916 redesign."
+detail_route = "cargo test --locked -p agentic-workspace-core --lib native_config::tests"
+notes = "Independent writable config dimensions must compose for every legal value. Same-question aliases or dependent peers require one canonical owner, a tagged/derived shape, or finite migration; explicit repo/local authority layering and safety intersections remain legal. Current native configuration fixtures cover closed source grammars, variant-specific transport fields, exact shared/local overrides and source currentness, unshadowable shared trust admission, and independent local safety ceilings. Retired compatibility fixtures are not retained as evidence for the current grammar. This seeded mechanically enforceable subset does not close the general #2613 or delegation-specific #2916 redesign."
 
 [assurance.requirements.direct_no_signal]
 level = "high"
@@ -2145,6 +2149,7 @@ notes = "Installed but irrelevant Planning, Memory, proof, reporting, and dogfoo
 [assurance.requirements.selected_planning_read_budget]
 level = "high"
 applies_to_paths = [
+  "tests/native_acceptance_measurements.py",
   "src/core/src/modules/planning/",
   "tests/test_native_operating_carriage.py",
   "src/core/src/modules/planning/native_planning.rs",
@@ -2171,7 +2176,7 @@ requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#selected-planning-read-budget"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:planning-selected-read"
-detail_route = "uv run pytest tests/test_native_operating_carriage.py -q"
+detail_route = "uv run python -m tests.native_acceptance_measurements selected-planning-read"
 
 [assurance.requirements.selected_planning_read_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -2182,19 +2187,23 @@ comparator = "lte"
 threshold = 2.0
 aggregation = "median"
 minimum_samples = 5
-subject = "planning-summary-exact-selector-history-1000"
-subject_revision = "tests/test_native_operating_carriage.py@policy-v1"
-environment = "maintained-local-cold-process"
-source_revision = "repo-acceptance-policy-v1"
+subject = "planning-owner-exact-detail-closeout-history-1000"
+subject_revision = "tests/native_acceptance_measurements.py@selected-planning-v2"
+environment = "maintained-local-cold-native-process"
+source_revision = "native-acceptance-measurements-v2"
 excluded_costs = [
+  "native binary build",
+  "fixture preparation",
+  "reference discovery",
   "dependency installation",
   "provider refresh",
 ]
-producer_command = "uv run pytest tests/test_native_operating_carriage.py -q"
+producer_command = "uv run python -m tests.native_acceptance_measurements selected-planning-read"
 
 [assurance.requirements.selected_planning_scaling_budget]
 level = "high"
 applies_to_paths = [
+  "tests/native_acceptance_measurements.py",
   "src/core/src/modules/planning/",
   "tests/test_native_operating_carriage.py",
   "src/core/src/modules/planning/native_planning.rs",
@@ -2221,7 +2230,7 @@ requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#selected-planning-read-budget"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:planning-selected-read"
-detail_route = "uv run pytest tests/test_native_operating_carriage.py -q"
+detail_route = "uv run python -m tests.native_acceptance_measurements selected-planning-read"
 
 [assurance.requirements.selected_planning_scaling_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -2233,21 +2242,25 @@ threshold = 1.2
 tolerance = 0.01
 aggregation = "ratio"
 minimum_samples = 5
-subject = "planning-summary-exact-selector-history-1000"
-subject_revision = "tests/test_native_operating_carriage.py@policy-v1"
-control_subject = "planning-summary-exact-selector-history-empty"
-control_revision = "tests/test_native_operating_carriage.py@policy-v1"
-environment = "maintained-local-cold-process"
-source_revision = "repo-acceptance-policy-v1"
+subject = "planning-owner-exact-detail-closeout-history-1000"
+subject_revision = "tests/native_acceptance_measurements.py@selected-planning-v2"
+control_subject = "planning-owner-exact-detail-closeout-history-empty"
+control_revision = "tests/native_acceptance_measurements.py@selected-planning-v2"
+environment = "maintained-local-cold-native-process"
+source_revision = "native-acceptance-measurements-v2"
 excluded_costs = [
+  "native binary build",
+  "fixture preparation",
+  "reference discovery",
   "dependency installation",
   "provider refresh",
 ]
-producer_command = "uv run pytest tests/test_native_operating_carriage.py -q"
+producer_command = "uv run python -m tests.native_acceptance_measurements selected-planning-read"
 
 [assurance.requirements.invalid_selector_rejection_budget]
 level = "high"
 applies_to_paths = [
+  "tests/native_acceptance_measurements.py",
   "src/core/src/operating.rs",
   "src/core/src/native_*.rs",
   "tests/test_native_public_cli.py",
@@ -2274,7 +2287,7 @@ requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#typed-cli-and-selector-contract"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-cli-runtime"
-detail_route = "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
+detail_route = "uv run python -m tests.native_acceptance_measurements invalid-selector"
 
 [assurance.requirements.invalid_selector_rejection_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -2285,14 +2298,17 @@ comparator = "lte"
 threshold = 2.0
 aggregation = "median"
 minimum_samples = 5
-subject = "upgrade-dry-run-invalid-actions-selector"
-subject_revision = "tests/test_native_public_cli.py@policy-v1"
-environment = "maintained-local-cold-process"
-source_revision = "repo-acceptance-policy-v1"
+subject = "start-invalid-operating-detail-reference"
+subject_revision = "tests/native_acceptance_measurements.py@invalid-reference-v2"
+environment = "maintained-local-cold-native-process"
+source_revision = "native-acceptance-measurements-v2"
 excluded_costs = [
+  "native binary build",
+  "fixture preparation",
+  "reference discovery",
   "dependency installation",
 ]
-producer_command = "uv run pytest tests/test_native_public_cli.py -k upgrade_unknown_selector -q"
+producer_command = "uv run python -m tests.native_acceptance_measurements invalid-selector"
 
 [assurance.requirements.selected_proof_residue_budget]
 level = "high"
