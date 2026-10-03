@@ -2039,7 +2039,7 @@ requirement_class = "invariant"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#proof-execution-integrity"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-proof-runtime"
-detail_route = "uv run pytest tests/test_native_domain_proof.py -k 'selected_proof_execution or claim_boundary' -q"
+detail_route = "uv run pytest tests/test_native_proof_producer.py::test_native_selected_command_stays_local_and_replays_without_task_claim -q"
 notes = "A green proof claim requires affected-owner coverage, one admitted execution path, current evidence, and no default tracked proof residue."
 
 [assurance.requirements.binding_automatic_assignment]
@@ -2143,7 +2143,7 @@ requirement_class = "invariant"
 source_intent_ref = "SYSTEM_INTENT.md#product-shape-rules"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-cli-runtime"
-detail_route = "uv run pytest tests/test_native_public_cli.py -k 'direct and (signal or irrelevant or unchanged)' -q"
+detail_route = "uv run pytest tests/test_native_former_routes.py::test_no_former_source_direct_work_has_no_candidate_or_state tests/test_native_public_cli.py::test_malformed_advisory_memory_cannot_veto_direct_work -q"
 notes = "Installed but irrelevant Planning, Memory, proof, reporting, and dogfood capabilities remain absent from direct work."
 
 [assurance.requirements.selected_planning_read_budget]
@@ -2339,7 +2339,7 @@ requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#proof-execution-integrity"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-proof-runtime"
-detail_route = "uv run pytest tests/test_native_domain_proof.py -k 'leaves_tracked_receipt_store_unchanged' -q"
+detail_route = "uv run pytest tests/test_native_proof_producer.py::test_native_selected_command_stays_local_and_replays_without_task_claim -q"
 
 [assurance.requirements.selected_proof_residue_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -2354,7 +2354,7 @@ subject = "ordinary-execute-selected-proof"
 subject_revision = "tests/test_native_domain_proof.py@policy-v1"
 environment = "none"
 source_revision = "repo-acceptance-policy-v1"
-producer_command = "uv run pytest tests/test_native_domain_proof.py -k leaves_tracked_receipt_store_unchanged -q"
+producer_command = "uv run pytest tests/test_native_proof_producer.py::test_native_selected_command_stays_local_and_replays_without_task_claim -q"
 
 [assurance.requirements.total_completion_cost]
 level = "medium"
