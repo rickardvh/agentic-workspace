@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve unchanged Assignment judgments through Verification transitions and expose bounded, exact claim confirmation with source detail available on demand."

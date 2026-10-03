@@ -65,6 +65,23 @@ The shell command carries ordinary arguments and the file path, not nested text,
 serialization or quoting logic. Continue from the returned result/action; file
 input uses the same native owner validation and grants no additional authority.
 
+For Assignment, answer `assignment_context.next_step` directly. Verification
+applicability and strategy answers preserve an execution judgment whose source
+meaning is unchanged. If they change an Assignment dependency, the returned
+`assignment_context.recovery` names the rejected judgment and reason; answer its
+current `next_step` using the updated carriage or `reentry`. Do not replay discarded
+Assignment envelopes or restart every earlier question.
+
+For claim closeout, inspect the current question in `decision_packet.decision_request`
+or `decision_packet.pending_consequences.decisions`. Use its exact `reference`
+(or the corresponding `detail_refs` entry for a compact primary question).
+Pending claims have their own references. The claim material
+supplies its proposed judgment, reason, result scope, obligations, evidence gaps
+and limits. Read `material.proposal_detail.reference` only when a binding detail is
+needed; no whole `/verification` read is required to confirm the claim. Answer the
+question's reference with one returned choice and keep all peer blockers in view.
+The answer still revalidates the full proposal and cannot replace independent review.
+
 When a temporary request file is useful and AW-managed scratch is appropriate,
 use one bounded task container and remove it when no longer needed through the
 [task resource lifecycle](../../workspace-resources/SKILL.md). Small/simple answers

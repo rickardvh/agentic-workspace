@@ -83,6 +83,7 @@ inputs = [
   "AGENTS.md",
   "tools/skills/REGISTRY.json",
   "tools/skills/pr-review-recheck/procedure.md",
+  "tools/skills/self-improvement-dogfooding/procedure.md",
 ]
 scratch_paths = ["target"]
 [execution.environment]
