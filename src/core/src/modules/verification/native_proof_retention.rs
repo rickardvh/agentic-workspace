@@ -398,6 +398,26 @@ pub(crate) fn view(
         .find(|o| o["owner"] == "verification")
         .ok_or_else(|| err("Proof owner unavailable"))?;
     let pending = retained(target)?;
+    if pending.is_none() && request.is_none() {
+        // With no repository proof source there can be no retirement candidate
+        // or index transfer. Avoid discovering unrelated Planning/Memory history
+        // just to establish that absence. Explicit requests and pending effects
+        // still reobserve the complete consumer graph below.
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+        let mut proof_sources = BTreeMap::new();
+        match files(&root, ".agentic-workspace/proof", &mut proof_sources) {
+            Ok(()) if proof_sources.is_empty() => {
+                return Ok(json!({"status":"quiet","requests":[]}));
+            }
+            Ok(()) => (),
+            Err(error) => {
+                return Ok(
+                    json!({"status":"preserved","requests":[],"reason":error.to_string(),
+                    "authority":"No disposition is offered until the proof source boundary is readable and confined."}),
+                );
+            }
+        }
+    }
     let binding = if let Some(record) = &pending {
         json!({"record_revision":digest(record)?})
     } else {

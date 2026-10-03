@@ -5,12 +5,55 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import statistics
+import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
+import pytest
+from tests.native_acceptance_measurements import METHODS, ROOT
 from tests.test_native_proof_procedure import install, procedure
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+@pytest.mark.parametrize("mode", ["selected-planning-read", "invalid-selector"])
+def test_repository_producer_uses_current_native_subject_and_outputs_only_evidence(mode, native_cli, shared_core_binary):
+    result = subprocess.run(
+        [sys.executable, "-m", "tests.native_acceptance_measurements", mode, "--native-cli", str(native_cli)],
+        cwd=ROOT,
+        capture_output=True,
+        check=True,
+    )
+    output = json.loads(result.stdout)
+    assert output["kind"] == "agentic-workspace/assurance-evidence-records/v1"
+    requirements = tomllib.loads((ROOT / ".agentic-workspace/verification/manifest.toml").read_text())["assurance"]["requirements"]
+    expected = (
+        {"invalid_selector_rejection_budget"}
+        if mode == "invalid-selector"
+        else {"selected_planning_read_budget", "selected_planning_scaling_budget"}
+    )
+    assert {r["requirement_id"] for r in output["records"]} == expected
+    for row in output["records"]:
+        name = row["requirement_id"]
+        observation = row["measurement"]
+        condition = requirements[name]["measurement"]
+        assert row["evidence_label"] == METHODS[name]["evidence_label"]
+        assert observation["sample_count"] == len(observation["samples"]) >= condition["minimum_samples"]
+        assert observation["observed_value"] == statistics.median(observation["samples"])
+        if "baseline_value" in observation:
+            assert observation["control_sample_count"] == len(observation["control_samples"]) == observation["sample_count"]
+            assert observation["baseline_value"] == statistics.median(observation["control_samples"])
+        assert observation["requirement_revision"] == requirements[name]["source_intent_revision"]
+        for key, value in METHODS[name].items():
+            assert (row if key == "evidence_label" else observation)[key] == value
+        evaluated = (
+            observation["observed_value"] / observation["baseline_value"]
+            if mode == "selected-planning-read" and condition["aggregation"] == "ratio"
+            else observation["observed_value"]
+        )
+        assert observation["status"] == ("passed" if evaluated <= condition["threshold"] + condition.get("tolerance", 0) else "failed")
 
 
 def test_measurement_output_admission_and_remaining_review(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
