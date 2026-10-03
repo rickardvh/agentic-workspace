@@ -53,24 +53,29 @@ WORKSPACE_TEST_CLI = \
 	tests/test_native_memory_disposition.py \
 	tests/test_native_npm_routes.py \
 	tests/test_native_operating_carriage.py \
+	tests/test_native_planning_binding.py \
 	tests/test_native_planning_create.py \
 	tests/test_native_planning_lifetime.py \
+	tests/test_native_plugin_exposure.py \
 	tests/test_native_proof_procedure.py \
 	tests/test_native_proof_scope.py \
 	tests/test_native_public_cli.py \
 	tests/test_native_readonly_handoff.py \
 	tests/test_native_release_receipt.py \
 	tests/test_native_release_topology.py \
+	tests/test_native_registry_composition.py \
 	tests/test_native_repository_adoption.py \
 	tests/test_native_repository_decisions.py \
 	tests/test_native_resource_owner.py \
 	tests/test_native_resources.py \
 	tests/test_native_source_reconciliation.py \
+	tests/test_native_standing_obligations.py \
 	tests/test_native_startup_adapter.py \
 	tests/test_native_system_intent.py \
 	tests/test_native_transport.py \
 	tests/test_native_verification_declarations.py \
-	tests/test_native_workflow_artifact_profile.py
+	tests/test_native_workflow_artifact_profile.py \
+	tests/test_native_workspace_disabled.py
 
 WORKSPACE_TEST_PROOF = \
 	tests/test_native_domain_proof.py \
@@ -99,7 +104,8 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_configuration_procedure.py \
 	tests/test_contract_catalogues.py \
 	tests/test_github_issue_body_agent_aid.py \
-	tests/test_github_workflow_skills.py \
+	tests/test_hosted_automation.py \
+	tests/test_hosted_followup.py \
 	tests/test_language_facade.py \
 	tests/test_no_absolute_paths.py \
 	tests/test_package_artifact_duplicates.py \
@@ -113,9 +119,6 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_selected_procedure_preparation.py \
 	tests/test_shared_core.py \
 	tests/test_skills_first_interface.py \
-	tests/test_structured_executor_contracts.py \
-	tests/test_structured_executor_replay.py \
-	tests/test_structured_executor_safety.py \
 	tests/test_structured_file_inventory.py \
 	tests/test_validation_runtime_plan.py \
 	tests/test_workspace_makefile_targets.py
@@ -125,6 +128,7 @@ WORKSPACE_TEST_GENERATED_RELEASE = \
 	tests/test_package_identity.py \
 	tests/test_preview_release.py \
 	tests/test_preview_release_workflow.py \
+	tests/test_release_lifecycle.py \
 	tests/test_release_recovery_status.py \
 	tests/test_release_workflows.py \
 	tests/test_support_bearing_promotion.py \
@@ -136,10 +140,17 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_completion_cost_json_corpus.py \
 	tests/test_completion_cost_lane_evidence.py \
 	tests/test_completion_cost_live_behavior_proof.py \
+	tests/test_consumer_agent.py \
+	tests/test_consumer_environment.py \
+	tests/test_consumer_journeys.py \
+	tests/test_consumer_outcomes.py \
+	tests/test_consumer_schedule.py \
 	tests/test_external_agent_evaluation_lane.py \
 	tests/test_external_integration_boundary.py \
 	tests/test_git_hooks.py \
-	tests/test_long_horizon_episode.py \
+	tests/test_manual_assignment_continuation.py \
+	tests/test_planning_derived_assignment.py \
+	tests/test_verification_derived_analysis.py \
 	tests/test_v1_contract.py
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \

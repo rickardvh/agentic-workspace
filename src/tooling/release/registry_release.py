@@ -41,6 +41,44 @@ def json_response(url):
     return None if data is None else json.loads(data)
 
 
+def verify_public_install(release, receipt_bytes, promotion, *, version, source, repository):
+    """Verify immutable stable install admission without creating a latest projection."""
+    tag = f"v{version}"
+    identity = coordinated_release.release_identity(tag)
+    if (
+        identity["release_class"] != "stable"
+        or release.get("tag_name") != tag
+        or release.get("draft") is not False
+        or release.get("prerelease") is not False
+    ):
+        raise ValueError("Public subject requires the selected published stable release")
+    receipt = json.loads(receipt_bytes)
+    admitted = promotion.get("artifacts", {})
+    if (
+        promotion.get("kind") != "agentic-workspace/support-bearing-promotion/v1"
+        or promotion.get("status") != "passed"
+        or promotion.get("source_commit") != source
+        or admitted.get("distribution-install-readiness.json") != "sha256:" + hashlib.sha256(receipt_bytes).hexdigest()
+        or receipt.get("kind") != "agentic-workspace/distribution-install-readiness/v1"
+        or receipt.get("status") != "passed"
+        or receipt.get("version") != version
+    ):
+        raise ValueError("Public release identity or accepted install receipt mismatch")
+    artifact = receipt.get("artifact", {})
+    name = artifact.get("name", "")
+    base = f"https://github.com/{repository}/releases/download/{tag}/"
+    if (
+        not name
+        or Path(name).name != name
+        or "/" in name
+        or "\\" in name
+        or artifact.get("url") != base + name
+        or admitted.get(name) != "sha256:" + str(artifact.get("sha256"))
+        or name not in {item["name"] for item in release["assets"]}
+    ):
+        raise ValueError("Install artifact is not in the accepted public release")
+
+
 def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 

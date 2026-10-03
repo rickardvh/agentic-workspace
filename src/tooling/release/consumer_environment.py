@@ -27,9 +27,10 @@ from urllib.parse import quote
 import cargo_release
 import coordinated_release
 import platform_release
-from current_install import REPOSITORY, fetch, projection
+from registry_release import fetch, verify_public_install
 
 ROOT = platform_release.ROOT
+REPOSITORY = coordinated_release.load_ownership()["project_identity"]["repository"].removeprefix("https://github.com/")
 DOCKERFILE = ROOT / "src/tooling/model-cli-harness/sandbox/consumer/Dockerfile"
 PROFILES = {
     "node": (("git", "node", "npm", "pnpm"), ("python", "python3", "cargo", "rustc", "cc", "gcc", "agentic-workspace")),
@@ -153,10 +154,13 @@ class Subject:
         release = json.loads(fetch(f"https://api.github.com/repos/{REPOSITORY}/releases/tags/v{version}"))
         base = f"https://github.com/{REPOSITORY}/releases/download/v{version}/"
         promotion = json.loads(fetch(base + "support-bearing-promotion.json"))
-        admitted = projection(release, fetch(base + "distribution-install-readiness.json"), promotion, promotion["source_commit"])
+        source = json.loads(fetch(f"https://api.github.com/repos/{REPOSITORY}/commits/v{version}"))["sha"]
+        verify_public_install(
+            release, fetch(base + "distribution-install-readiness.json"), promotion, version=version, source=source, repository=REPOSITORY
+        )
         raw = fetch(base + platform_release.MANIFEST)
         inventory = json.loads(raw)
-        if inventory["version"] != admitted["version"] or inventory["source_commit"] != admitted["source_commit"]:
+        if inventory["version"] != version or inventory["source_commit"] != source:
             raise ValueError("Public inventory does not match accepted release")
         expected = promotion["artifacts"].get(platform_release.MANIFEST)
         if expected != "sha256:" + hashlib.sha256(raw).hexdigest():

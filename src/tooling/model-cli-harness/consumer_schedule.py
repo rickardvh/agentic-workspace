@@ -16,8 +16,8 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
 import platform_release  # noqa: E402
-from consumer_environment import Subject, cleanup_remaining  # noqa: E402
-from current_install import REPOSITORY, fetch  # noqa: E402
+from consumer_environment import REPOSITORY, Subject, cleanup_remaining  # noqa: E402
+from registry_release import fetch  # noqa: E402
 from run_model_cli_harness import run_case  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -32,6 +32,7 @@ def harness_identity():
         Path(__file__).with_name("run_sbx_codex_adapter.py"),
         ROOT / "src/tooling/release/consumer_environment.py",
         ROOT / "src/tooling/release/consumer_journeys.py",
+        ROOT / "src/tooling/release/registry_release.py",
     ]
     # Git may check the same trusted text out with CRLF on a native Windows job.
     return {

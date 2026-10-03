@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -88,6 +89,147 @@ def test_public_subject_rejects_alias_before_network(tmp_path):
     for alias in ("latest", "v1.3.2", "1.3.2rc1", "../1.3.2"):
         with pytest.raises(ValueError, match="exact stable"):
             Subject.public(alias, tmp_path / "subject")
+
+
+@pytest.mark.parametrize(
+    "entry", ["release/consumer_environment.py", "model-cli-harness/run_model_cli_harness.py", "model-cli-harness/consumer_schedule.py"]
+)
+def test_documented_consumer_entry_points_import_in_a_fresh_process(entry):
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run([sys.executable, str(root / "src/tooling" / entry), "--help"], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "tag",
+        "draft",
+        "prerelease",
+        "promotion",
+        "source",
+        "receipt",
+        "receipt-version",
+        "receipt-digest",
+        "install-url",
+        "install-digest",
+        "missing-asset",
+        "manifest-source",
+        "manifest-digest",
+        "artifact-digest",
+        "cargo-digest",
+        "crate-digest",
+        "missing-receipt",
+    ],
+)
+def test_public_subject_freezes_exact_admitted_bytes_or_fails(tmp_path, monkeypatch, fault):
+    import consumer_environment as environment
+    import platform_release
+
+    version, source = "1.3.2", "a" * 40
+    base = f"https://github.com/{environment.REPOSITORY}/releases/download/v{version}/"
+    assets = {}
+
+    def item(name):
+        assets[name] = name.encode()
+        return {"asset": name, "sha256": hashlib.sha256(assets[name]).hexdigest()}
+
+    inventory = {
+        "kind": "agentic-workspace/platform-release/v1",
+        "version": version,
+        "source_commit": source,
+        "platforms": [
+            {**row, "wheel": item(row["target"] + ".whl"), "native_archive": item(row["target"] + ".zip")}
+            for row in platform_release.platforms()
+        ],
+        "npm": item("package.tgz"),
+    }
+    artifact = inventory["platforms"][0]["wheel"]
+    receipt = {
+        "kind": "agentic-workspace/distribution-install-readiness/v1",
+        "status": "passed",
+        "version": version,
+        "artifact": {"name": artifact["asset"], "sha256": artifact["sha256"], "url": base + artifact["asset"]},
+    }
+    if fault == "receipt":
+        receipt["status"] = "failed"
+    if fault == "receipt-version":
+        receipt["version"] = "1.2.0"
+    if fault == "install-url":
+        receipt["artifact"]["url"] = "https://example.invalid/unadmitted"
+    if fault == "install-digest":
+        receipt["artifact"]["sha256"] = "0" * 64
+    if fault == "manifest-source":
+        inventory["source_commit"] = "b" * 40
+    assets[platform_release.MANIFEST] = json.dumps(inventory).encode()
+    assets["distribution-install-readiness.json"] = json.dumps(receipt).encode()
+    assets["cargo-release-manifest.json"] = json.dumps({"packages": [item("package.crate")]}).encode()
+    promotion = {
+        "kind": "agentic-workspace/support-bearing-promotion/v1",
+        "status": "passed",
+        "source_commit": source,
+        "artifacts": {name: "sha256:" + hashlib.sha256(data).hexdigest() for name, data in assets.items()},
+    }
+    if fault == "promotion":
+        promotion["status"] = "blocked"
+    if fault == "source":
+        promotion["source_commit"] = "b" * 40
+    for name, selected_fault in [
+        ("distribution-install-readiness.json", "receipt-digest"),
+        (platform_release.MANIFEST, "manifest-digest"),
+        ("cargo-release-manifest.json", "cargo-digest"),
+    ]:
+        if fault == selected_fault:
+            promotion["artifacts"][name] = "sha256:" + "0" * 64
+    for name, selected_fault in [(artifact["asset"], "artifact-digest"), ("package.crate", "crate-digest")]:
+        if fault == selected_fault:
+            assets[name] = b"changed public bytes"
+    release = {"tag_name": f"v{version}", "draft": False, "prerelease": False, "assets": [{"name": name} for name in assets]}
+    if fault in {"draft", "prerelease"}:
+        release[fault] = True
+    if fault == "tag":
+        release["tag_name"] = "v1.2.0"
+    if fault == "missing-asset":
+        release["assets"] = []
+    assets["support-bearing-promotion.json"] = json.dumps(promotion).encode()
+    if fault == "missing-receipt":
+        del assets["distribution-install-readiness.json"]
+
+    def fetch(url):
+        if url == f"https://api.github.com/repos/{environment.REPOSITORY}/releases/tags/v{version}":
+            return json.dumps(release).encode()
+        if url == f"https://api.github.com/repos/{environment.REPOSITORY}/commits/v{version}":
+            return json.dumps({"sha": source}).encode()
+        assert url.startswith(base), "Subject followed an unselected release or checkout route"
+        name = url.removeprefix(base)
+        if name not in assets:
+            raise FileNotFoundError(name)
+        return assets[name]
+
+    monkeypatch.setattr(environment, "fetch", fetch)
+    destination = tmp_path / "frozen"
+    if fault:
+        with pytest.raises((ValueError, FileNotFoundError)):
+            Subject.public(version, destination)
+    else:
+        subject = Subject.public(version, destination)
+        assert subject.identity() == {
+            "mode": "public",
+            "version": version,
+            "source_commit": source,
+            "inventory_sha256": hashlib.sha256(assets[platform_release.MANIFEST]).hexdigest(),
+        }
+        subject.revalidate("standalone")
+        assert all(
+            (destination / name).read_bytes() == data
+            for name, data in assets.items()
+            if name not in {"support-bearing-promotion.json", "distribution-install-readiness.json"}
+        )
+        (destination / artifact["asset"]).write_bytes(b"changed frozen bytes")
+        with pytest.raises(ValueError, match="digest"):
+            subject.revalidate("standalone")
 
 
 @pytest.mark.parametrize("profile", ["node", "python"])
