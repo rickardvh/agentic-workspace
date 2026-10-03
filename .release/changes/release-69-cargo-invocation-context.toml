@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Supply exact work context in the Cargo release smoke check so invalid actions reach native effect admission."

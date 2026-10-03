@@ -225,8 +225,8 @@ def install_pair(packages, home, *, staging=None):
     if json.loads(result)["decision_packet"]["status"] != "direct":
         raise ValueError("Installed Cargo pair did not execute native startup")
     rejected = subprocess.run(
-        [str(binaries / ("agentic-workspace" + suffix)), "invoke", "--target", str(consumer), "--input", "-"],
-        input="{}",
+        [str(binaries / ("agentic-workspace" + suffix)), "invoke", "--input", "-"],
+        input=json.dumps({"target": str(consumer), "task": "Inspect", "changed": [], "invocation": {}}),
         text=True,
         capture_output=True,
         env=env,
