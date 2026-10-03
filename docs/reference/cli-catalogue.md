@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:01907d2f79bc13f791bba936488c18bb7bb1fb7a8e3877c24662fb0aabbd78d1`
+- Contract digest: `sha256:0c09deeb7eea6355f29d99688c242aead9465f403ac299726ce0473b29539bb1`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -16,7 +16,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `agentic-workspace worker` | yes | Present worker entry or a complete manual snapshot, expand an exact captured input, or wrap new return material with host-held Assignment identity. |
 | `agentic-workspace resources` | yes | Propose with a resource request; execute by passing the exact returned action envelope unchanged to --input. Explicit context flags must match; omitted context comes from the envelope. |
 | `agentic-workspace start` | no | Resolve the current operating decision. |
-| `agentic-workspace invoke` | yes | Invoke the exact operation returned by the current owner. |
+| `agentic-workspace invoke` | yes | Invoke an exact returned action with a complete work envelope or carriage plus --reference; a bare action requires original --target, --task and --changed flags. Empty changed scope requires an envelope or carriage. |
 | `agentic-workspace activation-index` | yes | Check or derive a repository registry activation index from its procedure sources; explicit authoring only. |
 
 ## Options
@@ -31,7 +31,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--reference` | — | — | Exact immutable reference from carried output; --input supplies the machine-carried object. |
 | `--answer` | — | — | JSON answer for an exact decision reference, or an arguments object for an exact owner request reference. Preserves owner identity and prior carried answers; normal owner validation applies. |
 | `--delivered` | — | — | Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations. |
-| `--input` | — | — | JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action. |
+| `--input` | — | — | JSON input file, or - for stdin; start accepts current owner requests or work context; invoke accepts a complete invocation/work envelope, carriage plus --reference, or a bare exact action with explicit original work context. |
 | `--yes` | — | — | Authorise the exact setup proposal (setup only). |
 | `--dry-run` | — | — | Show the setup proposal without changes (setup only). |
 | `--recover` | — | — | Inspect and authorise an interrupted setup (setup only). |

@@ -21,7 +21,13 @@ public command and option declarations come from `source_decision_contract.json`
 `start --target <repository> --task "<task>" --format json` reads current owner
 sources. Repeated `--changed` arguments declare changed paths. Supply a returned
 request through `--input <file>` or JSON stdin with `--input -`; a bounded array
-can preserve distinct owner answers. `invoke` accepts the exact returned action.
+can preserve distinct owner answers. `invoke` accepts a complete JSON envelope
+containing `target`, `task`, `changed` and the exact returned `invocation`, or
+`--input <carriage> --reference <action-reference>`. A bare action file requires
+the original `--target`, `--task` and `--changed` flags. Use an envelope with
+`changed: []` or carriage for an empty changed scope. Explicit context flags
+must match the envelope or carriage. Missing context rejects before execution;
+the CLI cannot reconstruct it from an action's identity.
 Clients cannot invent source admission, custody, capability contracts or proof.
 
 Python `agentic_workspace` and the installed npm root/`./operating` exports

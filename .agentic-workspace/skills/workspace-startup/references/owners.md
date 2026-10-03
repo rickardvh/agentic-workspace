@@ -113,6 +113,12 @@ For an authorised effect, use `invoke --input $carrier --reference $reference`
 with the returned action reference. Preserve the complete effect result, including
 `value` and its owner-specific next requests, before handling its continuation.
 Filtering for guessed top-level fields can discard a required next operation.
+Without carriage, pass a complete JSON envelope containing `target`, `task`,
+`changed` and the unchanged returned `invocation`. A bare action file requires
+the original `--target`, `--task` and `--changed` flags; it cannot recover work
+context from action identities. For an empty changed scope, use the complete
+envelope with `changed: []` or carriage. Explicit flags must match the envelope
+or carriage; omitted flags do not replace its context.
 A parsing/storage failure after invocation is not permission
 to replay the effect. Reobserve or use exact owner recovery. Consume a current
 continuation; do not call start again solely for ceremony.

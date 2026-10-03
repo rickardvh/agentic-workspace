@@ -190,6 +190,9 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<()
                     || input.get("available_sources").is_some()
                     || input.get("delivered").is_some())))
     {
+        if parsed.command == "invoke" && input["reference"].as_str().is_none() {
+            require_invoke_context(|field| input.get(field).is_some())?;
+        }
         // Preserve the exact owner envelope. Explicit argv is an assertion,
         // never an override; absent defaults must not replace bound context.
         for (key, value) in parsed.values.as_object().unwrap() {
@@ -217,9 +220,26 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<()
         }
         parsed.values = input;
     } else {
+        if parsed.command == "invoke" && parsed.values.get("reference").is_none() {
+            require_invoke_context(|field| parsed.explicit.contains(field))?;
+        }
         parsed.values[field] = input;
     }
     Ok(())
+}
+
+fn require_invoke_context(present: impl Fn(&str) -> bool) -> Result<(), String> {
+    let missing: Vec<_> = ["target", "task", "changed"]
+        .into_iter()
+        .filter(|field| !present(field))
+        .collect();
+    if missing.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "invoke requires exact work context; missing {}. Use a complete invocation envelope, --input <carriage> --reference <action-reference>, or the bare action with original --target, --task and --changed flags; use an envelope or carriage for an empty changed scope",
+        missing.join(", ")
+    ))
 }
 
 fn run() -> Result<(), (&'static str, String)> {
@@ -397,6 +417,75 @@ mod tests {
             .unwrap();
         carry_input(&contract, &mut bare, request.clone()).unwrap();
         assert_eq!(bare.values["request"], request);
+    }
+
+    #[test]
+    fn bare_invocations_require_explicit_work_context() {
+        let contract = declaration();
+        let action = json!({"kind":"agentic-workspace/operation-invocation/v1"});
+        for context in [
+            args(&[]),
+            args(&["--target", ".", "--task", "bounded task"]),
+            args(&["--target", ".", "--changed", "a"]),
+            args(&["--task", "bounded task", "--changed", "a"]),
+        ] {
+            let mut arguments = args(&["invoke", "--input", "-"]);
+            arguments.extend(context);
+            let mut parsed = parse(&contract, &arguments).unwrap().unwrap();
+            assert!(carry_input(&contract, &mut parsed, action.clone()).is_err());
+            assert!(parsed.values.get("invocation").is_none());
+        }
+        let mut parsed = parse(
+            &contract,
+            &args(&[
+                "invoke",
+                "--input",
+                "-",
+                "--target",
+                ".",
+                "--task",
+                "bounded task",
+                "--changed",
+                "a",
+                "b",
+            ]),
+        )
+        .unwrap()
+        .unwrap();
+        carry_input(&contract, &mut parsed, action.clone()).unwrap();
+        assert_eq!(
+            parsed.values,
+            json!({"target":".","task":"bounded task","changed":["a","b"],"invocation":action})
+        );
+
+        let envelope = json!({"target":".","task":"bounded task","changed":[],"invocation":action});
+        for missing in ["target", "task", "changed"] {
+            let mut incomplete = envelope.clone();
+            incomplete.as_object_mut().unwrap().remove(missing);
+            let mut parsed = parse(&contract, &args(&["invoke", "--input", "-"]))
+                .unwrap()
+                .unwrap();
+            assert!(carry_input(&contract, &mut parsed, incomplete).is_err());
+            assert!(parsed.values.get("invocation").is_none());
+        }
+        let mut parsed = parse(&contract, &args(&["invoke", "--input", "-"]))
+            .unwrap()
+            .unwrap();
+        carry_input(&contract, &mut parsed, envelope.clone()).unwrap();
+        assert_eq!(parsed.values, envelope);
+
+        let mut parsed = parse(
+            &contract,
+            &args(&["invoke", "--input", "-", "--reference", "exact-action-ref"]),
+        )
+        .unwrap()
+        .unwrap();
+        let carriage = json!({"kind":"agentic-workspace/operating-carriage/v1","context":{"target":".","task":"bounded task","changed":[]}});
+        carry_input(&contract, &mut parsed, carriage.clone()).unwrap();
+        assert_eq!(
+            parsed.values,
+            json!({"reference":"exact-action-ref","invocation":carriage})
+        );
     }
 
     #[test]

@@ -201,9 +201,14 @@ def consume(
             command += ["--changed", path]
         if context.get("request") or context.get("invocation") or "material" in context or "maintenance" in context:
             command += ["--input", "-"]
-        stdin = json.dumps(
-            context if "material" in context or "maintenance" in context else context.get("invocation", context.get("request"))
-        )
+        if verb == "invoke" and "target" in context and "task" in context:
+            # Preserve explicit empty scope through the supported invoke envelope.
+            # Context-free invocation + reference remains the actual carrier path.
+            stdin = json.dumps({"changed": [], **context})
+        else:
+            stdin = json.dumps(
+                context if "material" in context or "maintenance" in context else context.get("invocation", context.get("request"))
+            )
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":
@@ -1136,6 +1141,57 @@ def test_resource_transport_matches_native_contract(tmp_path, shared_core_binary
     expected = resource("json", shared_core_binary, native_cli, context)
     assert resource(surface, shared_core_binary, native_cli, context) == expected
     assert not (tmp_path / ".agentic-workspace").exists()
+
+
+def test_native_bare_action_requires_issuing_work_context(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Set the configured invocation", "changed": ["config-consumer.txt"]}
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, value)
+
+    initial = call(context)
+    discovered = call({**context, "request": initial["configuration_write"]["creation_discovery_request"]})
+    request = next(r for r in discovered["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "workspace.cli_invoke")
+    request["arguments"] = {"source": ".agentic-workspace/config.toml", "key": "workspace.cli_invoke", "value": "aw-local"}
+    context["request"] = request
+    proposed = call(context)
+    question = proposed["decision_packet"]["decision_request"]["response_request"]
+    selected = call({**context, "reference": f"owner:question:{question['owner']}:{question['id']}"})
+    answered = call({**context, "reference": selected["reference"], "answer": "authorize-write"})
+    action = answered["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "configuration.write"
+    encoded = json.dumps(action)
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    rejected = subprocess.run([str(native_cli), "invoke", "--input", "-"], input=encoded, text=True, capture_output=True, check=False)
+    assert rejected.returncode == 2
+    assert rejected.stdout == ""
+    error = json.loads(rejected.stderr)["error"]
+    assert error["code"] == "invalid-cli-input"
+    assert all(field in error["message"] for field in ("target", "task", "changed"))
+    assert "stale" not in error["message"]
+    assert before == {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+    # The unchanged non-proof action uses the same generic CLI boundary as proof.
+    accepted = subprocess.run(
+        [
+            str(native_cli),
+            "invoke",
+            "--target",
+            context["target"],
+            "--task",
+            context["task"],
+            "--changed",
+            *context["changed"],
+            "--input",
+            "-",
+        ],
+        input=encoded,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(accepted.stdout)["effect_outcome"]["status"] == "committed"
+    assert 'cli_invoke = "aw-local"' in (tmp_path / ".agentic-workspace/config.toml").read_text()
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

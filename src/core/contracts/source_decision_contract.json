@@ -234,7 +234,7 @@
       },
       {
         "name": "invoke",
-        "description": "Invoke the exact operation returned by the current owner.",
+        "description": "Invoke an exact returned action with a complete work envelope or carriage plus --reference; a bare action requires original --target, --task and --changed flags. Empty changed scope requires an envelope or carriage.",
         "input_field": "invocation",
         "input_required": true,
         "accepts_input_envelope": true
@@ -305,7 +305,7 @@
       {
         "flag": "--input",
         "field": "input",
-        "description": "JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action."
+        "description": "JSON input file, or - for stdin; start accepts current owner requests or work context; invoke accepts a complete invocation/work envelope, carriage plus --reference, or a bare exact action with explicit original work context."
       },
       {
         "flag": "--yes",
