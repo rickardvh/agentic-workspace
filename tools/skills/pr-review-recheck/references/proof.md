@@ -44,7 +44,7 @@ Workflow source tests establish wiring, not trusted dispatch or model execution.
 - CI and reported validation;
 - focused tests for changed behavior;
 - generated/payload sync when shipped or mirrored surfaces changed;
-- semver label when package behavior or shipped payload changes.
+- exactly one explicit Semver decision on every non-draft PR, regardless of changed paths: `semver:none` for intentional no release without new or modified fragments, or `semver:patch|minor|major` with valid changeset admission under the [release rules](../../../../docs/release-and-versioning.md#declare-release-intent).
 For behavior, test (including embedded Rust/package cases) or CI changes, read
 `docs/maintainer/testing-strategy.md` and audit the test/CI delta disposition:
 durable claim and lowest sufficient owner/contract; duplicate semantic proof;
