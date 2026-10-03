@@ -119,6 +119,31 @@ fn entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
             result.push(entry(context, selector, value)?);
         }
     }
+    for (index, question) in full["decision_packet"]["pending_consequences"]["decisions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .enumerate()
+    {
+        if question != &full["decision_packet"]["decision_request"]
+            && question["response_request"].is_object()
+        {
+            result.push(entry(
+                context,
+                &format!("/decision_packet/pending_consequences/decisions/{index}"),
+                question,
+            )?);
+        }
+    }
+    if let Some(proposal) = full.pointer("/verification/claim_review/proposal") {
+        let descriptor =
+            json!({"kind":"agentic-workspace/lazy-owner-detail/v1","revision":digest(proposal)?});
+        result.push(entry(
+            context,
+            "/verification/claim_review/proposal",
+            &descriptor,
+        )?);
+    }
     if full["decision_packet"]["primary_action"].is_null() {
         for (index, action) in full["decision_packet"]["ready_actions"]
             .as_array()
@@ -419,8 +444,20 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 .pointer_mut(selector.strip_prefix("/decision_packet").unwrap())
                 .unwrap() = action;
         }
-        if carried && selector == "/decision_packet/decision_request" {
-            let question = &mut packet["decision_request"];
+        if decision_selector(selector) {
+            let question = packet
+                .pointer_mut(selector.strip_prefix("/decision_packet").unwrap())
+                .unwrap();
+            if !carried
+                && selector == "/decision_packet/decision_request"
+                && question["id"] != "verification-claim-review"
+            {
+                continue;
+            }
+            question["reference"] = item["reference"].clone();
+            if !carried {
+                continue;
+            }
             // All owner-provided material remains decision-visible. Only the
             // immutable public-request identity is removed from model output.
             question["request_material"] = question["response_request"]["arguments"].clone();
@@ -438,7 +475,8 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             }
         }
     }
-    // The selected question/action already appears above; retain other peers.
+    // The selected question/action already appears above; retain other peers
+    // before adding presentation-only fields to their bounded views.
     for (field, selected) in [
         ("actions", "primary_action"),
         ("decisions", "decision_request"),
@@ -446,6 +484,23 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         let selected = &full["decision_packet"][selected];
         if let Some(values) = packet["pending_consequences"][field].as_array_mut() {
             values.retain(|value| value != selected);
+        }
+    }
+    let proposal_reference = refs.get("/verification/claim_review/proposal").cloned();
+    if let Some(reference) = proposal_reference {
+        let detail = json!({"reference":reference,
+            "use":"Read the exact proposal only when a source, obligation or evidence detail is needed to judge this claim. The whole binding remains currentness-checked on answer."});
+        if packet["decision_request"]["id"] == "verification-claim-review" {
+            packet["decision_request"]["material"]["proposal_detail"] = detail.clone();
+        }
+        for question in packet["pending_consequences"]["decisions"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+        {
+            if question["id"] == "verification-claim-review" {
+                question["material"]["proposal_detail"] = detail.clone();
+            }
         }
     }
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
@@ -654,6 +709,13 @@ fn action_selector(selector: &str) -> bool {
             })
 }
 
+fn decision_selector(selector: &str) -> bool {
+    selector == "/decision_packet/decision_request"
+        || selector
+            .strip_prefix("/decision_packet/pending_consequences/decisions/")
+            .is_some_and(|index| index.parse::<usize>().is_ok_and(|v| v.to_string() == index))
+}
+
 fn normalize_context(mut value: Value) -> Result<Value, CoreError> {
     if !value.is_object() {
         return Err(error("expected operating input object"));
@@ -736,7 +798,7 @@ fn resolve_owner_reference(
             "action" if action_selector(selector) => {
                 envelope["source_owner"] == wanted.owner && envelope["operation_id"] == wanted.id
             }
-            "question" if selector == "/decision_packet/decision_request" => {
+            "question" if decision_selector(selector) => {
                 envelope["response_request"]["owner"] == wanted.owner
                     && envelope["response_request"]["id"] == wanted.id
             }
@@ -804,7 +866,7 @@ fn use_selected(
             detail,
         ));
     }
-    if selector == "/decision_packet/decision_request"
+    if (decision_selector(selector) && answer.is_some())
         || (selector.starts_with("request:") && answer.is_some())
     {
         let answer = answer.ok_or_else(|| error("bounded answer required"))?;
@@ -847,10 +909,39 @@ fn use_selected(
         requests.retain(|request| {
             native_public::owner_request_key(request) != native_public::owner_request_key(&answered)
         });
+        let verification_transition = matches!(
+            answered["request_kind"].as_str(),
+            Some("verification/assurance-applicability/v1" | "verification/strategy/v1")
+        );
         requests.push(answered);
         next["request"] = json!(requests);
         next["projection"] = projection.clone();
-        return operate_selected(next, false, detail);
+        return match operate_selected(next.clone(), false, detail) {
+            Err(failure) if verification_transition && failure.2.is_some() => {
+                // Reject the stale envelopes, retaining the newly admitted
+                // Verification answer and unaffected peer answers. No previous
+                // Assignment choice is replayed as current authority.
+                let source = failure.2.unwrap();
+                next["request"].as_array_mut().unwrap().retain(|r| {
+                    r["owner"] != "assignment"
+                        || (matches!(source, crate::AssignmentSourceChange::Comparison)
+                            && r["request_kind"] == "assignment/judge-task-requirements/v1")
+                });
+                let mut recovered = operate_selected(next, false, detail)?;
+                let view = if projection == "carried" {
+                    &mut recovered["view"]
+                } else {
+                    &mut recovered
+                };
+                view["assignment_context"]["recovery"] = json!({
+                    "status":"stale-assignment-rejected",
+                    "affected_judgment":match source {crate::AssignmentSourceChange::Requirements=>"assignment/judge-task-requirements/v1",crate::AssignmentSourceChange::Comparison=>"assignment/assess-best-fit/v1"},
+                    "reason":failure.to_string(),
+                    "continuation":"Answer the current Assignment next_step. Verification and unaffected peer answers are carried; discarded Assignment envelopes grant no selection or implementation authority."});
+                Ok(recovered)
+            }
+            result => result,
+        };
     }
     if answer.is_some() || action_selector(selector) {
         return Err(error(
@@ -907,6 +998,7 @@ fn selected_owner(reference: &Value) -> Option<&str> {
         .or_else(|| text.strip_prefix("request:"))?
         .split(':')
         .next()
+        .and_then(|owner| owner.split('/').next())
 }
 fn operate_selected(
     mut value: Value,

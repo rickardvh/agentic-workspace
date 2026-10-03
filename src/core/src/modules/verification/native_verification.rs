@@ -1634,6 +1634,7 @@ pub(crate) fn view_with_applicability(
     let claim_review = crate::native_claim_review::view(
         crate::native_claim_review::Context {
             target,
+            task,
             work: current_work,
             subject,
             changed,

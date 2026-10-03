@@ -204,7 +204,8 @@ pub(crate) fn view(
         if request["source_revision"] != source {
             return Err(CoreError::new(
                 "assignment assessment source changed; resolve current request",
-            ));
+            )
+            .assignment_source_changed(crate::AssignmentSourceChange::Comparison));
         }
     }
     let mut result = crate::assignment::comparative_assessment(

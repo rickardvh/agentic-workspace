@@ -30,6 +30,79 @@ def size(value):
     return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode())
 
 
+def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tmp_path, shared_core_binary, native_cli):
+    """A non-primary claim question is sufficient without whole-owner detail."""
+    result = tmp_path / "result.txt"
+    result.write_text("bounded resulting source")
+    instructions = tmp_path / ".agentic-workspace/instructions"
+    instructions.mkdir(parents=True)
+    for index in range(12):
+        (instructions / f"rule-{index}.md").write_text(
+            "---\npaths: [result.txt]\n---\n" + f"Preserve rule {index}: current evidence and bounded source meaning.\n" * 60
+        )
+    context = {"target": str(tmp_path), "task": "Review this bounded source-rich result", "changed": ["result.txt"]}
+
+    def call(value):
+        return consume("json", shared_core_binary, native_cli, value)
+
+    first = call({**context, "projection": "carried"})
+    request = call({"request": first["carriage"], "reference": "owner:request:verification:verification/review-claim/v1"})
+    proposed = call(
+        {
+            "request": first["carriage"],
+            "reference": request["reference"],
+            "answer": {"disposition": "satisfied", "reason": "Checked the result against all delivered rules.", "evidence_refs": []},
+            "projection": "carried",
+            "available_sources": [
+                {k: r["source_material"][k] for k in ("reference", "revision", "extent", "selector", "content_revision")}
+                for r in first["view"]["decision_packet"]["material"]["scoped-instructions"]
+            ],
+        }
+    )
+    packet = proposed["view"]["decision_packet"]
+    assert packet["decision_request"] is None  # The ordinary task has no selected primary claim.
+    question = next(q for q in packet["pending_consequences"]["decisions"] if q["id"] == "verification-claim-review")
+    material = question["material"]
+    assert material["task"] == context["task"]
+    assert material["result_paths"] == ["result.txt"]
+    assert material["judgment"] == "satisfied" and material["reason"]
+    assert len(material["instruction_sources"]) == 12
+    assert material["protocol_obligations"] == {} and material["evidence"] == []
+    assert material["gaps"] == [] and material["claim_limits"]
+    assert "binding" not in material and "response_request" not in question
+    assert all("guidance" not in r for r in packet["material"]["scoped-instructions"])
+    assert all(r["delivery"]["status"] == "caller-held" for r in packet["material"]["scoped-instructions"])
+    # Exact detail remains available, without a full /verification read. It is
+    # freshly source-bound and contains the actual instruction semantics.
+    detail = call({"request": proposed["carriage"], "reference": material["proposal_detail"]["reference"]})
+    proposal = detail["value"]
+    assert len(proposal["binding"]["instructions"]) == 12
+    assert all("Preserve rule" in r["guidance"] for r in proposal["binding"]["instructions"])
+    assert size(material) < size(proposal) / 4
+    selected = call({"request": proposed["carriage"], "reference": question["reference"]})
+    assert selected["value"]["material"]["proposal_revision"] == material["proposal_revision"]
+    confirmed = call({"request": proposed["carriage"], "reference": question["reference"], "answer": "confirm", "projection": "carried"})
+    assert not any(
+        q["id"] == "verification-claim-review" for q in confirmed["view"]["decision_packet"]["pending_consequences"]["decisions"]
+    )
+    fresh = call(confirmed["carriage"]["context"])
+    assert fresh["verification"]["claim_review"]["status"] == "current"
+    deferred = call({"request": proposed["carriage"], "reference": question["reference"], "answer": "defer"})
+    assert deferred["verification"]["claim_review"]["status"] == "deferred"
+    for source in (result, instructions / "rule-0.md"):
+        original = source.read_bytes()
+        source.write_bytes(original + b"\nChanged source meaning.")
+        with pytest.raises(AssertionError, match="stale|changed"):
+            call({"request": proposed["carriage"], "reference": question["reference"], "answer": "confirm"})
+        with pytest.raises(AssertionError, match="stale|changed"):
+            call({"request": proposed["carriage"], "reference": material["proposal_detail"]["reference"]})
+        source.write_bytes(original)
+    policy = tmp_path / ".agentic-workspace/config.toml"
+    policy.write_text("[assurance]\nstrict_closeout=true\n")
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call({"request": proposed["carriage"], "reference": question["reference"], "answer": "confirm"})
+
+
 def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_binary, native_cli):
     """A request proposal must not discard the earlier owner-relation answer."""
     from tests.test_native_planning_create import material
@@ -453,7 +526,7 @@ def test_carried_diagnostics_follow_explicit_work_target(tmp_path, shared_core_b
     monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "carriage-fixture")
     context = proposal("json", shared_core_binary, native_cli, tmp_path)
     offered = consume("json", shared_core_binary, native_cli, context | {"projection": "carried"})
-    assert offered["view"]["session_capture"] == {"status": "capturing", "authoritative": False}
+    assert offered["view"]["session_capture"] == {"status": "capturing", "detail": "full", "authoritative": False}
     assert "session_capture" not in json.dumps(offered["carriage"])
     before = len(events(tmp_path))
     consume(

@@ -99,8 +99,14 @@ pub(crate) fn view(
     if let Some(fields) = policy.as_object_mut() {
         fields.remove("source_revision");
     }
+    // Only obligation declarations can change the execution question here.
+    // Applicability/profile assessments also change the whole strategy digest,
+    // but do not change an executor's role, result or proof capabilities. A
+    // selected Verification requirement is independently admitted below and its
+    // exact contribution remains bound by task_requirements and Assignment.
     let source_revision = digest(&json!({"task":task_identity,"work":current_work,
-        "configuration":policy,"posture":posture,"required_execution_guarantees":required,"verification_strategy":verification["strategy_revision"]}))?;
+        "configuration":policy,"posture":posture,"required_execution_guarantees":required,
+        "verification_protocols":verification["strategy"]["protocols"]}))?;
     let declaration = self::contract()?;
     let owner_revision = &declaration["owners"][0]["revision"];
     let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/task-requirements",
@@ -163,7 +169,8 @@ pub(crate) fn view(
         if request["owner"] != "assignment" || request["source_revision"] != source_revision {
             return Err(CoreError::new(
                 "task requirements source changed; resolve current judgment request",
-            ));
+            )
+            .assignment_source_changed(crate::AssignmentSourceChange::Requirements));
         }
     }
     let mut judgment = request.map(|r| r["arguments"].clone()).unwrap_or_else(|| {

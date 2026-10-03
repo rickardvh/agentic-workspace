@@ -12,6 +12,91 @@ from tests.test_native_public_cli import native_cli as native_cli
 BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
 
 
+def test_verification_transitions_keep_execution_judgment_and_recover_changed_obligation(tmp_path, shared_core_binary, native_cli):
+    """Closeout choices do not invalidate unrelated executor capabilities."""
+    from tests.test_native_execution_configurations import fixture
+
+    source, _, context = fixture(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text('[assurance]\ndefault_level="medium"\n')
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir()
+    manifest.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        '[assurance.requirements.semantic]\nforce="required-before-closeout"\nlevel="medium"\n'
+        'proof_profile="required"\napplies_to_task_markers=["different purpose"]\n'
+        '[assurance.proof_profiles.required]\nrequired_commands=["echo current"]\n'
+        '[protocols.semantic]\npurpose="Independent bounded evidence"\ncommands=[]\n'
+        'applies_to_task_markers=["different purpose"]\nreview_owner="independent-maintainer"\n'
+    )
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    def answer(view, reference, value):
+        return call({"request": view["carriage"], "reference": reference, "answer": value, "projection": "carried"})
+
+    def owner(view, kind):
+        return call({"request": view["carriage"], "reference": f"owner:request:verification:{kind}"})["reference"]
+
+    initial = call({**context, "projection": "carried"})
+    offered = answer(initial, initial["view"]["assignment_context"]["next_step"]["reference"], {"required_result_classes": ["read-only"]})
+    current = answer(
+        offered,
+        offered["view"]["assignment_context"]["next_step"]["reference"],
+        {"alternative": "local:internal", "reason": "Local meets the bounded read; a worker handoff adds no required capability."},
+    )
+    assignment_answers = [r for r in current["carriage"]["context"]["request"] if r["owner"] == "assignment"]
+    assert current["view"]["assignment_context"]["local_continuation_allowed"] is True
+    scope = {"semantic": "not-applicable", "protocol:semantic": "not-applicable"}
+    for kind, value in (
+        ("verification/assurance-applicability/v1", {"decisions": scope}),
+        ("verification/strategy/v1", {"level": "medium", "profile_ids": ["required"], "reason": "Cover the selected bounded source."}),
+    ):
+        current = answer(current, owner(current, kind), value)
+        assert current["view"]["assignment_context"]["local_continuation_allowed"] is True
+        assert [r for r in current["carriage"]["context"]["request"] if r["owner"] == "assignment"] == assignment_answers
+
+    # Newly applicable obligation declarations are a legitimate dependency change.
+    # The submitted stale Assignment envelopes remain unusable; the answered
+    # Verification request reaches a current, exact Assignment question instead.
+    recovered = answer(
+        current, owner(current, "verification/assurance-applicability/v1"), {"decisions": {**scope, "protocol:semantic": "applicable"}}
+    )
+    assignment = recovered["view"]["assignment_context"]
+    assert assignment["local_continuation_allowed"] is False
+    assert assignment["recovery"]["status"] == "stale-assignment-rejected"
+    assert assignment["recovery"]["affected_judgment"] == "assignment/judge-task-requirements/v1"
+    assert assignment["next_step"]["reference"]
+    assert all(r["owner"] != "assignment" for r in recovered["carriage"]["context"]["request"])
+    assert any("effect:implementation" in b["affects"] for b in recovered["view"]["decision_packet"]["blockers"])
+    with pytest.raises(AssertionError, match="changed|stale"):
+        call({**recovered["carriage"]["context"], "request": [*recovered["carriage"]["context"]["request"], *assignment_answers]})
+
+    # A genuine proof capability requirement cannot be smuggled through the
+    # preserved comparison. The ordinary fresh answer retains its honest gap.
+    changed_requirements = copy.deepcopy(current["carriage"]["context"])
+    next(r for r in changed_requirements["request"] if r["request_kind"] == "assignment/judge-task-requirements/v1")["arguments"][
+        "required_proof_classes"
+    ] = ["independent-evidence"]
+    with pytest.raises(AssertionError, match="source changed|stale"):
+        call(changed_requirements)
+    fresh = call({**context, "projection": "carried"})
+    denied = answer(
+        fresh,
+        fresh["view"]["assignment_context"]["next_step"]["reference"],
+        {"required_result_classes": ["unapplied-patch"], "required_proof_classes": ["independent-evidence"]},
+    )
+    assert denied["view"]["assignment_context"]["local_continuation_allowed"] is False
+    assert denied["view"]["assignment_context"]["ineligible_configurations"]
+    for changed_context in ({"task": "Different work"}, {"changed": []}):
+        with pytest.raises(AssertionError, match="changed|stale"):
+            call({**current["carriage"]["context"], **changed_context})
+    source.write_text(source.read_text() + 'forbidden_task_classes=["boundary-shaping"]\n')
+    with pytest.raises(AssertionError, match="changed|stale"):
+        call(current["carriage"]["context"])
+
+
 def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core_binary, native_cli):
     """The ordinary caller answers questions, without reading request bundles."""
     from tests.test_native_execution_configurations import fixture

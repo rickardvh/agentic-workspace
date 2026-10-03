@@ -162,9 +162,10 @@ def test_claim_review_cannot_impersonate_required_reviewer(tmp_path, shared_core
         "evidence_refs": [],
     }
     proposed = call(request=request)
-    answer = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")[
-        "response_request"
-    ]
+    decision = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")
+    assert "required-review-producer:review" in decision["material"]["gaps"]
+    assert decision["material"]["protocol_obligations"]["review"]["review_owner"] == "independent-maintainer"
+    answer = decision["response_request"]
     answer["arguments"]["answer"] = "confirm"
     reviewed = call(request=answer)
     assert reviewed["verification"]["claim_review"]["status"] == "insufficient"

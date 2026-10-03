@@ -109,15 +109,30 @@ const TASK: &str = "task";
 const CONSEQUENCE_PREFIXES: [&str; 5] = ["action:", "decision:", "effect:", "claim:", "outcome:"];
 
 #[derive(Debug, Clone)]
-pub struct CoreError(String, Option<native_delegation::DispatchMismatch>);
+pub struct CoreError(
+    String,
+    Option<native_delegation::DispatchMismatch>,
+    Option<AssignmentSourceChange>,
+);
+
+#[derive(Debug, Clone, Copy)]
+enum AssignmentSourceChange {
+    Requirements,
+    Comparison,
+}
 
 impl CoreError {
     fn new(message: impl Into<String>) -> Self {
-        Self(message.into(), None)
+        Self(message.into(), None, None)
     }
 
     fn dispatch_mismatch(mut self, mismatch: native_delegation::DispatchMismatch) -> Self {
         self.1.get_or_insert(mismatch);
+        self
+    }
+
+    fn assignment_source_changed(mut self, source: AssignmentSourceChange) -> Self {
+        self.2 = Some(source);
         self
     }
 }

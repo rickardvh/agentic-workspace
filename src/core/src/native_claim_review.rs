@@ -9,6 +9,7 @@ pub(crate) fn declaration() -> Value {
 }
 pub(crate) struct Context<'a> {
     pub target: &'a Path,
+    pub task: &'a str,
     pub work: &'a Value,
     pub subject: &'a Value,
     pub changed: &'a [String],
@@ -22,6 +23,7 @@ pub(crate) struct Context<'a> {
 pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Value, CoreError> {
     let Context {
         target,
+        task,
         work,
         subject,
         changed,
@@ -74,29 +76,6 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     let mut answer = args.clone();
     answer["proposal_revision"] = json!(pr);
     answer.as_object_mut().unwrap().remove("answer");
-    let decisions = json!([{"id":"verification-claim-review","question":"Confirm this exact claim judgment against the resulting work and current evidence?","material":result["proposal"],"response_request":{"request_kind":REQUEST,"arguments":answer},"choices":[{"id":"confirm","label":"Confirm exact claim judgment"},{"id":"defer","label":"Leave claim unresolved"}],"affects":["claim:complete"]}]);
-
-    let compiled = crate::compile_value(
-        json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
-    )?;
-    let mut exact = compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
-    let scope: Vec<String> = sources.keys().cloned().collect();
-    let delegated = crate::native_decision_authority::delegated(config, "verification", &scope);
-    if args["answer"].is_null() && delegated.is_none() {
-        result["status"] = json!("bounded-domain-answer-required");
-        result["decisions"] = decisions;
-        return Ok(result);
-    }
-    if !args["answer"].is_null() {
-        exact["arguments"]["answer"] = args["answer"].clone();
-        if exact != *request || args["proposal_revision"] != pr {
-            return Err(CoreError::new("claim review answer changed or is stale"));
-        }
-        if args["answer"] == "defer" {
-            result["status"] = json!("deferred");
-            return Ok(result);
-        }
-    }
     let mut gaps = Vec::new();
     if args["disposition"] != "satisfied" {
         gaps.push("review-judgment-insufficient".to_owned());
@@ -132,6 +111,44 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
             .is_some_and(|commands| commands.is_empty());
         if !covered && !manual_only {
             gaps.push(format!("protocol-evidence-required:{id}"));
+        }
+    }
+    // Keep the cryptographic proposal once, in selected owner detail. Compile
+    // only the decision-bearing material: binding bytes are not a second set of
+    // instructions for the consumer. Applicable instruction text is delivered
+    // by the composed packet; exact source/proposal detail remains addressable.
+    let material = json!({"task":task,"work":work,"subject":subject,
+        "result_paths":sources.keys().collect::<Vec<_>>(),
+        "judgment":args["disposition"],"reason":args["reason"],"proposal_revision":pr,
+        "instruction_sources":instructions["sources"].as_array().unwrap().iter()
+            .filter(|r|r["applicable"]==true).map(|r|json!({"source":r["source"],
+                "binding_admission":r["binding_admission"]["status"],"requirements":r["metadata"]})).collect::<Vec<_>>(),
+        "protocol_obligations":strategy["protocols"],
+        "evidence":evidence.iter().map(|e|json!({"reference":e["reference"],"status":e["status"],
+            "claim":e["checked_scope"]["claim"],"command":e["checked_scope"]["command"],
+            "route":e["runtime_admission"]["command_coverage"]["route_id"],"gaps":e["gaps"]})).collect::<Vec<_>>(),
+        "gaps":gaps,"claim_limits":"Confirmation supplies this semantic judgment only. All current blockers, required evidence and independent/manual reviewer producers remain binding; it grants no review, approval or whole-task completion."});
+    let decisions = json!([{"id":"verification-claim-review","question":"Confirm this exact claim judgment against the resulting work and current evidence?","material":material,"response_request":{"request_kind":REQUEST,"arguments":answer},"choices":[{"id":"confirm","label":"Confirm exact claim judgment"},{"id":"defer","label":"Leave claim unresolved"}],"affects":["claim:complete"]}]);
+
+    let compiled = crate::compile_value(
+        json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
+    )?;
+    let mut exact = compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
+    let scope: Vec<String> = sources.keys().cloned().collect();
+    let delegated = crate::native_decision_authority::delegated(config, "verification", &scope);
+    if args["answer"].is_null() && delegated.is_none() {
+        result["status"] = json!("bounded-domain-answer-required");
+        result["decisions"] = decisions;
+        return Ok(result);
+    }
+    if !args["answer"].is_null() {
+        exact["arguments"]["answer"] = args["answer"].clone();
+        if exact != *request || args["proposal_revision"] != pr {
+            return Err(CoreError::new("claim review answer changed or is stale"));
+        }
+        if args["answer"] == "defer" {
+            result["status"] = json!("deferred");
+            return Ok(result);
         }
     }
     result["status"] = json!(if gaps.is_empty() {
