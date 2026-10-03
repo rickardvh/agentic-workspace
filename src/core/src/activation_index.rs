@@ -87,10 +87,12 @@ pub(crate) fn run(input: Value) -> Result<Value, CoreError> {
         };
         crate::native_activation::validate(activation)?;
         let route = &skill["semantic_routes"][0];
-        rows.push(
-            json!({"id":skill["id"],"path":path,"procedure_resource":resource,
-            "semantic_routes":[route.get("id").unwrap_or(route)],"activation":activation}),
-        );
+        let mut row = json!({"id":skill["id"],"path":path,"procedure_resource":resource,
+            "activation":activation});
+        if let Some(id) = route.get("id").unwrap_or(route).as_str() {
+            row["semantic_routes"] = json!([id]);
+        }
+        rows.push(row);
     }
     if rows.len() > 128 {
         return Err(err("activation index exceeds 128 entries"));

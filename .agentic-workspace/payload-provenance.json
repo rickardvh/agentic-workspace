@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:1439046d3776c9bc8aaac512ac8ce3fd48102b93a4c6c73d8ad20e12479e7ed9",
+  "managed_revision": "sha256:9f84b0c285ae77d81feaa8fd23abe1dba2859233baac286aecb145bad9f26662",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],

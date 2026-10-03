@@ -25,10 +25,7 @@
       },
       "id": "self-improvement-dogfooding",
       "path": "self-improvement-dogfooding/SKILL.md",
-      "procedure_resource": "procedure.md",
-      "semantic_routes": [
-        null
-      ]
+      "procedure_resource": "procedure.md"
     }
   ],
   "owner": "repo-local-tool-skills",
