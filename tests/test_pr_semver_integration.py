@@ -247,28 +247,77 @@ def test_integration_exception_fails_closed(stack, defect):
 
 
 @pytest.mark.parametrize(
-    "mode", ["ordinary", "base-advanced", "non-package", "mixed-ordinary", "integration", "missing-label", "multiple-labels"]
+    "mode",
+    [
+        "ordinary",
+        "ordinary-minor",
+        "ordinary-major",
+        "base-advanced",
+        "integration",
+        "mixed-ordinary",
+        "missing-label",
+        "multiple-labels",
+        "none-changeset",
+        "none-modified",
+        "non-package",
+        "runtime-none",
+        "tooling-none",
+        "unlabelled-docs",
+        "missing-patch",
+        "missing-minor",
+        "missing-major",
+        "none-delete",
+        "none-rename",
+        "invalid-schema",
+        "empty-summary",
+    ],
 )
 def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode):
     monkeypatch.syspath_prepend(str(ROOT / "src/tooling"))
     monkeypatch.setitem(sys.modules, "release.pr_semver_integration", checker)
     root, git, event, _, prs, provider = stack
-    if mode in {"ordinary", "base-advanced"}:
+    ordinary = {"ordinary", "ordinary-minor", "ordinary-major", "base-advanced", "invalid-schema", "empty-summary"}
+    no_release = {"non-package", "runtime-none", "tooling-none", "none-delete", "none-rename"}
+    if mode in ordinary:
         git("checkout", "--detach", prs[0]["head"]["sha"])
+        bump = mode.removeprefix("ordinary-") if mode in {"ordinary-minor", "ordinary-major"} else "patch"
+        if mode in {"ordinary-minor", "ordinary-major", "invalid-schema", "empty-summary"}:
+            path = root / ".release/changes/1.toml"
+            schema = "wrong" if mode == "invalid-schema" else "agentic-workspace/release-change/v1"
+            summary = " " if mode == "empty-summary" else "Change"
+            path.write_text(f'schema_version="{schema}"\nbump="{bump}"\nsummary="{summary}"\n')
+            git("add", ".")
+            git("commit", "-qm", mode)
         event["pull_request"]["head"]["sha"] = git("rev-parse", "HEAD")
-        event["pull_request"]["labels"] = [{"name": "semver:patch"}]
+        event["pull_request"]["labels"] = [{"name": f"semver:{bump}"}]
         if mode == "base-advanced":
             git("update-ref", "refs/heads/master", event["pull_request"]["head"]["sha"])
-    elif mode == "non-package":
+    elif mode in no_release | {"unlabelled-docs", "missing-patch", "missing-minor", "missing-major", "none-modified"}:
         event["pull_request"]["base"]["sha"] = git("rev-parse", "HEAD")
-        (root / "note.md").write_text("Documentation only.")
-        git("add", "note.md")
-        git("commit", "-qm", "documentation")
+        if mode == "none-delete":
+            git("rm", ".release/changes/2.toml")
+        elif mode == "none-rename":
+            git("mv", ".release/changes/2.toml", ".release/changes/renamed.toml")
+        else:
+            name = {
+                "runtime-none": "src/core/src/lib.rs",
+                "tooling-none": "src/tooling/release/consumer_environment.py",
+                "none-modified": ".release/changes/2.toml",
+            }.get(mode, "note.md")
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(path.read_text() + "# changed revision\n" if path.exists() else "Change\n")
+            git("add", name)
+        git("commit", "-qm", mode)
         event["pull_request"]["head"]["sha"] = git("rev-parse", "HEAD")
+        label = f"semver:{mode.removeprefix('missing-')}" if mode.startswith("missing-") else "semver:none"
+        event["pull_request"]["labels"] = [] if mode == "unlabelled-docs" else [{"name": label}]
     elif mode == "missing-label":
         event["pull_request"]["labels"] = []
     elif mode == "multiple-labels":
-        event["pull_request"]["labels"].append({"name": "semver:patch"})
+        event["pull_request"]["labels"].append({"name": "semver:none"})
+    elif mode == "none-changeset":
+        event["pull_request"]["labels"] = [{"name": "semver:none"}]
     event_path = root / "event.json"
     event_path.write_text(json.dumps(event))
     monkeypatch.setenv("EVENT_PATH", str(event_path))
@@ -279,9 +328,7 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
     monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
 
     def observed(endpoint):
-        assert mode not in {"ordinary", "base-advanced", "non-package", "missing-label", "multiple-labels"}, (
-            "Ordinary admission must remain local."
-        )
+        assert mode in {"integration", "mixed-ordinary"}, "Ordinary admission must remain local."
         return provider["api"](endpoint) if mode == "integration" else []
 
     monkeypatch.setattr(checker, "github", observed)
@@ -292,7 +339,8 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
     assert "retention-days: 90" in workflow
     assert "overwrite: false" in workflow
     assert "semver-admission-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
-    if mode in {"ordinary", "integration", "base-advanced"}:
+    assert "if: ${{ !github.event.pull_request.draft }}" in workflow
+    if mode in (ordinary - {"invalid-schema", "empty-summary"}) | {"integration"}:
         exec(compile(code, "pr-semver-admission", "exec"), {"__name__": "__main__"})
         admission = json.loads((root / "semver-admission.json").read_text())
         assert admission["pull_request"] == {
@@ -300,15 +348,18 @@ def test_workflow_preserves_ordinary_semver_discipline(stack, monkeypatch, mode)
             "head_sha": event["pull_request"]["head"]["sha"],
             "base_sha": event["pull_request"]["base"]["sha"],
         }
-        assert admission["mode"] == ("ordinary" if mode == "base-advanced" else mode)
+        assert admission["mode"] == ("integration" if mode == "integration" else "ordinary")
         assert admission["producer"] == {"workflow": checker.WORKFLOW, "run_id": 3, "attempt": 1}
         assert admission["changesets"]
-    elif mode == "non-package":
-        with pytest.raises(SystemExit) as error:
-            exec(compile(code, "pr-semver-admission", "exec"), {"__name__": "__main__"})
-        assert error.value.code == 0
+        assert admission["requested_bump"] == event["pull_request"]["labels"][0]["name"].removeprefix("semver:")
+        assert admission["release_requested"] is True
+    elif mode in no_release:
+        exec(compile(code, "pr-semver-admission", "exec"), {"__name__": "__main__"})
         admission = json.loads((root / "semver-admission.json").read_text())
-        assert admission["mode"] == "not-required"
+        assert admission["mode"] == "none"
+        assert admission["label"] == "semver:none"
+        assert admission["requested_bump"] is None
+        assert admission["release_requested"] is False
         assert admission["changesets"] == {}
         assert admission["pull_request"]["head_sha"] == event["pull_request"]["head"]["sha"]
     else:

@@ -10,8 +10,17 @@ result. No unconsumed changes means a successful run with nothing to release.
 
 ## Declare release intent
 
-Package-affecting PRs need exactly one `semver:major`, `semver:minor` or
-`semver:patch` label and a matching fragment under `.release/changes/`:
+Every non-draft PR must choose exactly one release decision: `semver:none`,
+`semver:patch`, `semver:minor` or `semver:major`. Choose from the actual change
+and its compatibility impact; CI does not infer release intent from file paths.
+Independent review can challenge the choice.
+
+Use `semver:none` when the PR intentionally requires no package release. It needs
+no new release fragment and must not add or modify one. Unchanged fragment renames
+and deletion of consumed fragments do not request a release.
+
+For `semver:patch`, `semver:minor` or `semver:major`, add a matching fragment under
+`.release/changes/`:
 
 ```toml
 schema_version = "agentic-workspace/release-change/v1"
@@ -21,7 +30,8 @@ summary = "Describe the user-visible change."
 
 The label records the compatibility decision. Ordinary PR fragments must match
 it. The existing [exact-tree integration exception](../src/tooling/release/pr_semver_integration.py)
-requires its own immutable evidence. `Semver admission` and `Merge sufficiency`
+requires its own immutable evidence and applies only to release-bearing labels.
+`Semver admission` and `Merge sufficiency`
 remain the branch checks.
 
 Selection uses new fragment revisions since the most recent verified, completed

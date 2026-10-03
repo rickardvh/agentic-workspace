@@ -360,7 +360,7 @@
       "storage_class": "source-of-truth"
     },
     {
-      "checked_in_justification": "Release automation, docs, and tests use this manifest as the source of truth for package-affecting paths and shipped package metadata.",
+      "checked_in_justification": "Release automation, docs, and tests use this manifest as the source of truth for explicit Semver decisions and shipped package metadata.",
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
