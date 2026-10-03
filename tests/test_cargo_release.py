@@ -3,6 +3,7 @@
 import hashlib
 import io
 import json
+import shutil
 import struct
 import sys
 import tarfile
@@ -11,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import pytest
+from tests.test_native_public_cli import native_cli as native_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -55,6 +57,38 @@ def test_publisher_wire_body_contains_the_admitted_archive(tmp_path):
 
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
 import cargo_release as cargo  # noqa: E402
+
+
+@pytest.mark.parametrize("accept_invalid", [False, True])
+def test_cargo_pair_smoke_uses_native_invocation_admission(tmp_path, native_cli, shared_core_binary, monkeypatch, accept_invalid):
+    """Mock Cargo installation only; exercise the release caller with the real pair."""
+    packages = [
+        {"name": "agentic-workspace-core", "version": "1.0.0", "binary": "agentic-workspace-core"},
+        {"name": "agentic-workspace-cli", "version": "1.0.0", "binary": "agentic-workspace"},
+    ]
+    binaries = tmp_path / "installed/bin"
+    binaries.mkdir(parents=True)
+    for source in (native_cli, shared_core_binary):
+        shutil.copy2(source, binaries / source.name)
+    native_run = cargo.subprocess.run
+
+    def run(command, **kwargs):
+        if command[0] == "cargo":
+            return cargo.subprocess.CompletedProcess(command, 0)
+        result = native_run(command, **kwargs)
+        if "invoke" in command and kwargs.get("env", {}).get("PATH") == "":
+            assert result.returncode == 0, result.stderr
+            assert json.loads(result.stdout)["effect_outcome"]["status"] == "rejected-before-effect"
+            if accept_invalid:
+                return cargo.subprocess.CompletedProcess(command, 0, json.dumps({"effect_outcome": {"status": "committed"}}), "")
+        return result
+
+    monkeypatch.setattr(cargo.subprocess, "run", run)
+    if accept_invalid:
+        with pytest.raises(ValueError, match="Cargo pair accepted an invalid invocation"):
+            cargo.install_pair(packages, tmp_path, staging=tmp_path / "staged")
+    else:
+        cargo.install_pair(packages, tmp_path, staging=tmp_path / "staged")
 
 
 def test_cargo_projection_preserves_inputs_and_source_identity(tmp_path, monkeypatch):
