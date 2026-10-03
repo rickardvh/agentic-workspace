@@ -73,6 +73,89 @@ def test_registry_absence_matching_bytes_and_conflict(tmp_path, ecosystem):
         registry.observe(artifact, tmp_path, get=lambda _: metadata, download=lambda _: data)
 
 
+@pytest.mark.parametrize("state", ["absent", "partial", "ready", "conflict", "yanked", "duplicate"])
+def test_python_installer_index_requires_all_admitted_files(state):
+    artifacts = [
+        {"ecosystem": "python", "name": "agentic-workspace", "asset": "native.whl", "sha256": "a" * 64},
+        {"ecosystem": "python", "name": "agentic-workspace", "asset": "source.tar.gz", "sha256": "b" * 64},
+        {"ecosystem": "npm", "name": "@agentic-workspace/workspace-cli", "asset": "node.tgz"},
+    ]
+    files = [{"filename": row["asset"], "hashes": {"sha256": row["sha256"]}, "yanked": False} for row in artifacts[:2]]
+    if state == "partial":
+        files.pop()
+    elif state == "conflict":
+        files[0]["hashes"]["sha256"] = "c" * 64
+    elif state == "yanked":
+        files[0]["yanked"] = "withdrawn"
+    elif state == "duplicate":
+        files.append(files[0])
+
+    def get(url, *, accept):
+        assert url == "https://pypi.org/simple/agentic-workspace/"
+        assert accept == "application/vnd.pypi.simple.v1+json"
+        return None if state == "absent" else {"files": files}
+
+    if state in {"conflict", "yanked", "duplicate"}:
+        with pytest.raises(ValueError, match="installer index conflicts"):
+            registry.python_index_ready(artifacts, get=get)
+    else:
+        assert registry.python_index_ready(artifacts, get=get) is (state == "ready")
+
+
+@pytest.mark.parametrize("index_states,passes", [([False, True], True), ([False, False, False], False)])
+def test_registry_verification_waits_for_installer_index_before_smoke(tmp_path, monkeypatch, index_states, passes):
+    identity = registry.coordinated_release.release_identity("v1.10.1")
+    artifacts = [{"asset": "native.whl"}]
+    now = [0]
+    states = iter(index_states)
+    smoke_calls = []
+    converge = registry.converge
+    monkeypatch.setattr(registry, "admitted_artifacts", lambda *_: (identity, artifacts))
+    monkeypatch.setattr(registry, "json_response", lambda _: {"latest": "1.10.1"})
+    monkeypatch.setattr(registry, "python_index_ready", lambda _: next(states))
+    monkeypatch.setattr(registry, "smoke", lambda _: smoke_calls.append(now[0]))
+    monkeypatch.setattr(
+        registry,
+        "converge",
+        lambda *a, **kw: converge(
+            *a,
+            **kw,
+            observe_artifact=lambda *_: "matching",
+            clock=lambda: now[0],
+            sleep=lambda seconds: now.__setitem__(0, now[0] + seconds),
+        ),
+    )
+    receipt = tmp_path / "publication.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "registry_release",
+            "--tag",
+            "v1.10.1",
+            "--source",
+            "a" * 40,
+            "--artifact-dir",
+            str(tmp_path),
+            "--verify",
+            "--receipt",
+            str(receipt),
+            "--convergence-seconds",
+            "6",
+        ],
+    )
+    if passes:
+        registry.main()
+        assert smoke_calls == [2]
+        assert json.loads(receipt.read_text())["status"] == "passed"
+    else:
+        with pytest.raises(ValueError, match="installer index matching: False"):
+            registry.main()
+        assert now[0] == 6
+        assert smoke_calls == []
+        assert not receipt.exists()
+
+
 @pytest.mark.parametrize("tag", ["v1.0.0-rc.1", "v1.0.0"])
 def test_registry_requires_exact_admitted_subject(tmp_path, tag):
     identity = registry.coordinated_release.release_identity(tag)

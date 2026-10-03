@@ -25,8 +25,11 @@ import coordinated_release
 from first_contact import journey
 
 
-def fetch(url, *, missing=False):
-    request = Request(url, headers={"User-Agent": "agentic-workspace-release (github.com/rickardvh/agentic-workspace)"})
+def fetch(url, *, missing=False, accept=None):
+    headers = {"User-Agent": "agentic-workspace-release (github.com/rickardvh/agentic-workspace)"}
+    if accept:
+        headers["Accept"] = accept
+    request = Request(url, headers=headers)
     try:
         with urlopen(request, timeout=60) as response:
             return response.read()
@@ -36,8 +39,8 @@ def fetch(url, *, missing=False):
         raise
 
 
-def json_response(url):
-    data = fetch(url, missing=True)
+def json_response(url, *, accept=None):
+    data = fetch(url, missing=True, accept=accept)
     return None if data is None else json.loads(data)
 
 
@@ -210,6 +213,25 @@ def observe(artifact, dist, *, get=json_response, download=fetch):
     return "matching"
 
 
+def python_index_ready(artifacts, *, get=None):
+    """The release JSON API and installer index can propagate independently."""
+    python = [row for row in artifacts if row["ecosystem"] == "python"]
+    if not python:
+        return True
+    get = get or json_response
+    index = get(f"https://pypi.org/simple/{quote(python[0]['name'], safe='')}/", accept="application/vnd.pypi.simple.v1+json")
+    if index is None:
+        return False
+    ready = True
+    for artifact in python:
+        files = [row for row in index["files"] if row["filename"] == artifact["asset"]]
+        if not files:
+            ready = False
+        elif len(files) != 1 or files[0].get("yanked") or files[0]["hashes"].get("sha256") != artifact["sha256"]:
+            raise ValueError("PyPI installer index conflicts with admitted artifact")
+    return ready
+
+
 def smoke(identity):
     with tempfile.TemporaryDirectory(prefix="aw-registry-consumer-") as directory:
         workspace = Path(directory)
@@ -318,8 +340,10 @@ def smoke(identity):
         journey([executable], global_repo, global_env)
 
 
-def converge(artifacts, dist, *, timeout=300, observe_artifact=observe, channel_ready=None, clock=time.monotonic, sleep=time.sleep):
-    """Wait only for absent immutable bytes; conflicts and transport errors fail immediately."""
+def converge(
+    artifacts, dist, *, timeout=300, observe_artifact=observe, channel_ready=None, index_ready=None, clock=time.monotonic, sleep=time.sleep
+):
+    """Wait for immutable bytes and public indexes; conflicts and transport errors fail immediately."""
     if timeout < 0 or timeout > 900:
         raise ValueError("Registry convergence timeout must be between zero and 900 seconds")
     deadline = clock() + timeout
@@ -328,12 +352,17 @@ def converge(artifacts, dist, *, timeout=300, observe_artifact=observe, channel_
         observations = [{**row, "status": observe_artifact(row, dist)} for row in artifacts]
         absent = [row["asset"] for row in observations if row["status"] == "absent"]
         channel_matches = channel_ready is None or channel_ready()
-        if not absent and channel_matches:
+        index_matches = index_ready is None or index_ready()
+        if not absent and channel_matches and index_matches:
             return observations
+        diagnostic = (
+            f"absent artifacts: {absent}; channel matching: {channel_matches}; "
+            f"installer index matching: {index_matches}"
+        )
         remaining = deadline - clock()
         if remaining <= 0:
-            raise ValueError(f"Registry convergence timed out; absent artifacts: {absent}; channel matching: {channel_matches}")
-        print(f"Registry propagation pending: {absent}; channel matching: {channel_matches}", file=sys.stderr)
+            raise ValueError(f"Registry convergence timed out; {diagnostic}")
+        print(f"Registry propagation pending; {diagnostic}", file=sys.stderr)
         sleep(min(delay, remaining))
         delay = min(delay * 2, 30)
 
@@ -346,7 +375,7 @@ def main():
     parser.add_argument("--pending", type=Path)
     parser.add_argument("--verify", action="store_true")
     parser.add_argument("--receipt", type=Path)
-    parser.add_argument("--convergence-seconds", type=int, default=300)
+    parser.add_argument("--convergence-seconds", type=int, default=900)
     parser.add_argument("--fetch", action="store_true")
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY"))
     args = parser.parse_args()
@@ -364,7 +393,13 @@ def main():
             tags = json_response("https://registry.npmjs.org/-/package/%40agentic-workspace%2Fworkspace-cli/dist-tags")
             return bool(tags and tags.get(npm_tag) == identity["package_versions"]["npm"])
 
-        observations = converge(artifacts, args.artifact_dir, timeout=args.convergence_seconds, channel_ready=channel_ready)
+        observations = converge(
+            artifacts,
+            args.artifact_dir,
+            timeout=args.convergence_seconds,
+            channel_ready=channel_ready,
+            index_ready=lambda: python_index_ready(artifacts),
+        )
         smoke(identity)
         receipt = {
             "kind": "agentic-workspace/registry-publication/v1",
