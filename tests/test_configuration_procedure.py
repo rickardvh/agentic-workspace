@@ -341,6 +341,7 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
     [
         ("workspace.agent_instructions_file", "GUIDE.md", "config.toml"),
         ("session_logging.path_mode", "redacted", "config.local.toml"),
+        ("session_logging.detail", "metadata", "config.local.toml"),
         ("modules.enabled", ["memory"], "config.toml"),
     ],
 )
@@ -378,11 +379,16 @@ def test_native_write_reports_affected_owner_behavior(tmp_path, shared_core_bina
         assert observed["current"]["status"] == "source-context-delivered"
         assert "Read this repository-owned instruction" in json.dumps(observed["current"]["response"])
     elif key.startswith("session_logging"):
-        assert observed["effective_policy"] == {"enabled": True, "path_mode": "redacted"}
+        assert observed["effective_policy"] == {
+            "enabled": True,
+            "path_mode": "redacted" if key.endswith("path_mode") else "absolute",
+            "detail": value if key.endswith("detail") else "full",
+        }
         assert native["session_capture"]["status"] == "capturing"
         last = events(tmp_path)[-1]
         assert last["payload"]["entry"]["command"] == "agentic-workspace invoke"
-        assert str(tmp_path) not in json.dumps(last)
+        if key.endswith("path_mode"):
+            assert str(tmp_path) not in json.dumps(last)
     else:
         assert observed["enabled"] == ["memory"]
         assert observed["memory"]["status"] == "absent"

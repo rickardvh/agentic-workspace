@@ -1285,7 +1285,7 @@ def _artifact_chunk_events(
     result: list[dict[str, Any]] = []
     coverage: list[dict[str, Any]] = []
     seen: set[str] = set()
-    artifact_root = (state.target_root / _artifact_root_for_session(session)).resolve()
+    artifact_root = state.target_root / _artifact_root_for_session(session)
     for entry in entries:
         artifact = entry.get("artifact") if isinstance(entry.get("artifact"), dict) else None
         artifact_path = str((artifact or {}).get("path", ""))
@@ -1301,16 +1301,77 @@ def _artifact_chunk_events(
         if not include_artifacts:
             coverage.append({**record, "status": "digest-only" if record["sha256"] else "omitted"})
             continue
-        candidate = (state.target_root / artifact_path).resolve()
+        candidate = state.target_root / artifact_path
         try:
             candidate.relative_to(artifact_root)
-            payload = json.loads(candidate.read_text(encoding="utf-8-sig"))
-        except (OSError, ValueError, json.JSONDecodeError):
+            artifact_root.resolve().relative_to(state.target_root.resolve())
+            candidate.resolve().relative_to(artifact_root.resolve())
+            # Diagnostic references confer no authority to read arbitrary files.
+            relative = candidate.relative_to(state.target_root)
+            if any(part in {".", ".."} for part in relative.parts):
+                raise ValueError("unconfined artifact")
+            for parent in (candidate, *candidate.parents):
+                if parent == state.target_root:
+                    break
+                if parent.is_symlink() or getattr(parent, "is_junction", lambda: False)():
+                    raise ValueError("linked artifact")
+            body = candidate.read_bytes()
+            payload = json.loads(body.decode("utf-8-sig"))
+            integrity_body = body
+            integrity_basis = "exact-artifact-bytes"
+            # The retired writer declared its JSON text digest before adding
+            # the file newline (and platform newline conversion). Honour only
+            # that established legacy discriminator/framing, not native blobs.
+            if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/session-log-output-artifact/v1":
+                if hashlib.sha256(body).hexdigest() != record["sha256"]:
+                    integrity_body = body.decode("utf-8-sig").replace("\r\n", "\n").removesuffix("\n").encode("utf-8")
+                    integrity_basis = "legacy-json-text-framing"
+            if record["sha256"] and hashlib.sha256(integrity_body).hexdigest() != record["sha256"]:
+                coverage.append({**record, "status": "damaged"})
+                continue
+            if record["bytes"] and len(integrity_body) != record["bytes"]:
+                coverage.append({**record, "status": "damaged"})
+                continue
+        except (json.JSONDecodeError, UnicodeError):
+            coverage.append({**record, "status": "damaged"})
+            continue
+        except FileNotFoundError:
             coverage.append({**record, "status": "missing"})
             continue
-        coverage.append({**record, "status": "included-as-output-chunks"})
-        for stream in ("stdout", "stderr"):
-            text = _normalized_export_text(state=state, text=str(payload.get(stream, "")))
+        except (OSError, ValueError):
+            coverage.append({**record, "status": "unavailable"})
+            continue
+        if not isinstance(payload, dict):
+            coverage.append({**record, "status": "damaged"})
+            continue
+        native_io = payload.get("kind") == "agentic-workspace/session-command-io/v1"
+        if entry.get("detail") == "full" and not native_io:
+            coverage.append({**record, "status": "damaged"})
+            continue
+        streams = ("request", "stdout", "stderr", "configuration") if native_io else ("stdout", "stderr")
+        if native_io and any(not isinstance(payload.get(stream), str) for stream in streams):
+            coverage.append({**record, "status": "damaged"})
+            continue
+        coverage.append(
+            {
+                **record,
+                "status": "included-as-output-chunks",
+                "streams": list(streams),
+                "integrity_basis": integrity_basis,
+                "observed_artifact_sha256": hashlib.sha256(body).hexdigest(),
+                "observed_artifact_bytes": len(body),
+            }
+        )
+        for stream in streams:
+            source_text = str(payload.get(stream, ""))
+            text = _normalized_export_text(state=state, text=source_text)
+            stream_metadata = {
+                "source_stream_sha256": hashlib.sha256(source_text.encode("utf-8")).hexdigest(),
+                "source_stream_bytes": len(source_text.encode("utf-8")),
+                "stream_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                "stream_bytes": len(text.encode("utf-8")),
+                "content_transform": "known-local-paths" if text != source_text else "none",
+            }
             chunks = [text[index : index + 32768] for index in range(0, len(text), 32768)] or [""]
             for chunk_index, chunk in enumerate(chunks):
                 result.append(
@@ -1322,6 +1383,7 @@ def _artifact_chunk_events(
                         payload={
                             "entry_id": str(entry.get("id", "")),
                             "artifact_sha256": record["sha256"],
+                            **stream_metadata,
                             "stream": stream,
                             "chunk_index": chunk_index,
                             "chunk_count": len(chunks),
@@ -1392,7 +1454,7 @@ def export_session_log(
         chunks, coverage = _artifact_chunk_events(
             state=state,
             session=physical,
-            entries=entries,
+            entries=_command_entries_from_events(events, physical_session_id=physical["session_id"]),
             include_artifacts=include_artifacts,
         )
         all_events.extend(chunks)
@@ -1426,6 +1488,18 @@ def export_session_log(
     delegated_child_session_ids = [item["session_id"] for item in physical_sessions if item.get("parent_logical_session_id")]
     rotated_session_ids = [item["session_id"] for item in physical_sessions if item.get("prior_session_id")]
     excluded_artifacts = [item for item in artifact_coverage if item.get("status") != "included-as-output-chunks"]
+    completed_entries = _command_entries_from_events(normalized_events)
+    capture_levels = sorted(
+        {
+            str(entry.get("detail", "metadata" if entry.get("storage_mode") == "metadata-only" else "historical"))
+            for entry in completed_entries
+        }
+    )
+    omitted_body_ids = [
+        str(entry.get("id", ""))
+        for entry in completed_entries
+        if entry.get("storage_mode") == "metadata-only" or (entry.get("detail") == "full" and not isinstance(entry.get("artifact"), dict))
+    ]
     manifest = {
         "kind": "agentic-workspace/session-log-export-manifest/v2",
         "artifact_class": "normalized-share-safe-jsonl",
@@ -1448,6 +1522,15 @@ def export_session_log(
         "event_type_counts": dict(sorted(Counter(str(event.get("event_type", "")) for event in normalized_events).items())),
         "gap_count": len(gap_events),
         "capture_quality": _capture_quality(capture_observations),
+        "diagnostic_content": {
+            "capture_levels": capture_levels,
+            "body_omission_command_ids": omitted_body_ids,
+            "content_complete_for_recorded_commands": not omitted_body_ids
+            and not excluded_artifacts
+            and not source_issues
+            and not gap_events,
+            "boundary": "Recorded native AW inputs and delivered output only; whole-task and host activity remain unknown.",
+        },
         "gaps": [event.get("payload", {}) for event in gap_events],
         "source_stream_issues": source_issues,
         "time_coverage": {"started_at": min(timestamps) if timestamps else "", "finished_at": max(timestamps) if timestamps else ""},

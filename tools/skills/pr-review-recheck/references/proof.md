@@ -65,6 +65,16 @@ demand unspecified broader suites once the bounded claim is sufficiently
 proven; do not accept a stopping argument that skips binding proof. Proof of
 governance machinery is not proof that an unrelated patch applied the strategy.
 
+Judge document retention separately from proof sufficiency. Ordinary patch
+validation may be fully reviewable through its existing Verification receipts,
+focused tests and PR/issue context; do not require a new issue-specific maintainer
+report merely to cite it. Raw diagnostic data remains local unless its existing
+owner promotes a bounded result. A checked-in evidence/reference page needs a
+named future repository consumer, such as a maintained contract, reusable operation
+reference or accepted design boundary across PRs. Apply the testing strategy's
+retention decision and normal documentation governance to warranted durable pages.
+PR prose does not replace authenticated evidence or required source reconciliation.
+
 Resolve current Verification at the exact subject independently of method selection.
 Select only current evidence relevant to the bounded claim; unknown applicability
 or missing evidence stays unresolved. This reference resolves the current native

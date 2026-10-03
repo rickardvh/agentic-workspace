@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Restore full opt-in native maintainer session I/O capture and content-bearing exports, with explicit metadata detail and integrity-aware gaps."

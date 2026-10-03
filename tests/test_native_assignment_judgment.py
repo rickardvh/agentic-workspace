@@ -3,12 +3,84 @@
 from __future__ import annotations
 
 import copy
+import os
 
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
+
+
+def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core_binary, native_cli):
+    """The ordinary caller answers questions, without reading request bundles."""
+    from tests.test_native_execution_configurations import fixture
+
+    source, _, context = fixture(tmp_path)
+    # Relative targets and omitted optional fields must round-trip exactly;
+    # the returned work context must not introduce invalid material=null.
+    context["target"] = os.path.relpath(tmp_path)
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, {**value, "projection": "compact"})
+
+    def answer(view, material):
+        step = view["assignment_context"]["next_step"]
+        return call({**view["reentry"], "reference": step["reference"], "answer": material})
+
+    initial = call(context)
+    assert initial["assignment_context"]["local_continuation_allowed"] is False
+    unavailable = answer(initial, {"required_result_classes": ["unapplied-patch"], "required_proof_classes": ["independent-evidence"]})
+    assert unavailable["assignment_context"]["local_continuation_allowed"] is False
+    assert unavailable["assignment_context"]["ineligible_configurations"]
+    recovered = answer(unavailable, {"required_proof_classes": []})
+    assert recovered["assignment_context"]["alternatives"]
+    offered = answer(initial, {"required_result_classes": ["read-only"]})
+    comparison = offered["assignment_context"]
+    assert {a["id"] for a in comparison["alternatives"]} == {"local:internal", "worker:cli"}
+    current = answer(
+        offered,
+        {
+            "alternative": "local:internal",
+            "reason": "The local executor meets this bounded read; a worker handoff adds preparation without a needed capability.",
+        },
+    )
+    assert current["assignment_context"]["local_continuation_allowed"] is True
+    assert "next_step" not in current["assignment_context"]
+    assert "task_requirements" not in current
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    nonlocal_result = answer(offered, {"alternative": "worker:cli", "reason": "Use the eligible worker for this independent read."})
+    assert nonlocal_result["assignment_context"]["local_continuation_allowed"] is False
+    assert any("effect:implementation" in b["affects"] for b in nonlocal_result["decision_packet"]["blockers"])
+    with pytest.raises(AssertionError, match="stale|changed|unknown"):
+        call(
+            {
+                **offered["reentry"],
+                "task": "Different work",
+                "reference": comparison["next_step"]["reference"],
+                "answer": {"alternative": "local:internal", "reason": "Old choice"},
+            }
+        )
+
+    # A sole eligible local executor settles in two calls, with no essay.
+    source.write_text(BASE)
+    settled = answer(call(context), {"required_result_classes": ["read-only"]})
+    assert settled["assignment_context"]["determination"] == "sole-eligible-configuration"
+    assert settled["assignment_context"]["local_continuation_allowed"] is True
+    assert "next_step" not in settled["assignment_context"]
+    # Source prohibitions are visible in the first question, without transport
+    # discovery; unknown applicability cannot silently admit the local target.
+    source.write_text(BASE + 'forbidden_task_classes=["boundary-shaping"]\n')
+    first = call(context)
+    assert first["assignment_context"]["target_scope_questions"][0]["target"] == "local"
+    denied = answer(
+        first,
+        {
+            "required_result_classes": ["read-only"],
+            "target_scope": {"local": {"status": "applies", "reason": "This task changes a boundary."}},
+        },
+    )
+    assert denied["assignment_context"]["local_continuation_allowed"] is False
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

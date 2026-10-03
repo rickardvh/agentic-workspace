@@ -295,6 +295,74 @@ def governing_sources(content):
     raise ValueError("unterminated trusted scoped instruction metadata")
 
 
+def implementation_scope(repo, *, number=None, base_ref=None, head_ref="HEAD", cumulative=False):
+    """Observe the same direct PR subject as review without conducting a review.
+
+    Before publication, the caller supplies the explicitly established parent.
+    There is no inferred default branch, cached topology or evidence admission.
+    """
+    packet = {
+        "kind": "agentic-workspace/implementation-scope/v1",
+        "status": "unavailable",
+        "authority": "changed-path observation only; no proof, currentness, review or completion authority",
+        "scope_kind": "cumulative-integration" if cumulative else "layer",
+        "repository": repo,
+        "observed_from": datetime.now(timezone.utc).isoformat(),
+    }
+    if number is not None:
+        if base_ref is not None or cumulative:
+            raise ValueError("a PR layer uses its provider base; cumulative integration requires an explicit base instead")
+        endpoint = f"repos/{repo}/pulls/{number}"
+        subject = observe(endpoint)
+        packet["subject"] = subject
+        if subject["status"] != "observed":
+            return packet
+        pr = subject["value"]
+        if pr["base"]["repo"]["full_name"].lower() != repo.lower() or pr["number"] != number:
+            raise ValueError("remote subject does not match the requested repository/PR")
+        identity = {
+            "repository": repo,
+            "number": number,
+            "base": pr["base"]["sha"],
+            "head": pr["head"]["sha"],
+            "base_branch": pr["base"]["ref"],
+            "head_branch": pr["head"]["ref"],
+        }
+        subject["value"] = identity
+        subject["revision"] = digest(identity)
+        files = observe(f"{endpoint}/files?per_page=100", collection="list", fields=["filename", "previous_filename"])
+        packet["files"] = files
+        rows = files.get("value", [])
+        if files["status"] == "observed" and (len(rows) != pr["changed_files"] or len({row["filename"] for row in rows}) != len(rows)):
+            files.update(status="unavailable", reason="incomplete or duplicate changed-file set; transport limit or moved subject")
+        final = observe(endpoint)
+        packet["subject_recheck"] = {key: value for key, value in final.items() if key != "value"}
+        packet["status"] = "observed" if files["status"] == final["status"] == "observed" else "unavailable"
+        if final["status"] == "observed" and any(final["value"].get(key) != pr.get(key) for key in ["base", "head", "changed_files"]):
+            packet["status"] = "stale"
+        paths = {name for row in rows for name in (row["filename"], row.get("previous_filename")) if name}
+    else:
+        if not base_ref:
+            raise ValueError("layer base is unknown; supply its live PR or explicitly established parent, never infer master")
+
+        def commit(ref):
+            return git("rev-parse", "--verify", f"{ref}^{{commit}}").decode().strip()
+
+        base, head = commit(base_ref), commit(head_ref)
+        packet["subject"] = {
+            "source": "explicit-established-parent",
+            "value": {"repository": repo, "base": base, "head": head, "base_ref": base_ref, "head_ref": head_ref},
+        }
+        # Match PR changed-file semantics: direct parent identity, merge-base delta.
+        # Renames expose both affected paths to existing source/proof routing.
+        paths = set(git("diff", "--name-only", "--no-renames", "-z", f"{base}...{head}").decode().split("\0")) - {""}
+        packet["status"] = "observed" if (commit(base_ref), commit(head_ref)) == (base, head) else "stale"
+    if packet["status"] == "observed":
+        packet["changed"] = sorted(paths)
+    packet["observed_until"] = datetime.now(timezone.utc).isoformat()
+    return packet
+
+
 def prepare(repo, number, baseline, *, previous=None, owner_evidence=(), owner_obligations=()):
     started = datetime.now(timezone.utc).isoformat()
     prefix = f"repos/{repo}"
@@ -454,7 +522,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("baseline", help="Exact trusted full Git commit identity, explicitly selected by the reviewer")
     parser.add_argument("--repo", required=True)
-    parser.add_argument("--pr", required=True, type=int)
+    parser.add_argument("--pr", type=int)
+    parser.add_argument("--implementation-scope", action="store_true", help="Read-only layer paths; does not invoke review")
+    parser.add_argument("--base", help="Explicitly established parent before PR publication; never inferred")
+    parser.add_argument("--head", default="HEAD", help="Local head for an explicit-parent subject")
+    parser.add_argument("--cumulative-integration", action="store_true", help="Name a deliberate aggregate subject with --base")
     parser.add_argument("--eligibility", choices=["independent", "ineligible", "unknown"], default="unknown")
     parser.add_argument("--previous", type=Path)
     parser.add_argument(
@@ -465,13 +537,25 @@ def main():
     )
     args = parser.parse_args()
     try:
-        if args.eligibility != "independent":
+        if not args.implementation_scope and args.eligibility != "independent":
             raise ValueError("independent review eligibility must be established outside preparation; stop at the skill gate")
-        if not re.fullmatch(r"[0-9a-f]{40}", args.baseline) or not re.fullmatch(r"[\w.-]+/[\w.-]+", args.repo) or args.pr < 1:
+        if (
+            not re.fullmatch(r"[0-9a-f]{40}", args.baseline)
+            or not re.fullmatch(r"[\w.-]+/[\w.-]+", args.repo)
+            or (args.pr is not None and args.pr < 1)
+        ):
             raise ValueError("supply exact baseline SHA, owner/repository and positive PR number")
         trusted = git("show", f"{args.baseline}:{HELPER}")
         if globals().get("TRUSTED_HELPER_BYTES") != trusted:
             raise ValueError("use the trusted Git-object loader documented in the baseline skill, never the PR-head script")
+        if args.implementation_scope:
+            result = implementation_scope(
+                args.repo, number=args.pr, base_ref=args.base, head_ref=args.head, cumulative=args.cumulative_integration
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result["status"] == "observed" else 2
+        if args.pr is None or args.base is not None or args.cumulative_integration:
+            raise ValueError("review requires --pr and uses its provider base/head")
         previous = json.loads(args.previous.read_text(encoding="utf-8")) if args.previous else None
         owner_evidence = json.loads(args.owner_evidence.read_text(encoding="utf-8")) if args.owner_evidence else []
         owner_obligations = json.loads(args.owner_obligations.read_text(encoding="utf-8")) if args.owner_obligations else []

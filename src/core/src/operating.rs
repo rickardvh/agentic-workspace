@@ -449,8 +449,11 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         }
     }
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
-        "reentry":{"target":context["target"],"task":context["task"],"changed":context["changed"]},
+        "reentry":context,
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    if let Some(assignment) = assignment_question(full, context)? {
+        result["assignment_context"] = assignment;
+    }
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
@@ -520,7 +523,6 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     }
     if let Some(material) = full.get("material") {
         result["material"] = material.clone();
-        result["reentry"]["material"] = context["material"].clone();
     }
     if let Some(activation) = full.get("activation") {
         result["activation"] = activation.clone();
@@ -571,6 +573,74 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         result["procedure_refs"] = json!(sources);
     }
     Ok(result)
+}
+
+fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, CoreError> {
+    let requirements = &full["task_requirements"];
+    if requirements["status"].is_null() || requirements["status"] == "not-applicable" {
+        return Ok(None);
+    }
+    let assessment = &requirements["assignment"]["result"];
+    let mut result = json!({"status":requirements["implementation_admission"]["status"],
+        "local_continuation_allowed":requirements["implementation_admission"]["local_continuation_allowed"],
+        "comparison_status":assessment["status"],
+        "determination":assessment["determination"],
+        "authority":"Current Assignment admission only; proof, review and task completion remain separate."});
+    let (kind, question, answer) = if requirements["status"] != "resolved" {
+        result["target_scope_questions"] = requirements["target_scope_questions"].clone();
+        result["source_work"] = requirements["source_work"].clone();
+        (
+            "assignment/judge-task-requirements/v1",
+            "What result and proof does this work require, and which configured task restrictions apply? Source identities and constraints are already supplied by the owner.",
+            json!({"role":"executor","required_result_classes":["<required result class, e.g. unapplied-patch>"],"required_proof_classes":[],"target_scope":{}}),
+        )
+    } else if matches!(
+        assessment["status"].as_str(),
+        Some("assessment-required" | "unresolved-assessment")
+    ) && assessment["alternatives"]
+        .as_array()
+        .is_some_and(|a| !a.is_empty())
+    {
+        result["requirements"] = requirements["result"]["requirements"].clone();
+        result["alternatives"] = assessment["alternatives"].clone();
+        result["unresolved_alternatives"] = assessment["unresolved_alternatives"].clone();
+        result["execution_gaps"] = requirements["execution_configurations"]["gaps"].clone();
+        (
+            "assignment/assess-best-fit/v1",
+            "Which current alternative best fits the required outcome? Compare capability, preparation, coupling and repair cost using the supplied evidence and standing preferences; loaded context alone does not settle the choice. Keep real uncertainty explicit.",
+            json!({"alternative":"<returned alternative id>","reason":"<material comparative tradeoff>","uncertainties":[]}),
+        )
+    } else if matches!(
+        assessment["status"].as_str(),
+        Some("assigned-current-target" | "assigned-nonlocal-handoff-required")
+    ) {
+        result["selected"] =
+            json!({"id":assessment["selected"]["id"],"target":assessment["selected"]["target"]});
+        return Ok(Some(result));
+    } else {
+        result["requirements"] = requirements["result"]["requirements"].clone();
+        result["unresolved_alternatives"] = assessment["unresolved_alternatives"].clone();
+        result["execution_gaps"] = requirements["execution_configurations"]["gaps"].clone();
+        result["ineligible_configurations"] = json!(requirements["execution_configurations"]["configurations"]["candidates"]
+            .as_array().into_iter().flatten().filter(|r| r["eligible"] != true)
+            .map(|r| json!({"id":r["configuration"]["id"],"reasons":r["reasons"],
+                "result_classes":r["configuration"]["result_classes"],"proof_classes":r["configuration"]["proof_classes"]})).collect::<Vec<_>>());
+        (
+            "assignment/judge-task-requirements/v1",
+            "No currently admitted comparison can settle this work. Inspect the current requirements and capability gaps. Correct only a mis-stated requirement or unresolved task restriction; retain real requirements and use the owner's recovery when capability is missing. No local fallback is authorized.",
+            json!({"required_result_classes":"<the actual required classes>","required_proof_classes":"<the actual required proof classes>","target_scope":{}}),
+        )
+    };
+    let requests = request_entries(full, context)?;
+    if let Some(request) = requests
+        .iter()
+        .find(|r| r["envelope"]["request_kind"] == kind)
+    {
+        result["next_step"] = json!({"reference":request["reference"],"question":question,
+            "answer_shape":answer,
+            "use":"Send the fields of reentry unchanged at the top level, plus reference and answer containing only the requested fields. Optional carriage is equivalent. The owner reobserves current sources and preserves earlier answers; no request identities or handoff envelopes need inspection."});
+    }
+    Ok(Some(result))
 }
 
 fn action_selector(selector: &str) -> bool {
@@ -1174,6 +1244,9 @@ fn operate_current(
             detail,
         ));
     }
+    // Resolve owner identities and their projected references from the same
+    // canonical work context, including when the caller used a relative path.
+    let value = normalize_context(value)?;
     let full = native_public::start_selected(value.clone(), &resolution(&projection, detail))?;
     if projection == "full" && detail.is_some() {
         Ok(full)

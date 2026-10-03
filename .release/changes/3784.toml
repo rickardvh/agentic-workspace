@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose binding Assignment questions and current local admission directly in compact startup, carrying source identities and earlier answers without envelope inspection."

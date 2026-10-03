@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep test-evidence review manual and select executable proof from the changed behavior owner."

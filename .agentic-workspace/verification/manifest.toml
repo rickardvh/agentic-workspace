@@ -247,7 +247,6 @@ fail_evidence_labels = [
   "missing_verification_proof_decision",
   "test_count_only_completion_claim",
 ]
-automation_hint = "uv run pytest tests/test_native_verification_strategy.py -q"
 manual_boundary = "The acting agent answers current Verification requests for the specific evidence change; an automated check does not decide sufficiency or confer completion authority."
 
 [scenarios.repo_acceptance_policy]
@@ -571,7 +570,7 @@ review_aids = [
 
 [protocols.test_evidence_decision]
 title = "Test evidence decision"
-purpose = "Make ordinary test growth, reduction, movement, and conformance conversion explainable by evidence ownership instead of raw test count."
+purpose = "Manual evidence-retention review for ordinary test growth, reduction, movement and conversion; executable proof belongs to the changed behavior's existing owner."
 applies_to_paths = [
   "tests/**",
   "docs/maintainer/testing-strategy.md",
@@ -598,7 +597,6 @@ expected_evidence = [
   "verification_proof_decision_review",
   "test_evidence_owner_review",
 ]
-review_owner = "maintainer"
 authority_refs = [
   "docs/maintainer/testing-strategy.md",
   "docs/maintainer/test-knowledge-inventory.md",
@@ -617,9 +615,7 @@ non_goals = [
   "Verification does not authorize deletion by itself.",
   "Verification does not infer host strategy from prose or filenames.",
 ]
-commands = [
-  "uv run pytest tests/test_native_verification_strategy.py -q",
-]
+commands = []
 review_aids = [
   "Use this route before claiming test-count reduction, pruning, conversion, or new regression tests are sufficient.",
   "Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\"",
@@ -804,9 +800,7 @@ scenario_refs = [
 assurance_requirement_refs = [
   "test_evidence_change_decision",
 ]
-commands = [
-  "uv run pytest tests/test_native_verification_strategy.py -q",
-]
+commands = []
 review_aids = [
   "Use docs/maintainer/testing-strategy.md: name the claim and failure risk, inspect existing evidence, choose the smallest sufficient boundary, validate, decide permanent retention separately, broaden only for a named remaining risk, then stop.",
   "No new permanent test is a valid outcome. Wording assertions cannot establish prose quality or agent comprehension; retain structural, exact-transport and generated-source contracts.",
@@ -865,9 +859,8 @@ review_aids = [
 ]
 
 [assurance.proof_profiles.test_evidence_change]
-required_commands = [
-  "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
-]
+# Semantic review remains binding; this profile requires no unrelated suite.
+required_commands = []
 review_aids = [
   "Record or inspect the Verification proof-decision route when ordinary tests grow, shrink, or move.",
 ]
@@ -1660,7 +1653,7 @@ claim_boundary = "focused-output-budget-proof-required-before-compact-output-cla
 owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.test_evidence_decision]
-purpose = "Focused test-evidence change review."
+purpose = "Manual test-evidence change review; existing domain owners supply mechanical proof."
 applies_to_paths = [
   "tests/**",
   "src/core/tests/**",
@@ -1668,9 +1661,7 @@ applies_to_paths = [
   "docs/maintainer/test-knowledge-inventory.md",
   "src/tooling/model-cli-harness/run_model_cli_harness.py",
 ]
-commands = [
-  "uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q",
-]
+commands = []
 manual_evidence = [
   "verification_proof_decision_review",
   "test_evidence_owner_review",

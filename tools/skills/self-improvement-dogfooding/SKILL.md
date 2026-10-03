@@ -15,12 +15,25 @@ in this repository, is reconstruction work, or improves Agentic Workspace.
 
 ## Activation boundary
 
+Native observation activation enters through [the current triage question](procedure.md).
+Material AW-caused retries, rereads, redundant proof, route reversals, workaround
+or protocol work, noisy output, or repeated human steering count even when the
+original task succeeds. Judge the observed cost and attribution; do not infer a
+defect from command counts alone or require evidence of future recurrence.
+
 Use this skill only when both are true:
 
 1. Current work exposes a concrete improvement finding that is not already the
    intended outcome of the task, issue, approved Plan, review fix, or explicit
    human instruction.
 2. The agent must decide whether and how to act on that newly discovered finding.
+
+Before its evidence or context disappears, nominate one bounded `material` item
+with `kind: observation`, observed cost, and truthful source provenance through
+ordinary `start`. Keep the original task unchanged. Activation supplies this
+procedure, not write, proof, publication or completion authority. The installed
+consumer `workspace-dogfooding` skill separately owns consent and anonymised
+upstream reporting; it does not replace this repository's maintenance triage.
 
 Once the human or an existing owner explicitly adopts the finding as planned work,
 execute that work through the ordinary owner path. This skill adds no second
@@ -66,6 +79,13 @@ Examples:
 4. After a bounded autonomous repair, return to the original task unless the repair
    invalidates its assumptions. Do not let incidental improvement work silently
    replace the user's requested outcome.
+
+For a weak or cosmetic annoyance with no useful consequence, deliberately dismiss
+it with justified `no-retention`; no issue or Memory note is needed. Before
+closeout, disposition each material signal actually encountered as fixed,
+already-owned/routed, deliberately dismissed/no-retention, or unresolved. A
+successful original task does not discharge that known finding. If none occurred,
+do not scan again or call AW merely to prove the absence of a signal.
 
 ## Human review boundary
 

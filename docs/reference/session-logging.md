@@ -30,7 +30,7 @@ Physical rotations append through the same logical-stream lock and never restart
 Review an export before sharing it. Path normalisation is not secret scanning or
 transfer approval; exports can include command output.
 
-`uv run --frozen python src/tooling/maintainer/session_diagnostics.py export --target .` produces one share-review candidate ending in `.jsonl.gz`. Without an explicit `--id` or `--path`, it includes the current logical session, its physical rotations, and linked delegated descendants. The first record is an `export.manifest`; later records are one normalised event per line in global sequence order. Large text output remains in per-command blob files referenced by path, byte count, and SHA-256 from completion events; export converts available stdout and stderr into bounded `output.chunk` events so no line grows without limit. Binary or unavailable blobs remain digest references. `--no-artifacts` retains hashes and coverage metadata without output bytes.
+`uv run --frozen python src/tooling/maintainer/session_diagnostics.py export --target .` produces one share-review candidate ending in `.jsonl.gz`. Without an explicit `--id` or `--path`, it includes the current logical session, its physical rotations, and linked delegated descendants. The first record is an `export.manifest`; later records are one normalised event per line in global sequence order. Large text output remains in per-command blob files referenced by path, byte count, and SHA-256 from completion events. Default export verifies each blob's bytes and digest, then emits bounded `output.chunk` events for recorded request, stdout, stderr and configuration content. Chunks retain stream order, source and exported byte counts/digests. Missing, damaged or excluded artifacts have explicit coverage statuses. `--no-artifacts` explicitly omits bodies while retaining references and coverage metadata.
 
 Exports preserve the raw local logs, normalise known machine-local paths, and disclose time, gap, child-session, and artefact coverage. Event ordering is deterministic for unchanged source streams; deliberately variable manifest creation metadata gives each export its own hash.
 
@@ -40,9 +40,24 @@ Older Markdown/index-only sessions remain readable. Existing physical JSONL stre
 
 ## Native transport capture
 
-Native `start` and `invoke` capture completion metadata when the current local `[session_logging]` source enables it and `AW_SESSION_LOGICAL_IDENTITY` supplies a stable explicit identity. `AW_SESSION_LOGGING_DISABLE=1` wins. Disabled capture produces no diagnostic files or status field. Opted-in capture returns a compact `session_capture` transport advisory; missing identity creates no diagnostic files. Native capture uses the shared Rust policy for `enabled`, `path_mode`, and the `redact_local_paths` compatibility alias; malformed configuration or diagnostic state cannot change the command result.
+Native `start` and `invoke` automatically retain diagnostic I/O when the current local `[session_logging]` source enables it and `AW_SESSION_LOGICAL_IDENTITY` supplies a stable explicit identity. Configure it once in `.agentic-workspace/config.local.toml` (or the selected shared-local source):
 
-Native events contain timing, command identity, transport outcome, request/result byte counts and hashes, and explicit omissions. They omit raw tasks, arguments, result bodies and stdout/stderr. Paths follow the configured mode. Parent/correlation identities use the existing salted identity format at initial registration. Capture is limited to 8 KiB per event and a 1 MiB existing stream/registry read; reaching a bound, lock contention or interruption omits diagnostics. No rotation or interrupted-command recovery is claimed. Transport success is not task success or proof.
+```toml
+[session_logging]
+enabled = true
+detail = "full"
+path_mode = "absolute"
+```
+
+Capture is disabled by default. When enabled, `detail` defaults to `full`; explicitly select `metadata` to retain only timings, identities, sizes, digests and status tags. `AW_SESSION_LOGGING_DISABLE=1` wins. Disabled capture produces no diagnostic files or status field. Missing identity creates no diagnostic files. Malformed configuration or diagnostic state cannot change the operation result.
+
+Full capture saves the exact native request envelope text, including task/context, request answers and invocation arguments, and the JSON stdout/stderr delivered by that transport, including its capture advisory and error envelopes. It retains full, compact and carried responses without changing what the caller consumes; the advisory remains outside immutable carriage. CLI argument parsing is upstream of this boundary: the resulting native envelope is retained, rather than host argv. Arbitrary host terminal activity, provider conversations and private model reasoning are outside capture.
+
+Each operation references a recoverable JSON artefact in the existing physical session's `artifacts/` directory. The canonical event stays below 8 KiB; request/output bodies have no inline truncation threshold. The configuration prelude records only explicitly allowed booleans, fixed operating choices and built-in enabled module names, together with local/repository source hashes, source roles and bundled runtime identity. Arbitrary independent-module settings and names, configuration paths and commands, extensible capability names, raw diagnostic reasons, environment values and worker transport declarations are omitted. Shared-local sources retain their role and hash rather than their configured filename. This prelude is retained with every full operation so configuration changes remain identifiable without copying arbitrary ambient values.
+
+`absolute` preserves native I/O bytes. `repo-relative` replaces known target paths with `.`, while `redacted` replaces them with `<target>`; both also replace known home paths and explicitly supplied `AW_SESSION_LOG_REDACT_PATHS`. The artifact declares this transformation and events retain original transport digests. These choices apply to recorded bodies as well as event targets. Default export normalises known local paths in either mode and reports source and exported stream digests; normalisation is not secret scanning or approval to transfer. Full local logging can contain sensitive request/output content supplied to AW.
+
+Parent/correlation identities use the existing salted identity format at initial registration. The 1 MiB existing stream/registry read bound, lock contention or interruption can prevent capture; bodies are never silently replaced with hashes to fit those bounds. The operation returns `capture-failed` when retention fails. No native rotation or interrupted-command recovery is claimed. `diagnostic_content` in the export manifest separately reports capture levels, intentionally omitted body ids, and completeness for recorded commands; an intact metadata stream does not imply full-body capture. Transport success is not task success or proof.
 
 An absent registry is created exclusively with exact common attempt/commit custody. A later native command verifies that custody before appending or registering a new logical identity. The existing registry retains only its latest publication provenance; immutable attempt/commit evidence uses the common effect store. Historical registries, including native registries created before this provenance existed, remain readable but unavailable for native mutation. Unknown or torn state is preserved.
 
@@ -60,6 +75,7 @@ JSON clients receive the same native result field; they do not implement logging
 policy. The advisory has `authoritative: false` and one status:
 
 - `capturing`: this invocation was appended to its identified event stream.
+  `detail` declares `full` or `metadata`; only full means its I/O artifact was retained.
 - `identity-unavailable`: capture was requested but portable identity is missing,
   blank or oversized. `requirement: AW_SESSION_LOGICAL_IDENTITY` names the host's
   recovery boundary. Provider-specific identity discovery stays in host adapters.
@@ -75,3 +91,16 @@ subsequent invocations; it does not backfill earlier work. Capture failure detai
 and raw identities are excluded from the advisory. Disabled/default results stay
 quiet. The field is outside decision carriage and all semantic owner inputs;
 it grants no task, mutation, proof, claim or completion authority.
+
+### Restoration parity
+
+| Accepted diagnostic outcome | Current native capture/export |
+| --- | --- |
+| #2122 automatic AW input/output and effective configuration | Full level records native envelopes, delivered responses/errors and an operating configuration prelude automatically. Disabled/default capture remains quiet. |
+| #2130 recoverable large raw output beside a bounded index | Canonical completion events reference hashed local I/O artifacts. Default export verifies and carries their content in bounded chunks. Native output deduplication and richer Markdown/index projections remain unavailable. |
+| #2707 one ordered logical chronology and ordinary export | Existing logical/physical ids, monotonic ordering and supported child/rotation reader selection remain in use. Default export includes recorded I/O and declares real missing/damaged/omitted content. |
+
+This restores diagnostic content for newly recorded native operations. It does not
+backfill historical metadata-only bytes. Native optional note writing, automatic
+rotation and interruption/disabled-gap events remain unavailable; historical
+reader support does not establish those native capabilities or whole-task coverage.
