@@ -22,7 +22,8 @@ Treat these as blockers unless the human explicitly accepts the underlying produ
 - a material test/CI delta lacks its testing-strategy disposition or retains duplicate semantic proof, implementation-shaped residue, unjustified public-surface repetition, temporary batch taxonomy, opaque unbounded constituents, or recurring cost unsupported by a distinct durable merge claim;
 - incident-driven permanent regression growth lacks a missing durable failure class, or the proof argument lacks a defensible bounded stop/escalate rationale;
 - a wrong or missing currently relied-upon Planning or Memory fact would cause an incorrect action or unsupported claim: name that action/claim, the fact and its concrete consequence;
-- package-affecting changes lack exactly one semver label;
+- a non-draft PR lacks exactly one release decision: `semver:none`, `semver:patch`, `semver:minor` or `semver:major`;
+- changeset revisions contradict that decision: `semver:none` has new or modified fragments, or a release-bearing label lacks valid changeset admission under the [release rules](../../../../docs/release-and-versioning.md#declare-release-intent);
 - a shipped payload mirror is out of sync with the source surface;
 - an independently approved draft PR is left draft without an explicit hold reason.
 

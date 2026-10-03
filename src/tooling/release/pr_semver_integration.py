@@ -61,6 +61,8 @@ def make_admission(*, root: Path, event: dict, payloads: dict, label: str | None
         "merge_base": git(root, "merge-base", base, head),
         "mode": mode,
         "label": label,
+        "requested_bump": label.removeprefix("semver:") if label and label.removeprefix("semver:") in BUMP_ORDER else None,
+        "release_requested": bool(label and label.removeprefix("semver:") in BUMP_ORDER),
         "changesets": {
             path: {"bump": payload["bump"], "git_entry": git(root, "ls-tree", head, "--", path)} for path, payload in payloads.items()
         },
@@ -98,10 +100,12 @@ def retained_admission(*, root: Path, repository: str, candidate: dict, run: dic
         or record.get("pull_request") != {"number": candidate["number"], "head_sha": head, "base_sha": base}
         or record.get("head_tree") != git(root, "rev-parse", f"{head}^{{tree}}")
         or record.get("merge_base") != git(root, "merge-base", base, head)
-        or record.get("mode") not in {"ordinary", "integration", "not-required", "release"}
+        or record.get("mode") not in {"ordinary", "integration", "none", "not-required", "release"}
         or not isinstance(record.get("changesets"), dict)
     ):
         return None
+    if record["mode"] == "none":
+        return record if record.get("label") == "semver:none" and not record["changesets"] else None
     if record["mode"] in {"not-required", "release"}:
         return record if not record["changesets"] else None
     bump = str(record.get("label", "")).removeprefix("semver:")

@@ -22,58 +22,60 @@ def _load_module():
     return module
 
 
-def test_semver_repair_only_pr_reports_that_it_will_not_publish() -> None:
+@pytest.mark.parametrize(
+    "path", ["docs/maintenance.md", ".github/workflows/ci.yml", "src/tooling/release/pr_semver_admission.py", "src/cli/typescript/cli.mjs"]
+)
+def test_explicit_none_reports_no_release_regardless_of_paths(path: str) -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
     packet = module.semver_pr_status(
-        labels=["semver:patch"],
-        changed_files=["docs/reviews/release-repair-note.md"],
+        labels=["semver:none"],
+        changed_files=[path],
         ownership=ownership,
     )
 
-    assert packet["status"] == "repair-only-semver-pr"
+    assert packet["status"] == "no-release-needed"
+    assert packet["requested_bump"] is None
+    assert packet["release_requested"] is False
     assert packet["will_publish_release"] is False
     assert packet["will_prepare_release_pr"] is False
 
 
-def test_documentation_only_pr_does_not_require_semver_release() -> None:
+@pytest.mark.parametrize(
+    "path", ["docs/maintenance.md", ".github/workflows/ci.yml", "src/tooling/release/pr_semver_admission.py", "src/cli/typescript/cli.mjs"]
+)
+def test_every_pr_requires_an_explicit_decision(path: str) -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
     packet = module.semver_pr_status(
         labels=[],
-        changed_files=["docs/maintenance.md", "docs/maintenance.md"],
+        changed_files=[path, path],
         ownership=ownership,
     )
 
-    assert packet["status"] == "no-release-needed"
-    assert packet["package_affecting"] is False
-    assert packet["path_classification"]["integrity_metadata_paths"] == []
+    assert packet["status"] == "blocked-semver-label-selection"
+    assert "package_affecting" not in packet
+    assert "path_classification" not in packet
 
 
-def test_github_automation_only_pr_does_not_require_semver_release() -> None:
+def test_none_cannot_coexist_with_a_release_fragment() -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
-    changed_files = [
-        ".github/workflows/ci.yml",
-        ".github/workflows/pr-semver-label.yml",
-        ".github/release-ownership.json",
-    ]
-    packet = module.semver_pr_status(labels=[], changed_files=changed_files, ownership=ownership)
+    packet = module.semver_pr_status(labels=["semver:none"], changed_files=[".release/changes/new.toml"], ownership=ownership)
 
-    assert packet["status"] == "no-release-needed"
-    assert packet["package_affecting"] is False
-    assert packet["path_classification"]["unclassified_paths"] == changed_files
+    assert packet["status"] == "blocked-release-intent"
+    assert packet["release_requested"] is False
 
 
-def test_documentation_cannot_lower_a_binding_change() -> None:
+def test_multiple_decisions_are_blocked() -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
     packet = module.semver_pr_status(
-        labels=[],
+        labels=["semver:none", "semver:patch"],
         changed_files=[
             "docs/maintenance.md",
             "src/cli/typescript/cli.mjs",
@@ -82,39 +84,44 @@ def test_documentation_cannot_lower_a_binding_change() -> None:
     )
 
     assert packet["status"] == "blocked-semver-label-selection"
-    assert packet["package_affecting"] is True
+    assert packet["requested_bump"] is None
 
 
-def test_package_affecting_semver_pr_requires_release_changeset() -> None:
+@pytest.mark.parametrize("bump", ["patch", "minor", "major"])
+def test_release_bearing_decision_requires_release_changeset(bump: str) -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
     packet = module.semver_pr_status(
-        labels=["semver:patch"],
-        changed_files=["src/agentic_workspace/workspace_runtime.py"],
+        labels=[f"semver:{bump}"],
+        changed_files=["docs/maintenance.md"],
         ownership=ownership,
     )
 
     assert packet["status"] == "blocked-release-changeset"
+    assert packet["requested_bump"] == bump
+    assert packet["release_requested"] is True
     assert packet["will_publish_release"] is False
     assert packet["will_prepare_release_pr"] is False
     assert "release changeset" in packet["next_action"]
 
 
-def test_package_affecting_semver_pr_with_changeset_is_ready_for_manual_release() -> None:
+@pytest.mark.parametrize("bump", ["patch", "minor", "major"])
+def test_release_bearing_pr_with_changeset_is_ready_for_manual_release(bump: str) -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
 
     packet = module.semver_pr_status(
-        labels=["semver:patch"],
+        labels=[f"semver:{bump}"],
         changed_files=[
-            "src/agentic_workspace/workspace_runtime.py",
+            "docs/maintenance.md",
             ".release/changes/runtime.toml",
         ],
         ownership=ownership,
     )
 
     assert packet["status"] == "ready-for-manual-release"
+    assert packet["requested_bump"] == bump
     assert packet["will_publish_release"] is False
     assert packet["will_prepare_release_pr"] is False
 
@@ -173,7 +180,7 @@ def test_release_recovery_cli_reads_fixture_inputs(tmp_path: Path) -> None:
             "--repo-root",
             str(REPO_ROOT),
             "--labels",
-            "semver:patch",
+            "semver:none",
             "--changed-file",
             "docs/reviews/release-repair-note.md",
             "--run-fixture",
@@ -190,7 +197,7 @@ def test_release_recovery_cli_reads_fixture_inputs(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     packet = json.loads(result.stdout)
     assert packet["kind"] == "agentic-workspace/release-recovery-status/v1"
-    assert packet["semver_release_action"]["status"] == "repair-only-semver-pr"
+    assert packet["semver_release_action"]["status"] == "no-release-needed"
     assert packet["release_ci_failure"]["status"] == "failed-release-run"
     assert packet["coordinated_recovery"]["status"] == "required"
 
@@ -278,7 +285,7 @@ def test_recovery_packet_marks_failed_release_superseded_by_newer_success(monkey
     packet = module.recovery_packet(
         repo_root=REPO_ROOT,
         labels=["semver:patch"],
-        changed_files=["pyproject.toml"],
+        changed_files=["pyproject.toml", ".release/changes/fix.toml"],
         release_failure=failure,
     )
 
@@ -430,12 +437,48 @@ def test_recovery_routes_follow_run_and_observed_tag(tmp_path, monkeypatch, iden
         assert "301" in recovery["next_action"]
 
 
-def test_repair_only_packet_routes_to_changeset_backed_manual_release():
+def test_missing_fragment_routes_to_pr_release_decision():
     module = _load_module()
     recovery = module.recovery_packet(repo_root=REPO_ROOT, labels=["semver:patch"], changed_files=["docs/reviews/repair.md"])[
         "coordinated_recovery"
     ]
-    assert recovery["route"] == "product-release"
+    assert recovery["route"] == "pr-release-decision"
     assert "changeset" in recovery["next_action"]
-    assert "dispatch Release on master" in recovery["next_action"]
     assert "pr_shape" not in recovery
+
+
+def test_live_inputs_ignore_consumed_deletions_and_unchanged_fragment_renames(monkeypatch):
+    module = _load_module()
+
+    def fake_gh_json(args):
+        if args == ["pr", "view", "12", "--repo", "example/repo", "--json", "labels"]:
+            return {"labels": [{"name": "semver:none"}]}
+        assert args == ["api", "repos/example/repo/pulls/12/files", "--paginate", "--slurp"]
+        return [
+            [
+                {"filename": ".release/changes/consumed.toml", "status": "removed"},
+                {
+                    "filename": ".release/changes/renamed.toml",
+                    "previous_filename": ".release/changes/original.toml",
+                    "status": "renamed",
+                    "additions": 0,
+                    "deletions": 0,
+                },
+                {"filename": "docs/release.md", "status": "modified"},
+            ],
+            [
+                {"filename": ".release/changes/modified.toml", "status": "modified"},
+                {
+                    "filename": ".release/changes/moved.toml",
+                    "previous_filename": "elsewhere.toml",
+                    "status": "renamed",
+                    "additions": 0,
+                    "deletions": 0,
+                },
+            ],
+        ]
+
+    monkeypatch.setattr(module, "_run_gh_json", fake_gh_json)
+    labels, files = module._live_pr_inputs("example/repo", 12, changeset_dir=".release/changes")
+    assert labels == ["semver:none"]
+    assert files == ["docs/release.md", ".release/changes/modified.toml", ".release/changes/moved.toml"]

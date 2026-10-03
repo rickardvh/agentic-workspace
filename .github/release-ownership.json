@@ -65,6 +65,7 @@
   "semver_labels": [
     "semver:major",
     "semver:minor",
+    "semver:none",
     "semver:patch"
   ],
   "release_commit_allowed_paths": [
@@ -90,18 +91,6 @@
     "Cargo.lock",
     "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
-  "package_affecting_paths": [
-    ".release/changes/",
-    ".release/releases/",
-    "docs/release-and-versioning.md",
-    "pyproject.toml",
-    "src/tooling/release/",
-    "src/",
-    "uv.lock",
-    "Cargo.toml",
-    "Cargo.lock"
-  ],
-  "non_semver_generated_metadata": [],
   "packages": [
     {
       "name": "agentic-workspace",

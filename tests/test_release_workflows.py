@@ -15,7 +15,6 @@ WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
 RULESET_PATH = ROOT / ".github" / "rulesets" / "master-support-bearing.json"
 SUPPORT_POLICY_PATH = ROOT / ".github" / "support-bearing-promotion.json"
-RELEASE_OWNERSHIP_CLASSIFIER_PATH = ROOT / "src" / "tooling" / "release" / "release_ownership.py"
 
 
 def test_release_publication_permissions_and_pinned_source():
@@ -109,16 +108,6 @@ def _step_run_block(workflow: str, step_name: str) -> str:
     return "\n".join(block_lines)
 
 
-def _load_release_ownership_classifier():
-    spec = importlib.util.spec_from_file_location("release_ownership_under_test", RELEASE_OWNERSHIP_CLASSIFIER_PATH)
-    assert spec is not None
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def test_release_ownership_manifest_declares_coordinated_workspace_packages() -> None:
     ownership = _ownership()
 
@@ -126,7 +115,9 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     assert ownership["release_model"] == "coordinated-workspace"
     assert ownership["changeset_dir"] == ".release/changes"
     assert ownership["release_notes_dir"] == ".release/releases"
-    assert ownership["semver_labels"] == ["semver:major", "semver:minor", "semver:patch"]
+    assert ownership["semver_labels"] == ["semver:major", "semver:minor", "semver:none", "semver:patch"]
+    assert "package_affecting_paths" not in ownership
+    assert "non_semver_generated_metadata" not in ownership
 
     package_names = [package["name"] for package in ownership["packages"]]
     assert package_names == ["agentic-workspace"]
@@ -182,34 +173,6 @@ def test_stable_manifest_admits_only_public_registry_contract(private, policy, a
             exec(guard, context)
 
 
-def test_package_affecting_scope_excludes_github_automation() -> None:
-    ownership = _ownership()
-    paths = set(ownership["package_affecting_paths"])
-
-    assert not any(path.startswith(".github/") for path in paths)
-    assert ".release/changes/" in paths
-    assert ".release/releases/" in paths
-    assert "docs/release-and-versioning.md" in paths
-    assert "src/" in paths
-    assert "src/tooling/release/" in paths
-    assert "src/" in paths
-    assert "uv.lock" in paths
-
-    assert ownership["non_semver_generated_metadata"] == []
-    classify = _load_release_ownership_classifier().classify_changed_paths
-    assert classify(["src/core/src/lib.rs"], ownership)["package_affecting"] is True
-
-
-def test_release_path_classification_covers_native_sources_and_bindings() -> None:
-    classify = _load_release_ownership_classifier().classify_changed_paths
-    ownership = _ownership()
-    assert classify(["docs/maintenance.md"], ownership)["package_affecting"] is False
-    for path in ("src/cli/python/agentic_workspace/__init__.py", "src/cli/typescript/package.json", "src/core/src/lib.rs"):
-        result = classify([path], ownership)
-        assert result["package_affecting"] is True
-        assert result["package_affecting_paths"] == [path]
-
-
 def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     workflow = (WORKFLOW_ROOT / "pr-semver-label.yml").read_text(encoding="utf-8")
 
@@ -222,9 +185,7 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     assert "python src/tooling/release/pr_semver_admission.py" in workflow
     workflow = (WORKFLOW_ROOT.parent.parent / "src/tooling/release/pr_semver_admission.py").read_text()
     assert ".github/release-ownership.json" in workflow
-    assert "classify_changed_paths(changed, ownership)" in workflow
     assert 'ownership["semver_labels"]' in workflow
-    assert "must have exactly one semver label" in workflow
     assert 'ownership["changeset_dir"]' in workflow
     assert "release changeset" in workflow
     assert "agentic-workspace/release-change/v1" in workflow

@@ -10,12 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-REPO_IMPORT_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_IMPORT_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_IMPORT_ROOT))
-
-from release.release_ownership import classify_changed_paths  # noqa: E402
-
 PACKET_KIND = "agentic-workspace/release-recovery-status/v1"
 DEFAULT_WORKFLOW = "Release"
 ERROR_MARKERS = ("error", "failed", "failure", "traceback", "exception", "assertionerror")
@@ -34,67 +28,38 @@ def _ownership_payload(repo_root: Path) -> dict[str, Any]:
 
 
 def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: dict[str, Any]) -> dict[str, Any]:
-    semver_labels = [label for label in labels if label in set(ownership.get("semver_labels", []))]
-    path_classification = classify_changed_paths(changed_files, ownership)
-    package_affecting = path_classification["package_affecting"]
+    semver_labels = sorted(set(labels) & set(ownership["semver_labels"]))
     changeset_dir = str(ownership.get("changeset_dir", ".release/changes")).rstrip("/")
     changesets = [path for path in changed_files if path.startswith(f"{changeset_dir}/") and path.endswith(".toml")]
-    if not package_affecting:
-        status = "repair-only-semver-pr" if semver_labels else "no-release-needed"
-        return {
-            "kind": "agentic-workspace/semver-pr-release-action/v1",
-            "status": status,
-            "will_publish_release": False,
-            "will_prepare_release_pr": False,
-            "package_affecting": False,
-            "path_classification": path_classification,
-            "semver_labels": semver_labels,
-            "changesets": changesets,
-            "changed_file_count": len(changed_files),
-            "next_action": (
-                "Merge a changeset-backed package-affecting PR if publication is still needed, then dispatch Release on master with the default inputs."
-                if semver_labels
-                else "No release action is expected because no package-affecting paths changed."
-            ),
-        }
-    if len(semver_labels) != 1:
-        return {
-            "kind": "agentic-workspace/semver-pr-release-action/v1",
-            "status": "blocked-semver-label-selection",
-            "will_publish_release": False,
-            "will_prepare_release_pr": False,
-            "package_affecting": True,
-            "path_classification": path_classification,
-            "semver_labels": semver_labels,
-            "changesets": changesets,
-            "changed_file_count": len(changed_files),
-            "next_action": "Apply exactly one semver label and add a matching release changeset before merge.",
-        }
-    if not changesets:
-        return {
-            "kind": "agentic-workspace/semver-pr-release-action/v1",
-            "status": "blocked-release-changeset",
-            "will_publish_release": False,
-            "will_prepare_release_pr": False,
-            "package_affecting": True,
-            "path_classification": path_classification,
-            "semver_labels": semver_labels,
-            "changesets": changesets,
-            "changed_file_count": len(changed_files),
-            "next_action": f"Add a release changeset under {changeset_dir}/ whose bump matches {semver_labels[0]}.",
-        }
-    return {
+    selected = semver_labels[0] if len(semver_labels) == 1 else None
+    packet = {
         "kind": "agentic-workspace/semver-pr-release-action/v1",
-        "status": "ready-for-manual-release",
         "will_publish_release": False,
         "will_prepare_release_pr": False,
-        "package_affecting": True,
-        "path_classification": path_classification,
+        "release_requested": selected in {"semver:patch", "semver:minor", "semver:major"},
+        "requested_bump": selected.removeprefix("semver:") if selected and selected != "semver:none" else None,
         "semver_labels": semver_labels,
         "changesets": changesets,
         "changed_file_count": len(changed_files),
-        "next_action": "After merge, dispatch Release on master with the default inputs.",
     }
+    if len(semver_labels) != 1:
+        status, next_action = (
+            "blocked-semver-label-selection",
+            "Choose exactly one release decision: semver:none, semver:patch, semver:minor or semver:major.",
+        )
+    elif selected == "semver:none":
+        if changesets:
+            status, next_action = (
+                "blocked-release-intent",
+                "Remove the new release changeset revisions or choose the matching release-bearing decision.",
+            )
+        else:
+            status, next_action = "no-release-needed", "No package release is expected because this PR explicitly selects semver:none."
+    elif not changesets:
+        status, next_action = "blocked-release-changeset", f"Add a release changeset under {changeset_dir}/ whose bump matches {selected}."
+    else:
+        status, next_action = "ready-for-manual-release", "After merge, dispatch Release on master with the default inputs."
+    return {**packet, "status": status, "next_action": next_action}
 
 
 def _publisher_retry_command(tag: str, source_commit: str) -> str:
@@ -376,7 +341,8 @@ def recovery_packet(
     superseded_by_verified_publication = (
         release_failure.get("freshness", {}).get("status") == "superseded_by_newer_success" and not publication_recovery_required
     )
-    recovery_needed = semver["status"] == "repair-only-semver-pr" or active_failed_release or publication_recovery_required
+    semver_blocked = semver["status"].startswith("blocked-")
+    recovery_needed = semver_blocked or active_failed_release or publication_recovery_required
     publisher_retry = local_publisher_retry_status(repo_root=repo_root) if active_failed_release else {}
     if active_failed_release:
         if publisher_retry.get("status") == "ready":
@@ -390,8 +356,8 @@ def recovery_packet(
         next_action = (
             release_publication.get("next_action") or "Inspect the original Release run for the exact retained-identity or bundle gap."
         )
-    elif semver["status"] == "repair-only-semver-pr":
-        route, next_action = "product-release", semver["next_action"]
+    elif semver_blocked:
+        route, next_action = "pr-release-decision", semver["next_action"]
     else:
         route, next_action = "none", "No failed-release recovery action is active in this packet."
     publication_status = _text(release_publication.get("status")) if release_publication else "not-checked"
@@ -405,8 +371,8 @@ def recovery_packet(
             if active_failed_release
             else publication_status
             if publication_recovery_required
-            else "repair-only-pr-does-not-publish"
-            if semver["status"] == "repair-only-semver-pr"
+            else "no-release-requested"
+            if semver["status"] == "no-release-needed"
             else "cleared-by-newer-success"
             if superseded_by_verified_publication
             else "no-active-failed-release",
@@ -439,10 +405,24 @@ def _run_gh_json(args: list[str]) -> Any:
     return json.loads(result.stdout or "[]")
 
 
-def _live_pr_inputs(repo: str, pr: int) -> tuple[list[str], list[str]]:
-    labels_payload = _run_gh_json(["pr", "view", str(pr), "--repo", repo, "--json", "labels,files"])
+def _live_pr_inputs(repo: str, pr: int, *, changeset_dir: str) -> tuple[list[str], list[str]]:
+    labels_payload = _run_gh_json(["pr", "view", str(pr), "--repo", repo, "--json", "labels"])
     labels = [item["name"] for item in labels_payload.get("labels", []) if isinstance(item, dict) and item.get("name")]
-    files = [item["path"] for item in labels_payload.get("files", []) if isinstance(item, dict) and item.get("path")]
+    pages = _run_gh_json(["api", f"repos/{repo}/pulls/{pr}/files", "--paginate", "--slurp"])
+    files = []
+    for page in pages:
+        for item in page:
+            path = item["filename"]
+            if item["status"] == "removed":
+                continue
+            if (
+                item["status"] == "renamed"
+                and item["additions"] == item["deletions"] == 0
+                and path.startswith(changeset_dir.rstrip("/") + "/")
+                and item["previous_filename"].startswith(changeset_dir.rstrip("/") + "/")
+            ):
+                continue
+            files.append(path)
     return labels, files
 
 
@@ -467,7 +447,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--repo and --pr must be supplied together unless --include-release-runs is used")
     labels, changed_files = (args.labels, args.changed_file)
     if args.repo and args.pr:
-        labels, changed_files = _live_pr_inputs(args.repo, args.pr)
+        labels, changed_files = _live_pr_inputs(args.repo, args.pr, changeset_dir=_ownership_payload(args.repo_root)["changeset_dir"])
     run_payload = _load_json(args.run_fixture) if args.run_fixture else None
     release_failure = (
         live_release_failure_status(repo=args.repo, workflow=args.workflow, limit=args.run_limit)
