@@ -74,6 +74,107 @@ fn random() -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     Ok(hash(&bytes)[..32].to_owned())
 }
+
+fn configuration_snapshot(effective: &Value) -> Value {
+    let mut snapshot = json!({});
+    // Ambient configuration is not command I/O. Retain only typed, closed
+    // operating choices; paths, commands, extensible names and owner settings
+    // may contain credentials even when their keys do not look sensitive.
+    for (section, fields) in [
+        ("workspace", &["enabled", "upstream_dogfooding"][..]),
+        (
+            "assurance",
+            &[
+                "agent_may_escalate",
+                "agent_may_deescalate",
+                "strict_closeout",
+            ][..],
+        ),
+    ] {
+        for field in fields {
+            if let Some(value) = effective[section][*field].as_bool() {
+                snapshot[section][*field] = json!(value);
+            }
+        }
+    }
+    let choices: &[(&str, &str, &[&str])] = &[
+        (
+            "workspace",
+            "workflow_artifact_profile",
+            &["repo-owned", "gemini"],
+        ),
+        (
+            "workspace",
+            "improvement_latitude",
+            &["none", "reporting", "conservative", "proactive"],
+        ),
+        (
+            "assurance",
+            "default_level",
+            &["low", "medium", "high", "critical"],
+        ),
+        (
+            "payload",
+            "policy",
+            &["advisory", "required-before-claim", "required-before-work"],
+        ),
+        ("session_logging", "detail", &["full", "metadata"]),
+        (
+            "session_logging",
+            "path_mode",
+            &["absolute", "repo-relative", "redacted"],
+        ),
+        (
+            "clarification",
+            "mode",
+            &["ask-first", "suggest", "auto-continue"],
+        ),
+        (
+            "delegation",
+            "assignment_policy",
+            &["local-preferred", "best-fit-advisory", "required-best-fit"],
+        ),
+        (
+            "delegation",
+            "transport_authority",
+            &["manual", "automatic"],
+        ),
+        (
+            "delegation",
+            "human_override_policy",
+            &[
+                "explicit-only",
+                "allowed-with-recorded-reason",
+                "disallowed",
+            ],
+        ),
+    ];
+    for (section, field, allowed) in choices {
+        if let Some(value) = effective[*section][*field]
+            .as_str()
+            .filter(|value| allowed.contains(value))
+        {
+            snapshot[*section][*field] = json!(value);
+        }
+    }
+    if let Some(value) = effective["session_logging"]["enabled"].as_bool() {
+        snapshot["session_logging"]["enabled"] = json!(value);
+    }
+    if let Some(enabled) = effective["modules"]["enabled"].as_array() {
+        snapshot["modules"]["enabled"] = Value::Array(
+            enabled
+                .iter()
+                .filter(|value| {
+                    value
+                        .as_str()
+                        .is_some_and(|name| ["planning", "memory", "verification"].contains(&name))
+                })
+                .cloned()
+                .collect(),
+        );
+    }
+    snapshot
+}
 fn safe(root: &Dir, path: &str) -> Result<(), String> {
     let mut current = std::path::PathBuf::new();
     for part in Path::new(path).components() {
@@ -516,30 +617,20 @@ fn capture_inner(
         };
         let effective =
             crate::assignment_policy::merge(&shared_config["configuration"], &local.effective);
-        let mut snapshot = serde_json::Map::new();
-        // Interpretation requires operating settings and source identities, not
-        // private worker transport/environment declarations or arbitrary files.
-        for key in [
-            "workspace",
-            "modules",
-            "assurance",
-            "payload",
-            "session_logging",
-            "clarification",
-            "delegation",
-        ] {
-            if let Some(value) = effective.get(key) {
-                snapshot.insert(key.into(), value.clone());
-            }
-        }
+        let snapshot = configuration_snapshot(&effective);
+        let local_sources: Vec<Value> = local.sources.iter().map(|source| {
+            json!({"role":if source["status"] == "current-shared-local-source" {"shared-local"} else {"repository-local"},
+                "status":source["status"],"revision":source["revision"]})
+        }).collect();
         let configuration = json!({
             "effective_logging_policy":policy,
             "effective_configuration":snapshot,
-            "repository_source":{"reference":".agentic-workspace/config.toml","status":shared_config["status"],"revision":shared_config["revision"],"reason":shared_config["reason"]},
-            "local_sources":local.sources,
+            "repository_source":{"reference":".agentic-workspace/config.toml","status":shared_config["status"],"revision":shared_config["revision"]},
+            "local_sources":local_sources,
             "local_source_revision":local.revision,
             "runtime":{"package_version":env!("CARGO_PKG_VERSION"),"bundled_payload_revision":crate::native_payload::identity(),"logging_schema_sha256":hash(LOCAL_SCHEMA.as_bytes())},
             "boundary":"Native request envelope and delivered stdout/stderr; no arbitrary environment or host conversation.",
+            "configuration_boundary":"Closed operating choices and source/runtime identities; arbitrary settings, paths, commands, extensible names and diagnostic reasons omitted.",
             "authoritative":false
         });
         let normalize = |text: &str| {

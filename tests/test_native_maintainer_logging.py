@@ -320,6 +320,97 @@ def test_native_io_export_roundtrips_delivered_bytes_and_reports_gaps(tmp_path, 
     assert not missing["manifest"]["diagnostic_content"]["content_complete_for_recorded_commands"]
 
 
+def test_full_capture_omits_ambient_config_secrets_but_keeps_provenance(tmp_path, shared_core_binary, monkeypatch):
+    from aw_maintainer import session_diagnostics as reader
+
+    configured(tmp_path, "absolute")
+    secret = "synthetic-ambient-credential-7aab5f09"
+    shared = tmp_path / ".agentic-workspace/config.toml"
+    shared.write_text(
+        f'''[workspace]
+enabled = false
+cli_invoke = "helper --token {secret}"
+agent_instructions_file = "{secret}.md"
+improvement_latitude = "conservative"
+[modules]
+enabled = ["memory"]
+[modules.independent.example]
+binding = "sha256:{"a" * 64}"
+reads = ["{secret}.json"]
+[modules.independent.example.settings]
+api_key = "{secret}"
+nested = {{ arbitrary = ["{secret}"] }}
+[assurance]
+default_level = "high"
+strict_closeout = false
+decision_record_target = "{secret}/"
+[payload]
+target_release = "{secret}"
+minimum_capabilities = ["{secret}"]
+policy = "advisory"
+''',
+        encoding="utf-8",
+    )
+    # A selected shared-local filename is also unconstrained configuration.
+    selected_local = tmp_path / f"{secret}.toml"
+    selected_local.write_text('[clarification]\nmode = "suggest"\n', encoding="utf-8")
+    local = tmp_path / ".agentic-workspace/config.local.toml"
+    local.write_text(local.read_text() + f'[workspace]\nshared_config_path = "{selected_local.name}"\n', encoding="utf-8")
+    monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "ambient-config-privacy")
+    monkeypatch.delenv("AW_SESSION_LOGGING_DISABLE", raising=False)
+    raw = json.dumps({"start": {"target": str(tmp_path), "task": "Inspect inactive configuration"}}).encode()
+    result = subprocess.run([str(shared_core_binary)], input=raw, capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["status"] == "inactive"
+    row = events(tmp_path)[0]
+    artifact_bytes = (tmp_path / row["payload"]["entry"]["artifact"]["path"]).read_bytes()
+    assert secret.encode() not in artifact_bytes
+    artifact = json.loads(artifact_bytes)
+    assert artifact["request"].encode() == raw
+    assert artifact["stdout"].encode() == result.stdout
+    assert artifact["stderr"].encode() == result.stderr
+    config = json.loads(artifact["configuration"])
+    assert config["effective_configuration"] == {
+        "workspace": {"enabled": False, "improvement_latitude": "conservative"},
+        "modules": {"enabled": ["memory"]},
+        "assurance": {"default_level": "high", "strict_closeout": False},
+        "payload": {"policy": "advisory"},
+        "clarification": {"mode": "suggest"},
+        "session_logging": {"enabled": True, "detail": "full", "path_mode": "absolute"},
+    }
+    assert config["repository_source"] == {
+        "reference": ".agentic-workspace/config.toml",
+        "status": "current",
+        "revision": "sha256:" + hashlib.sha256(shared.read_bytes()).hexdigest(),
+    }
+    assert config["local_sources"] == [
+        {
+            "role": "shared-local",
+            "status": "current-shared-local-source",
+            "revision": "sha256:" + hashlib.sha256(selected_local.read_bytes()).hexdigest(),
+        },
+        {
+            "role": "repository-local",
+            "status": "current-local-source",
+            "revision": "sha256:" + hashlib.sha256(local.read_bytes()).hexdigest(),
+        },
+    ]
+    assert config["local_source_revision"] and config["runtime"]["bundled_payload_revision"]
+    exported = reader.export_session_log(state=reader.load_state_for_argv(["--target", str(tmp_path)]))
+    assert exported["manifest"]["diagnostic_content"]["content_complete_for_recorded_commands"]
+    with gzip.open(tmp_path / exported["path"], "rt", encoding="utf-8") as stream:
+        export_text = stream.read()
+    assert secret not in export_text
+    chunks = [
+        event["payload"]
+        for event in map(json.loads, export_text.splitlines())
+        if event["event_type"] == "output.chunk" and event["payload"]["stream"] == "configuration"
+    ]
+    exported_config = json.loads("".join(chunk["text"] for chunk in sorted(chunks, key=lambda chunk: chunk["chunk_index"])))
+    for field in ("effective_configuration", "repository_source", "local_sources", "local_source_revision", "runtime"):
+        assert exported_config[field] == config[field]
+
+
 def test_explicit_metadata_logging_discloses_omitted_bodies(tmp_path, shared_core_binary, monkeypatch):
     from aw_maintainer import session_diagnostics as reader
 
