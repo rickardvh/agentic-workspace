@@ -103,7 +103,7 @@ def test_recurring_workflow_has_no_pr_provider_ingress_and_seven_day_retention()
     workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
     assert workflow["on"]["schedule"][0]["cron"] == "23 7 * * *"
     assert "pull_request_target" not in workflow["on"] and "pull_request" not in workflow["on"]
-    assert set(workflow["jobs"]) == {"freeze", "deterministic", "report", "security", "current-install-projection"}
+    assert set(workflow["jobs"]) == {"freeze", "deterministic", "report", "security"}
     assert "live" not in workflow["on"]["workflow_dispatch"]["inputs"]
     freeze = next(step for step in workflow["jobs"]["freeze"]["steps"] if step.get("id") == "freeze")
     assert "freeze --directory frozen --deterministic-only" in freeze["run"]
