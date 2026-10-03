@@ -107,7 +107,12 @@ Use the [PR template](../../.github/PULL_REQUEST_TEMPLATE.md). State:
 - what was checked;
 - what remains unresolved.
 
-Package-affecting changes need the appropriate semver label and release fragment.
+Every non-draft PR must choose exactly one release decision: `semver:none`,
+`semver:patch`, `semver:minor` or `semver:major`. Choose from the change's actual
+compatibility impact, not its file paths. Use `semver:none` for an intentional
+no-release PR, without new or modified release fragments. Patch, minor and major
+decisions need matching changesets under the
+[release rules](../release-and-versioning.md#declare-release-intent).
 A documentation-only change is not itself a release or a maturity change.
 
 An agent that implemented or materially changed the patch must not independently

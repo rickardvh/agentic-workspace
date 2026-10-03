@@ -17,6 +17,7 @@ permissions:
 jobs:
   semver:
     name: Semver admission
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

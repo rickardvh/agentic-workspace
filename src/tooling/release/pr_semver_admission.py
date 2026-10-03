@@ -9,7 +9,6 @@ from pathlib import Path
 
 sys.path.insert(0, "src/tooling")
 from release.pr_semver_integration import MAX_ARTIFACT_BYTES, admit_exact_tree_integration, make_admission
-from release.release_ownership import classify_changed_paths
 
 
 def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
@@ -59,7 +58,9 @@ def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
     ).stdout.splitlines()
     cleanup = subprocess.run(
         ["git", "diff", "--name-status", "-M", f"{base}...{pr['head']['sha']}"],
-        check=True, capture_output=True, text=True,
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout.splitlines()
     ignored_fragments = set()
     for row in cleanup:
@@ -67,32 +68,29 @@ def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
         if status in {"D", "R100"} and all(path.startswith(changeset_dir + "/") for path in paths):
             ignored_fragments.update(paths)
     changed = [path for path in changed if path not in ignored_fragments]
-    path_classification = classify_changed_paths(changed, ownership)
-    package_changed = path_classification["package_affecting"]
-
-    if not package_changed:
-        record_admission({}, None, "not-required")
-        print("No package-affecting changes detected; semver label not required.")
-        raise SystemExit(0)
-
     labels = {label["name"] for label in event["pull_request"].get("labels", [])}
     selected = sorted(labels & semver_labels)
 
     if len(selected) != 1:
         print(
-            "Package-affecting PRs must have exactly one semver label: " + ", ".join(sorted(semver_labels)),
+            "Choose exactly one release decision: " + ", ".join(sorted(semver_labels)),
             file=sys.stderr,
         )
         print(f"Current semver labels: {selected or 'none'}", file=sys.stderr)
-        print("Changed package paths:", file=sys.stderr)
-        for path in path_classification["package_affecting_paths"]:
-            print(f"  {path}", file=sys.stderr)
         raise SystemExit(1)
 
     changesets = [Path(path) for path in changed if path.startswith(f"{changeset_dir}/") and path.endswith(".toml")]
+    if selected[0] == "semver:none":
+        if changesets:
+            print("semver:none contradicts new release changeset revisions.", file=sys.stderr)
+            raise SystemExit(1)
+        record_admission({}, selected[0], "none")
+        print("Release decision accepted: semver:none; no package release requested.")
+        return
+
     if not changesets:
         print(
-            f"Package-affecting PRs must add a release changeset under {changeset_dir}/.",
+            f"Release-bearing decisions must add a matching release changeset under {changeset_dir}/.",
             file=sys.stderr,
         )
         raise SystemExit(1)
