@@ -346,7 +346,12 @@ def test_installed_delegation_choice_and_repository_replacement(workspace_wheel:
         args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--projection", "full"]
         if request is not None or invocation is not None:
             packet = tmp_path / "choice-request.json"
-            packet.write_text(json.dumps(invocation if invocation is not None else request), encoding="utf-8")
+            envelope = (
+                {"target": str(target), "task": task, "changed": [], "projection": "full", "invocation": invocation}
+                if invocation is not None
+                else request
+            )
+            packet.write_text(json.dumps(envelope), encoding="utf-8")
             args += ["--input", str(packet)]
         return _run_workspace_console_json(exe, target, *args)
 
@@ -457,7 +462,12 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
         args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--format", "json", "--projection", "full"]
         if request is not None or invocation is not None:
             packet = target.parent / "procedure-request.json"
-            packet.write_text(json.dumps(invocation if invocation is not None else request), encoding="utf-8")
+            envelope = (
+                {"target": str(target), "task": task, "changed": [], "projection": "full", "invocation": invocation}
+                if invocation is not None
+                else request
+            )
+            packet.write_text(json.dumps(envelope), encoding="utf-8")
             args.extend(["--input", str(packet)])
         return _run_workspace_console_json(workspace_exe, target, *args)
 
@@ -571,7 +581,12 @@ def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path,
         args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--format", "json", "--projection", "full"]
         if request is not None or invocation is not None:
             packet = tmp_path / "native-request.json"
-            packet.write_text(json.dumps(invocation if invocation is not None else request))
+            envelope = (
+                {"target": str(target), "task": task, "changed": [], "projection": "full", "invocation": invocation}
+                if invocation is not None
+                else request
+            )
+            packet.write_text(json.dumps(envelope))
             args.extend(["--input", str(packet)])
         return _run_workspace_console_json(workspace_exe, tmp_path, *args)
 

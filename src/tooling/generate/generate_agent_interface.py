@@ -9,6 +9,25 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def validate_skill_dependencies(files: dict[str, str]) -> None:
+    """Check the advertised distribution, never the wider producer tree."""
+    for reference, text in files.items():
+        if not reference.endswith("/skills/REGISTRY.json"):
+            continue
+        registry = json.loads(text)
+        resources = registry.get("resources", {})
+        for skill in registry.get("skills", []):
+            bundle = str(Path(reference).parent / Path(skill["path"]).parent).replace("\\", "/")
+            required = [str(Path(reference).parent / skill["path"]).replace("\\", "/")]
+            if procedure := skill.get("procedure_resource"):
+                required.append(f"{bundle}/{procedure}")
+            for name in skill.get("required_resources", []):
+                required.append(resources.get(name, {}).get("path", ""))
+            for path in required:
+                if path not in files:
+                    raise ValueError(f"{reference}: {skill['id']} requires unavailable distributed resource {path!r}")
+
+
 def render_host_payload(root: Path) -> dict[str, str]:
     """Closed derivation graph: no source-maintenance semantic read capability."""
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
@@ -66,6 +85,7 @@ def render_host_payload(root: Path) -> dict[str, str]:
 
     for path in rows:
         materialize(path)
+    validate_skill_dependencies(outputs)
     return outputs
 
 
@@ -78,7 +98,9 @@ def synchronize(*, check: bool = False) -> list[str]:
         ".agentic-workspace/planning/skills/REGISTRY.json",
         ".agentic-workspace/memory/skills/REGISTRY.json",
     ]
-    activation_drift = [reference for reference in registries if (ROOT / reference).is_file() and activation_index(ROOT / reference, check=check)]
+    activation_drift = [
+        reference for reference in registries if (ROOT / reference).is_file() and activation_index(ROOT / reference, check=check)
+    ]
     manifest = json.loads((ROOT / "src/tooling/contracts/source_maintenance_surfaces.json").read_text())
     # Validate and derive public outputs before any writes. This read capability
     # cannot be widened by the source-maintenance copy set below.

@@ -31,8 +31,10 @@ Select [the current question](procedure.md) or follow the same sources manually:
 - [Recover when dispatch or return delivery is uncertain](references/recovery.md).
 
 Native owners retain binding facts, permissions, evidence, effects and recovery.
-Missing optional procedure cannot waive them. Missing runtime permits relevant
-source reads only; current custody stays unknown and managed state is preserved.
+Missing optional procedure cannot waive them. Without runtime, follow
+[the no-runtime boundary](../../../skills/workspace-startup/references/unavailable.md):
+AW custody and effects remain unavailable; independently authorised repository
+work can continue.
 Repositories may replace or supplement this generic method through their own
 skill registry and source-owned preferences. Repository delegation policy stays
 with its source; skill selection grants no proof, review or completion authority.

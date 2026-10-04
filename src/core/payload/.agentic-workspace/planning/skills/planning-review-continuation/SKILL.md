@@ -18,5 +18,7 @@ Select [the current question](procedure.md) or follow the same sources manually:
 - [Route a justified finding to its owner](references/continuation.md).
 
 Native owners retain binding facts, permissions, evidence, effects and recovery.
-Missing optional procedure cannot waive them. Missing runtime permits relevant
-source reads only; current custody stays unknown and managed state is preserved.
+Missing optional procedure cannot waive them. Without runtime, follow
+[the no-runtime boundary](../../../skills/workspace-startup/references/unavailable.md):
+AW custody and effects remain unavailable; independently authorised repository
+work can continue.

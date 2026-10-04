@@ -69,6 +69,28 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
         render("[malformed", target=ROOT)
 
 
+def test_advertised_skill_dependencies_cannot_resolve_through_producer_only_files():
+    files = generator.render_host_payload(ROOT)
+    registry_ref = ".agentic-workspace/planning/skills/REGISTRY.json"
+    registry = json.loads(files[registry_ref])
+    skill = next(row for row in registry["skills"] if row["id"] == "planning-review-continuation")
+    template = ".agentic-workspace/planning/reviews/TEMPLATE.review.json"
+    assert (ROOT / template).is_file() and template not in files
+    registry["resources"]["producer-only-template"] = {"path": template}
+    skill["required_resources"] = ["producer-only-template"]
+    files[registry_ref] = json.dumps(registry)
+    with pytest.raises(ValueError, match="unavailable distributed resource"):
+        generator.validate_skill_dependencies(files)
+    # The same advertised dependency is legal only when its bytes are actually
+    # included in this distribution. This fixture does not widen the product.
+    files[template] = "{}"
+    generator.validate_skill_dependencies(files)
+    skill["required_resources"] = ["undeclared"]
+    files[registry_ref] = json.dumps(registry)
+    with pytest.raises(ValueError, match="unavailable distributed resource"):
+        generator.validate_skill_dependencies(files)
+
+
 def test_repository_pr_completion_is_global_without_broadening_operating_scope(tmp_path, shared_core_binary, native_cli):
     completion = ".agentic-workspace/instructions/github-pr-completion.md"
     operating = ".agentic-workspace/instructions/workspace-operating.md"
