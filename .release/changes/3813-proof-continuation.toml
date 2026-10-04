@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Carry executed native check receipts into same-work Verification continuation while preserving explicit sufficiency and external-evidence judgments."

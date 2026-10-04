@@ -15,6 +15,76 @@ pub(crate) fn enclave() -> Value {
 const MANIFEST: &str = ".agentic-workspace/verification/manifest.toml";
 const RECEIPTS: &str = ".agentic-workspace/proof/receipts";
 
+/// Carry a native producer's exact evidence into fresh owner admission. This
+/// prepares evidence consideration, never a sufficiency or completion answer.
+pub(crate) fn proof_continuation(
+    invocation: &Value,
+    outcome: &Value,
+    current: &Value,
+) -> Option<Value> {
+    if invocation["operation_id"] != "proof.report"
+        || invocation["arguments"]["execute_selected"] != true
+        || outcome["status"] != "applied"
+    {
+        return None;
+    }
+    let reference = outcome["value"]["publication"]["reference"].as_str()?;
+    let selection = &invocation["arguments"]["selection"];
+    let mut requests = Vec::new();
+    let rebind = |prior: &Value, template: &Value| {
+        if template.is_object()
+            && [
+                "kind",
+                "id",
+                "owner",
+                "owner_revision",
+                "source_revision",
+                "task_identity",
+                "request_kind",
+            ]
+            .iter()
+            .all(|field| prior[*field] == template[*field])
+        {
+            let mut current = template.clone();
+            current["arguments"] = prior["arguments"].clone();
+            current
+        } else {
+            prior.clone()
+        }
+    };
+    // Exact scope judgments remain source-bound. A changed source produces the
+    // owner's ordinary stale/unresolved result rather than a refreshed waiver.
+    if selection["strategy"]["assurance_request"].is_object() {
+        requests.push(rebind(
+            &selection["strategy"]["assurance_request"],
+            &current["verification"]["assurance_request"],
+        ));
+    }
+    if selection["strategy_request"].is_object() {
+        requests.push(rebind(
+            &selection["strategy_request"],
+            &current["verification"]["strategy_request"],
+        ));
+    }
+    let mut evidence = current["verification"]["requests"][0].clone();
+    if !evidence.is_object() {
+        return None;
+    }
+    let mut refs = selection["evidence_refs"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    refs.push(reference.to_owned());
+    refs.sort();
+    refs.dedup();
+    evidence["arguments"]["evidence_refs"] = json!(refs);
+    requests.push(evidence);
+    Some(json!(requests))
+}
+
 pub(crate) const MAX_SOURCE_BYTES: usize = 1_048_576;
 pub(crate) fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
     if path.is_empty()
@@ -1275,7 +1345,14 @@ pub(crate) fn view_with_applicability(
         .and_then(|i| i["arguments"]["selection"]["strategy"].get("assessment"))
         .filter(|v| !v.is_null())
         .cloned();
-    let mut evidence_refs = Vec::<String>::new();
+    let mut evidence_refs = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"]["evidence_refs"].as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
     let mut proof_choice = applicability
         .invocation
         .map(|i| i["arguments"]["selection"]["choice"].clone());
@@ -1446,6 +1523,16 @@ pub(crate) fn view_with_applicability(
         execution["reason"] = json!("proof-execution-scope-unresolved");
         execution["recovery"] = json!({"kind":"capability-gap","human_answer_allowed":false,
             "detail":"Configure an available enforced proof executor. Human permission cannot bound an unrestricted shell."});
+    }
+    if execution["status"] == "selected" {
+        evidence_refs.sort();
+        evidence_refs.dedup();
+        execution["selection"]["evidence_refs"] = json!(evidence_refs);
+        execution["selection"]["strategy_request"] = if strategy_assessment.is_some() {
+            strategy_request.clone()
+        } else {
+            Value::Null
+        };
     }
     let execution_actions = crate::native_proof::action(
         target,

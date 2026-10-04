@@ -2270,9 +2270,10 @@ mod fresh_action_tests {
             false
         );
 
-        let mut claim = fixture.start(Value::Null)["verification"]["requests"][0].clone();
-        claim["arguments"]["evidence_refs"] = json!([applied["value"]["publication"]["reference"]]);
-        let observed = fixture.start(claim.clone())["verification"].clone();
+        assert_eq!(applied["continuation_status"], "current");
+        let continuation = &applied["continuation"];
+        let claim = continuation["context"]["request"][0].clone();
+        let observed = continuation["result"]["verification"].clone();
         assert_eq!(observed["evidence"][0]["evidence_freshness"], "reusable");
         let mut measured = observed.clone();
         measured["evidence"][0]["runtime_admission"]["validation_duration_us"] = json!(0);
@@ -2437,7 +2438,22 @@ mod fresh_action_tests {
         assert_eq!(result["value"]["process"]["status"], "passed");
         assert_eq!(result["value"]["publication"]["status"], "local");
         assert!(result["value"]["publication"]["reference"].is_string());
-        assert_eq!(result["continuation_status"], "current");
+        assert_eq!(
+            result["continuation_status"], "current",
+            "{}",
+            result["continuation"]["diagnostic"]
+        );
+        let verified = &result["continuation"]["result"]["verification"];
+        assert_eq!(verified["strategy_control"]["effective_level"], "high");
+        assert_eq!(
+            verified["strategy_control"]["selected_profiles"][0]["id"],
+            "selected"
+        );
+        assert_eq!(verified["evidence"][0]["evidence_freshness"], "reusable");
+        assert_eq!(
+            verified["strategy_control"]["obligations"][0]["missing_commands"],
+            json!([])
+        );
         assert_eq!(
             result["value"]["claim_boundary"]["completion_claim_allowed"],
             false
@@ -2624,6 +2640,12 @@ fn finish_invocation(
             crate::native_frontier::built("post-effect-continuation");
             let current =
                 start_selected(context.clone(), &progress.resolution).and_then(|current| {
+                    if let Some(request) = crate::native_verification::proof_continuation(
+                        invocation, &outcome, &current,
+                    ) {
+                        context["request"] = request;
+                        return start_selected(context.clone(), &progress.resolution);
+                    }
                     if let Some(request) = crate::native_memory_candidates::publication_completion(
                         &current["memory"]["candidates"],
                         invocation,

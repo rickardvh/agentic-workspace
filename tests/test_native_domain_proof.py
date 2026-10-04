@@ -80,6 +80,11 @@ def test_domain_source_executes_without_claim_and_rejects_drift(
     result = call({**context, "invocation": invocation})
     assert result["value"]["process"]["status"] == "passed"
     assert result["value"]["claim_boundary"]["completion_claim_allowed"] is False
+    evidence = result["continuation"]["result"]["verification"]["evidence"]
+    assert len(evidence) == 1
+    assert evidence[0]["reference"] == result["value"]["publication"]["reference"]
+    assert evidence[0]["publication_admission"]["status"] == "admitted"
+    assert evidence[0]["evidence_freshness"] == "reusable"
     assert call({**context, "invocation": invocation})["value"] == result["value"]
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     unrelated = call({**context, "changed": ["other.txt"], "task": "Different work"})

@@ -412,9 +412,7 @@ def test_native_failed_or_timed_out_command_is_retained_without_retry(
     assert result["value"]["process"]["status"] == ("timeout" if failure == "timeout" else "failed")
     assert call({**context, "invocation": action})["value"] == result["value"]
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
-    request = call(context)["verification"]["requests"][0]
-    request["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
-    evidence = call({**context, "request": request})["verification"]["evidence"][0]
+    evidence = result["continuation"]["result"]["verification"]["evidence"][0]
     assert evidence["receipt_admission"]["proof_sufficient"] is False
 
 
