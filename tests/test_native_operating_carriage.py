@@ -127,16 +127,19 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
             "projection": "carried",
         }
     )
+    # Fresh discovery supplies the full work context and the owner's semantic
+    # schema; the consumer need not reconstruct a task-bound request envelope.
+    assert fresh["next_step"]["answer_schema"]["properties"]["owner_ref"]["type"] == "string"
     related = call(
         {
-            **context,
-            "task": "Finish the approved rollout",
-            "reference": fresh["reference"],
-            "answer": {},
+            **fresh["reentry"],
+            "reference": fresh["next_step"]["reference"],
+            "answer": {"owner_ref": str(path.relative_to(tmp_path)).replace("\\", "/")},
             "projection": "carried",
         }
     )
     request = call({"request": related["carriage"], "reference": "owner:request:planning:planning/update/v1"})
+    prior_continuation = value["continuation"].copy()
     value["continuation"] = {"accepted_progress": "Approved rollout completed with the retained retry choice"}
     value["blockers"] = []
     value["next_action"] = "No remaining service work"
@@ -167,7 +170,7 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
     )
     assert result["effect_outcome"]["status"] == "committed"
     retained = json.loads(path.read_bytes())
-    assert retained["continuation"] == value["continuation"]
+    assert retained["continuation"] == {**prior_continuation, **value["continuation"]}
     assert retained["lifecycle"] == "closed"
 
 

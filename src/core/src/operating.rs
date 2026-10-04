@@ -829,9 +829,10 @@ fn resolve_owner_reference(
         );
     }
     let selected = matches.remove(0);
-    let mut result = json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],
+    let mut result = json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],"reentry":context,
         "authority_effect":"none","continuation":"Use the exact reference through the existing owner answer/invoke path; a request template still requires its owner's requested input. Resolution never executes or retries."});
     if wanted.kind == "request" {
+        attach_request_answer(&mut result, full, context, &selected);
         result["procedure"] = json!({
             "reference":".agentic-workspace/skills/workspace-startup/references/owners.md",
             "use":"Answer a simple choice directly. For substantial structured material, read this procedure and write UTF-8 JSON as data; submit it through start --input while retaining prior work-bound answers."
@@ -841,6 +842,32 @@ fn resolve_owner_reference(
         );
     }
     Ok(result)
+}
+
+/// Discovery returns the same complete answer context as ordinary compact
+/// questions. The schema comes from this exact request's responsible owner;
+/// presentation neither fills a judgment nor alters request/source admission.
+fn attach_request_answer(result: &mut Value, full: &Value, context: &Value, selected: &Value) {
+    let request = &selected["envelope"];
+    result["reentry"] = context.clone();
+    let mut step = json!({"reference":selected["reference"],"answer_shape":request["arguments"],
+        "use":"Send the returned reentry unchanged, plus this exact reference and an answer containing the requested argument fields. The discovery identity is for lookup only; do not answer it or put this presentation in request. Owners revalidate the answer and current sources before offering any effect."});
+    if let Some(declaration) = std::iter::once(&full["capability_contract"])
+        .chain(
+            full.as_object()
+                .into_iter()
+                .flat_map(|object| object.values())
+                .filter_map(|value| value.get("capability_contract")),
+        )
+        .filter(|contract| contract["revision"] == request["capability_revision"])
+        .flat_map(|contract| contract["owners"].as_array().into_iter().flatten())
+        .filter(|owner| owner["owner"] == request["owner"])
+        .flat_map(|owner| owner["requests"].as_array().into_iter().flatten())
+        .find(|declaration| declaration["kind"] == request["request_kind"])
+    {
+        step["answer_schema"] = declaration["input_schema"].clone();
+    }
+    result["next_step"] = step;
 }
 
 fn use_selected(
@@ -963,9 +990,11 @@ fn use_selected(
             "detail selection does not accept answers or invoke actions",
         ));
     }
-    Ok(
-        json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"}),
-    )
+    let mut result = json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"});
+    if selector.starts_with("request:") {
+        attach_request_answer(&mut result, &current, &context, &selected_entry);
+    }
+    Ok(result)
 }
 
 /// Shared by JSON and all thin consumers. References and the optional carrier
@@ -1578,6 +1607,13 @@ mod tests {
         assert_eq!(resolved["status"], "current");
         assert_eq!(resolved["value"]["owner"], "semantic-routes");
         assert_eq!(resolved["authority_effect"], "none");
+        assert_eq!(resolved["reentry"]["task"], context["task"]);
+        assert_eq!(resolved["reentry"]["changed"], json!([]));
+        assert_eq!(resolved["next_step"]["reference"], resolved["reference"]);
+        assert_eq!(
+            resolved["next_step"]["answer_shape"],
+            resolved["value"]["arguments"]
+        );
         assert_eq!(
             resolved["procedure"]["reference"],
             ".agentic-workspace/skills/workspace-startup/references/owners.md"
@@ -1585,6 +1621,12 @@ mod tests {
         context["reference"] = resolved["reference"].clone();
         let exact = start(context.clone()).unwrap();
         assert_eq!(exact["value"], resolved["value"]);
+        assert_eq!(exact["reentry"], resolved["reentry"]);
+        let mut answered = resolved["reentry"].clone();
+        answered["reference"] = resolved["next_step"]["reference"].clone();
+        answered["answer"] = json!({"parent":""});
+        let next = start(answered).unwrap();
+        assert_eq!(next["reentry"]["request"][0]["arguments"]["parent"], "");
         std::fs::create_dir_all(root.join("tools/skills")).unwrap();
         std::fs::write(
             root.join("tools/skills/REGISTRY.json"),
