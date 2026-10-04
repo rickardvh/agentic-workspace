@@ -269,6 +269,20 @@ def test_former_selection_requires_exact_current_agent_request(
     assert len(plugin_requests) == 2 and len(plugin_operations) == 1
     plugin_bytes = sum(len(json.dumps(row)) for row in [*plugin_requests, *plugin_operations])
     assert 0 < plugin_bytes < 1_600, plugin_bytes
+    # Task-shaped setup adds two passive request schemas. Their selected jobs
+    # compose existing effects; they must not enlarge ordinary state or output.
+    setup_requests = [
+        row for row in configuration["requests"] if row["kind"] in {"configuration/setup-job/v1", "configuration/assess-concern/v1"}
+    ]
+    assert len(setup_requests) == 2
+    setup_job = next(row for row in setup_requests if row["kind"] == "configuration/setup-job/v1")
+    assert setup_job["input_schema"]["required"] == ["job"]
+    assert len(setup_job["input_schema"]["properties"]["job"]["enum"]) == 6
+    setup_assessment = next(row for row in setup_requests if row["kind"] == "configuration/assess-concern/v1")
+    assert set(setup_assessment["input_schema"]["required"]) == {"concern", "judgment", "reason"}
+    assert "resume" not in setup_assessment["input_schema"]["required"]
+    setup_request_bytes = sum(len(json.dumps(row)) for row in setup_requests)
+    assert 0 < setup_request_bytes < 2_000, setup_request_bytes
     # Source-defined bounded Planning work adds only these three optional
     # introspection properties. Attribute their exact serialized delta while
     # preserving the existing ordinary-state and compact-response ceilings.
@@ -370,6 +384,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + consequence_bytes
         + evidence_bytes
         + plugin_bytes
+        + setup_request_bytes
         + assignment_input_bytes
         + nullable_delta_bytes
         + analysis_receipt_bytes
@@ -411,6 +426,14 @@ def test_former_selection_requires_exact_current_agent_request(
     assert selection_requests[0]["arguments"] == {}
     assert len(json.dumps(selection_requests)) < 650
     state["planning"] = {key: value for key, value in state["planning"].items() if key != "selection_requests"}
+    # Full detail also offers one passive setup discovery envelope. Like the
+    # Planning selection envelope above, this is separately bounded catalogue
+    # detail; the remaining-state and ordinary compact ceilings still stand.
+    setup_discovery = state["configuration_write"]["setup_job_request"]
+    assert setup_discovery["request_kind"] == "configuration/setup-job/v1"
+    assert setup_discovery["arguments"] == {"job": "refresh-payload"}
+    assert len(json.dumps(setup_discovery)) < 700
+    state["configuration_write"] = {key: value for key, value in state["configuration_write"].items() if key != "setup_job_request"}
     # Full Memory detail offers only the bounded candidate read envelope until
     # relevant material or a current scoped selection exists. No candidate rows
     # or candidate effect revision may leak into this unrelated entry.
