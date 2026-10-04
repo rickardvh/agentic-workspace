@@ -1973,25 +1973,7 @@ fn resolve_selected(
     }
     // Detail identities bind current owner truth, never optional presentation.
     // The request/work context is additionally bound by operating transport.
-    let mut verification_identity = public["verification"].clone();
-    if let Some(v) = verification_identity.as_object_mut() {
-        for field in ["execution_requests", "record_requests", "judgment_request"] {
-            v.remove(field);
-        }
-    }
-    if let Some(v) = verification_identity["strategy_control"].as_object_mut() {
-        v.remove("available_profiles");
-        v.remove("omitted_profile_count");
-    }
-    if let Some(v) = verification_identity["execution"].as_object_mut() {
-        for field in [
-            "choices",
-            "omitted_domain_command_count",
-            "omitted_profile_command_count",
-        ] {
-            v.remove(field);
-        }
-    }
+    let verification_identity = verification_detail_identity(&public["verification"]);
     let mut planning_identity = public["planning"].clone();
     if let Some(v) = planning_identity.as_object_mut() {
         v.remove("portable_continuation");
@@ -2076,6 +2058,40 @@ fn resolve_selected(
         public["activation"] = activation;
     }
     Ok(public)
+}
+
+fn verification_detail_identity(verification: &Value) -> Value {
+    let mut identity = verification.clone();
+    // Keep owner state, source/policy/strategy revisions, evidence custody and
+    // currentness judgments. Optional request catalogues and presentation counts
+    // do not define that state; operating separately binds the exact work context.
+    if let Some(v) = identity.as_object_mut() {
+        for field in ["execution_requests", "record_requests", "judgment_request"] {
+            v.remove(field);
+        }
+    }
+    if let Some(v) = identity["strategy_control"].as_object_mut() {
+        v.remove("available_profiles");
+        v.remove("omitted_profile_count");
+    }
+    if let Some(v) = identity["execution"].as_object_mut() {
+        for field in [
+            "choices",
+            "omitted_domain_command_count",
+            "omitted_profile_command_count",
+        ] {
+            v.remove(field);
+        }
+    }
+    // Admission elapsed time describes this observation, not receipt validity.
+    // Preserve every other admission field and leave the returned detail intact,
+    // as the claim-review evidence binding does for the same measurement.
+    for evidence in identity["evidence"].as_array_mut().into_iter().flatten() {
+        if let Some(admission) = evidence["runtime_admission"].as_object_mut() {
+            admission.remove("validation_duration_us");
+        }
+    }
+    identity
 }
 
 pub(crate) fn owner_request_key(request: &Value) -> String {
@@ -2230,6 +2246,99 @@ mod fresh_action_tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn verification_detail_reobserves_semantic_receipt_state() {
+        let fixture = Fixture::new();
+        let command = if cfg!(windows) {
+            "Add-Content -Path marker.txt -Value executed"
+        } else {
+            "echo executed >> marker.txt"
+        };
+        fixture.write(".agentic-workspace/verification/manifest.toml", &format!(
+            "schema_version='agentic-workspace/verification-manifest/v1'\n[protocols.check]\napplies_to_paths=['docs/note.md']\n[proof_routes.check]\nprotocol_refs=['check']\ncommands=['{command}']\n"));
+        let initial = fixture.start(Value::Null);
+        let ready = fixture.start(initial["verification"]["execution_requests"][0].clone());
+        let action = &ready["decision_packet"]["primary_action"];
+        assert_eq!(action["operation_id"], "proof.report");
+        let applied = invoke_checked(fixture.execution(action)).unwrap();
+        assert_eq!(applied["value"]["process"]["status"], "passed");
+        assert_eq!(applied["value"]["publication"]["status"], "local");
+        assert_eq!(
+            applied["value"]["claim_boundary"]["completion_claim_allowed"],
+            false
+        );
+
+        let mut claim = fixture.start(Value::Null)["verification"]["requests"][0].clone();
+        claim["arguments"]["evidence_refs"] = json!([applied["value"]["publication"]["reference"]]);
+        let observed = fixture.start(claim.clone())["verification"].clone();
+        assert_eq!(observed["evidence"][0]["evidence_freshness"], "reusable");
+        let mut measured = observed.clone();
+        measured["evidence"][0]["runtime_admission"]["validation_duration_us"] = json!(0);
+        let identity = verification_detail_identity(&measured);
+        measured["evidence"][0]["runtime_admission"]["validation_duration_us"] = json!(u64::MAX);
+        assert_eq!(verification_detail_identity(&measured), identity);
+        assert!(
+            measured["evidence"][0]["runtime_admission"]
+                .get("validation_duration_us")
+                .is_some()
+        );
+        // Unknown admission fields are retained, so a future semantic dependency
+        // cannot silently disappear through a whitelist or recursive field scrub.
+        measured["evidence"][0]["runtime_admission"]["new_dependency"] = json!("changed");
+        assert_ne!(verification_detail_identity(&measured), identity);
+
+        let mut context = fixture.context();
+        context["request"] = claim;
+        context["projection"] = json!("carried");
+        let issued = crate::operating::start(context.clone()).unwrap();
+        let repeated = crate::operating::start(context.clone()).unwrap();
+        let reference = &issued["view"]["detail_refs"]["/verification"];
+        assert_eq!(repeated["view"]["detail_refs"]["/verification"], *reference);
+        let selection = json!({"request":issued["carriage"],"reference":reference});
+        let detail = crate::operating::start(selection.clone()).unwrap();
+        assert_eq!(detail["currentness"], "reobserved");
+        assert_eq!(detail["authority"], "detail-only");
+        assert_eq!(
+            detail["value"]["evidence"][0]["publication_admission"]["status"],
+            "admitted"
+        );
+        assert!(
+            detail["value"]["evidence"][0]["runtime_admission"]["validation_duration_us"]
+                .is_number()
+        );
+
+        for field in ["task", "changed", "request"] {
+            let mut changed = context.clone();
+            changed[field] = match field {
+                "task" => json!("Different work"),
+                "changed" => json!([]),
+                _ => Value::Null,
+            };
+            changed["reference"] = reference.clone();
+            assert!(crate::operating::start(changed).is_err(), "{field}");
+        }
+        let mut forged = selection.clone();
+        forged["reference"] = json!(format!("{}0", reference.as_str().unwrap()));
+        assert!(crate::operating::start(forged).is_err());
+        let source = std::fs::read(fixture.0.join("docs/note.md")).unwrap();
+        fixture.write("docs/note.md", "changed source");
+        assert!(crate::operating::start(selection.clone()).is_err());
+        std::fs::write(fixture.0.join("docs/note.md"), source).unwrap();
+        assert!(crate::operating::start(selection.clone()).is_ok());
+        fixture.write(
+            ".agentic-workspace/config.local.toml",
+            "[assurance]\ndefault_level='high'\n",
+        );
+        assert!(crate::operating::start(selection).is_err());
+        assert_eq!(
+            std::fs::read_to_string(fixture.0.join("marker.txt"))
+                .unwrap()
+                .lines()
+                .collect::<Vec<_>>(),
+            ["executed"]
+        );
     }
 
     #[test]
