@@ -144,7 +144,7 @@ jobs:
         timeout-minutes: 2
         run: uv run pytest tests/test_native_claim_review.py::test_claim_review_cannot_impersonate_required_reviewer -v
       - name: Preserve representative Planning custody
-        run: uv run pytest tests/test_native_planning_create.py -k "public_creation_then_separate_selection" -q
+        run: uv run pytest tests/test_native_planning_create.py -k "public_creation_continues_with_current_owner" -q
       - name: Verify merge-versus-release stage policy
         run: uv run pytest tests/test_release_workflows.py::test_release_publication_permissions_and_pinned_source tests/test_release_workflows.py::test_ci_pr_path_is_merge_sufficiency_not_release_admission
           tests/test_release_workflows.py::test_master_ruleset_and_release_policy_require_merge_sufficiency_before_support_proof tests/test_release_workflows.py::test_ci_supports_explicit_exact_source_validation
@@ -209,7 +209,7 @@ jobs:
       - name: Run native root CLI and thin-launcher admission
         run: uv run pytest tests/test_native_public_cli.py -q
       - name: Preserve real Planning custody through public consumers
-        run: uv run pytest tests/test_native_planning_create.py -k "public_creation_then_separate_selection or quiescent_selected_owner" -q
+        run: uv run pytest tests/test_native_planning_create.py -k "public_creation_continues_with_current_owner or quiescent_selected_owner" -q
       - name: Admit exact current source reconciliation through public consumers
         run: uv run pytest tests/test_native_source_reconciliation.py -q
       - name: Prove compact operating projection and exact carriage
