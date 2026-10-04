@@ -62,20 +62,24 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
         return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     execute = call()["verification"]["execution_requests"][0]
-    proof = call(invocation=call(request=execute)["decision_packet"]["primary_action"])
+    proof = call(invocation=call(request=execute)["decision_packet"]["primary_action"], projection="compact")
     assert proof["value"]["claim_boundary"]["completion_claim_allowed"] is False
     continuation = proof["continuation"]["result"]
-    request = continuation["verification"]["claim_review"]["request"]
+    step = continuation["verification_context"]["next_step"]
+    assert continuation["verification_context"]["evidence"][0]["proof_sufficient"] is True
+    discovered = consume("json", shared_core_binary, native_cli, {**proof["continuation"]["context"], "reference": step["reference"]})
+    request = discovered["value"]
     assert request["arguments"]["evidence_refs"] == [proof["value"]["publication"]["reference"]]
     assert request["arguments"]["disposition"] == "insufficient"
-    discovered = call(
-        **{k: v for k, v in proof["continuation"]["context"].items() if k not in context},
-        reference="owner:request:verification:verification/review-claim/v1",
-    )
-    proposed = call(
-        **{k: v for k, v in discovered["reentry"].items() if k not in context},
-        reference=discovered["reference"],
-        answer={"disposition": "satisfied", "reason": "Checked the complete requested behavior and current command evidence."},
+    proposed = consume(
+        "json",
+        shared_core_binary,
+        native_cli,
+        {
+            **continuation["reentry"],
+            "reference": step["reference"],
+            "answer": {"disposition": "satisfied", "reason": "Checked the complete requested behavior and current command evidence."},
+        },
     )
     decision = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")
     answer = decision["response_request"]

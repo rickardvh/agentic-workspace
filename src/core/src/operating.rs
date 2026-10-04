@@ -524,6 +524,37 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         }
         result["planning_context"] = planning;
     }
+    let verification = &full["verification"];
+    let claim = &verification["claim_review"];
+    if claim["status"] == "not-requested"
+        && verification["evidence"]
+            .as_array()
+            .is_some_and(|evidence| !evidence.is_empty())
+    {
+        let request = &claim["request"];
+        let selector = format!("request:verification:{}", digest(request)?);
+        let evidence: Vec<_> = verification["evidence"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|entry| {
+                json!({"reference":entry["reference"],
+                    "status":entry["runtime_admission"]["status"],
+                    "gaps":entry["runtime_admission"]["gaps"],
+                    "freshness":entry["evidence_freshness"],
+                    "checked_scope":entry["checked_scope"],
+                    "proof_sufficient":entry["receipt_admission"]["proof_sufficient"]})
+            })
+            .collect();
+        result["verification_context"] = json!({
+            "evidence":evidence,
+            "authority":"Current evidence for semantic consideration only; source, required proof and independent review remain binding.",
+            "next_step":{
+                "reference":reference(context, &selector, request)?,
+                "question":"Does the current evidence support the requested result? Judge sufficiency and give the reason; Verification carries the selected evidence into the bounded claim proposal.",
+                "answer_shape":{"disposition":"<satisfied or insufficient>","reason":"<judgment against the requested result and current evidence>"},
+                "use":"Use current reentry with this exact reference and only the semantic answer. Inspect the resulting bounded claim question before confirming; evidence presence and a passed command alone do not grant completion."}});
+    }
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
