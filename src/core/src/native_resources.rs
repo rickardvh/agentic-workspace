@@ -961,14 +961,9 @@ fn view_checked(
                 for output in &outputs {
                     let source = target.join(output);
                     unlinked(&source)?;
-                    if source.exists()
-                        && (!source.is_dir()
-                            || fs::read_dir(&source).map_err(err)?.next().is_some())
-                    {
-                        blockers.push(
-                            "pre-existing output material is not a creation lease; preserve it",
-                        );
-                    }
+                    // The lease owns the fresh external checkout, never local
+                    // output in the source checkout. Git does not copy that
+                    // untracked material; preserve it while checking the seed.
                     if !git(&target, &["ls-tree", "--name-only", &seed, "--", output])?
                         .trim()
                         .is_empty()

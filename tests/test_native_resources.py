@@ -788,8 +788,26 @@ def test_custom_output_source_and_tracked_material_are_preserved(tmp_path, share
     (repo / "dist").mkdir()
     (repo / "dist/valuable.txt").write_text("Pre-existing source output")
     initial = call("worktree-create", disposable_outputs=["dist"])
-    assert any("pre-existing" in b for b in initial["blockers"])
-    assert (repo / "dist/valuable.txt").exists() and not path.exists()
+    proposal = call(
+        "worktree-create",
+        disposable_outputs=["dist"],
+        need="destructive-validation",
+        reason="Keep the valuable source output outside the isolated lease",
+        policy_revision=initial["policy_revision"],
+        policy_answer="permits-isolation",
+    )
+    resource("native", shared_core_binary, native_cli, proposal["action"])
+    assert not (path / "dist/valuable.txt").exists()
+    (path / "dist/output.bin").write_bytes(b"Reproducible isolated output")
+    resource("native", shared_core_binary, native_cli, call("worktree-remove")["action"])
+    assert not path.exists()
+    assert (repo / "dist/valuable.txt").read_text() == "Pre-existing source output"
+    # Material actually owned by the immutable seed cannot become a lease.
+    git(repo, "add", "dist/valuable.txt")
+    git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Retain source output")
+    tracked = call("worktree-create", disposable_outputs=["dist"])
+    assert any("source tree already owns" in b for b in tracked["blockers"])
+    assert not path.exists() and (repo / "dist/valuable.txt").exists()
     # A different absent root can be leased, but cannot become deletable source.
     initial = call("worktree-create", disposable_outputs=["build"])
     proposal = call(
