@@ -223,9 +223,7 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
     request = planning_call()["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
     created = planning_call(invocation=planning_call(request=request)["decision_packet"]["primary_action"])
-    planning_context = created["value"]["selection_context"]
-    selected = planning_call(request=created["value"]["selection_request"])
-    planning_call(invocation=selected["decision_packet"]["primary_action"])
+    planning_context = created["continuation"]["context"]
     preserved_planning = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file() and "planning" in p.parts}
     ordinary = planning_call(task="Set up Agentic Workspace in this repository")
     # A remembered owner is advisory until this different task selects it.

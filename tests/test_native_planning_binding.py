@@ -23,10 +23,9 @@ def test_remembered_plans_are_inert_until_explicit_binding(
         request = call(context)["planning"]["creation_requests"][0]
         request["arguments"] = {"material": {**material(), "title": task}}
         action = call({**context, "request": request})["decision_packet"]["primary_action"]
-        made = call({**context, "invocation": action})["value"]
-        context = made["selection_context"]
-        action = call({**context, "request": made["selection_request"]})["decision_packet"]["primary_action"]
-        call({**context, "invocation": action})
+        result = call({**context, "invocation": action})
+        made = result["value"]
+        context = result["continuation"]["context"]
         return context, tmp_path / made["owner_path"]
 
     first_context, first = create("First unfinished objective")

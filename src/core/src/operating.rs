@@ -509,6 +509,21 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(assignment) = assignment_question(full, context)? {
         result["assignment_context"] = assignment;
     }
+    if full["planning"]["selected_owner"].is_object() {
+        let mut planning = json!({"status":full["planning"]["status"],
+            "owner_ref":full["planning"]["selected_owner"]["ref"],
+            "authority":"Current Planning continuation only; assignment, evidence and completion remain separate."});
+        if let Some(request) = request_entries(full, context)?
+            .iter()
+            .find(|r| r["envelope"]["request_kind"] == crate::native_planning_update::KIND)
+        {
+            planning["next_step"] = json!({"reference":request["reference"],
+                "question":"What durable intent, scope, progress, remaining work or next action changed? Supply only those semantic fields; Planning preserves and validates the complete current record.",
+                "answer_shape":{"material":{"next_action":"<changed next action, or other changed material fields>"}},
+                "use":"Use current reentry with this reference and the semantic answer. Unchanged record fields and current owner identity are supplied by Planning."});
+        }
+        result["planning_context"] = planning;
+    }
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }

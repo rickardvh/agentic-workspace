@@ -116,8 +116,7 @@ def test_planning_frontier_preserves_verification_request_lifetime(tmp_path, sha
     request = call()["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
     created = call({"invocation": call({"request": request})["decision_packet"]["primary_action"]})
-    context = created["value"]["selection_context"]
-    call({"invocation": call({"request": created["value"]["selection_request"]})["decision_packet"]["primary_action"]})
+    context = created["continuation"]["context"]
     before = call()
     claim = before["verification"]["requests"][0]
     update = before["planning"]["update_requests"][0]

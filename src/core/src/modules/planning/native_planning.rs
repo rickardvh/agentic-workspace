@@ -657,7 +657,15 @@ fn resolve_context(
                         .get("current_work")
                         .is_some()
         });
-    let threads = if bound {
+    let creation_continuation = hint
+        .as_ref()
+        .and_then(|s| s["selected_owner"]["ref"].as_str())
+        .map(|reference| {
+            crate::native_planning_create::created_work_current(&target, reference, current_work)
+        })
+        .transpose()?
+        .unwrap_or(false);
+    let threads = if bound || creation_continuation {
         load(THREADS)?.unwrap_or(json!({}))
     } else {
         json!({})
@@ -666,8 +674,16 @@ fn resolve_context(
         .as_str()
         .filter(|s| !s.is_empty())
         .unwrap_or("default");
-    let selection = if bound { load(SELECTION)? } else { None };
-    let legacy = if bound { load(STATE)? } else { None };
+    let selection = if bound || creation_continuation {
+        load(SELECTION)?
+    } else {
+        None
+    };
+    let legacy = if bound || creation_continuation {
+        load(STATE)?
+    } else {
+        None
+    };
     let mut migration = json!({"status":"absent"});
     let legacy_candidates = if let Some(state) = &legacy {
         match legacy_references(state, false) {
@@ -907,7 +923,7 @@ fn resolve_context(
     let mut planning_input = Value::Null;
     if !selected.is_null()
         && retained["kind"] == "agentic-planning/reconciliation-custody/v1"
-        && retained["current_work"] == *current_work
+        && (retained["current_work"] == *current_work || creation_continuation)
         && (retained["source"] == selected["source"]
             || crate::native_planning_update::retained_work_current(
                 &target,
@@ -1006,8 +1022,9 @@ fn resolve_context(
         }
     }
     if (quiescent || selected["blocked"] == true) && status != "stale" && !transfer_authorized {
-        let continuing =
-            retained["current_work"] == *current_work || request.is_some_and(explicit_continuation);
+        let continuing = retained["current_work"] == *current_work
+            || creation_continuation
+            || request.is_some_and(explicit_continuation);
         let unrelated = request.is_some_and(|r| {
             matches!(
                 r["arguments"]["answer"].as_str(),

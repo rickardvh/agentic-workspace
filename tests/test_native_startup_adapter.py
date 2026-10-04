@@ -186,17 +186,19 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
         def setup(value):
             return consume(surface, shared_core_binary, native_cli, value)
 
+        owners = []
         for index in range(2):
             current = setup(context)
             request = current["planning"]["creation_requests"][0]
             request["arguments"] = {"material": planning_material()}
             requests = [request]
             created = setup({**context, "invocation": setup({**context, "request": requests})["decision_packet"]["primary_action"]})
-            context = created["value"]["selection_context"]
-            switch_choice = created["value"]["selection_request"]
+            context = created["continuation"]["context"]
+            owners.append(created["value"]["owner_path"])
             if not index:
-                setup({**context, "invocation": setup({**context, "request": switch_choice})["decision_packet"]["primary_action"]})
                 context["task"] = "Select a second bounded owner"
+        switch_choice = setup(context)["planning"]["selection_requests"][0]
+        switch_choice["arguments"] = {"owner_ref": owners[0]}
         incumbent = (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").read_bytes()
     elif operation == "proof":
         context = proof_fixture(tmp_path)

@@ -155,10 +155,8 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
             creation["arguments"]["material"]["material_lifetimes"]["continuation_frontier"] = "observation"
             creation["arguments"]["material"]["continuation"][destination] = dependency.read_bytes().decode()
         created = call(invocation=call(creation)["decision_packet"]["primary_action"])
-        context = created["value"]["selection_context"]
+        context = created["continuation"]["context"]
         plan_path = tmp_path / created["value"]["owner_path"]
-        selection = created["value"]["selection_request"]
-        call(invocation=call(selection)["decision_packet"]["primary_action"])
         original_plan = json.loads(plan_path.read_bytes())
         if surface == "json":
             oversized = call()["planning"]["update_requests"][0]
@@ -455,8 +453,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         with pytest.raises(AssertionError, match="changed|stale"):
             call(held["reentry"]["request"])
         plan_path.write_bytes(original_bytes)
-        material = copy.deepcopy(retain_action["arguments"]["request"]["arguments"]["material"])
-        material["relationships"] = original_body["relationships"]
+        material = {"next_action": original_body["next_action"]}
         update = call()["planning"]["update_requests"][0]
         update["arguments"]["material"] = copy.deepcopy(material)
         update["arguments"]["material"]["next_action"] = "A materially different continuation."
@@ -476,9 +473,8 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         creation = other_call()["planning"]["creation_requests"][0]
         creation["arguments"] = {"material": new_material()}
         creation["arguments"]["material"]["title"] = "A different selected Planning owner"
-        other_call(invocation=other_call(creation)["decision_packet"]["primary_action"])
-        selection = other_call()["planning"]["created_owner"]["selection_request"]
-        other_call(invocation=other_call(selection)["decision_packet"]["primary_action"])
+        other_created = other_call(invocation=other_call(creation)["decision_packet"]["primary_action"])
+        assert other_created["value"]["selection"]["effect_outcome"]["status"] == "committed"
         with pytest.raises(AssertionError, match="changed|stale"):
             call(held["reentry"]["request"])
         selection = call()["planning"]["selection_requests"][0]

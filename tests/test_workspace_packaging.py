@@ -594,8 +594,7 @@ def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path,
     create = initial["planning"]["creation_requests"][0]
     create["arguments"] = {"material": material()}
     created = call(invocation=call(create)["decision_packet"]["primary_action"])
-    selection = call()["planning"]["created_owner"]["selection_request"]
-    call(invocation=call(selection)["decision_packet"]["primary_action"])
+    assert created["continuation"]["result"]["planning"]["current_owner"]["current"] is True
     current = call()
     assert current["planning"]["current_owner"]["current"] is True
     update = current["planning"]["update_requests"][0]

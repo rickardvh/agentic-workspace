@@ -91,10 +91,9 @@ def planning_fixture(binary: Path, root: Path) -> tuple[dict, str]:
     request = successful(binary, context)["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material}
     ready = successful(binary, {**context, "request": request})
-    created = successful(binary, {**context, "invocation": ready["decision_packet"]["primary_action"]}, "invoke")["value"]
-    context = {**created["selection_context"], "projection": "full"}
-    selected = successful(binary, {**context, "request": created["selection_request"]})
-    successful(binary, {**context, "invocation": selected["decision_packet"]["primary_action"]}, "invoke")
+    result = successful(binary, {**context, "invocation": ready["decision_packet"]["primary_action"]}, "invoke")
+    created = result["value"]
+    context = {**result["continuation"]["context"], "projection": "full"}
     compact = successful(binary, {**context, "projection": "compact"})
     return {**context, "reference": compact["detail_refs"]["/planning"]}, created["owner_id"]
 

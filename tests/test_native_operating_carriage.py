@@ -116,9 +116,6 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
     create["arguments"]["material"] = value
     ready = call({**context, "request": create})
     created = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
-    selected_context = created["value"]["selection_context"]
-    selection = call({**selected_context, "request": created["value"]["selection_request"]})
-    call({**selected_context, "invocation": selection["decision_packet"]["primary_action"]})
     path = tmp_path / created["value"]["owner_path"]
     before = path.read_bytes()
 

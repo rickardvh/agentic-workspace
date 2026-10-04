@@ -357,3 +357,22 @@ pub(crate) fn created_reference(target: &Path, work: &Value) -> Result<Option<St
     let local = inspect_origin(target, &relative, &body)?.is_some();
     Ok((local || portable_observation(&relative, &body)?).then_some(relative))
 }
+
+pub(crate) fn created_work_current(
+    target: &Path,
+    reference: &str,
+    work: &Value,
+) -> Result<bool, CoreError> {
+    if path(work)?.0 != reference {
+        return Ok(false);
+    }
+    let Some(bytes) = read(target, reference)? else {
+        return Ok(false);
+    };
+    let body = serde_json::from_slice(&bytes).map_err(error)?;
+    Ok(
+        inspect_origin(target, reference, &body)?.is_some_and(|retained| {
+            retained["invocation"]["arguments"]["request"]["task_identity"] == *work
+        }),
+    )
+}

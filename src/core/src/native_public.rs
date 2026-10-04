@@ -3137,10 +3137,74 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                     reference,
                     &next["capability_contract"],
                 ) {
-                    Ok(candidate) => {
-                        result["value"]["selection_request"] = candidate["requests"][0].clone();
-                        result["value"]["selection_context"] =
-                            result["continuation"]["context"].clone();
+                    Ok(candidate)
+                        if committed.is_object()
+                            && candidate["selection_transition"].is_object() =>
+                    {
+                        result["value"]["selection_gap"] = json!(
+                            "Creation already committed; a different owner is now selected. Explicit resume is required; do not replay creation or undo the current selection"
+                        );
+                    }
+                    Ok(_) => {
+                        let mut context = result["continuation"]["context"].clone();
+                        // Selection writes its own local carrier. Establish that
+                        // exact effect scope before binding the continuation so
+                        // post-effect entry keeps the same work identity.
+                        let mut changed: Vec<String> =
+                            serde_json::from_value(context["changed"].clone())
+                                .map_err(|e| CoreError::new(e.to_string()))?;
+                        changed.extend(
+                            serde_json::from_value::<Vec<String>>(
+                                native_planning::post_effect_paths(),
+                            )
+                            .map_err(|e| CoreError::new(e.to_string()))?,
+                        );
+                        changed.sort();
+                        changed.dedup();
+                        context["changed"] = json!(changed);
+                        let scoped = start_selected(context.clone(), &progress.resolution)?;
+                        let candidate = native_planning::candidate(
+                            &target,
+                            &scoped["current_work"],
+                            reference,
+                            &scoped["capability_contract"],
+                        )?;
+                        let selection = candidate["requests"][0].clone();
+                        let recovery_context = context.clone();
+                        context["request"] = selection.clone();
+                        let followthrough = start_selected(context.clone(), &progress.resolution)
+                            .map(|ready| {
+                                let action = &ready["decision_packet"]["primary_action"];
+                                if action["operation_id"] == "planning.reconcile" {
+                                    context.as_object_mut().unwrap().remove("request");
+                                    context["invocation"] = action.clone();
+                                    let selected = invoke_selected(context.clone(), &progress.resolution);
+                                    result["value"]["selection"] = json!({
+                                        "effect_outcome":selected["effect_outcome"],
+                                        "custody":selected["custody"]});
+                                    if selected["effect_outcome"]["status"] == "committed" {
+                                        result["continuation"] = selected["continuation"].clone();
+                                        result["continuation_status"] = selected["continuation_status"].clone();
+                                        result["next_decision"] = selected["next_decision"].clone();
+                                        return Ok(());
+                                    }
+                                    result["value"]["selection"]["error"] = selected["error"].clone();
+                                    result["value"]["selection"]["recovery"] = selected["recovery"].clone();
+                                    return Err(CoreError::new(
+                                        "Creation committed; current selection effect is not established. Use exact selection recovery; do not recreate the plan"));
+                                }
+                                if ready["planning"]["status"] == "current" {
+                                    result = attach_continuation(result.clone(), Ok(ready), &context);
+                                    Ok(())
+                                } else {
+                                    Err(CoreError::new("Creation committed; current selection admission remains unresolved"))
+                                }
+                            }).and_then(|r| r);
+                        if let Err(error) = followthrough {
+                            result["value"]["selection_gap"] = json!(error.to_string());
+                            result["value"]["selection_request"] = selection;
+                            result["value"]["selection_context"] = recovery_context;
+                        }
                     }
                     Err(error) => result["value"]["selection_gap"] = json!(error.to_string()),
                 }

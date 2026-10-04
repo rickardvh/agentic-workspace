@@ -20,19 +20,16 @@ Resolve an owner reference with ordinary `start --target . --task "<actual task>
 and `--reference owner:request:planning:planning/create/v1`. Fill only its requested
 `arguments.material` using the returned schema/current Planning detail. For an
 existing owner, first explicitly select or resume it for this task, then use its update
-request below. Supply the complete proposed record and preserve all unchanged fields and
-relationships. Submit the filled
+request below. Supply only the semantic material that changed. Submit the filled
 request through `start`, invoke only the returned admitted action, and inspect the
-effect outcome. Creation and selection are two distinct effects. Keep the full
-invocation result: its `value.selection_request`, `value.selection_context` and
-`value.owner_path` are needed next. Do not filter out `value` when displaying an
-effect result. Submit the exact `value.selection_context` with its `request` set
-to `value.selection_request`, invoke the resulting selection action, then verify
-that current Planning names this owner. A created file alone does not establish
-the selector needed for bounded discovery after context loss.
+effect outcome and current continuation. Native creation establishes the current
+owner for this task through the existing selection admission. Verify that current
+Planning names the created owner; a successful write alone is not selection or
+task completion. Genuine ambiguity or unavailable admission remains an explicit
+selection gap with a bounded next request.
 
-If selection was interrupted, use the creation result's exact owner path and
-selection context to reobserve the current creation/selection recovery; never
+If selection was interrupted, use current reentry and the exact owner path to
+reobserve the current creation/selection recovery; never
 replay the creation effect or find an owner with an all-plan glob. Preserve a
 precise selection gap when the current owner cannot admit the next operation.
 
@@ -68,13 +65,14 @@ source, policy, Assignment and Verification restrictions and uncertain effects.
 {"kind":"request","owner":"planning","id":"planning/update/v1"}
 ```
 
-Updates use `arguments.material`, like creation. Supply the complete requested
-record (the semantic postimage), preserving unchanged fields; a partial delta or an invented
-`document` field is not the update contract. Use the schema supplied by current
-Planning detail or its exact `planning/update/v1` capability declaration.
-Start from the selected record and keep the fields admitted by that schema.
-An update includes the current `lifecycle` and `phase`; creation material alone
-is incomplete. Preserve their actual values unless the task changes them.
+Use `planning_context.next_step` with current reentry and the changed `material`
+fields. Object members merge into current supported material; arrays and scalar
+values replace the named value, and `null` removes a named member. The complete
+record must still satisfy all required fields. Omitted members, lifecycle, phase, relationships
+and other supported fields remain under Planning's custody. Planning constructs
+and validates the complete postimage and rechecks current sources before effects.
+Include lifecycle or phase only when the task actually changes them. Detailed
+schemas remain available for exceptional contract questions.
 
 On fresh entry, use the supplied issue/owner pointer and explicitly select it for
 today's task, then recover only that owner's
@@ -86,11 +84,11 @@ when explicitly resuming the local remembered hint. Planning revalidates its
 real source and custody. Several unfinished plans may coexist; unrelated work
 does not need to reject or release any of them. An exact retained current-work
 binding still restores the bound owner's continuity requirements.
-Keep the explicit selection or `continue-selected` answer in the returned
-JSON transport (carriage) when requesting and submitting the update. Repeating only task flags
-starts fresh resolution and can lose the relation answer. A missing update
-request is a reason to inspect the current relation and continuation, not to
-repeatedly fetch schemas or fabricate a request.
+Use the returned current reentry for the next step. It preserves any still-current
+explicit relation answer. A missing update request is a reason to resolve the
+current relation or its reported gap, not to reconstruct a record or repeatedly
+fetch schemas. Exact committed creation custody also restores this task's owner
+on fresh entry; unrelated tasks remain direct.
 
 Reobserve material volatile state such as remote head/review changes, relevant
 source/scope changes and required prerequisites. Unrelated changes do not require
