@@ -141,12 +141,38 @@ def test_spoofed_tool_output_never_becomes_product_evidence():
     assert "unknown" in result["measurement_boundary"]
 
 
-@pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code", "session"])
+@pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code", "session", "env", "host_session_identity"])
 def test_product_boundary_rejects_caller_authored_receipts(extra):
     from consumer_product_boundary import validate_request
 
     with pytest.raises(ValueError, match="Only argv and stdin"):
         validate_request({"argv": ["start"], "stdin": "", extra: "fabricated"})
+
+
+def test_product_boundary_carries_controller_identity_without_inherited_environment(monkeypatch):
+    from types import SimpleNamespace
+
+    import consumer_product_boundary as boundary
+
+    environments = []
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-reach-product")
+    monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "caller-cannot-select-identity")
+
+    def execute(argv, **kwargs):
+        environments.append(kwargs["env"])
+        assert kwargs["user"] == 10002 and kwargs["group"] == 10002
+        assert kwargs["extra_groups"] == []
+        assert argv == [str(boundary.ROOT / "subject/agentic-workspace"), "start"]
+        kwargs["stdout"].write(b"{}")
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(boundary.subprocess, "run", execute)
+    config = {"subject": {"sha256": "fixed-subject"}, "run_id": "controller-run"}
+    calls = [boundary.invoke({"argv": ["start"], "stdin": ""}, config, session) for session in (1, 1, 2)]
+    identities = [call["host_session_identity"] for call in calls]
+    assert identities == ["consumer:controller-run:session:1", "consumer:controller-run:session:1", "consumer:controller-run:session:2"]
+    assert [env["AW_SESSION_LOGICAL_IDENTITY"] for env in environments] == identities
+    assert all(set(env) == {"PATH", "HOME", "TMPDIR", "AW_SESSION_LOGICAL_IDENTITY"} for env in environments)
 
 
 def test_product_budget_rejection_drains_request_and_retains_controller_failure(tmp_path, monkeypatch):
@@ -163,7 +189,8 @@ def test_product_budget_rejection_drains_request_and_retains_controller_failure(
     scratch = tmp_path / "fixture-scratch"
     scratch.write_text("temporary fixture material")
 
-    def invoke(value, config):
+    def invoke(value, config, session):
+        assert session == json.loads((tmp_path / "session.json").read_text())
         invoked.append(value)
         if value["argv"] == ["invoke", "fixture-cleanup"]:
             scratch.unlink()

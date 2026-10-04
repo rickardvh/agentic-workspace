@@ -45,7 +45,7 @@ def validate_request(value):
         raise ValueError("Invalid bounded product input")
 
 
-def invoke(value, config):
+def invoke(value, config, session):
     validate_request(value)
     # Observe file input with the actor's uid, never the root observer's access.
     # Failure to observe it is unknown; it must not replace the actual CLI call.
@@ -57,8 +57,16 @@ def invoke(value, config):
             material = None
             try:
                 with tempfile.TemporaryFile() as captured:
-                    read = subprocess.run(["/bin/cat", "--", argv[index]], stdout=captured, stderr=subprocess.DEVNULL,
-                                          cwd="/home/consumer/repo", user=10002, group=10002, extra_groups=[], timeout=5)
+                    read = subprocess.run(
+                        ["/bin/cat", "--", argv[index]],
+                        stdout=captured,
+                        stderr=subprocess.DEVNULL,
+                        cwd="/home/consumer/repo",
+                        user=10002,
+                        group=10002,
+                        extra_groups=[],
+                        timeout=5,
+                    )
                     if read.returncode == 0 and captured.tell() <= LIMIT:
                         captured.seek(0)
                         material = captured.read()
@@ -71,13 +79,18 @@ def invoke(value, config):
         if "--reference" in argv and isinstance(document, dict):
             reference_index = argv.index("--reference") + 1
             if reference_index < len(argv):
-                candidate = next((row.get("envelope") for row in document.get("envelopes", [])
-                                  if row.get("reference") == argv[reference_index]), candidate)
+                candidate = next(
+                    (row.get("envelope") for row in document.get("envelopes", []) if row.get("reference") == argv[reference_index]),
+                    candidate,
+                )
         if isinstance(candidate, dict) and candidate.get("operation_id"):
             submitted = hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()
     except (ValueError, AttributeError):
         pass
+    identity = f"consumer:{config['run_id']}:session:{session}"
     # Fixed absolute executable, fixed cwd, no shell and no inherited credentials.
+    # Supply the trusted host's identity explicitly: stripping it would make
+    # actual AW capture impossible even after the actor configures logging.
     # The root-owned pair cannot be replaced even temporarily by the actor.
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as errors:
         process = subprocess.run(
@@ -86,7 +99,12 @@ def invoke(value, config):
             stdout=out,
             stderr=errors,
             cwd="/home/consumer/repo",
-            env={"PATH": "/usr/bin:/bin", "HOME": "/home/consumer", "TMPDIR": "/home/consumer/tmp"},
+            env={
+                "PATH": "/usr/bin:/bin",
+                "HOME": "/home/consumer",
+                "TMPDIR": "/home/consumer/tmp",
+                "AW_SESSION_LOGICAL_IDENTITY": identity,
+            },
             user=10002,
             group=10002,
             extra_groups=[],
@@ -99,6 +117,7 @@ def invoke(value, config):
         return {
             "kind": "agentic-workspace/observed-installed-call/v1",
             "subject": config["subject"],
+            "host_session_identity": identity,
             "argv": value["argv"],
             "stdin_sha256": hashlib.sha256(value["stdin"].encode()).hexdigest(),
             "input_sha256": hashlib.sha256(material).hexdigest() if material is not None else None,
@@ -128,7 +147,7 @@ def serve_connection(connection, config, budget):
             raise ValueError("Product observation call budget exhausted")
         budget["calls"] += 1
         stage = "observation"
-        receipt = invoke(value, config)
+        receipt = invoke(value, config, session)
         receipt["observer_session"] = budget["session"]
         record = (json.dumps(receipt) + "\n").encode()
         path = ROOT / "receipts.jsonl"
@@ -141,8 +160,14 @@ def serve_connection(connection, config, budget):
         reply = {key: receipt[key] for key in ("stdout", "stderr", "exit_code")}
     except (ValueError, OSError, subprocess.SubprocessError) as error:
         reason = str(error)[:1000]
-        failure = {"kind": "agentic-workspace/product-observer-failure/v1", "subject": config["subject"],
-                   "reason": reason, "stage": stage, "session": budget["session"], "exit_code": 75}
+        failure = {
+            "kind": "agentic-workspace/product-observer-failure/v1",
+            "subject": config["subject"],
+            "reason": reason,
+            "stage": stage,
+            "session": budget["session"],
+            "exit_code": 75,
+        }
         # Keep the first controller failure separately from actual product calls.
         # One bounded record survives repeated attempts without growing a log.
         path = ROOT / "failure.json"

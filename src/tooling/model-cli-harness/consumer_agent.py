@@ -185,7 +185,9 @@ class SandboxConsumer(DockerConsumer):
             "cli_sha256": self.observation["installed"]["cli_sha256"],
             "core_sha256": self.observation["installed"]["sha256"],
         }
-        config = json.dumps({"subject": self.product_subject})
+        # The controller owns the host session identity, independently of the
+        # actor's environment and of any product decision or evidence claim.
+        config = json.dumps({"subject": self.product_subject, "run_id": uuid.uuid4().hex})
         wrapper = '#!/bin/sh\nexec /usr/bin/python3 -I /opt/aw-observer/boundary.py client "$@"\n'
         self.root_exec(
             [
@@ -283,8 +285,7 @@ class SandboxConsumer(DockerConsumer):
             raise ValueError("Product observer failure exceeds bound")
         failure = json.loads(raw)
         if failure is not None and (
-            failure.get("subject") != self.product_subject
-            or failure.get("kind") != "agentic-workspace/product-observer-failure/v1"
+            failure.get("subject") != self.product_subject or failure.get("kind") != "agentic-workspace/product-observer-failure/v1"
         ):
             raise ValueError("Product observer failure subject differs from the admitted installation")
         return failure
