@@ -275,22 +275,50 @@ def test_former_selection_requires_exact_current_agent_request(
     without_assignment_inputs = copy.deepcopy(planning)
     assignment_input_schemas = []
 
-    def remove_assignment_input_schema(value):
+    def without_nullable_delta(value):
+        if isinstance(value, dict):
+            alternatives = value.get("anyOf", [])
+            if set(value) == {"anyOf"} and len(alternatives) == 2 and alternatives[1] == {"type": "null"}:
+                return without_nullable_delta(alternatives[0])
+            return {key: without_nullable_delta(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [without_nullable_delta(item) for item in value]
+        return value
+
+    def remove_assignment_input_schema(value, request_kind):
         if isinstance(value, dict):
             properties = value.get("properties", {})
             if "assignment_inputs" in properties:
-                assignment_input_schemas.append(properties.pop("assignment_inputs"))
+                assignment_input_schemas.append((request_kind, properties.pop("assignment_inputs")))
             for item in value.values():
-                remove_assignment_input_schema(item)
+                remove_assignment_input_schema(item, request_kind)
         elif isinstance(value, list):
             for item in value:
-                remove_assignment_input_schema(item)
+                remove_assignment_input_schema(item, request_kind)
 
-    remove_assignment_input_schema(without_assignment_inputs)
+    for row in [*without_assignment_inputs["requests"], *without_assignment_inputs["operations"]]:
+        remove_assignment_input_schema(row, row.get("kind", row.get("id")))
     assert len(assignment_input_schemas) == 3
-    assert all(row["type"] == "object" for row in assignment_input_schemas)
+    for request_kind, row in assignment_input_schemas:
+        if request_kind == "planning/update/v1":
+            assert row["anyOf"][0]["type"] == "object"
+            assert row["anyOf"][1:] == [{"type": "null"}]
+        else:
+            assert row["type"] == "object"
     assignment_input_bytes = len(json.dumps(planning)) - len(json.dumps(without_assignment_inputs))
-    assert 0 < assignment_input_bytes < 2_300, assignment_input_bytes
+    assignment_delta_bytes = sum(
+        len(json.dumps(row)) - len(json.dumps(without_nullable_delta(row)))
+        for request_kind, row in assignment_input_schemas
+        if request_kind == "planning/update/v1"
+    )
+    assert 0 < assignment_delta_bytes < 500, assignment_delta_bytes
+    assert 0 < assignment_input_bytes - assignment_delta_bytes < 2_300, assignment_input_bytes
+    # Semantic updates may omit fields and delete optional members. Attribute
+    # only their nullable schema wrappers in full introspection; the original
+    # assignment, remaining-state and compact budgets stay unchanged.
+    update = next(row for row in without_assignment_inputs["requests"] if row["kind"] == "planning/update/v1")
+    nullable_delta_bytes = len(json.dumps(update)) - len(json.dumps(without_nullable_delta(update)))
+    assert 0 < nullable_delta_bytes < 5_000, nullable_delta_bytes
     # A Verification investigation reuses an exact native receipt; its one
     # optional request property is introspection only until explicitly supplied.
     analysis_request = next(row for row in verification["requests"] if row["kind"] == "verification/requirements/v1")
@@ -343,6 +371,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + evidence_bytes
         + plugin_bytes
         + assignment_input_bytes
+        + nullable_delta_bytes
         + analysis_receipt_bytes
         + manual_bytes
         + candidate_bytes
