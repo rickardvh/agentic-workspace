@@ -50,7 +50,7 @@ Prefer leaving these observations with their current source. If `proof.observed`
 contains only a captured check result or status, classify it with
 `material_lifetimes.proof_observed: observation`. First separate real obligations
 into `proof.remaining` and accepted results needed for continuation into durable
-`continuation` fields. Unclassified or mixed legacy meaning stays retained;
+`continuation` fields. Unclassified or mixed meaning stays retained;
 classification requires judgment, not matching words such as "passed".
 Replace current continuation rather than append transcript history, source bodies,
 raw logs or carriage. A retained conclusion needs its rationale, not every step.

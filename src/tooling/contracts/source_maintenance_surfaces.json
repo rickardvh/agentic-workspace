@@ -798,6 +798,16 @@
   ],
   "retired_surface_files": [
     {
+      "path": ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
+      "sha256": "5cc29b456d5b7d3c376054a4f0846e23a0785cda2d5cfa1f8f5bc7d1c5d3f622",
+      "replacement": ".agentic-workspace/planning/skills/planning-work/references/intake.md"
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md",
+      "sha256": "19432d129ad6b19c83943d3becce400c545ec1ce77512947d716e438f4525858",
+      "replacement": ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md"
+    },
+    {
       "path": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
       "sha256": "130bafef8d7d713e15f1d4b45f461abb2427f8c28b40bf67d401cb3f19a75891",
       "replacement": ".agentic-workspace/skills/workspace-startup/SKILL.md"

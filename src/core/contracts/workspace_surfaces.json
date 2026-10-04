@@ -49,7 +49,6 @@
     ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
-    ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
     ".agentic-workspace/skills/workspace-proof-selection/procedure.md",
     ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
@@ -73,7 +72,6 @@
     ".agentic-workspace/planning/skills/planning-work/procedure.md",
     ".agentic-workspace/planning/skills/planning-work/references/continuity.md",
     ".agentic-workspace/planning/skills/planning-work/references/intake.md",
-    ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
     ".agentic-workspace/planning/skills/planning-work/references/structure.md",
     ".agentic-workspace/planning/skills/planning-work/SKILL.md",
     ".agentic-workspace/planning/skills/README.md",
@@ -696,19 +694,6 @@
       }
     },
     {
-      "path": ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md",
-      "ownership": "package-managed",
-      "lifetime": "adopted-host",
-      "establish": "configuration.repository-adoption",
-      "refresh": "configuration.repository-adoption",
-      "remove": "configuration.repository-adoption",
-      "justification": "Repository-local selected procedure or its declared executable dependency",
-      "materialization": {
-        "mode": "package-verbatim",
-        "source": ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md"
-      }
-    },
-    {
       "path": ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
       "ownership": "package-managed",
       "lifetime": "adopted-host",
@@ -1029,20 +1014,6 @@
       }
     },
     {
-      "path": ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
-      "owner": "planning",
-      "ownership": "package-managed",
-      "lifetime": "adopted-host",
-      "establish": "configuration.repository-adoption",
-      "refresh": "configuration.repository-adoption",
-      "remove": "configuration.repository-adoption",
-      "justification": "Planning-owned reusable procedure, without domain-state or assignment authority",
-      "materialization": {
-        "mode": "package-verbatim",
-        "source": ".agentic-workspace/planning/skills/planning-work/references/legacy.md"
-      }
-    },
-    {
       "path": ".agentic-workspace/planning/skills/planning-work/references/structure.md",
       "owner": "planning",
       "ownership": "package-managed",
@@ -1162,6 +1133,14 @@
   "source_maintenance_contract": "source_maintenance_surfaces.json",
   "retired_package_surfaces": [
     {
+      "path": ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
+      "sha256": "5cc29b456d5b7d3c376054a4f0846e23a0785cda2d5cfa1f8f5bc7d1c5d3f622"
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md",
+      "sha256": "19432d129ad6b19c83943d3becce400c545ec1ce77512947d716e438f4525858"
+    },
+    {
       "path": ".agentic-workspace/WORKFLOW.md",
       "sha256": "75162f6469347e428ab284a7e1478a0fdd62ab4f61897a8e913f5a5f6600afa7"
     },
@@ -1242,7 +1221,6 @@
       ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
       ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
       ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
-      ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md",
       ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
       ".agentic-workspace/skills/workspace-proof-selection/procedure.md",
       ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
@@ -1266,7 +1244,6 @@
       ".agentic-workspace/planning/skills/planning-work/procedure.md",
       ".agentic-workspace/planning/skills/planning-work/references/continuity.md",
       ".agentic-workspace/planning/skills/planning-work/references/intake.md",
-      ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
       ".agentic-workspace/planning/skills/planning-work/references/structure.md",
       ".agentic-workspace/planning/skills/planning-work/SKILL.md",
       ".agentic-workspace/planning/skills/README.md",

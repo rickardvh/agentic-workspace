@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:c61ab6326fa77f16817a79fbd32e3312415e9d14acae2c0f34d20042fd188f90`
+- Contract digest: `sha256:1dc915c6466b9e35fe0bb740314bf7cca126c2a6fbc5e70dfe40c1b4727bb91f`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -55,7 +55,6 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/claim.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-proof-selection/references/legacy.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/learning.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
@@ -79,7 +78,6 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/planning/skills/planning-work/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/references/continuity.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/references/intake.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
-| `.agentic-workspace/planning/skills/planning-work/references/legacy.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/references/structure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/README.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
@@ -137,7 +135,6 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
-- `.agentic-workspace/skills/workspace-proof-selection/references/legacy.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
 - `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
 - `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md`
@@ -161,7 +158,6 @@ Portable source promotions:
 - `.agentic-workspace/planning/skills/planning-work/procedure.md`
 - `.agentic-workspace/planning/skills/planning-work/references/continuity.md`
 - `.agentic-workspace/planning/skills/planning-work/references/intake.md`
-- `.agentic-workspace/planning/skills/planning-work/references/legacy.md`
 - `.agentic-workspace/planning/skills/planning-work/references/structure.md`
 - `.agentic-workspace/planning/skills/planning-work/SKILL.md`
 - `.agentic-workspace/planning/skills/README.md`
@@ -191,6 +187,8 @@ Skill-discovery links are removed through their authenticated Configuration expo
 
 These exact preimages are retained only for de-adoption compatibility. Current-version update hygiene uses current ownership declarations and requires no retirement entry or historical hash.
 
+- `.agentic-workspace/planning/skills/planning-work/references/legacy.md` -- `sha256:5cc29b456d5b7d3c376054a4f0846e23a0785cda2d5cfa1f8f5bc7d1c5d3f622`
+- `.agentic-workspace/skills/workspace-proof-selection/references/legacy.md` -- `sha256:19432d129ad6b19c83943d3becce400c545ec1ce77512947d716e438f4525858`
 - `.agentic-workspace/WORKFLOW.md` -- `sha256:75162f6469347e428ab284a7e1478a0fdd62ab4f61897a8e913f5a5f6600afa7`
 - `.agentic-workspace/docs/jumpstart-contract.md` -- `sha256:f37d653f52fdb3616758d8c5f31123f5d65d704e4c2cb971edd45f9729abbd4e`
 - `.agentic-workspace/docs/module-map.md` -- `sha256:e87c87007f08021c0a9af478e758a784782c543cc427d1e07db9ea2e9ce869df`

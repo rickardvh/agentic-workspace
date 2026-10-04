@@ -132,6 +132,10 @@ whole bundle to understand its first step.
 
 ## Keep procedure separate from authority and current state
 
+Skills and their references describe current supported workflows. Compatibility
+with retired representations belongs to the runtime component that owns the data;
+do not add format migration or legacy workflow branches to skills.
+
 Explain how to use a current rule, request or result; do not copy changing policy,
 permission, task state or proof into the skill. Preserve exact identifiers and
 returned actions instead of teaching callers to reconstruct them.

@@ -17,7 +17,3 @@ or Planning mutation; distinct planned work may create its own owner directly.
 ```agentic-owner-reference
 {"kind":"request","owner":"planning","id":"planning/select-owner/v1"}
 ```
-
-If explicit selection reports `legacy_aggregate` requiring migration, use the
-[legacy aggregate procedure](legacy.md). Current-plan intake needs none of that
-detail. A preserved unfamiliar aggregate does not grant selection or retirement.

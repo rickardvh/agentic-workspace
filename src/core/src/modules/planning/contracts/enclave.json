@@ -272,12 +272,6 @@
       "lifetime": "current-version"
     },
     {
-      "path": ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
       "path": ".agentic-workspace/planning/skills/planning-work/references/structure.md",
       "scope": "exact",
       "class": "managed-support",

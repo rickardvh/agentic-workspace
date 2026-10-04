@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:33edc3d73062fa6d4c63e6f5e5f1d6462bc297914b658aa5a7eabeda7d1314ae",
+  "managed_revision": "sha256:389a975452dc3ee0b059ba48a0c30b18d978196226298349ce73ad908b531cab",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -52,7 +52,6 @@
     ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
-    ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
     ".agentic-workspace/skills/workspace-proof-selection/procedure.md",
     ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
@@ -76,7 +75,6 @@
     ".agentic-workspace/planning/skills/planning-work/procedure.md",
     ".agentic-workspace/planning/skills/planning-work/references/continuity.md",
     ".agentic-workspace/planning/skills/planning-work/references/intake.md",
-    ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
     ".agentic-workspace/planning/skills/planning-work/references/structure.md",
     ".agentic-workspace/planning/skills/planning-work/SKILL.md",
     ".agentic-workspace/planning/skills/README.md",

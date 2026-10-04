@@ -13,7 +13,3 @@ or current recovery; native revalidation carries evidence and scope/strategy
 judgments. Never rerun a check to regain context. Unknown effects remain unknown
 until resolved by their owner. Without runtime, read sources while preserving
 the evidence gap; do not fabricate receipts, waivers or another writer.
-
-If Verification reports a historical publication index requiring disposition,
-use [legacy receipt retirement](legacy.md) before its dependent new proof. Ordinary
-current receipt recovery needs no index migration.
