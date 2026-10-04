@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose bounded setup jobs with plain committed-effect, verified-consumer and remaining-gap results."

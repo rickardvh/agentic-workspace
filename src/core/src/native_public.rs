@@ -56,13 +56,33 @@ pub fn start(value: Value) -> Result<Value, CoreError> {
 }
 
 pub(crate) fn start_selected(value: Value, resolution: &Resolution) -> Result<Value, CoreError> {
-    let (input, target) = input(value)?;
+    let (mut input, target) = input(value)?;
     if input.invocation.is_some() {
         return Err(CoreError::new(
             "start accepts a public request, not an invocation",
         ));
     }
-    resolve_selected(&input, &target, false, None, resolution)
+    let current = resolve_selected(&input, &target, false, None, resolution)?;
+    let mut requests = owner_requests(input.request.as_ref())?;
+    if let Some(index) = requests
+        .iter()
+        .position(|r| r["request_kind"] == crate::native_configuration_procedure::ASSESS)
+        && let Some(proposed) = crate::native_configuration_procedure::assessment_proposal(
+            &target,
+            &input.task,
+            &requests[index],
+            &current,
+        )?
+    {
+        requests[index] = proposed;
+        input.request = Some(json!(requests));
+        let mut prepared = resolve_selected(&input, &target, false, None, resolution)?;
+        prepared["configuration_write"]["selected_setup_job"] =
+            current["configuration_write"]["selected_setup_job"].clone();
+        prepared["setup_context"] = crate::native_configuration_procedure::setup_view(&current);
+        return Ok(prepared);
+    }
+    Ok(current)
 }
 
 fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<Value, CoreError> {
@@ -2049,6 +2069,10 @@ fn resolve_selected(
             public["configuration_write"]["requested_behavior_scope"].clone();
     }
     crate::native_configuration_assessment::validate_consumers(target, &public)?;
+    let setup = crate::native_configuration_procedure::setup_view(&public);
+    if !setup.is_null() {
+        public["setup_context"] = setup;
+    }
     let activation = if input.maintenance.is_some() {
         json!({"status":"not-evaluated", "reason":"Explicit Configuration maintenance; re-enter ordinary start after repair."})
     } else {
@@ -2633,7 +2657,7 @@ fn finish_invocation(
     if !input.material.is_empty() {
         context["material"] = json!(input.material);
     }
-    match post_effect_changed_paths(&input.changed, executed, &outcome) {
+    let mut result = match post_effect_changed_paths(&input.changed, executed, &outcome) {
         Ok(changed) => {
             context["changed"] = json!(changed);
             #[cfg(test)]
@@ -2672,7 +2696,9 @@ fn finish_invocation(
                 "changed":"Establish the complete post-effect changed-path set through the effect owner before continuing affected work."});
             Ok(result)
         }
-    }
+    }?;
+    crate::native_configuration_procedure::attach_setup(target, invocation, &mut result);
+    Ok(result)
 }
 
 fn post_effect_changed_paths(
@@ -3471,6 +3497,20 @@ mod continuation_tests {
             );
             assert_eq!(result["configuration_behavior"]["status"], "unavailable");
             assert_eq!(result["configuration_behavior"]["retry_effect"], false);
+            crate::native_configuration_procedure::attach_setup(
+                &root,
+                &selected["decision_packet"]["primary_action"],
+                &mut result,
+            );
+            assert_eq!(result["setup_result"]["effect"], "committed");
+            assert_eq!(
+                result["setup_result"]["consumer_verification"]["status"],
+                "unknown"
+            );
+            assert_eq!(
+                result["setup_result"]["consumer_verification"]["retry_effect"],
+                false
+            );
             for field in ["status", "effects", "value", "custody", "effect_outcome"] {
                 assert_eq!(result[field], committed[field]);
             }

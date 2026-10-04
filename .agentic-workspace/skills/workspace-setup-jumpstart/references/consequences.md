@@ -8,7 +8,8 @@ a human approval. Preserve source protection and exact proposal binding; a
 configuration change grants no proof or independent review acceptance.
 
 Pass the returned exact action to native `invoke`. It returns
-`effect_outcome`, `configuration_behavior`, actual `session_capture`
+`setup_result` with the committed effect, verified consumer and remaining gaps,
+alongside detailed `configuration_behavior` and actual `session_capture`
 when available, and continuation/reentry. Interpret the **affected owner's**
 observation: exact instruction delivery or read requirement, effective diagnostic
 privacy and capture outcome, eligible Assignment configurations or missing

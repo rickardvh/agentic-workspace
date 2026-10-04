@@ -509,6 +509,27 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(assignment) = assignment_question(full, context)? {
         result["assignment_context"] = assignment;
     }
+    if full["setup_context"].is_object() {
+        fn references(value: &mut Value, entries: &[Value]) {
+            if value["kind"] == "agentic-workspace/public-request/v1" {
+                if let Some(entry) = entries.iter().find(|e| e["envelope"] == *value) {
+                    *value = json!({"reference":entry["reference"],"answer_shape":value["arguments"],
+                        "use":"Send current reentry with this reference and only the bounded semantic answer. Selection grants no effect authority."});
+                }
+            } else if let Some(object) = value.as_object_mut() {
+                for child in object.values_mut() {
+                    references(child, entries);
+                }
+            } else if let Some(array) = value.as_array_mut() {
+                for child in array {
+                    references(child, entries);
+                }
+            }
+        }
+        let mut setup = full["setup_context"].clone();
+        references(&mut setup, &request_entries(full, context)?);
+        result["setup_context"] = setup;
+    }
     if full["planning"]["selected_owner"].is_object() {
         let mut planning = json!({"status":full["planning"]["status"],
             "owner_ref":full["planning"]["selected_owner"]["ref"],

@@ -14,6 +14,84 @@ from tests.test_native_public_cli import native_cli as native_cli
 TASK = "Configure the requested repository behavior"
 
 
+def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_core_binary, native_cli):
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text("[workspace]\nenabled=true\n")
+    (tmp_path / "GUIDE.md").write_text("Use the required review convention.\n")
+    context = {"target": str(tmp_path), "task": TASK}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+
+    job = call()["configuration_write"]["setup_job_request"]
+    job["arguments"] = {"job": "configure-behavior", "concern": "instructions"}
+    selected = call(request=job)
+    compact = call(request=job, projection="compact")
+    choice = compact["setup_context"]["choices"][0]["request"]
+    assert "source_revision" not in json.dumps(compact["setup_context"])
+    read = call(**{**compact["reentry"], "reference": choice["reference"], "answer": choice["answer_shape"]})
+    edit = read["configuration_write"]["selected_choice"]["edit_request"]
+    edit["arguments"]["value"] = "GUIDE.md"
+    proposed = call(request=edit)
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    result = call(invocation=call(request=answer)["decision_packet"]["primary_action"])
+    assert result["setup_result"]["effect"] == "committed"
+    assert result["setup_result"]["consumer_verification"]["status"] == "verified"
+    assert selected["setup_context"]["consumer_verification"]["status"] == "owner-check-required"
+
+    job = call()["configuration_write"]["setup_job_request"]
+    job["arguments"] = {"job": "assess-setup", "concern": "instructions"}
+    question = call(request=job)["configuration_write"]["concern_assessment_request"]
+    question["arguments"] = {"concern": "instructions", "judgment": "working", "reason": "The selected GUIDE.md was delivered."}
+    prepared = call(request=question)
+    action = prepared["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "configuration.write"
+    result = call(invocation=action)
+    assert result["setup_result"]["effect"] == "committed"
+    assert result["setup_result"]["consumer_verification"]["consumers"][0]["status"] == "verified"
+    saved = json.loads((workspace / "configuration-assessment.json").read_text())
+    assert saved["dispositions"][0]["observation"]["owner"] == "startup-adapter"
+    assert "setup_context" not in call(projection="compact")
+    assert call()["configuration_write"]["setup_assessment"]["record"] == saved
+
+
+def test_setup_job_preserves_other_owner_gap_and_unfinished_resume(tmp_path, shared_core_binary, native_cli):
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text("[workspace]\nenabled=true\n")
+    context = {"target": str(tmp_path), "task": TASK}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+
+    def question(concern):
+        job = call()["configuration_write"]["setup_job_request"]
+        job["arguments"] = {"job": "assess-setup", "concern": concern}
+        selected = call(request=job)
+        assert selected["setup_context"]["consumer_verification"]["status"] == "owner-check-required"
+        return selected["configuration_write"]["concern_assessment_request"]
+
+    pending = question("modules")
+    pending["arguments"].update(
+        judgment="pending", reason="Memory state is absent.", resume="Memory owner: establish current state and admission."
+    )
+    call(invocation=call(request=pending)["decision_packet"]["primary_action"])
+    handled = question("diagnostics")
+    handled["arguments"] = {
+        "concern": "diagnostics",
+        "judgment": "handled-by-owner",
+        "reason": "Session logging owns actual capture evidence.",
+    }
+    call(invocation=call(request=handled)["decision_packet"]["primary_action"])
+    saved = json.loads((workspace / "configuration-assessment.json").read_text())
+    assert len(saved["dispositions"]) == 2
+    assert saved["continuation"] == {"task": TASK, "next_action": "Memory owner: establish current state and admission."}
+    assert all("observation" not in row for row in saved["dispositions"])
+    assert call()["configuration_write"]["setup_assessment"]["integration_complete"] is False
+
+
 def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path, shared_core_binary, native_cli):
     """Native-entry recovery, consumer and currentness; not proof that old skills invoke AW."""
     workspace = tmp_path / ".agentic-workspace"

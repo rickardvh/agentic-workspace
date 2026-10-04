@@ -6,8 +6,8 @@ description: Resolve setup or configuration, preserve evidenced repository worki
 # Resolve the setup concern
 
 Use this method when the user asks to configure AW or `start` reports setup or
-refresh needing attention. Inspect the current Configuration request and its
-installed guidance. Infer safe choices from repository policy; ask only for a
+refresh needing attention. Select the requested job in current `setup_context`
+using Configuration's `setup_job_request`. Infer choices from repository policy; ask only for a
 decision the user still needs to make. Apply the exact supported change and check
 whether the intended consumer now works. Saved configuration bytes alone do not
 prove that result. Preserve explicit exclusions and unrelated settings, then

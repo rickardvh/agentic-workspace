@@ -26,21 +26,26 @@ def plugin_host(target, core, cli):
         ready = call(request=request)
         action = ready["decision_packet"]["primary_action"]
         assert action, ready
-        return call(invocation=action)
+        result = call(invocation=action)
+        assert result["setup_result"]["effect"] == "committed"
+        return result
 
     def adoption(mode):
-        view = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+        request = call()["configuration_write"]["repository_adoption_request"]
+        if mode == "remove":
+            request = call()["configuration_write"]["setup_job_request"]
+            request["arguments"] = {"job": "remove-adoption"}
+        view = call(request=request)["configuration_write"]
         return next(r for r in view["adoption_requests"] if r["arguments"]["mode"] == mode)
 
     def row(host):
         initial = call()
         assert "plugin_exposure_request" not in initial["configuration_write"]
-        setup = call(request=initial["configuration_write"]["setup_assessment"]["request"])
-        return next(
-            r
-            for r in call(request=setup["configuration_write"]["plugin_exposure_request"])["configuration_write"]["plugin_exposure"]
-            if r["state"]["host"] == host
-        )
+        job = initial["configuration_write"]["setup_job_request"]
+        job["arguments"] = {"job": "expose-plugin"}
+        setup = call(request=job)
+        assert setup["setup_context"]["job"] == "expose-plugin"
+        return next(r for r in setup["configuration_write"]["plugin_exposure"] if r["state"]["host"] == host)
 
     apply(adoption("adopt"))
     return call, apply, adoption, row
