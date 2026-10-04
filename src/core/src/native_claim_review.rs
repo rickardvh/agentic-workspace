@@ -40,7 +40,16 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         .iter()
         .find(|o| o["owner"] == "verification")
         .unwrap();
-    let template = json!({"kind":"agentic-workspace/public-request/v1","id":REQUEST,"owner":"verification","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":REQUEST,"arguments":{"reason":"Review the exact resulting work against the required evidence and outcome.","disposition":"insufficient","evidence_refs":[]}});
+    // Preserve the evidence already selected and admitted by Verification. Its
+    // presence is not sufficiency: failed and stale observations remain visible
+    // and all claim/currentness checks below still apply to the semantic answer.
+    let mut evidence_refs: Vec<_> = evidence
+        .iter()
+        .filter_map(|entry| entry["reference"].as_str())
+        .collect();
+    evidence_refs.sort_unstable();
+    evidence_refs.dedup();
+    let template = json!({"kind":"agentic-workspace/public-request/v1","id":REQUEST,"owner":"verification","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":REQUEST,"arguments":{"reason":"Review the exact resulting work against the required evidence and outcome.","disposition":"insufficient","evidence_refs":evidence_refs}});
     let mut result = json!({"kind":"agentic-workspace/claim-review/v1","status":"not-requested","request":template,"decisions":[],"completion_authority":false});
     let Some(request) = request else {
         return Ok(result);

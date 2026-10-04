@@ -414,6 +414,9 @@ def test_native_failed_or_timed_out_command_is_retained_without_retry(
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     evidence = result["continuation"]["result"]["verification"]["evidence"][0]
     assert evidence["receipt_admission"]["proof_sufficient"] is False
+    claim = result["continuation"]["result"]["verification"]["claim_review"]["request"]
+    assert claim["arguments"]["evidence_refs"] == [evidence["reference"]]
+    assert claim["arguments"]["disposition"] == "insufficient"
 
 
 def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
