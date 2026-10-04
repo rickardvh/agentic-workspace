@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import copy
 import json
+import os
+import subprocess
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -15,6 +17,7 @@ TASK = "Configure the requested repository behavior"
 
 
 def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_core_binary, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     workspace = tmp_path / ".agentic-workspace"
     workspace.mkdir()
     (workspace / "config.toml").write_text("[workspace]\nenabled=true\n")
@@ -22,7 +25,21 @@ def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_cor
     context = {"target": str(tmp_path), "task": TASK}
 
     def call(**extra):
-        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    adoption = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    install = next(row for row in adoption["adoption_requests"] if row["arguments"]["mode"] == "adopt")
+    proposed = call(request=install)
+    authorization = next(
+        row["response_request"]
+        for row in proposed["decision_packet"]["pending_consequences"]["decisions"]
+        if row["owner"] == "configuration"
+    )
+    authorization["arguments"]["answer"] = "authorize-write"
+    installed = call(invocation=call(request=authorization)["decision_packet"]["primary_action"])
+    assert installed["effect_outcome"]["status"] == "committed"
+    adoption = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    assert adoption["repository_adoption"]["enclave"]["status"] == "current"
 
     job = call()["configuration_write"]["setup_job_request"]
     job["arguments"] = {"job": "configure-behavior", "concern": "instructions"}
@@ -39,7 +56,7 @@ def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_cor
     result = call(invocation=call(request=answer)["decision_packet"]["primary_action"])
     assert result["setup_result"]["effect"] == "committed"
     assert result["setup_result"]["consumer_verification"]["status"] == "verified"
-    assert selected["setup_context"]["consumer_verification"]["status"] == "owner-check-required"
+    assert selected["configuration_behavior"]["observation"]["selected_source"] != "GUIDE.md"
 
     job = call()["configuration_write"]["setup_job_request"]
     job["arguments"] = {"job": "assess-setup", "concern": "instructions"}
@@ -53,8 +70,28 @@ def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_cor
     assert result["setup_result"]["consumer_verification"]["consumers"][0]["status"] == "verified"
     saved = json.loads((workspace / "configuration-assessment.json").read_text())
     assert saved["dispositions"][0]["observation"]["owner"] == "startup-adapter"
-    assert "setup_context" not in call(projection="compact")
-    assert call()["configuration_write"]["setup_assessment"]["record"] == saved
+    quiet = call(projection="compact")
+    assert "setup_context" not in quiet
+    current = call()["configuration_write"]
+    assert current["setup_assessment"]["record"] == saved
+    assert current["setup_assessment"]["assessment_due"] is False
+    assert current["managed_refresh"]["required"] is False
+    # An explicit new setup request on current, settled state needs no full read.
+    before = {path: path.read_bytes() for path in workspace.rglob("*") if path.is_file()}
+    issued = call(**{**quiet["reentry"], "reference": "owner:request:configuration:configuration/setup-job/v1"})
+    assert issued["status"] == "current", issued
+    selected = call(
+        **{
+            **quiet["reentry"],
+            "reference": issued["reference"],
+            "answer": {"job": "configure-behavior", "concern": "preferences"},
+        }
+    )
+    assert selected["setup_context"]["job"] == "configure-behavior"
+    assert selected["setup_context"]["concern"] == "preferences"
+    assert selected["setup_context"]["choices"]
+    assert all(path.read_bytes() == value for path, value in before.items())
+    assert "setup_context" not in call(task="Fix the parser's empty-input handling", projection="compact")
 
 
 def test_setup_job_preserves_other_owner_gap_and_unfinished_resume(tmp_path, shared_core_binary, native_cli):
@@ -78,6 +115,17 @@ def test_setup_job_preserves_other_owner_gap_and_unfinished_resume(tmp_path, sha
         judgment="pending", reason="Memory state is absent.", resume="Memory owner: establish current state and admission."
     )
     call(invocation=call(request=pending)["decision_packet"]["primary_action"])
+    before = {path: path.read_bytes() for path in workspace.rglob("*") if path.is_file()}
+    for concern in ("diagnostics", "assignment", "modules", "invocation", "instructions"):
+        unproven = question(concern)
+        unproven["arguments"] = {
+            "concern": concern,
+            "judgment": "working",
+            "reason": "No consumer evidence was supplied.",
+        }
+        with pytest.raises(AssertionError, match="no current consumer observation"):
+            call(request=unproven)
+        assert {path: path.read_bytes() for path in workspace.rglob("*") if path.is_file()} == before
     handled = question("diagnostics")
     handled["arguments"] = {
         "concern": "diagnostics",

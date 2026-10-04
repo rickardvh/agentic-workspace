@@ -54,7 +54,9 @@ pub(crate) fn assessment_proposal(
             target, concern, scope, current,
         )?;
         if witness.is_null() {
-            return Ok(None);
+            return Err(CoreError::new(format!(
+                "Cannot record 'working' for {concern}: no current consumer observation is available. Use an unfinished judgment with the exact owner and next action, or handled-by-owner where supported."
+            )));
         }
         row["observation"] = witness;
     } else if status == "owner-managed" {
