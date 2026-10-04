@@ -173,7 +173,7 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
     }))
 }
 
-fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<(), String> {
+fn carry_input(contract: &Value, parsed: &mut Parsed, mut input: Value) -> Result<(), String> {
     let command = contract["commands"]
         .as_array()
         .unwrap()
@@ -193,10 +193,17 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<()
         if parsed.command == "invoke" && input["reference"].as_str().is_none() {
             require_invoke_context(|field| input.get(field).is_some())?;
         }
-        // Preserve the exact owner envelope. Explicit argv is an assertion,
-        // never an override; absent defaults must not replace bound context.
+        // A new selector and semantic answer can accompany unchanged reentry.
+        // Existing fields remain exact assertions, never argv overrides.
         for (key, value) in parsed.values.as_object().unwrap() {
             if !parsed.explicit.contains(key) {
+                continue;
+            }
+            if parsed.command == "start"
+                && matches!(key.as_str(), "reference" | "answer")
+                && input.get(key).is_none()
+            {
+                input[key] = value.clone();
                 continue;
             }
             let same = if key == "target" {
