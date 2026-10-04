@@ -529,6 +529,19 @@ def test_carried_diagnostics_follow_explicit_work_target(tmp_path, shared_core_b
     assert offered["view"]["session_capture"] == {"status": "capturing", "detail": "full", "authoritative": False}
     assert "session_capture" not in json.dumps(offered["carriage"])
     before = len(events(tmp_path))
+    explicit = consume(
+        "json",
+        shared_core_binary,
+        native_cli,
+        {
+            **offered["carriage"]["context"],
+            "reference": offered["view"]["decision_packet"]["decision_request"]["reference"],
+            "answer": "authorize-write",
+            "projection": "compact",
+        },
+    )
+    assert explicit["session_capture"] == {"status": "capturing", "detail": "full", "authoritative": False}
+    assert len(events(tmp_path)) == before + 1
     consume(
         "json",
         shared_core_binary,
@@ -540,9 +553,9 @@ def test_carried_diagnostics_follow_explicit_work_target(tmp_path, shared_core_b
         },
     )
     recorded = events(tmp_path)
-    assert len(recorded) == before + 1
-    assert recorded[-1]["payload"]["entry"]["target"] == "<target>"
-    assert recorded[-1]["authoritative"] is False
+    assert len(recorded) == before + 2
+    assert all(row["payload"]["entry"]["target"] == "<target>" for row in recorded[-2:])
+    assert all(row["authoritative"] is False for row in recorded[-2:])
 
 
 def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, shared_core_binary, native_cli):

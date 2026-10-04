@@ -427,11 +427,11 @@ fn capture_inner(
     if !matches!(operation.as_str(), "start" | "invoke") {
         return Ok(None);
     }
-    let target = if input.get("reference").is_some() {
-        crate::operating::carried_target(input).ok_or("carried target unavailable")?
-    } else {
-        input["target"].as_str().unwrap_or(".")
-    };
+    // A reference may use ordinary explicit reentry or opaque carriage. Prefer
+    // the carried work target when present; a selector alone is not carriage.
+    let target = crate::operating::carried_target(input)
+        .or_else(|| input["target"].as_str())
+        .unwrap_or(".");
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(|e| e.to_string())?;
     let local =
         crate::native_assignment_policy::load(Path::new(target)).map_err(|e| e.to_string())?;
