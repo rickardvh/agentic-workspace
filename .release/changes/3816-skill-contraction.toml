@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep ordinary installed skills focused on current semantic choices and move legacy, integration and source-maintainer detail to conditional references."

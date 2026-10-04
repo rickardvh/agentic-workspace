@@ -18,23 +18,6 @@ or Planning mutation; distinct planned work may create its own owner directly.
 {"kind":"request","owner":"planning","id":"planning/select-owner/v1"}
 ```
 
-## Upgrade legacy aggregate input
-
-Explicit Planning selection can read `state.toml` as legacy owner relations, never current status, revision or
-continuation. Read the canonical owner body and use the exact Planning selection
-request to establish the task relation, then invoke `planning.reconcile`. With
-several owner candidates, or unfamiliar material alongside a safe owner reference,
-choose one of `legacy_aggregate.selection_requests`. Pending choice remains an
-unresolved task relation, including at worktree creation. If no safe selection
-exists, preserve the reported owner-resolution gap; current work can use ordinary
-Planning creation or explicit canonical-owner discovery. No nonexistent selection
-or retirement request resolves unfamiliar material.
-
-Preserve useful aggregate-only intent in the appropriate canonical owner through
-Planning's update operation. Unfamiliar aggregate material stays preserved until
-its owner relations can be represented safely. Once current selection custody
-is committed, use the exact terminal retention request for `state.toml`, judging
-that no unresolved intent or continuing value remains in the aggregate itself.
-The operation guards source and consumers and provides interruption recovery.
-After retirement, native and repository reads use the same owner body; fresh
-setup does not recreate an aggregate.
+If explicit selection reports `legacy_aggregate` requiring migration, use the
+[legacy aggregate procedure](legacy.md). Current-plan intake needs none of that
+detail. A preserved unfamiliar aggregate does not grant selection or retirement.

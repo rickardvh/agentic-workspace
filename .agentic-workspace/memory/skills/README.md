@@ -18,5 +18,4 @@ supported operation and explains what remains unknown if it is unavailable.
 Product-managed skill bodies may be replaced on upgrade. Put repository-specific
 methods in distinct repository-owned bundles, register them deliberately, and keep
 durable facts in the existing Memory sources. Do not customise a shipped bundle
-to obtain a persistent local override. Source-checkout maintainers edit canonical
-sources and regenerate declared copies.
+to obtain a persistent local override.

@@ -14,19 +14,6 @@ judgments. Never rerun a check to regain context. Unknown effects remain unknown
 until resolved by their owner. Without runtime, read sources while preserving
 the evidence gap; do not fabricate receipts, waivers or another writer.
 
-## Resolve a legacy publication index before proof
-
-A nonempty legacy repository index without authenticated custody is historical
-input. Before a new proof, use Verification's exact `verification/retire-receipts/v1`
-request. Judge the continuing value and unresolved intent, then explicitly set
-`retire_legacy_index` and the three disposition judgments when the obsolete
-locators may be retired. Use empty `sources` to preserve receipt files; only
-owner-offered receipt sources can be separately selected for removal. Unfamiliar
-files and unsupported index fields remain preserved.
-
-The guarded operation replaces obsolete locators with a current empty index and
-commits mutation custody. It creates no history archive and grants no current
-proof authority to old receipts. Interrupted disposition returns the exact
-`verification/recover-retirement/v1` route; do not replay an uncertain proof or
-edit the index/custody files by hand. Current proof then follows its normal local
-lifetime unless an explicit durable consumer requires repository promotion.
+If Verification reports a historical publication index requiring disposition,
+use [legacy receipt retirement](legacy.md) before its dependent new proof. Ordinary
+current receipt recovery needs no index migration.

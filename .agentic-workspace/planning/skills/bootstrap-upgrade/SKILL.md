@@ -1,24 +1,11 @@
 ---
 name: bootstrap-upgrade
-description: Refresh managed guidance while preserving Planning state and custody.
+description: Select shared package refresh from Planning host discovery.
 ---
 
-# Managed guidance lifecycle
+# Refresh installed Planning guidance
 
-Refresh managed guidance while preserving Planning state and custody.
-
-Use the target repository's
-[setup entry](../../../skills/workspace-setup-jumpstart/SKILL.md) and its
-[package refresh section](../../../skills/workspace-setup-jumpstart/references/package.md#package-and-host-exposure).
-The same paths are canonical sources in an AW source checkout. Do not maintain
-a second command recipe here.
-
-If that source or the configured native runtime is unavailable, read target policy
-and report the exact lifecycle gap. Preserve existing material; no historical
-package command or no-install runner supplies replacement authority.
-
-Configuration owns its footprint only. Preserve repository-authored guidance,
-custom seed notes, unique knowledge, active plans, assignments and evidence.
-An upgrade is not a Memory refresh or a migration of current-task notes. Removal
-does not imply deleting domain state. Inspect actual receiving-owner behavior
-after a committed change and retain unresolved custody with its existing owner.
+Use the shared [setup entry](../../../skills/workspace-setup-jumpstart/SKILL.md)
+and select `refresh-payload`. This named entry exists for Planning host discovery;
+the shared procedure owns the entire lifecycle. Preserve active plans and custody.
+Package refresh does not migrate or remove Planning state.

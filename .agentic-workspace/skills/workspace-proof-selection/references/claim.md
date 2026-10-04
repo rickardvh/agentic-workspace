@@ -30,7 +30,3 @@ Distinguish validation,
 issue completion, intent satisfaction and total operating cost. Reconcile actionable
 remaining gaps through their existing owner; retain only knowledge that prevents
 rediscovery. Do not infer lane completion from a local check or self-review.
-
-The native owner and resource tests protect exact effects, currentness,
-strict closeout and confirmed-effect recovery. Changes to this procedure must
-cite behavior-impact evidence and update its canonical/payload surfaces together.

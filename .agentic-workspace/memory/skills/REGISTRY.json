@@ -177,7 +177,7 @@
       "path": "memory-upgrade/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "Refresh managed guidance while preserving custom Memory content."
+      "summary": "Memory host-discovery entry for shared Setup package refresh; preserve notes and knowledge."
     }
   ],
   "source_kind": "installed-core-skills"

@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:cfe89b79e416a03ae0d1177c00ec8dde216a2cd53901e0fc3826f355b7a7a78c`
+- Contract digest: `sha256:c61ab6326fa77f16817a79fbd32e3312415e9d14acae2c0f34d20042fd188f90`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -23,6 +23,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-startup/references/ordinary.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/evidence.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/owners.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-startup/references/transport.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/reconcile.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/unavailable.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -34,6 +35,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/package.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Selectively loaded repository working-rule authoring procedure |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -53,6 +55,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/claim.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/legacy.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/learning.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
@@ -76,6 +79,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/planning/skills/planning-work/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/references/continuity.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/references/intake.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
+| `.agentic-workspace/planning/skills/planning-work/references/legacy.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/references/structure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/planning-work/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/planning/skills/README.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
@@ -101,6 +105,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-startup/references/ordinary.md`
 - `.agentic-workspace/skills/workspace-startup/references/evidence.md`
 - `.agentic-workspace/skills/workspace-startup/references/owners.md`
+- `.agentic-workspace/skills/workspace-startup/references/transport.md`
 - `.agentic-workspace/skills/workspace-startup/references/reconcile.md`
 - `.agentic-workspace/skills/workspace-startup/references/unavailable.md`
 - `.agentic-workspace/skills/workspace-startup/procedure.md`
@@ -112,6 +117,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/package.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
+- `.agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md`
@@ -131,6 +137,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/legacy.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
 - `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
 - `.agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md`
@@ -154,6 +161,7 @@ Portable source promotions:
 - `.agentic-workspace/planning/skills/planning-work/procedure.md`
 - `.agentic-workspace/planning/skills/planning-work/references/continuity.md`
 - `.agentic-workspace/planning/skills/planning-work/references/intake.md`
+- `.agentic-workspace/planning/skills/planning-work/references/legacy.md`
 - `.agentic-workspace/planning/skills/planning-work/references/structure.md`
 - `.agentic-workspace/planning/skills/planning-work/SKILL.md`
 - `.agentic-workspace/planning/skills/README.md`
