@@ -48,7 +48,7 @@ pub(crate) fn declaration() -> Value {
         "$schema":canonical["$schema"],"$defs":canonical["$defs"],"type":"object","properties":{"material":{"type":"object","properties":properties,"required":required,"additionalProperties":false}},"required":["material"],"additionalProperties":false}})
 }
 pub(crate) fn operation() -> Value {
-    json!({"id":"planning.create","semantic_revision":"planning-create-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"document":{"type":"object"},"planning_request":{"type":["object","null"]},"provenance_format":{"const":"repo-relative-v2"}},"required":["target","request","owner_path","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/creation-result/v1","effects":["planning-state"],"reads":["planning"]})
+    json!({"id":"planning.create","semantic_revision":"planning-create-current-owner-v2","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"document":{"type":"object"},"planning_request":{"type":["object","null"]},"establish_current_owner":{"const":true},"provenance_format":{"const":"repo-relative-v2"}},"required":["target","request","owner_path","document","planning_request","establish_current_owner"],"additionalProperties":false},"result_kind":"agentic-planning/creation-result/v1","effects":["planning-state"],"reads":["planning"]})
 }
 fn path(work: &Value) -> Result<(String, String), CoreError> {
     let id = format!("work-{}", &digest(work)?[7..]);
@@ -292,7 +292,7 @@ pub(crate) fn view(
         }
         let body = document(&request["arguments"]["material"], work)?;
         result["contribution"]["settled"] = json!(false);
-        result["contribution"]["actions"] = json!([{"operation_id":"planning.create","dependency_revision":digest(&json!({"source":revision,"document":body}))?,"arguments":{"target":target,"request":request,"owner_path":relative,"document":body,"provenance_format":"repo-relative-v2"},"effects":["planning-state"]}]);
+        result["contribution"]["actions"] = json!([{"operation_id":"planning.create","dependency_revision":digest(&json!({"source":revision,"document":body}))?,"arguments":{"target":target,"request":request,"owner_path":relative,"document":body,"provenance_format":"repo-relative-v2","establish_current_owner":true},"effects":["planning-state"]}]);
     }
     Ok(result)
 }

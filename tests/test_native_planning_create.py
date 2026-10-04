@@ -396,6 +396,22 @@ def test_public_creation_continues_with_current_owner(tmp_path: Path, shared_cor
     ready = call({**context, "request": request})
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.create", ready
+    operation = next(
+        row
+        for owner in ready["capability_contract"]["owners"]
+        if owner["owner"] == "planning"
+        for row in owner["operations"]
+        if row["id"] == "planning.create"
+    )
+    assert operation["semantic_revision"] == "planning-create-current-owner-v2"
+    assert action["arguments"]["establish_current_owner"] is True
+    Draft202012Validator(operation["input_schema"]).validate(action["arguments"])
+    create_only = json.loads(json.dumps(action))
+    del create_only["arguments"]["establish_current_owner"]
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": create_only})
+    assert not (tmp_path / action["arguments"]["owner_path"]).exists()
+    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
     result = call({**context, "invocation": action})
     assert result["status"] == "applied", result
     path = tmp_path / result["value"]["owner_path"]

@@ -3126,6 +3126,11 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             )?
         };
         let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
+        // Current creation explicitly declares this separately admitted selector
+        // effect. Historical create-only semantics cannot acquire selection.
+        if invocation["arguments"]["establish_current_owner"] != true {
+            return Ok(result);
+        }
         // Creation is bound to the former work identity, so its deterministic
         // discovery path need not be rediscovered by the expanded work scope.
         // Ask Planning about the exact published owner using the fresh context.
