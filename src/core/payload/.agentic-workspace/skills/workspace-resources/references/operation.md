@@ -20,6 +20,11 @@ For isolation, supply the concrete `need`, `reason`, returned `policy_revision`
 and `policy_answer: permits-isolation` only when current instructions permit it.
 Missing judgment, stale policy or protection yields rather than executing.
 
+For `worktree-create`, `path` is the absolute external checkout path and `base`
+is its Git seed. Declare custom reproducible roots in `disposable_outputs`, for
+example `["generated/rendered-preview"]`, before building. Use the returned
+checkout path and build environment; cleanup cannot adopt undeclared output.
+
 Before creation, the owner checks the seed against current Planning continuity.
 If the task relation or posture is unresolved, answer the returned Planning
 request through ordinary startup carriage. The shared owner carries that answer

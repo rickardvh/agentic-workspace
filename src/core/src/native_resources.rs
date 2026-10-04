@@ -233,6 +233,25 @@ struct Request {
     #[serde(default)]
     disposable_outputs: Vec<String>,
 }
+
+/// Public proposal grammar; operation-specific admission stays in this owner.
+pub(crate) fn request_schema() -> Value {
+    json!({"type":"object","required":["operation"],"additionalProperties":false,
+    "properties":{
+        "operation":{"type":"string","description":"audit, scratch-create, scratch-remove, scratch-prune, scratch-retain, scratch-release, worktree-create or worktree-remove"},
+        "path":{"type":["string","null"],"description":"For worktrees, an absolute checkout path outside the repository and AW roots. For scratch, the exact returned repository-relative task container; creation may omit it."},
+        "base":{"type":["string","null"],"description":"Git ref to seed worktree-create; must carry the current Planning continuity or an explicitly independent task."},
+        "need":{"type":["string","null"],"description":"Isolation need: conflicting-checkout, transport-requires-isolation or destructive-validation."},
+        "reason":{"type":["string","null"],"description":"Concrete reason for isolation or scratch retention."},
+        "policy_revision":{"type":["string","null"],"description":"Exact policy_revision from the current resource observation."},
+        "policy_answer":{"type":["string","null"],"description":"permits-isolation only when the current instructions permit the stated isolation."},
+        "selection":{"type":["string","null"],"description":"Exact scratch member to prune, selected from the current owner observation."},
+        "route_request":{"description":"Exact answered route request(s) returned for unresolved protection."},
+        "planning_request":{"description":"Exact answered Planning request(s) returned for unresolved seed continuity."},
+        "disposable_outputs":{"type":"array","items":{"type":"string"},"description":"Repository-relative reproducible output roots reserved at worktree-create, such as generated/rendered-preview. Declare before building; cleanup cannot adopt new roots."},
+        "expected_revision":{"type":["string","null"],"description":"Effect-only revision in the returned action. Do not supply it in a public proposal; invoke the exact returned action."}
+    }})
+}
 fn linked(meta: &fs::Metadata) -> bool {
     if meta.file_type().is_symlink() {
         return true;

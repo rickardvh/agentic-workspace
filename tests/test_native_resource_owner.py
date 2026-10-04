@@ -61,8 +61,22 @@ def test_resource_reference_proposal_effect_and_stale_reentry(tmp_path, shared_c
     # Stable identity selects an exact current template; selecting executes nothing.
     reference = selected
     assert reference["status"] == "current"
-    request = reference["value"]
-    request["arguments"]["request"] = {"operation": "scratch-create"}
+    step = reference["next_step"]
+    schema = step["answer_schema"]["properties"]["request"]
+    assert schema["required"] == ["operation"]
+    assert schema["additionalProperties"] is False
+    assert schema["properties"]["path"]["type"] == ["string", "null"]
+    assert schema["properties"]["disposable_outputs"]["items"] == {"type": "string"}
+    carried = consume(
+        surface,
+        shared_core_binary,
+        native_cli,
+        reference["reentry"]
+        | {"reference": step["reference"], "answer": {"request": {"operation": "scratch-create"}}, "projection": "carried"},
+    )
+    request = carried["carriage"]["context"]["request"]
+    if isinstance(request, list):
+        request = next(r for r in request if r["owner"] == "workspace-resources")
     proposed = call(request=request)
     proposal = proposed["resources"]["proposal"]
     path = Path(proposal["path"])
