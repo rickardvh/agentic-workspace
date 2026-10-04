@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep Verification detail references current across repeated receipt admission when only validation timing changes."
