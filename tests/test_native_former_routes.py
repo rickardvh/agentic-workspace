@@ -103,7 +103,23 @@ def test_former_selection_requires_exact_current_agent_request(
     contract = first["capability_contract"]
     resource_owners = [owner for owner in contract["owners"] if owner["owner"] == "workspace-resources"]
     assert len(resource_owners) == 1
-    assert len(json.dumps(resource_owners[0])) < 4_500
+    # Explicit output leases publish the proposal grammar formerly represented
+    # by an opaque object. Bound that exact schema delta independently of the
+    # existing seven effects and the ordinary resource observation.
+    resource = resource_owners[0]
+    assert len(resource["requests"]) == 1
+    proposal = resource["requests"][0]
+    assert proposal["kind"] == "resources/propose/v1"
+    proposal_schema = proposal["input_schema"]["properties"]["request"]
+    assert proposal_schema["required"] == ["operation"]
+    assert proposal_schema["additionalProperties"] is False
+    assert proposal_schema["properties"]["disposable_outputs"]["type"] == "array"
+    assert proposal_schema["properties"]["disposable_outputs"]["items"] == {"type": "string"}
+    opaque_resource = copy.deepcopy(resource)
+    opaque_resource["requests"][0]["input_schema"]["properties"]["request"] = {"type": "object"}
+    resource_schema_bytes = len(json.dumps(resource)) - len(json.dumps(opaque_resource))
+    assert 0 < resource_schema_bytes < 2_100, resource_schema_bytes
+    assert len(json.dumps(opaque_resource)) < 4_500
     non_resource_contract = {
         **contract,
         "owners": [owner for owner in contract["owners"] if owner["owner"] != "workspace-resources"],
@@ -396,7 +412,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + candidate_continuation_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
-    assert len(json.dumps(contract)) - schema_extensions < 86_000
+    assert len(json.dumps(contract)) - schema_extensions - resource_schema_bytes < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
     terminal_retention = first["planning"]["terminal_retention"]
     offered_discovery = terminal_retention["discovery_request"]
