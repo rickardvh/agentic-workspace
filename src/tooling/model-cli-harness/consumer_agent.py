@@ -311,7 +311,9 @@ class SandboxConsumer(DockerConsumer):
     def restrict_actor(self):
         # Provider proxy auth is allowed; publishing, repository write and SSH
         # credentials must not be reachable by the tested actor.
-        run([self.sbx, "exec", "--user", "root", self.name, "sh", "-ec", "test ! -S /run/ssh-agent.sock || chmod 000 /run/ssh-agent.sock"])
+        # Installation blocks the SSH socket. Reobserve containment under the
+        # actual actor below; refuse an accessible replacement instead of
+        # repeatedly mutating a vendor-mounted socket before that check.
         run(
             [
                 self.sbx,

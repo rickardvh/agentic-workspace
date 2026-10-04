@@ -23,6 +23,8 @@ def test_fresh_machine_continuation_excludes_local_custody():
 
 
 def test_containment_challenges_actor_auth_file(monkeypatch):
+    import subprocess
+
     import consumer_agent
 
     commands = []
@@ -40,6 +42,14 @@ def test_containment_challenges_actor_auth_file(monkeypatch):
     consumer.restrict_actor()
     assert 'test ! -e "$CODEX_HOME/auth.json"' in commands[-1][-1]
     assert "OPENAI_API_KEY|CODEX_API_KEY" in commands[-1][-1]
+    assert "test ! -w /run/ssh-agent.sock" in commands[-1][-1]
+
+    def accessible_socket(argv):
+        raise subprocess.CalledProcessError(1, argv, stderr="ssh-socket-accessible\n")
+
+    monkeypatch.setattr(consumer, "exec", accessible_socket)
+    with pytest.raises(ValueError, match="Actor containment preflight failed: ssh-socket-accessible"):
+        consumer.restrict_actor()
 
 
 def test_subscription_records_unknown_cost_without_requiring_tokens():
