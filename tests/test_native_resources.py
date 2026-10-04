@@ -247,7 +247,9 @@ def test_legacy_migration_blocks_only_explicitly_resumed_resource_seed(tmp_path,
         policy_answer="permits-isolation",
     )
     blocked = resource("native", shared_core_binary, native_cli, {**context, "request": request})
-    assert blocked["continuity"]["status"] == "relation-required"
+    # Creation now retains its exact selection. Explicit canonical selection is
+    # resolved, while this older seed still cannot represent the selected owner.
+    assert blocked["continuity"]["status"] == "owner-missing-from-seed"
     assert "action" not in blocked and not path.exists()
     assert all(p.read_bytes() == held for p, held in before.items())
 
@@ -674,6 +676,136 @@ def test_malformed_scratch_custody_is_preserved(tmp_path, shared_core_binary, na
     with pytest.raises(AssertionError, match="custody differs"):
         resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-remove"}})
     assert json.loads(marker.read_text()) == body
+
+
+def test_custom_output_leases_preserve_unknown_siblings_and_changed_custody(tmp_path, shared_core_binary, native_cli):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    (repo / ".gitignore").write_text("/dist/\n/cache/\n")
+    git(repo, "add", ".")
+    git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "custom outputs")
+    path = tmp_path / "isolated"
+    context = {"target": str(repo), "task": "Validate custom reproducible outputs"}
+    roots = ["dist", "cache/generated"]
+
+    def call(op, **kw):
+        return resource("native", shared_core_binary, native_cli, {**context, "request": {"operation": op, "path": str(path), **kw}})
+
+    initial = call("worktree-create", disposable_outputs=roots)
+    proposal = call(
+        "worktree-create",
+        disposable_outputs=roots,
+        need="destructive-validation",
+        reason="Keep generated fixture outputs outside the current checkout",
+        policy_revision=initial["policy_revision"],
+        policy_answer="permits-isolation",
+    )
+    created = resource("native", shared_core_binary, native_cli, proposal["action"])
+    assert created["disposable_outputs"] == roots
+    assert "CARGO_TARGET_DIR" not in created["build_environment"]
+    for root in roots:
+        (path / root / "output.bin").write_bytes(b"Reproducible fixture")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "preserved.txt").write_text("A contained link grants no outside ownership")
+    if os.name == "nt":
+        import _winapi
+
+        _winapi.CreateJunction(str(outside), str(path / "dist/external"))
+    else:
+        (path / "dist/external").symlink_to(outside, target_is_directory=True)
+    unknown = path / "cache/valuable.txt"
+    unknown.write_text("Unowned ignored material")
+    assert "action" not in call("worktree-remove")
+    assert unknown.read_text() == "Unowned ignored material"
+    assert all((path / root / "output.bin").exists() for root in roots)
+    unknown.unlink()  # Dispose only the controlled negative fixture.
+    removal = call("worktree-remove")
+    admin = Path(git(path, "rev-parse", "--absolute-git-dir"))
+    marker = admin / "aw-resource.json"
+    original = marker.read_bytes()
+    changed = json.loads(original)
+    changed["disposable_outputs"].append("unowned")
+    marker.write_text(json.dumps(changed))
+    with pytest.raises(AssertionError, match="custody changed"):
+        call("worktree-remove")
+    assert path.exists()
+    marker.write_bytes(original)
+    # Interrupted unlock retains authenticated leases and exact fresh recovery.
+    git(repo, "worktree", "unlock", str(path))
+    removal = call("worktree-remove")
+    resource("native", shared_core_binary, native_cli, removal["action"])
+    assert not path.exists()
+    assert (outside / "preserved.txt").read_text() == "A contained link grants no outside ownership"
+
+
+@pytest.mark.parametrize("boundary", ["link", "protected"])
+def test_custom_output_links_and_policy_are_preserved(tmp_path, shared_core_binary, native_cli, boundary):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "valuable.txt").write_text("Outside lease authority")
+    if boundary == "link":
+        if os.name == "nt":
+            import _winapi
+
+            _winapi.CreateJunction(str(outside), str(repo / "dist"))
+        else:
+            (repo / "dist").symlink_to(outside, target_is_directory=True)
+    else:
+        instructions = repo / ".agentic-workspace/instructions"
+        instructions.mkdir(parents=True, exist_ok=True)
+        (instructions / "protect.md").write_text("---\nprotect: [dist/**]\n---\nPreserve the protected output destination.\n")
+    context = {
+        "target": str(repo),
+        "task": "Respect output boundaries",
+        "request": {"operation": "worktree-create", "path": str(tmp_path / "isolated"), "disposable_outputs": ["dist"]},
+    }
+    if boundary == "link":
+        with pytest.raises(AssertionError, match="link"):
+            resource("native", shared_core_binary, native_cli, context)
+    else:
+        result = resource("native", shared_core_binary, native_cli, context)
+        assert any("protects" in b for b in result["blockers"])
+        assert "action" not in result
+    assert (outside / "valuable.txt").read_text() == "Outside lease authority"
+    assert not (tmp_path / "isolated").exists()
+
+
+def test_custom_output_source_and_tracked_material_are_preserved(tmp_path, shared_core_binary, native_cli):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    path = tmp_path / "isolated"
+    context = {"target": str(repo), "task": "Preserve source and user output"}
+
+    def call(op, **kw):
+        return resource("native", shared_core_binary, native_cli, {**context, "request": {"operation": op, "path": str(path), **kw}})
+
+    (repo / "dist").mkdir()
+    (repo / "dist/valuable.txt").write_text("Pre-existing source output")
+    initial = call("worktree-create", disposable_outputs=["dist"])
+    assert any("pre-existing" in b for b in initial["blockers"])
+    assert (repo / "dist/valuable.txt").exists() and not path.exists()
+    # A different absent root can be leased, but cannot become deletable source.
+    initial = call("worktree-create", disposable_outputs=["build"])
+    proposal = call(
+        "worktree-create",
+        disposable_outputs=["build"],
+        need="destructive-validation",
+        reason="Separate mutable validation subject",
+        policy_revision=initial["policy_revision"],
+        policy_answer="permits-isolation",
+    )
+    resource("native", shared_core_binary, native_cli, proposal["action"])
+    (path / "build/source.txt").write_text("Tracked source must survive")
+    git(path, "add", "build/source.txt")
+    with pytest.raises(AssertionError, match="tracked material"):
+        call("worktree-remove")
+    assert (path / "build/source.txt").read_text() == "Tracked source must survive"
 
 
 def test_owned_build_outputs_are_removed_but_unknown_ignored_material_is_preserved(tmp_path, shared_core_binary, native_cli):

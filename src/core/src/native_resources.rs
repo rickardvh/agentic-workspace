@@ -539,6 +539,31 @@ fn worktrees(target: &Path, selected: &Path) -> Result<Vec<Value>, CoreError> {
                         "worktree recovery custody differs; preserve exact registration",
                     ));
                 }
+                let roots = output_roots(&receipt["disposable_outputs"])?;
+                if let Some(accepted) = receipt["lease_revision"].as_str() {
+                    let mut material = receipt.clone();
+                    material.as_object_mut().unwrap().remove("lease_revision");
+                    let expected = digest(&material)?;
+                    let lock = format!(
+                        "aw-resource:{}:{}:{expected}",
+                        digest(&json!(target))?,
+                        receipt["baseline"].as_str().unwrap_or("")
+                    );
+                    if accepted != expected
+                        || row["locked"].as_str().is_some_and(|held| held != lock)
+                    {
+                        return Err(err(
+                            "creation lease custody changed; preserve exact worktree",
+                        ));
+                    }
+                } else if roots
+                    .iter()
+                    .any(|r| !matches!(r.as_str(), "target" | ".pytest_cache" | ".venv"))
+                {
+                    return Err(err(
+                        "custom output roots have no authenticated creation lease; preserve worktree",
+                    ));
+                }
                 row["resource_custody"] = receipt;
             }
             break;
@@ -553,13 +578,46 @@ fn output_roots(value: &Value) -> Result<Vec<String>, CoreError> {
     } else {
         serde_json::from_value(value.clone()).map_err(err)?
     };
+    if roots.len() > 16 || roots.iter().map(String::len).sum::<usize>() > 4096 {
+        return Err(err(
+            "disposable output declarations exceed the bounded lease limit",
+        ));
+    }
     let mut seen = std::collections::BTreeSet::new();
     for root in &roots {
-        if !matches!(root.as_str(), "target" | ".pytest_cache" | ".venv") || !seen.insert(root) {
+        crate::decision_source::relative(root)?;
+        let folded = root.to_ascii_lowercase();
+        let protected = [".agentic-workspace", ".agents", ".codex", ".claude", ".git"];
+        if root.len() > 256
+            || root.split('/').any(|part| {
+                if protected.iter().any(|p| part.eq_ignore_ascii_case(p)) {
+                    return true;
+                }
+                let stem = part.split('.').next().unwrap_or("").to_ascii_lowercase();
+                part.len() > 64
+                    || part.ends_with('.')
+                    || !part
+                        .bytes()
+                        .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'_' | b'-'))
+                    || matches!(stem.as_str(), "con" | "prn" | "aux" | "nul")
+                    || (stem.len() == 4
+                        && (stem.starts_with("com") || stem.starts_with("lpt"))
+                        && matches!(stem.as_bytes()[3], b'1'..=b'9'))
+            })
+            || protected
+                .iter()
+                .any(|p| folded == *p || folded.starts_with(&format!("{p}/")))
+            || seen.iter().any(|prior: &String| {
+                folded == *prior
+                    || folded.starts_with(&format!("{prior}/"))
+                    || prior.starts_with(&format!("{folded}/"))
+            })
+        {
             return Err(err(
-                "disposable output must be a distinct supported tool root: target, .pytest_cache or .venv",
+                "disposable outputs require distinct nonoverlapping normalized relative roots outside protected paths",
             ));
         }
+        seen.insert(folded);
     }
     Ok(roots)
 }
@@ -569,7 +627,7 @@ fn worktree_status(path: &Path, outputs: &[String]) -> Result<String, CoreError>
         "--porcelain=v1",
         "-z",
         "--untracked-files=all",
-        "--ignored=matching",
+        "--ignored=traditional",
         "--",
         ".",
     ];
@@ -588,9 +646,9 @@ fn worktree_status(path: &Path, outputs: &[String]) -> Result<String, CoreError>
     }
     args.extend(exclusions.iter().map(String::as_str));
     let raw = git(path, &args)?;
-    // Git still reports explicitly ignored directories with --ignored=matching
-    // even when pathspecs exclude them. Filter only untracked/ignored entries
-    // inside the exact creation leases; NUL records avoid quoted-path ambiguity.
+    // --untracked-files=all with traditional ignored reporting lists files even
+    // beneath ignored parents, so a nested lease cannot hide its unowned siblings.
+    // Filter only exact lease contents; NUL records avoid quoted-path ambiguity.
     Ok(raw
         .split('\0')
         .filter(|record| !record.is_empty())
@@ -734,13 +792,18 @@ fn view_checked(
         targets.push(removal_path(relative)?);
         targets.push(".agentic-workspace/local/effects/*.attempt.json".into());
     }
-    let policy = policy(
+    if request.operation == "worktree-create" {
+        for output in &requested_outputs {
+            targets.extend([output.clone(), format!("{output}/**")]);
+        }
+    }
+    let mut policy = policy(
         &target,
         &changed,
         &targets,
         &routes["decision"]["semantic_task_routes"],
     )?;
-    let policy_revision = digest(&policy)?;
+    let mut policy_revision = digest(&policy)?;
     let mut snapshot;
     let mut blockers = vec![];
     let path: PathBuf;
@@ -877,6 +940,16 @@ fn view_checked(
                 }
                 outputs = requested_outputs;
                 for output in &outputs {
+                    let source = target.join(output);
+                    unlinked(&source)?;
+                    if source.exists()
+                        && (!source.is_dir()
+                            || fs::read_dir(&source).map_err(err)?.next().is_some())
+                    {
+                        blockers.push(
+                            "pre-existing output material is not a creation lease; preserve it",
+                        );
+                    }
                     if !git(&target, &["ls-tree", "--name-only", &seed, "--", output])?
                         .trim()
                         .is_empty()
@@ -964,6 +1037,21 @@ fn view_checked(
     } else {
         vec![".git/worktrees/**".to_owned()]
     };
+    if request.operation == "worktree-remove" && !outputs.is_empty() {
+        for output in &outputs {
+            targets.extend([output.clone(), format!("{output}/**")]);
+        }
+        policy = self::policy(
+            &target,
+            &changed,
+            &targets,
+            &routes["decision"]["semantic_task_routes"],
+        )?;
+        policy_revision = digest(&policy)?;
+    }
+    for output in &outputs {
+        writes.extend([output.clone(), format!("{output}/**")]);
+    }
     if request.operation == "scratch-remove" {
         writes.push(removal_path(relative)?);
         writes.push(".agentic-workspace/local/effects/*.attempt.json".into());
@@ -1171,7 +1259,16 @@ fn view_checked(
                 ));
             }
             fs::create_dir_all(path.parent().unwrap()).map_err(err)?;
-            let reason = format!("aw-resource:{}:{seed}", digest(&json!(target))?);
+            let mut custody = json!({
+                "kind":"agentic-workspace/worktree-resource/v1", "origin":normalized_path(&target),
+                "path":normalized_path(&path),"baseline":seed,"task":input.task,"need":request.need,"reason":request.reason,"disposable_outputs":outputs
+            });
+            let lease_revision = digest(&custody)?;
+            let reason = format!(
+                "aw-resource:{}:{seed}:{lease_revision}",
+                digest(&json!(target))?
+            );
+            custody["lease_revision"] = json!(lease_revision);
             git(
                 &target,
                 &[
@@ -1189,12 +1286,22 @@ fn view_checked(
             unlinked(&admin)?;
             let worktree = Dir::open_ambient_dir(&path, ambient_authority()).map_err(err)?;
             for output in &outputs {
-                worktree.create_dir(output).map_err(err)?;
+                unlinked(&path.join(output))?;
+                if worktree.exists(output)
+                    && (!worktree.is_dir(output)
+                        || worktree.read_dir(output).map_err(err)?.next().is_some())
+                {
+                    return Err(err(
+                        "output root is not empty at creation; preserve exact interrupted worktree",
+                    ));
+                }
+                worktree.create_dir_all(output).map_err(err)?;
             }
-            fs::write(admin.join("aw-resource.json"), serde_json::to_vec(&json!({
-                "kind":"agentic-workspace/worktree-resource/v1", "origin":normalized_path(&target),
-                "path":normalized_path(&path),"baseline":seed,"task":input.task,"need":request.need,"reason":request.reason,"disposable_outputs":outputs
-            })).map_err(err)?).map_err(err)?;
+            fs::write(
+                admin.join("aw-resource.json"),
+                serde_json::to_vec(&custody).map_err(err)?,
+            )
+            .map_err(err)?;
         }
         "worktree-remove" if !registration.is_null() => {
             let p = path.to_str().ok_or_else(|| err("non-UTF8 path"))?;
@@ -1258,6 +1365,46 @@ fn view_checked(
 mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn disposable_roots_are_bounded_portable_nonoverlapping_paths() {
+        assert!(
+            output_roots(&json!([
+                "target",
+                ".pytest_cache",
+                ".venv",
+                "dist",
+                "cache/generated"
+            ]))
+            .is_ok()
+        );
+        for roots in [
+            json!(["dist", "dist"]),
+            json!(["dist", "DIST"]),
+            json!(["cache", "cache/generated"]),
+            json!(["cache/generated", "cache"]),
+            json!(["/outside"]),
+            json!(["../outside"]),
+            json!(["a/../b"]),
+            json!([(["C:", "outside"].join("/"))]),
+            json!([".git/state"]),
+            json!([".agentic-workspace/local"]),
+            json!([".agents/skills"]),
+            json!(["cache/.GIT/state"]),
+            json!(["foo\\bar"]),
+            json!(["build/*"]),
+            json!(["build."]),
+            json!(["nul/cache"]),
+            json!(["cache//build"]),
+            json!(vec!["root"; 17]),
+            json!(["a".repeat(257)]),
+        ] {
+            assert!(
+                output_roots(&roots).is_err(),
+                "accepted unsafe roots: {roots}"
+            );
+        }
+    }
 
     struct Repo(PathBuf);
     impl Repo {
