@@ -657,7 +657,7 @@ pub(crate) fn view_selected(
         if job == "assess-setup" {
             selected["concern_assessment_request"] = template(
                 crate::native_configuration_procedure::ASSESS,
-                json!({"concern":concern,"scope":scope,"judgment":"pending","reason":"","resume":""}),
+                json!({"concern":concern,"scope":scope,"judgment":"pending","reason":""}),
             );
         }
         return Ok(selected);

@@ -69,9 +69,16 @@ def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_cor
 
     job = call()["configuration_write"]["setup_job_request"]
     job["arguments"] = {"job": "assess-setup", "concern": "instructions"}
-    question = call(request=job)["configuration_write"]["concern_assessment_request"]
-    question["arguments"] = {"concern": "instructions", "judgment": "working", "reason": "The selected GUIDE.md was delivered."}
-    prepared = call(request=question)
+    selected_assessment = call(request=job, projection="compact")
+    question = selected_assessment["setup_context"]["choices"][0]["request"]
+    prepared = call(
+        **{
+            **selected_assessment["reentry"],
+            "reference": question["reference"],
+            "answer": {"judgment": "working", "reason": "The selected GUIDE.md was delivered."},
+            "projection": "compact",
+        }
+    )
     action = prepared["decision_packet"]["primary_action"]
     assert action["operation_id"] == "configuration.write"
     result = call(invocation=action)
@@ -120,6 +127,9 @@ def test_setup_job_preserves_other_owner_gap_and_unfinished_resume(tmp_path, sha
         return selected["configuration_write"]["concern_assessment_request"]
 
     pending = question("modules")
+    pending["arguments"].update(judgment="pending", reason="Memory state is absent.")
+    with pytest.raises(AssertionError, match="Unfinished setup needs its exact owner and next action"):
+        call(request=pending)
     pending["arguments"].update(
         judgment="pending", reason="Memory state is absent.", resume="Memory owner: establish current state and admission."
     )
