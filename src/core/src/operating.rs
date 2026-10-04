@@ -448,12 +448,6 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             let question = packet
                 .pointer_mut(selector.strip_prefix("/decision_packet").unwrap())
                 .unwrap();
-            if !carried
-                && selector == "/decision_packet/decision_request"
-                && question["id"] != "verification-claim-review"
-            {
-                continue;
-            }
             question["reference"] = item["reference"].clone();
             if !carried {
                 continue;
@@ -1426,6 +1420,22 @@ fn operate_current(
         return Err(error("answer requires exact operating reference"));
     }
     if invoking {
+        // A returned reentry can carry the same answered requests already
+        // bound into its exact action. Subtract only that duplicate cache;
+        // contradictory requests remain invalid. Native effect admission still
+        // revalidates every action source request, dependency and restriction.
+        if value["invocation"]["kind"] == "agentic-workspace/operation-invocation/v1"
+            && let Some(request) = value.get("request").filter(|request| !request.is_null())
+        {
+            let requests = if request.is_array() {
+                request.clone()
+            } else {
+                json!([request])
+            };
+            if value["invocation"]["source_requests"] == requests {
+                value.as_object_mut().unwrap().remove("request");
+            }
+        }
         return Ok(project_invocation(
             native_public::invoke_selected(value, &resolution(&projection, detail)),
             &projection,

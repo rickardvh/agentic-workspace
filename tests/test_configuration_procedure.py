@@ -47,13 +47,22 @@ def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_cor
     compact = call(request=job, projection="compact")
     choice = compact["setup_context"]["choices"][0]["request"]
     assert "source_revision" not in json.dumps(compact["setup_context"])
-    read = call(**{**compact["reentry"], "reference": choice["reference"], "answer": choice["answer_shape"]})
-    edit = read["configuration_write"]["selected_choice"]["edit_request"]
-    edit["arguments"]["value"] = "GUIDE.md"
-    proposed = call(request=edit)
-    answer = proposed["decision_packet"]["decision_request"]["response_request"]
-    answer["arguments"]["answer"] = "authorize-write"
-    result = call(invocation=call(request=answer)["decision_packet"]["primary_action"])
+    read = call(**{**compact["reentry"], "reference": choice["reference"], "answer": choice["answer_shape"], "projection": "compact"})
+    assert read["setup_context"]["job"] == "configure-behavior"
+    setting = read["setup_context"]["choices"][0]
+    assert setting["setting"] == "workspace.agent_instructions_file"
+    assert setting["value_schema"]["type"] == "string"
+    edit = setting["request"]
+    proposed = call(**{**read["reentry"], "reference": edit["reference"], "answer": {"value": "GUIDE.md"}, "projection": "compact"})
+    answer = proposed["decision_packet"]["decision_request"]
+    ready = call(**{**proposed["reentry"], "reference": answer["reference"], "answer": "authorize-write", "projection": "compact"})
+    before = (workspace / "config.toml").read_bytes()
+    conflicting = copy.deepcopy(ready["reentry"])
+    conflicting["request"][0]["arguments"]["value"] = "OTHER.md"
+    with pytest.raises(AssertionError):
+        call(**{**conflicting, "invocation": ready["decision_packet"]["primary_action"]})
+    assert (workspace / "config.toml").read_bytes() == before
+    result = call(**{**ready["reentry"], "invocation": ready["decision_packet"]["primary_action"]})
     assert result["setup_result"]["effect"] == "committed"
     assert result["setup_result"]["consumer_verification"]["status"] == "verified"
     assert selected["configuration_behavior"]["observation"]["selected_source"] != "GUIDE.md"

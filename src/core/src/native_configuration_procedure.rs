@@ -170,13 +170,20 @@ pub(crate) fn setup_view(current: &Value) -> Value {
             );
         }
         "configure-behavior" => {
-            choices.extend(
-                configuration["choice_requests"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .map(|r| json!({"setting":r["arguments"]["key"],"request":r})),
-            );
+            let choice = &configuration["selected_choice"];
+            if choice["edit_request"].is_object() {
+                choices.push(json!({"setting":choice["key"],"value":choice["value"],
+                    "value_schema":choice["schema"],"request":choice["edit_request"],
+                    "question":"What value should this setting have? Answer only value; Configuration retains its exact source and key and asks for write authorization before effects."}));
+            } else {
+                choices.extend(
+                    configuration["choice_requests"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .map(|r| json!({"setting":r["arguments"]["key"],"request":r})),
+                );
+            }
         }
         "assess-setup" => {
             choices.push(json!({"request":configuration["concern_assessment_request"],"question":"What changed for this concern, what actually works, and what owner or action remains? Configuration supplies source bindings and consumer observations."}));

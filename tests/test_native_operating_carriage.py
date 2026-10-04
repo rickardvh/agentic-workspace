@@ -333,7 +333,9 @@ def test_exact_answer_and_action_carriage_preserve_full_effects(tmp_path, shared
     # Ordinary compact output without a host still includes the exact executable
     # request, rather than forcing a compensating detail call.
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
-    assert compact["decision_packet"]["decision_request"] == full["decision_packet"]["decision_request"]
+    compact_question = compact["decision_packet"]["decision_request"]
+    assert compact_question["reference"] == compact["detail_refs"]["/decision_packet/decision_request"]
+    assert {key: value for key, value in compact_question.items() if key != "reference"} == full["decision_packet"]["decision_request"]
     before = copy.deepcopy(carried)
     answered = consume(
         surface,

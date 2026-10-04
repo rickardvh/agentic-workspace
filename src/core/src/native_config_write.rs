@@ -809,6 +809,10 @@ pub(crate) fn view_selected(
         }
         result["status"] = json!("choice-delivered");
         result["selected_choice"] = json!({"source":source,"key":key,"value":value,"schema":schema,"edit_request":template(EDIT,json!({"source":source,"key":key,"value":value}))});
+        if let Some(concern) = crate::native_configuration_procedure::concern(key) {
+            result["selected_setup_job"] = json!({"job":"configure-behavior","concern":concern,
+                "scope":if source == LOCAL {"machine-local"} else {"repository"}});
+        }
         return Ok(result);
     }
     let source = args["source"]
