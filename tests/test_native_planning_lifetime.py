@@ -36,9 +36,7 @@ def test_classified_proof_observations_preserve_work_and_reusable_evidence(
     create["arguments"] = {"material": value}
     ready = call({**context, "request": create})
     created = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
-    context = created["value"]["selection_context"]
-    selected = call({**context, "request": created["value"]["selection_request"]})
-    call({**context, "invocation": selected["decision_packet"]["primary_action"]})
+    context = created["continuation"]["context"]
     plan = tmp_path / created["value"]["owner_path"]
     before = plan.read_bytes()
     assert "observed" not in json.loads(before)["proof"]
@@ -144,9 +142,7 @@ def test_observation_movement_has_no_postimage_but_semantic_change_does(
         call({**context, "request": unclassified})
     ready = call({**context, "request": create})
     created = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
-    context = created["value"]["selection_context"]
-    selection = call({**context, "request": created["value"]["selection_request"]})
-    call({**context, "invocation": selection["decision_packet"]["primary_action"]})
+    context = created["continuation"]["context"]
     path = tmp_path / created["value"]["owner_path"]
     before = path.read_bytes()
     git("add", "--", created["value"]["owner_path"])

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Lease exact custom reproducible output roots for disposable worktrees while preserving unleased, tracked and externally linked material."

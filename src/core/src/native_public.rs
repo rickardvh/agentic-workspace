@@ -56,13 +56,33 @@ pub fn start(value: Value) -> Result<Value, CoreError> {
 }
 
 pub(crate) fn start_selected(value: Value, resolution: &Resolution) -> Result<Value, CoreError> {
-    let (input, target) = input(value)?;
+    let (mut input, target) = input(value)?;
     if input.invocation.is_some() {
         return Err(CoreError::new(
             "start accepts a public request, not an invocation",
         ));
     }
-    resolve_selected(&input, &target, false, None, resolution)
+    let current = resolve_selected(&input, &target, false, None, resolution)?;
+    let mut requests = owner_requests(input.request.as_ref())?;
+    if let Some(index) = requests
+        .iter()
+        .position(|r| r["request_kind"] == crate::native_configuration_procedure::ASSESS)
+        && let Some(proposed) = crate::native_configuration_procedure::assessment_proposal(
+            &target,
+            &input.task,
+            &requests[index],
+            &current,
+        )?
+    {
+        requests[index] = proposed;
+        input.request = Some(json!(requests));
+        let mut prepared = resolve_selected(&input, &target, false, None, resolution)?;
+        prepared["configuration_write"]["selected_setup_job"] =
+            current["configuration_write"]["selected_setup_job"].clone();
+        prepared["setup_context"] = crate::native_configuration_procedure::setup_view(&current);
+        return Ok(prepared);
+    }
+    Ok(current)
 }
 
 fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<Value, CoreError> {
@@ -2049,6 +2069,10 @@ fn resolve_selected(
             public["configuration_write"]["requested_behavior_scope"].clone();
     }
     crate::native_configuration_assessment::validate_consumers(target, &public)?;
+    let setup = crate::native_configuration_procedure::setup_view(&public);
+    if !setup.is_null() {
+        public["setup_context"] = setup;
+    }
     let activation = if input.maintenance.is_some() {
         json!({"status":"not-evaluated", "reason":"Explicit Configuration maintenance; re-enter ordinary start after repair."})
     } else {
@@ -2270,9 +2294,10 @@ mod fresh_action_tests {
             false
         );
 
-        let mut claim = fixture.start(Value::Null)["verification"]["requests"][0].clone();
-        claim["arguments"]["evidence_refs"] = json!([applied["value"]["publication"]["reference"]]);
-        let observed = fixture.start(claim.clone())["verification"].clone();
+        assert_eq!(applied["continuation_status"], "current");
+        let continuation = &applied["continuation"];
+        let claim = continuation["context"]["request"][0].clone();
+        let observed = continuation["result"]["verification"].clone();
         assert_eq!(observed["evidence"][0]["evidence_freshness"], "reusable");
         let mut measured = observed.clone();
         measured["evidence"][0]["runtime_admission"]["validation_duration_us"] = json!(0);
@@ -2437,7 +2462,22 @@ mod fresh_action_tests {
         assert_eq!(result["value"]["process"]["status"], "passed");
         assert_eq!(result["value"]["publication"]["status"], "local");
         assert!(result["value"]["publication"]["reference"].is_string());
-        assert_eq!(result["continuation_status"], "current");
+        assert_eq!(
+            result["continuation_status"], "current",
+            "{}",
+            result["continuation"]["diagnostic"]
+        );
+        let verified = &result["continuation"]["result"]["verification"];
+        assert_eq!(verified["strategy_control"]["effective_level"], "high");
+        assert_eq!(
+            verified["strategy_control"]["selected_profiles"][0]["id"],
+            "selected"
+        );
+        assert_eq!(verified["evidence"][0]["evidence_freshness"], "reusable");
+        assert_eq!(
+            verified["strategy_control"]["obligations"][0]["missing_commands"],
+            json!([])
+        );
         assert_eq!(
             result["value"]["claim_boundary"]["completion_claim_allowed"],
             false
@@ -2617,13 +2657,19 @@ fn finish_invocation(
     if !input.material.is_empty() {
         context["material"] = json!(input.material);
     }
-    match post_effect_changed_paths(&input.changed, executed, &outcome) {
+    let mut result = match post_effect_changed_paths(&input.changed, executed, &outcome) {
         Ok(changed) => {
             context["changed"] = json!(changed);
             #[cfg(test)]
             crate::native_frontier::built("post-effect-continuation");
             let current =
                 start_selected(context.clone(), &progress.resolution).and_then(|current| {
+                    if let Some(request) = crate::native_verification::proof_continuation(
+                        invocation, &outcome, &current,
+                    ) {
+                        context["request"] = request;
+                        return start_selected(context.clone(), &progress.resolution);
+                    }
                     if let Some(request) = crate::native_memory_candidates::publication_completion(
                         &current["memory"]["candidates"],
                         invocation,
@@ -2650,7 +2696,9 @@ fn finish_invocation(
                 "changed":"Establish the complete post-effect changed-path set through the effect owner before continuing affected work."});
             Ok(result)
         }
-    }
+    }?;
+    crate::native_configuration_procedure::attach_setup(target, invocation, &mut result);
+    Ok(result)
 }
 
 fn post_effect_changed_paths(
@@ -3126,6 +3174,11 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             )?
         };
         let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
+        // Current creation explicitly declares this separately admitted selector
+        // effect. Historical create-only semantics cannot acquire selection.
+        if invocation["arguments"]["establish_current_owner"] != true {
+            return Ok(result);
+        }
         // Creation is bound to the former work identity, so its deterministic
         // discovery path need not be rediscovered by the expanded work scope.
         // Ask Planning about the exact published owner using the fresh context.
@@ -3137,10 +3190,74 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                     reference,
                     &next["capability_contract"],
                 ) {
-                    Ok(candidate) => {
-                        result["value"]["selection_request"] = candidate["requests"][0].clone();
-                        result["value"]["selection_context"] =
-                            result["continuation"]["context"].clone();
+                    Ok(candidate)
+                        if committed.is_object()
+                            && candidate["selection_transition"].is_object() =>
+                    {
+                        result["value"]["selection_gap"] = json!(
+                            "Creation already committed; a different owner is now selected. Explicit resume is required; do not replay creation or undo the current selection"
+                        );
+                    }
+                    Ok(_) => {
+                        let mut context = result["continuation"]["context"].clone();
+                        // Selection writes its own local carrier. Establish that
+                        // exact effect scope before binding the continuation so
+                        // post-effect entry keeps the same work identity.
+                        let mut changed: Vec<String> =
+                            serde_json::from_value(context["changed"].clone())
+                                .map_err(|e| CoreError::new(e.to_string()))?;
+                        changed.extend(
+                            serde_json::from_value::<Vec<String>>(
+                                native_planning::post_effect_paths(),
+                            )
+                            .map_err(|e| CoreError::new(e.to_string()))?,
+                        );
+                        changed.sort();
+                        changed.dedup();
+                        context["changed"] = json!(changed);
+                        let scoped = start_selected(context.clone(), &progress.resolution)?;
+                        let candidate = native_planning::candidate(
+                            &target,
+                            &scoped["current_work"],
+                            reference,
+                            &scoped["capability_contract"],
+                        )?;
+                        let selection = candidate["requests"][0].clone();
+                        let recovery_context = context.clone();
+                        context["request"] = selection.clone();
+                        let followthrough = start_selected(context.clone(), &progress.resolution)
+                            .map(|ready| {
+                                let action = &ready["decision_packet"]["primary_action"];
+                                if action["operation_id"] == "planning.reconcile" {
+                                    context.as_object_mut().unwrap().remove("request");
+                                    context["invocation"] = action.clone();
+                                    let selected = invoke_selected(context.clone(), &progress.resolution);
+                                    result["value"]["selection"] = json!({
+                                        "effect_outcome":selected["effect_outcome"],
+                                        "custody":selected["custody"]});
+                                    if selected["effect_outcome"]["status"] == "committed" {
+                                        result["continuation"] = selected["continuation"].clone();
+                                        result["continuation_status"] = selected["continuation_status"].clone();
+                                        result["next_decision"] = selected["next_decision"].clone();
+                                        return Ok(());
+                                    }
+                                    result["value"]["selection"]["error"] = selected["error"].clone();
+                                    result["value"]["selection"]["recovery"] = selected["recovery"].clone();
+                                    return Err(CoreError::new(
+                                        "Creation committed; current selection effect is not established. Use exact selection recovery; do not recreate the plan"));
+                                }
+                                if ready["planning"]["status"] == "current" {
+                                    result = attach_continuation(result.clone(), Ok(ready), &context);
+                                    Ok(())
+                                } else {
+                                    Err(CoreError::new("Creation committed; current selection admission remains unresolved"))
+                                }
+                            }).and_then(|r| r);
+                        if let Err(error) = followthrough {
+                            result["value"]["selection_gap"] = json!(error.to_string());
+                            result["value"]["selection_request"] = selection;
+                            result["value"]["selection_context"] = recovery_context;
+                        }
                     }
                     Err(error) => result["value"]["selection_gap"] = json!(error.to_string()),
                 }
@@ -3380,6 +3497,20 @@ mod continuation_tests {
             );
             assert_eq!(result["configuration_behavior"]["status"], "unavailable");
             assert_eq!(result["configuration_behavior"]["retry_effect"], false);
+            crate::native_configuration_procedure::attach_setup(
+                &root,
+                &selected["decision_packet"]["primary_action"],
+                &mut result,
+            );
+            assert_eq!(result["setup_result"]["effect"], "committed");
+            assert_eq!(
+                result["setup_result"]["consumer_verification"]["status"],
+                "unknown"
+            );
+            assert_eq!(
+                result["setup_result"]["consumer_verification"]["retry_effect"],
+                false
+            );
             for field in ["status", "effects", "value", "custody", "effect_outcome"] {
                 assert_eq!(result[field], committed[field]);
             }

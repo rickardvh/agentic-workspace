@@ -1,4 +1,4 @@
-//! Exact material replacement under acquired Planning creation or reconciliation custody.
+//! Semantic material updates under acquired Planning creation or reconciliation custody.
 use crate::{CoreError, attempt_store, digest, prepare_request_value};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -50,7 +50,55 @@ pub(crate) fn declaration() -> Value {
         .chain(OPTIONAL_MATERIAL)
         .map(|k| (k.to_string(), schema["properties"][k].clone()))
         .collect();
-    json!({"kind":KIND,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":schema["$schema"],"$defs":schema["$defs"],"type":"object","properties":{"owner_ref":{"type":"string"},"material":{"type":"object","properties":properties,"required":fields,"additionalProperties":false}},"required":["owner_ref","material"],"additionalProperties":false}})
+    let mut input = json!({"kind":KIND,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":schema["$schema"],"$defs":schema["$defs"],"type":"object","properties":{"owner_ref":{"type":"string"},"material":{"type":"object","properties":properties,"minProperties":1,"additionalProperties":false}},"required":["owner_ref","material"],"additionalProperties":false}});
+    // A delta can omit members of a supported object. Validate the complete
+    // owner-constructed postimage below, including all original requirements.
+    fn partial(value: &mut Value) {
+        if let Some(map) = value.as_object_mut() {
+            map.remove("required");
+            for (key, child) in map {
+                if key != "items" {
+                    partial(child);
+                }
+                if key == "properties" {
+                    for schema in child
+                        .as_object_mut()
+                        .into_iter()
+                        .flat_map(|m| m.values_mut())
+                    {
+                        let original = std::mem::take(schema);
+                        *schema = json!({"anyOf":[original,{"type":"null"}]});
+                    }
+                } else if key == "additionalProperties" && child.is_object() {
+                    let original = std::mem::take(child);
+                    *child = json!({"anyOf":[original,{"type":"null"}]});
+                }
+            }
+        } else if let Some(rows) = value.as_array_mut() {
+            for row in rows {
+                partial(row);
+            }
+        }
+    }
+    partial(&mut input["input_schema"]["properties"]["material"]);
+    partial(&mut input["input_schema"]["$defs"]);
+    input
+}
+
+fn merge_material(document: &mut Value, delta: &Value) {
+    if let (Some(current), Some(changes)) = (document.as_object_mut(), delta.as_object()) {
+        for (key, value) in changes {
+            if value.is_null() {
+                current.remove(key);
+            } else if let Some(prior) = current.get_mut(key) {
+                merge_material(prior, value);
+            } else {
+                current.insert(key.clone(), value.clone());
+            }
+        }
+    } else {
+        *document = delta.clone();
+    }
 }
 pub(crate) fn operation() -> Value {
     let mut operation = json!({"id":"planning.update","semantic_revision":"planning-update-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"prior_revision":{"type":"string"},"document":{"type":"object"},"provenance_format":{"const":"repo-relative-v2"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","prior_revision","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/update-result/v1","effects":["planning-state"],"reads":["planning"]});
@@ -119,6 +167,15 @@ pub(crate) fn retained_continuation_current(
         return Ok(false);
     }
     let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
+    if let Some(retained) = inspect(target, reference, &body)?
+        && retained["committed"] == true
+        && retained["invocation"]["arguments"]["planning_request"] == *request
+        && retained["invocation"]["arguments"]["request"]["task_identity"]
+            == request["task_identity"]
+        && payload(&retained["invocation"], &retained["custody"])? == body
+    {
+        return Ok(true);
+    }
     let Some(held) = held_handoff(&body) else {
         return Ok(false);
     };
@@ -749,7 +806,10 @@ pub(crate) fn view(
         request,
         invocation,
         continuation,
-        false,
+        invocation.is_some_and(|i| {
+            i["arguments"]["retained_handoff"].is_object()
+                || i["arguments"]["consumed_return"].is_object()
+        }),
     )
 }
 
@@ -984,16 +1044,23 @@ fn view_material(
             .as_object_mut()
             .ok_or_else(|| error("Planning owner must be an object"))?
             .remove(PROVENANCE);
-        for key in fields() {
-            document[key] = request["arguments"]["material"][key].clone();
-        }
-        for key in crate::native_planning_create::ASSURANCE
-            .iter()
-            .chain(OPTIONAL_MATERIAL)
-        {
-            if let Some(value) = request["arguments"]["material"].get(*key) {
-                document[*key] = value.clone();
+        if custody_update {
+            // These private callers supply a complete current postimage. In
+            // particular, null relationship slots are retained source values,
+            // not the ordinary caller's instruction to remove a member.
+            for key in fields() {
+                document[key] = request["arguments"]["material"][key].clone();
             }
+            for key in crate::native_planning_create::ASSURANCE
+                .iter()
+                .chain(OPTIONAL_MATERIAL)
+            {
+                if let Some(value) = request["arguments"]["material"].get(*key) {
+                    document[*key] = value.clone();
+                }
+            }
+        } else {
+            merge_material(&mut document, &request["arguments"]["material"]);
         }
         // Current execution and returned authority may only be changed by those
         // owners. Material updates preserve their existing relationship records.
@@ -1274,12 +1341,10 @@ mod tests {
             request(target, create)["decision_packet"]["primary_action"].clone(),
         )
         .unwrap();
-        let mut selection_context = created["value"]["selection_context"].clone();
-        selection_context["request"] = created["value"]["selection_request"].clone();
-        let select = crate::native_public::start(selection_context.clone()).unwrap();
-        selection_context.as_object_mut().unwrap().remove("request");
-        selection_context["invocation"] = select["decision_packet"]["primary_action"].clone();
-        crate::native_public::invoke_checked(selection_context).unwrap();
+        assert_eq!(
+            created["value"]["selection"]["effect_outcome"]["status"],
+            "committed"
+        );
         created["value"]["owner_path"].as_str().unwrap().to_owned()
     }
     fn ready(target: &Path) -> Value {
@@ -1479,11 +1544,10 @@ mod tests {
                 .unwrap()
                 .is_empty()
         );
-        assert!(
-            invoke(&target, action)
-                .unwrap_err()
-                .to_string()
-                .contains("acquired creation or reconciliation custody")
+        assert!(invoke(&target, action).is_err());
+        assert_eq!(
+            read(&target, &relative).unwrap(),
+            serde_json::to_vec(&historical).unwrap()
         );
         assert_eq!(
             serde_json::from_slice::<Value>(&read(&target, &relative).unwrap()).unwrap(),

@@ -72,12 +72,7 @@
     }
   ],
   "owner": "agentic-planning",
-  "resources": {
-    "planning-review-template": {
-      "package_path": "../bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
-      "path": ".agentic-workspace/planning/reviews/TEMPLATE.review.json"
-    }
-  },
+  "resources": {},
   "schema_version": "skill-registry.v1",
   "skills": [
     {
@@ -178,9 +173,6 @@
       "id": "planning-review-continuation",
       "path": "planning-review-continuation/SKILL.md",
       "procedure_resource": "procedure.md",
-      "required_resources": [
-        "planning-review-template"
-      ],
       "scope": "bundled",
       "semantic_routes": [
         "planning/review/continuation"

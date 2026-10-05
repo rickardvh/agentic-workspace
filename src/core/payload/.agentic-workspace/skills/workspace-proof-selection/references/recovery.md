@@ -8,11 +8,11 @@ A knowledgeable agent uses the same direct `start`/`invoke` and resource owner
 operations without activating a skill. Optional-skill absence or drift cannot
 drop native requirements, evidence obligations or pending learning candidates.
 
-Preserve confirmed effects and exact native custody when continuation is unavailable.
-Do not rerun a check to regain context. Reenter through its exact owner action or
-fresh current recovery, retaining current scope/strategy request carriage. Unknown
-effects remain unknown until the owner resolves them. Missing runtime permits
-source reads only: no fabricated receipts, waivers, trust pins or alternate writer.
+Preserve confirmed effects and exact native custody. Use the exact owner action
+or current recovery; native revalidation carries evidence and scope/strategy
+judgments. Never rerun a check to regain context. Unknown effects remain unknown
+until resolved by their owner. Without runtime, read sources while preserving
+the evidence gap; do not fabricate receipts, waivers or another writer.
 
 ## Resolve a legacy publication index before proof
 

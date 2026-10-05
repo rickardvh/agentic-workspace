@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import copy
 import json
+import os
+import subprocess
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -12,6 +14,149 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 TASK = "Configure the requested repository behavior"
+
+
+def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_core_binary, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text("[workspace]\nenabled=true\n")
+    (tmp_path / "GUIDE.md").write_text("Use the required review convention.\n")
+    context = {"target": str(tmp_path), "task": TASK}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    adoption = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    install = next(row for row in adoption["adoption_requests"] if row["arguments"]["mode"] == "adopt")
+    proposed = call(request=install)
+    authorization = next(
+        row["response_request"]
+        for row in proposed["decision_packet"]["pending_consequences"]["decisions"]
+        if row["owner"] == "configuration"
+    )
+    authorization["arguments"]["answer"] = "authorize-write"
+    installed = call(invocation=call(request=authorization)["decision_packet"]["primary_action"])
+    assert installed["effect_outcome"]["status"] == "committed"
+    adoption = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    assert adoption["repository_adoption"]["enclave"]["status"] == "current"
+
+    job = call()["configuration_write"]["setup_job_request"]
+    job["arguments"] = {"job": "configure-behavior", "concern": "instructions"}
+    selected = call(request=job)
+    compact = call(request=job, projection="compact")
+    choice = compact["setup_context"]["choices"][0]["request"]
+    assert "source_revision" not in json.dumps(compact["setup_context"])
+    read = call(**{**compact["reentry"], "reference": choice["reference"], "answer": choice["answer_shape"], "projection": "compact"})
+    assert read["setup_context"]["job"] == "configure-behavior"
+    setting = read["setup_context"]["choices"][0]
+    assert setting["setting"] == "workspace.agent_instructions_file"
+    assert setting["value_schema"]["type"] == "string"
+    edit = setting["request"]
+    proposed = call(**{**read["reentry"], "reference": edit["reference"], "answer": {"value": "GUIDE.md"}, "projection": "compact"})
+    answer = proposed["decision_packet"]["decision_request"]
+    ready = call(**{**proposed["reentry"], "reference": answer["reference"], "answer": "authorize-write", "projection": "compact"})
+    before = (workspace / "config.toml").read_bytes()
+    conflicting = copy.deepcopy(ready["reentry"])
+    conflicting["request"][0]["arguments"]["value"] = "OTHER.md"
+    with pytest.raises(AssertionError):
+        call(**{**conflicting, "invocation": ready["decision_packet"]["primary_action"]})
+    assert (workspace / "config.toml").read_bytes() == before
+    result = call(**{**ready["reentry"], "invocation": ready["decision_packet"]["primary_action"]})
+    assert result["setup_result"]["effect"] == "committed"
+    assert result["setup_result"]["consumer_verification"]["status"] == "verified"
+    assert selected["configuration_behavior"]["observation"]["selected_source"] != "GUIDE.md"
+
+    job = call()["configuration_write"]["setup_job_request"]
+    job["arguments"] = {"job": "assess-setup", "concern": "instructions"}
+    selected_assessment = call(request=job, projection="compact")
+    question = selected_assessment["setup_context"]["choices"][0]["request"]
+    prepared = call(
+        **{
+            **selected_assessment["reentry"],
+            "reference": question["reference"],
+            "answer": {"judgment": "working", "reason": "The selected GUIDE.md was delivered."},
+            "projection": "compact",
+        }
+    )
+    action = prepared["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "configuration.write"
+    result = call(invocation=action)
+    assert result["setup_result"]["effect"] == "committed"
+    assert result["setup_result"]["consumer_verification"]["consumers"][0]["status"] == "verified"
+    saved = json.loads((workspace / "configuration-assessment.json").read_text())
+    assert saved["dispositions"][0]["observation"]["owner"] == "startup-adapter"
+    quiet = call(projection="compact")
+    assert "setup_context" not in quiet
+    current = call()["configuration_write"]
+    assert current["setup_assessment"]["record"] == saved
+    assert current["setup_assessment"]["assessment_due"] is False
+    assert current["managed_refresh"]["required"] is False
+    # An explicit new setup request on current, settled state needs no full read.
+    before = {path: path.read_bytes() for path in workspace.rglob("*") if path.is_file()}
+    issued = call(**{**quiet["reentry"], "reference": "owner:request:configuration:configuration/setup-job/v1"})
+    assert issued["status"] == "current", issued
+    selected = call(
+        **{
+            **quiet["reentry"],
+            "reference": issued["reference"],
+            "answer": {"job": "configure-behavior", "concern": "preferences"},
+        }
+    )
+    assert selected["setup_context"]["job"] == "configure-behavior"
+    assert selected["setup_context"]["concern"] == "preferences"
+    assert selected["setup_context"]["choices"]
+    assert all(path.read_bytes() == value for path, value in before.items())
+    assert "setup_context" not in call(task="Fix the parser's empty-input handling", projection="compact")
+
+
+def test_setup_job_preserves_other_owner_gap_and_unfinished_resume(tmp_path, shared_core_binary, native_cli):
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text("[workspace]\nenabled=true\n")
+    context = {"target": str(tmp_path), "task": TASK}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+
+    def question(concern):
+        job = call()["configuration_write"]["setup_job_request"]
+        job["arguments"] = {"job": "assess-setup", "concern": concern}
+        selected = call(request=job)
+        assert selected["setup_context"]["consumer_verification"]["status"] == "owner-check-required"
+        return selected["configuration_write"]["concern_assessment_request"]
+
+    pending = question("modules")
+    pending["arguments"].update(judgment="pending", reason="Memory state is absent.")
+    with pytest.raises(AssertionError, match="Unfinished setup needs its exact owner and next action"):
+        call(request=pending)
+    pending["arguments"].update(
+        judgment="pending", reason="Memory state is absent.", resume="Memory owner: establish current state and admission."
+    )
+    call(invocation=call(request=pending)["decision_packet"]["primary_action"])
+    before = {path: path.read_bytes() for path in workspace.rglob("*") if path.is_file()}
+    for concern in ("diagnostics", "assignment", "modules", "invocation", "instructions"):
+        unproven = question(concern)
+        unproven["arguments"] = {
+            "concern": concern,
+            "judgment": "working",
+            "reason": "No consumer evidence was supplied.",
+        }
+        with pytest.raises(AssertionError, match="no current consumer observation"):
+            call(request=unproven)
+        assert {path: path.read_bytes() for path in workspace.rglob("*") if path.is_file()} == before
+    handled = question("diagnostics")
+    handled["arguments"] = {
+        "concern": "diagnostics",
+        "judgment": "handled-by-owner",
+        "reason": "Session logging owns actual capture evidence.",
+    }
+    call(invocation=call(request=handled)["decision_packet"]["primary_action"])
+    saved = json.loads((workspace / "configuration-assessment.json").read_text())
+    assert len(saved["dispositions"]) == 2
+    assert saved["continuation"] == {"task": TASK, "next_action": "Memory owner: establish current state and admission."}
+    assert all("observation" not in row for row in saved["dispositions"])
+    assert call()["configuration_write"]["setup_assessment"]["integration_complete"] is False
 
 
 def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path, shared_core_binary, native_cli):

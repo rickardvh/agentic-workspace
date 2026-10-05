@@ -150,7 +150,7 @@ def test_clean_context_preserves_selected_meaning_without_disposable_transport()
 def test_clean_context_keeps_native_selected_owner_resolvable(tmp_path, native_cli):
     from tests.test_native_planning_create import material
 
-    context = {"target": str(tmp_path), "task": "Prepare the gated rollout", "material": [], "projection": "full"}
+    context = {"target": str(tmp_path), "task": "Prepare the gated rollout", "changed": [], "material": [], "projection": "full"}
 
     def call(extra=None, command="start"):
         result = subprocess.run(
@@ -165,10 +165,9 @@ def test_clean_context_keeps_native_selected_owner_resolvable(tmp_path, native_c
     request = call()["planning"]["creation_requests"][0]
     request["arguments"]["material"] = material()
     action = call({"request": request})["decision_packet"]["primary_action"]
-    created = call({"invocation": action}, "invoke")["value"]
-    context.update(created["selection_context"])
-    selection = call({"request": created["selection_request"]})["decision_packet"]["primary_action"]
-    call({"invocation": selection}, "invoke")
+    result = call({"invocation": action}, "invoke")
+    created = result["value"]
+    context.update(result["continuation"]["context"])
     plan = created["owner_path"]
     intact = {p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     clean = clean_context_snapshot({}, intact, {plan: intact[plan]})

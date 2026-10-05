@@ -39,8 +39,9 @@ def proof_consumer(call, context, reference, task="Retain the selected proof for
     consumer_context = {**context, "task": task}
     request = call(consumer_context)["planning"]["creation_requests"][0]
     value = material()
-    value["references"] = [reference]
-    value["proof"] = {"observed": reference}
+    if reference is not None:
+        value["references"] = [reference]
+        value["proof"] = {"observed": reference}
     request["arguments"]["material"] = value
     action = call({**consumer_context, "request": request})["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.create"
@@ -315,6 +316,9 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
         if "local" not in path.relative_to(fresh).parts:
             assert not find_matches(path.read_text()), path
 
+    # Native creation selects its consumer. Move current selection through the
+    # owner before retiring that source, so no retained selection still uses it.
+    proof_consumer(call, context, None, task="Retain independent work without repository proof")
     consumer.unlink()
     unrelated = tmp_path / "user-edit.txt"
     unrelated.write_text("preserve user work")
@@ -408,10 +412,11 @@ def test_native_failed_or_timed_out_command_is_retained_without_retry(
     assert result["value"]["process"]["status"] == ("timeout" if failure == "timeout" else "failed")
     assert call({**context, "invocation": action})["value"] == result["value"]
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
-    request = call(context)["verification"]["requests"][0]
-    request["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
-    evidence = call({**context, "request": request})["verification"]["evidence"][0]
+    evidence = result["continuation"]["result"]["verification"]["evidence"][0]
     assert evidence["receipt_admission"]["proof_sufficient"] is False
+    claim = result["continuation"]["result"]["verification"]["claim_review"]["request"]
+    assert claim["arguments"]["evidence_refs"] == [evidence["reference"]]
+    assert claim["arguments"]["disposition"] == "insufficient"
 
 
 def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:

@@ -448,12 +448,6 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             let question = packet
                 .pointer_mut(selector.strip_prefix("/decision_packet").unwrap())
                 .unwrap();
-            if !carried
-                && selector == "/decision_packet/decision_request"
-                && question["id"] != "verification-claim-review"
-            {
-                continue;
-            }
             question["reference"] = item["reference"].clone();
             if !carried {
                 continue;
@@ -508,6 +502,73 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
     if let Some(assignment) = assignment_question(full, context)? {
         result["assignment_context"] = assignment;
+    }
+    if full["setup_context"].is_object() {
+        fn references(value: &mut Value, entries: &[Value]) {
+            if value["kind"] == "agentic-workspace/public-request/v1" {
+                if let Some(entry) = entries.iter().find(|e| e["envelope"] == *value) {
+                    *value = json!({"reference":entry["reference"],"answer_shape":value["arguments"],
+                        "use":"Send current reentry with this reference and only the bounded semantic answer. Selection grants no effect authority."});
+                }
+            } else if let Some(object) = value.as_object_mut() {
+                for child in object.values_mut() {
+                    references(child, entries);
+                }
+            } else if let Some(array) = value.as_array_mut() {
+                for child in array {
+                    references(child, entries);
+                }
+            }
+        }
+        let mut setup = full["setup_context"].clone();
+        references(&mut setup, &request_entries(full, context)?);
+        result["setup_context"] = setup;
+    }
+    if full["planning"]["selected_owner"].is_object() {
+        let mut planning = json!({"status":full["planning"]["status"],
+            "owner_ref":full["planning"]["selected_owner"]["ref"],
+            "authority":"Current Planning continuation only; assignment, evidence and completion remain separate."});
+        if let Some(request) = request_entries(full, context)?
+            .iter()
+            .find(|r| r["envelope"]["request_kind"] == crate::native_planning_update::KIND)
+        {
+            planning["next_step"] = json!({"reference":request["reference"],
+                "question":"What durable intent, scope, progress, remaining work or next action changed? Supply only those semantic fields; Planning preserves and validates the complete current record.",
+                "answer_shape":{"material":{"next_action":"<changed next action, or other changed material fields>"}},
+                "use":"Use current reentry with this reference and the semantic answer. Unchanged record fields and current owner identity are supplied by Planning."});
+        }
+        result["planning_context"] = planning;
+    }
+    let verification = &full["verification"];
+    let claim = &verification["claim_review"];
+    if claim["status"] == "not-requested"
+        && verification["evidence"]
+            .as_array()
+            .is_some_and(|evidence| !evidence.is_empty())
+    {
+        let request = &claim["request"];
+        let selector = format!("request:verification:{}", digest(request)?);
+        let evidence: Vec<_> = verification["evidence"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|entry| {
+                json!({"reference":entry["reference"],
+                    "status":entry["runtime_admission"]["status"],
+                    "gaps":entry["runtime_admission"]["gaps"],
+                    "freshness":entry["evidence_freshness"],
+                    "checked_scope":entry["checked_scope"],
+                    "proof_sufficient":entry["receipt_admission"]["proof_sufficient"]})
+            })
+            .collect();
+        result["verification_context"] = json!({
+            "evidence":evidence,
+            "authority":"Current evidence for semantic consideration only; source, required proof and independent review remain binding.",
+            "next_step":{
+                "reference":reference(context, &selector, request)?,
+                "question":"Does the current evidence support the requested result? Judge sufficiency and give the reason; Verification carries the selected evidence into the bounded claim proposal.",
+                "answer_shape":{"disposition":"<satisfied or insufficient>","reason":"<judgment against the requested result and current evidence>"},
+                "use":"Use current reentry with this exact reference and only the semantic answer. Inspect the resulting bounded claim question before confirming; evidence presence and a passed command alone do not grant completion."}});
     }
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
@@ -814,9 +875,10 @@ fn resolve_owner_reference(
         );
     }
     let selected = matches.remove(0);
-    let mut result = json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],
+    let mut result = json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],"reentry":context,
         "authority_effect":"none","continuation":"Use the exact reference through the existing owner answer/invoke path; a request template still requires its owner's requested input. Resolution never executes or retries."});
     if wanted.kind == "request" {
+        attach_request_answer(&mut result, full, context, &selected);
         result["procedure"] = json!({
             "reference":".agentic-workspace/skills/workspace-startup/references/owners.md",
             "use":"Answer a simple choice directly. For substantial structured material, read this procedure and write UTF-8 JSON as data; submit it through start --input while retaining prior work-bound answers."
@@ -826,6 +888,32 @@ fn resolve_owner_reference(
         );
     }
     Ok(result)
+}
+
+/// Discovery returns the same complete answer context as ordinary compact
+/// questions. The schema comes from this exact request's responsible owner;
+/// presentation neither fills a judgment nor alters request/source admission.
+fn attach_request_answer(result: &mut Value, full: &Value, context: &Value, selected: &Value) {
+    let request = &selected["envelope"];
+    result["reentry"] = context.clone();
+    let mut step = json!({"reference":selected["reference"],"answer_shape":request["arguments"],
+        "use":"Send the returned reentry unchanged, plus this exact reference and an answer containing the requested argument fields. The discovery identity is for lookup only; do not answer it or put this presentation in request. Owners revalidate the answer and current sources before offering any effect."});
+    if let Some(declaration) = std::iter::once(&full["capability_contract"])
+        .chain(
+            full.as_object()
+                .into_iter()
+                .flat_map(|object| object.values())
+                .filter_map(|value| value.get("capability_contract")),
+        )
+        .filter(|contract| contract["revision"] == request["capability_revision"])
+        .flat_map(|contract| contract["owners"].as_array().into_iter().flatten())
+        .filter(|owner| owner["owner"] == request["owner"])
+        .flat_map(|owner| owner["requests"].as_array().into_iter().flatten())
+        .find(|declaration| declaration["kind"] == request["request_kind"])
+    {
+        step["answer_schema"] = declaration["input_schema"].clone();
+    }
+    result["next_step"] = step;
 }
 
 fn use_selected(
@@ -948,9 +1036,11 @@ fn use_selected(
             "detail selection does not accept answers or invoke actions",
         ));
     }
-    Ok(
-        json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"}),
-    )
+    let mut result = json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"});
+    if selector.starts_with("request:") {
+        attach_request_answer(&mut result, &current, &context, &selected_entry);
+    }
+    Ok(result)
 }
 
 /// Shared by JSON and all thin consumers. References and the optional carrier
@@ -1330,6 +1420,22 @@ fn operate_current(
         return Err(error("answer requires exact operating reference"));
     }
     if invoking {
+        // A returned reentry can carry the same answered requests already
+        // bound into its exact action. Subtract only that duplicate cache;
+        // contradictory requests remain invalid. Native effect admission still
+        // revalidates every action source request, dependency and restriction.
+        if value["invocation"]["kind"] == "agentic-workspace/operation-invocation/v1"
+            && let Some(request) = value.get("request").filter(|request| !request.is_null())
+        {
+            let requests = if request.is_array() {
+                request.clone()
+            } else {
+                json!([request])
+            };
+            if value["invocation"]["source_requests"] == requests {
+                value.as_object_mut().unwrap().remove("request");
+            }
+        }
         return Ok(project_invocation(
             native_public::invoke_selected(value, &resolution(&projection, detail)),
             &projection,
@@ -1563,6 +1669,13 @@ mod tests {
         assert_eq!(resolved["status"], "current");
         assert_eq!(resolved["value"]["owner"], "semantic-routes");
         assert_eq!(resolved["authority_effect"], "none");
+        assert_eq!(resolved["reentry"]["task"], context["task"]);
+        assert_eq!(resolved["reentry"]["changed"], json!([]));
+        assert_eq!(resolved["next_step"]["reference"], resolved["reference"]);
+        assert_eq!(
+            resolved["next_step"]["answer_shape"],
+            resolved["value"]["arguments"]
+        );
         assert_eq!(
             resolved["procedure"]["reference"],
             ".agentic-workspace/skills/workspace-startup/references/owners.md"
@@ -1570,6 +1683,12 @@ mod tests {
         context["reference"] = resolved["reference"].clone();
         let exact = start(context.clone()).unwrap();
         assert_eq!(exact["value"], resolved["value"]);
+        assert_eq!(exact["reentry"], resolved["reentry"]);
+        let mut answered = resolved["reentry"].clone();
+        answered["reference"] = resolved["next_step"]["reference"].clone();
+        answered["answer"] = json!({"parent":""});
+        let next = start(answered).unwrap();
+        assert_eq!(next["reentry"]["request"][0]["arguments"]["parent"], "");
         std::fs::create_dir_all(root.join("tools/skills")).unwrap();
         std::fs::write(
             root.join("tools/skills/REGISTRY.json"),

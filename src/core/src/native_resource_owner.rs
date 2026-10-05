@@ -32,7 +32,7 @@ fn revision() -> Result<String, CoreError> {
 pub(crate) fn contract() -> Result<Value, CoreError> {
     let shape = json!({"$schema":"https://json-schema.org/draft/2020-12/schema",
         "type":"object","required":["request"],"additionalProperties":false,
-        "properties":{"request":{"type":"object"}}});
+        "properties":{"request":crate::native_resources::request_schema()}});
     let operations: Vec<_> = OPERATIONS.iter().map(|name| json!({
         "id":format!("workspace.resources.{name}"),"semantic_revision":"resource-owner-v1",
         "input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",

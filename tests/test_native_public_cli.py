@@ -1157,7 +1157,32 @@ def test_native_bare_action_requires_issuing_work_context(tmp_path, shared_core_
     proposed = call(context)
     question = proposed["decision_packet"]["decision_request"]["response_request"]
     selected = call({**context, "reference": f"owner:question:{question['owner']}:{question['id']}"})
-    answered = call({**context, "reference": selected["reference"], "answer": "authorize-write"})
+    # New semantic inputs can accompany unchanged returned reentry; bound
+    # fields and already supplied answers still cannot be overridden by argv.
+    semantic_args = ["--reference", selected["reference"], "--answer", json.dumps("authorize-write")]
+    answered_cli = subprocess.run(
+        [str(native_cli), "start", "--input", "-", *semantic_args],
+        input=json.dumps(selected["reentry"]),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    answered = json.loads(answered_cli.stdout)
+    for envelope, extra in (
+        (selected["reentry"], ["--task", "different"]),
+        ({**selected["reentry"], "answer": "defer"}, []),
+        ({**selected["reentry"], "reference": "different"}, []),
+    ):
+        rejected_answer = subprocess.run(
+            [str(native_cli), "start", "--input", "-", *semantic_args, *extra],
+            input=json.dumps(envelope),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert rejected_answer.returncode == 2
+        assert json.loads(rejected_answer.stderr)["error"]["code"] == "invalid-cli-input"
+    assert not (tmp_path / ".agentic-workspace/config.toml").exists()
     action = answered["decision_packet"]["primary_action"]
     assert action["operation_id"] == "configuration.write"
     encoded = json.dumps(action)

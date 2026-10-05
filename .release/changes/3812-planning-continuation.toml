@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Continue plan creation into its current task owner and accept semantic updates without reconstructing unchanged plan fields."

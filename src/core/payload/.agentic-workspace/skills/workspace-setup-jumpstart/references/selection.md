@@ -6,9 +6,10 @@ and its later consumer. Configuration assessments exclude launch/module readines
 they are not environment preparation records. Use the Configuration request below
 only for an actual supported setting or instruction concern.
 
-Select `configuration_write.behavior_request` from current native context and supply
+Select `configure-behavior` through the current setup job request and supply
 the relevant `concern`: `instructions`, `diagnostics`, `assignment`, `modules`,
 `invocation`, or `preferences`. Select by the human outcome, not task-word matching.
+The selected view gives the supported setting requests for that concern and scope.
 Carry affected-owner judgments as the exact current request set; never manufacture
 absent edit requests. Follow [shared owner carriage](../../workspace-startup/references/owners.md).
 

@@ -34,6 +34,34 @@ fn main() {
         surfaces.len(),
         value["payload_files"].as_array().unwrap().len()
     );
+    let distributed: BTreeSet<_> = value["payload_files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|path| path.as_str().unwrap())
+        .collect();
+    // Required dependencies belong to this exact advertised footprint. Their
+    // existence elsewhere in the producer checkout cannot close the bundle.
+    for reference in &distributed {
+        if !reference.ends_with("/skills/REGISTRY.json") {
+            continue;
+        }
+        let registry: serde_json::Value = serde_json::from_slice(
+            &fs::read(root.join("src/core/payload").join(reference)).unwrap(),
+        )
+        .unwrap();
+        for skill in registry["skills"].as_array().unwrap() {
+            for name in skill["required_resources"].as_array().into_iter().flatten() {
+                let path = registry["resources"][name.as_str().unwrap()]["path"]
+                    .as_str()
+                    .expect("required skill resource must be declared");
+                assert!(
+                    distributed.contains(path),
+                    "required skill resource absent from distribution: {reference}: {path}"
+                );
+            }
+        }
+    }
     let mut identity = Sha256::new();
     identity.update(serde_json::to_vec(&value).unwrap());
     let mut seen = BTreeSet::new();

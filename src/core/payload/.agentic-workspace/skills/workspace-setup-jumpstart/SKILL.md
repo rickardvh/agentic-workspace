@@ -6,9 +6,18 @@ description: Resolve setup or configuration, preserve evidenced repository worki
 # Resolve the setup concern
 
 Use this method when the user asks to configure AW or `start` reports setup or
-refresh needing attention. Inspect the current Configuration request and its
-installed guidance. Infer safe choices from repository policy; ask only for a
-decision the user still needs to make. Apply the exact supported change and check
+refresh needing attention. Select a due job through the request in current
+`setup_context`. For explicit setup when ordinary entry is quiet, resolve this
+request in the same work context:
+
+```agentic-owner-reference
+{"kind":"request","owner":"configuration","id":"configuration/setup-job/v1"}
+```
+
+Answer its returned exact reference with the requested `job` and, when required,
+`concern`. This reads the selected setup choices; it does not execute a change.
+Infer choices from repository policy; ask only for a decision the user still
+needs to make. Apply the exact supported change and check
 whether the intended consumer now works. Saved configuration bytes alone do not
 prove that result. Preserve explicit exclusions and unrelated settings, then
 return to the original task.

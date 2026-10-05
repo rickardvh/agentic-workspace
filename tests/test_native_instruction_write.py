@@ -194,8 +194,7 @@ def test_sequential_instruction_write_preserves_composed_dependencies(tmp_path, 
     creation = call()["planning"]["creation_requests"][0]
     creation["arguments"] = {"material": material()}
     created = call(invocation=call(request=creation)["decision_packet"]["primary_action"])
-    context = created["value"]["selection_context"]
-    call(invocation=call(request=created["value"]["selection_request"])["decision_packet"]["primary_action"])
+    context = created["continuation"]["context"]
     plan = tmp_path / created["value"]["owner_path"]
     before = plan.read_bytes()
     context["task"] = "Publish independent repository instructions"

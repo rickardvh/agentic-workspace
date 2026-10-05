@@ -287,9 +287,8 @@ def test_real_former_owner_can_evolve_after_native_custody(
         create["arguments"] = {"material": {**material(), "title": "Separate follow-through owner"}}
         ready = call({**next_context, "request": create})
         created = call({**next_context, "invocation": ready["decision_packet"]["primary_action"]})
-        next_context = created["value"]["selection_context"]
-        ready = call({**next_context, "request": created["value"]["selection_request"]})
-        transitioned = call({**next_context, "invocation": ready["decision_packet"]["primary_action"]})
+        next_context = created["continuation"]["context"]
+        transitioned = created
         assert transitioned["effect_outcome"]["status"] == "committed"
         successor = json.loads(selector.read_bytes())
         assert "reason" not in successor and "planning_revision" not in successor
@@ -307,15 +306,35 @@ def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared
     creation["arguments"] = {"material": material()}
     action = call({**context, "request": creation})["decision_packet"]["primary_action"]
     created = call({**context, "invocation": action})
-    context = created["value"]["selection_context"]
-    select = call({**context, "request": created["value"]["selection_request"]})["decision_packet"]["primary_action"]
-    call({**context, "invocation": select})
+    context = created["continuation"]["context"]
     update = call(context)["planning"]["update_requests"][0]
-    update["arguments"]["material"] = {**material(), "lifecycle": "live", "phase": "implementation"}
-    old = call({**context, "request": update})["decision_packet"]["primary_action"]
+    invalid = {**update, "arguments": {**update["arguments"], "material": {"title": None}}}
+    with pytest.raises(AssertionError):
+        call({**context, "request": invalid})
+    update["arguments"]["material"] = {
+        "next_action": "Resume the committed sparse update",
+        "continuation": {"owner": None, "accepted": "The bounded update was agreed"},
+    }
+    ordinary = call({**context, "projection": "compact"})
+    assert ordinary["planning_context"]["owner_ref"] == created["value"]["owner_path"]
+    old = call(
+        {
+            **ordinary["reentry"],
+            "reference": ordinary["planning_context"]["next_step"]["reference"],
+            "answer": {"material": update["arguments"]["material"]},
+        }
+    )["decision_packet"]["primary_action"]
     result = call({**context, "invocation": old})
     path = tmp_path / created["value"]["owner_path"]
     before = path.read_bytes()
+    updated = json.loads(before)
+    assert updated["lifecycle"] == "planned" and updated["phase"] == "shaping"
+    assert updated["intent"] == material()["intent"]
+    assert updated["relationships"] == material()["relationships"]
+    assert updated["continuation"] == {
+        **{k: v for k, v in material()["continuation"].items() if k != "owner"},
+        "accepted": "The bounded update was agreed",
+    }
     # Exact genuine producer postimage with its result withheld is a deterministic
     # interrupted-publication fixture; the Rust process test kills the real writer.
     (tmp_path / result["custody"]["committed"]["path"]).unlink()
@@ -358,7 +377,7 @@ def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_public_creation_then_separate_selection(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+def test_public_creation_continues_with_current_owner(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
     context = {"target": str(tmp_path), "task": "Create current bounded Planning custody"}
 
     def call(value: dict) -> dict:
@@ -377,6 +396,22 @@ def test_public_creation_then_separate_selection(tmp_path: Path, shared_core_bin
     ready = call({**context, "request": request})
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.create", ready
+    operation = next(
+        row
+        for owner in ready["capability_contract"]["owners"]
+        if owner["owner"] == "planning"
+        for row in owner["operations"]
+        if row["id"] == "planning.create"
+    )
+    assert operation["semantic_revision"] == "planning-create-current-owner-v2"
+    assert action["arguments"]["establish_current_owner"] is True
+    Draft202012Validator(operation["input_schema"]).validate(action["arguments"])
+    create_only = json.loads(json.dumps(action))
+    del create_only["arguments"]["establish_current_owner"]
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": create_only})
+    assert not (tmp_path / action["arguments"]["owner_path"]).exists()
+    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
     result = call({**context, "invocation": action})
     assert result["status"] == "applied", result
     path = tmp_path / result["value"]["owner_path"]
@@ -384,15 +419,17 @@ def test_public_creation_then_separate_selection(tmp_path: Path, shared_core_bin
     assert body["lifecycle"] == "planned" and body["phase"] == "shaping"
     assert body["canonical_core"] == material()["canonical_core"]
     selection = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
-    assert not selection.exists()
+    assert selection.exists()
+    assert result["value"]["selection"]["effect_outcome"]["status"] == "committed"
+    assert result["continuation"]["result"]["planning"]["current_owner"]["current"] is True
+    assert "selection_request" not in result["value"]
     replay = call({**context, "invocation": action})
-    assert replay["value"] == result["value"]
+    assert replay["value"]["owner_path"] == result["value"]["owner_path"]
+    assert path.read_bytes() == json.dumps(body, indent=2).encode()
     # Fresh process discovers exact producer-backed creation without the parent result.
     fresh_creation = call(context)["planning"]["created_owner"]
     assert fresh_creation["path"] == result["value"]["owner_path"]
-    select = call({**context, "request": fresh_creation["selection_request"]})
-    assert select["decision_packet"]["primary_action"]["operation_id"] == "planning.reconcile", select
-    call({**context, "invocation": select["decision_packet"]["primary_action"]})
+    assert call(context)["planning"]["current_owner"]["current"] is True
     fresh = call(context)
     assert fresh["planning"]["current_owner"]["current"] is True
     assert fresh["decision_packet"]["status"] != "terminal"
@@ -499,6 +536,8 @@ def test_creation_retention_never_adopts_changed_or_uncertain_source(
     result = consume("native", shared_core_binary, native_cli, {**context, "invocation": action})
     path = tmp_path / result["value"]["owner_path"]
     body = json.loads(path.read_bytes())
+    saved_context = result["continuation"]["context"]
+    saved_request = result["continuation"]["result"]["planning"]["requests"][0]
     if damage == "material":
         body["canonical_core"]["hard_constraints"] = "Materially revised scope"
         path.write_text(json.dumps(body))
@@ -515,7 +554,7 @@ def test_creation_retention_never_adopts_changed_or_uncertain_source(
             "native",
             shared_core_binary,
             native_cli,
-            {**result["value"]["selection_context"], "request": result["value"]["selection_request"]},
+            {**saved_context, "request": saved_request},
         )
         assert stale["planning"]["status"] == "stale"
     else:
@@ -524,7 +563,7 @@ def test_creation_retention_never_adopts_changed_or_uncertain_source(
                 "native",
                 shared_core_binary,
                 native_cli,
-                {**result["value"]["selection_context"], "request": result["value"]["selection_request"]},
+                {**saved_context, "request": saved_request},
             )
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
 
@@ -592,9 +631,7 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     request = call(context)["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
     first = call({**context, "invocation": call({**context, "request": request})["decision_packet"]["primary_action"]})
-    context = first["value"]["selection_context"]
-    choice = first["value"]["selection_request"]
-    call({**context, "invocation": call({**context, "request": choice})["decision_packet"]["primary_action"]})
+    context = first["continuation"]["context"]
     selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
     before = selector.read_bytes()
     first_path = tmp_path / first["value"]["owner_path"]
@@ -625,19 +662,17 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     assert planned["planning"]["selected_owner"] is None
     action = planned["decision_packet"]["primary_action"]
     second = call({**context, "invocation": action})
-    assert selector.read_bytes() == before
-    context = second["value"]["selection_context"]
-    choice = second["value"]["selection_request"]
-    selected = call({**context, "request": choice})
-    action = selected["decision_packet"]["primary_action"]
+    assert selector.read_bytes() != before
+    context = second["continuation"]["context"]
+    action = json.loads(selector.read_bytes())["reconciliation"]["invocation"]
     assert action["operation_id"] == "planning.reconcile"
     assert action["arguments"]["selection_transition"]["prior_custody"]["committed"]
-    assert selector.read_bytes() == before
+    selected_bytes = selector.read_bytes()
     forged = json.loads(json.dumps(action))
     forged["arguments"]["selection_transition"]["prior_sha256"] = "sha256:" + "0" * 64
     with pytest.raises(AssertionError):
         call({**context, "invocation": forged})
-    assert selector.read_bytes() == before
+    assert selector.read_bytes() == selected_bytes
     call({**context, "invocation": action})
     fresh = call(context)
     assert fresh["planning"]["current_owner"]["current"] is True
@@ -726,9 +761,7 @@ def test_created_owner_revision_outlives_creation_provenance(
     request["arguments"] = {"material": material()}
     creation = call({**context, "request": request})["decision_packet"]["primary_action"]
     created = call({**context, "invocation": creation})
-    choice = call(context)["planning"]["created_owner"]["selection_request"]
-    reconcile = call({**context, "request": choice})["decision_packet"]["primary_action"]
-    call({**context, "invocation": reconcile})
+    context = created["continuation"]["context"]
     first = call(context)["planning"]["current_owner"]["reconciliation"]["subject"]
     path = tmp_path / created["value"]["owner_path"]
     body = json.loads(path.read_bytes())
@@ -746,7 +779,7 @@ def test_created_owner_revision_outlives_creation_provenance(
     assert (subject["revision"] == first["revision"]) is (change == "attempt")
     call({**context, "invocation": current["decision_packet"]["primary_action"]})
     assert call(context)["planning"]["current_owner"]["current"] is True
-    with pytest.raises(AssertionError, match="snapshot is stale"):
+    with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": creation})
 
 
@@ -762,10 +795,7 @@ def test_quiescent_selected_owner_preserves_task_and_allows_unrelated_work(
     request["arguments"] = {"material": material()}
     action = call({**context, "request": request})["decision_packet"]["primary_action"]
     created = call({**context, "invocation": action})
-    context = created["value"]["selection_context"]
-    select = created["value"]["selection_request"]
-    action = call({**context, "request": select})["decision_packet"]["primary_action"]
-    call({**context, "invocation": action})
+    context = created["continuation"]["context"]
     live = call(context)
     old_subject = live["planning"]["current_owner"]["reconciliation"]["subject"]
     path = tmp_path / created["value"]["owner_path"]
@@ -796,9 +826,7 @@ def test_quiescent_selected_owner_preserves_task_and_allows_unrelated_work(
     request["arguments"] = {"material": material()}
     action = call({**other, "request": request})["decision_packet"]["primary_action"]
     created_other = call({**other, "invocation": action})
-    other = created_other["value"]["selection_context"]
-    action = call({**other, "request": created_other["value"]["selection_request"]})["decision_packet"]["primary_action"]
-    call({**other, "invocation": action})
+    other = created_other["continuation"]["context"]
     assert call(other)["planning"]["selected_owner"]["ref"] == created_other["value"]["owner_path"]
     assert path.read_bytes() == before[path]
 
@@ -859,9 +887,7 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
     authored = {**material(), "adaptive_assurance": {"proof_profiles": []}, "risk_registry_refs": ["risk:original"], "invariant_refs": []}
     request["arguments"] = {"material": authored}
     created = call({**context, "invocation": call({**context, "request": request})["decision_packet"]["primary_action"]})
-    context = created["value"]["selection_context"]
-    selected = call({**context, "request": created["value"]["selection_request"]})
-    call({**context, "invocation": selected["decision_packet"]["primary_action"]})
+    context = created["continuation"]["context"]
     old = call(context)
     proof_request = old["verification"]["execution_requests"][0]
     proof_action = call({**context, "request": proof_request})["decision_packet"]["primary_action"]
@@ -917,7 +943,7 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
     result = call({**context, "invocation": action})
     assert result["status"] == "applied", result
     updated = json.loads(path.read_bytes())
-    assert updated["scope"] == changed_material["scope"]
+    assert updated["scope"] == {**body["scope"], **changed_material["scope"]}
     assert updated["risk_registry_refs"] == ["risk:revised"], "omitted optional update fields retain their current owner value"
     assert updated["id"] == body["id"] and updated["creation_provenance"] == body["creation_provenance"]
     assert selector.read_bytes() == selector_bytes
@@ -982,6 +1008,8 @@ def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(
         ready = call({**context, "request": create})
         made = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
         owners.append(made["value"])
+    # Construct the former aggregate-only entry, without today's native cursor.
+    (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").unlink()
     state = tmp_path / ".agentic-workspace/planning/state.toml"
     state.write_text(
         "kind='planning-state/v1'\n"
@@ -1006,6 +1034,7 @@ def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(
     call({**context, "invocation": ready["decision_packet"]["primary_action"]})
     before = call(context)
     owner_body = (tmp_path / owners[0]["owner_path"]).read_bytes()
+    before = call({**context, "request": before["planning"]["terminal_retention"]["discovery_request"]})
     if unsupported:
         # Cold unknown material preserves safe discovery, but never authorizes
         # retiring unknown bytes after selecting the useful canonical owner.
@@ -1047,5 +1076,7 @@ def test_legacy_aggregate_migrates_to_owner_and_retires_exactly(
     assert (tmp_path / owners[0]["owner_path"]).read_bytes() == owner_body
     assert (tmp_path / owners[1]["owner_path"]).exists()
     state.write_text("[unfamiliar]\nintent='preserve'\n")
-    assert call(context)["planning"]["terminal_retention"]["status"] == "legacy-migration-required"
+    current = call(context)
+    observed = call({**context, "request": current["planning"]["terminal_retention"]["discovery_request"]})
+    assert observed["planning"]["terminal_retention"]["status"] == "legacy-migration-required"
     assert state.exists()

@@ -78,9 +78,8 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
         creation = call(task)["planning"]["creation_requests"][0]
         creation["arguments"]["material"] = source
         created = act(task, call(task, creation), "planning.create")
-        contexts[task] = created["value"]["selection_context"]
+        contexts[task] = created["continuation"]["context"]
         reference = created["value"]["owner_path"]
-        act(task, call(task, created["value"]["selection_request"]), "planning.reconcile")
         selection = call(task)["planning"]["selection_requests"][0]
         selection["arguments"]["owner_ref"] = reference
         ready = call(task, selection)

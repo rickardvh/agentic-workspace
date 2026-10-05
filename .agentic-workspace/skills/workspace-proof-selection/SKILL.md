@@ -17,7 +17,7 @@ Use [the question](procedure.md) or the same sources directly:
 
 - [Choose a check and establish its prerequisites](references/select.md).
 - [Run the check selected by Verification](references/execute.md).
-- [Submit the returned execution receipt](references/receipt.md).
+- [Use the current proof continuation](references/receipt.md).
 - [Decide what the results support](references/claim.md).
 - [Recover when execution happened but continuation failed](references/recovery.md).
 - [Handle a returned lesson worth retaining](references/learning.md).

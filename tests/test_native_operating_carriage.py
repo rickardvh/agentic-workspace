@@ -116,9 +116,6 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
     create["arguments"]["material"] = value
     ready = call({**context, "request": create})
     created = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
-    selected_context = created["value"]["selection_context"]
-    selection = call({**selected_context, "request": created["value"]["selection_request"]})
-    call({**selected_context, "invocation": selection["decision_packet"]["primary_action"]})
     path = tmp_path / created["value"]["owner_path"]
     before = path.read_bytes()
 
@@ -130,16 +127,19 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
             "projection": "carried",
         }
     )
+    # Fresh discovery supplies the full work context and the owner's semantic
+    # schema; the consumer need not reconstruct a task-bound request envelope.
+    assert fresh["next_step"]["answer_schema"]["properties"]["owner_ref"]["type"] == "string"
     related = call(
         {
-            **context,
-            "task": "Finish the approved rollout",
-            "reference": fresh["reference"],
-            "answer": {},
+            **fresh["reentry"],
+            "reference": fresh["next_step"]["reference"],
+            "answer": {"owner_ref": str(path.relative_to(tmp_path)).replace("\\", "/")},
             "projection": "carried",
         }
     )
     request = call({"request": related["carriage"], "reference": "owner:request:planning:planning/update/v1"})
+    prior_continuation = value["continuation"].copy()
     value["continuation"] = {"accepted_progress": "Approved rollout completed with the retained retry choice"}
     value["blockers"] = []
     value["next_action"] = "No remaining service work"
@@ -170,7 +170,7 @@ def test_owner_request_arguments_preserve_prior_relation(tmp_path, shared_core_b
     )
     assert result["effect_outcome"]["status"] == "committed"
     retained = json.loads(path.read_bytes())
-    assert retained["continuation"] == value["continuation"]
+    assert retained["continuation"] == {**prior_continuation, **value["continuation"]}
     assert retained["lifecycle"] == "closed"
 
 
@@ -333,7 +333,9 @@ def test_exact_answer_and_action_carriage_preserve_full_effects(tmp_path, shared
     # Ordinary compact output without a host still includes the exact executable
     # request, rather than forcing a compensating detail call.
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
-    assert compact["decision_packet"]["decision_request"] == full["decision_packet"]["decision_request"]
+    compact_question = compact["decision_packet"]["decision_request"]
+    assert compact_question["reference"] == compact["detail_refs"]["/decision_packet/decision_request"]
+    assert {key: value for key, value in compact_question.items() if key != "reference"} == full["decision_packet"]["decision_request"]
     before = copy.deepcopy(carried)
     answered = consume(
         surface,
@@ -529,6 +531,19 @@ def test_carried_diagnostics_follow_explicit_work_target(tmp_path, shared_core_b
     assert offered["view"]["session_capture"] == {"status": "capturing", "detail": "full", "authoritative": False}
     assert "session_capture" not in json.dumps(offered["carriage"])
     before = len(events(tmp_path))
+    explicit = consume(
+        "json",
+        shared_core_binary,
+        native_cli,
+        {
+            **offered["carriage"]["context"],
+            "reference": offered["view"]["decision_packet"]["decision_request"]["reference"],
+            "answer": "authorize-write",
+            "projection": "compact",
+        },
+    )
+    assert explicit["session_capture"] == {"status": "capturing", "detail": "full", "authoritative": False}
+    assert len(events(tmp_path)) == before + 1
     consume(
         "json",
         shared_core_binary,
@@ -540,9 +555,9 @@ def test_carried_diagnostics_follow_explicit_work_target(tmp_path, shared_core_b
         },
     )
     recorded = events(tmp_path)
-    assert len(recorded) == before + 1
-    assert recorded[-1]["payload"]["entry"]["target"] == "<target>"
-    assert recorded[-1]["authoritative"] is False
+    assert len(recorded) == before + 2
+    assert all(row["payload"]["entry"]["target"] == "<target>" for row in recorded[-2:])
+    assert all(row["authoritative"] is False for row in recorded[-2:])
 
 
 def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, shared_core_binary, native_cli):

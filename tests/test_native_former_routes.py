@@ -103,7 +103,23 @@ def test_former_selection_requires_exact_current_agent_request(
     contract = first["capability_contract"]
     resource_owners = [owner for owner in contract["owners"] if owner["owner"] == "workspace-resources"]
     assert len(resource_owners) == 1
-    assert len(json.dumps(resource_owners[0])) < 4_500
+    # Explicit output leases publish the proposal grammar formerly represented
+    # by an opaque object. Bound that exact schema delta independently of the
+    # existing seven effects and the ordinary resource observation.
+    resource = resource_owners[0]
+    assert len(resource["requests"]) == 1
+    proposal = resource["requests"][0]
+    assert proposal["kind"] == "resources/propose/v1"
+    proposal_schema = proposal["input_schema"]["properties"]["request"]
+    assert proposal_schema["required"] == ["operation"]
+    assert proposal_schema["additionalProperties"] is False
+    assert proposal_schema["properties"]["disposable_outputs"]["type"] == "array"
+    assert proposal_schema["properties"]["disposable_outputs"]["items"] == {"type": "string"}
+    opaque_resource = copy.deepcopy(resource)
+    opaque_resource["requests"][0]["input_schema"]["properties"]["request"] = {"type": "object"}
+    resource_schema_bytes = len(json.dumps(resource)) - len(json.dumps(opaque_resource))
+    assert 0 < resource_schema_bytes < 2_100, resource_schema_bytes
+    assert len(json.dumps(opaque_resource)) < 4_500
     non_resource_contract = {
         **contract,
         "owners": [owner for owner in contract["owners"] if owner["owner"] != "workspace-resources"],
@@ -269,28 +285,70 @@ def test_former_selection_requires_exact_current_agent_request(
     assert len(plugin_requests) == 2 and len(plugin_operations) == 1
     plugin_bytes = sum(len(json.dumps(row)) for row in [*plugin_requests, *plugin_operations])
     assert 0 < plugin_bytes < 1_600, plugin_bytes
+    # Task-shaped setup adds two passive request schemas. Their selected jobs
+    # compose existing effects; they must not enlarge ordinary state or output.
+    setup_requests = [
+        row for row in configuration["requests"] if row["kind"] in {"configuration/setup-job/v1", "configuration/assess-concern/v1"}
+    ]
+    assert len(setup_requests) == 2
+    setup_job = next(row for row in setup_requests if row["kind"] == "configuration/setup-job/v1")
+    assert setup_job["input_schema"]["required"] == ["job"]
+    assert len(setup_job["input_schema"]["properties"]["job"]["enum"]) == 6
+    setup_assessment = next(row for row in setup_requests if row["kind"] == "configuration/assess-concern/v1")
+    assert set(setup_assessment["input_schema"]["required"]) == {"concern", "judgment", "reason"}
+    assert "resume" not in setup_assessment["input_schema"]["required"]
+    setup_request_bytes = sum(len(json.dumps(row)) for row in setup_requests)
+    assert 0 < setup_request_bytes < 2_000, setup_request_bytes
     # Source-defined bounded Planning work adds only these three optional
     # introspection properties. Attribute their exact serialized delta while
     # preserving the existing ordinary-state and compact-response ceilings.
     without_assignment_inputs = copy.deepcopy(planning)
     assignment_input_schemas = []
 
-    def remove_assignment_input_schema(value):
+    def without_nullable_delta(value):
+        if isinstance(value, dict):
+            alternatives = value.get("anyOf", [])
+            if set(value) == {"anyOf"} and len(alternatives) == 2 and alternatives[1] == {"type": "null"}:
+                return without_nullable_delta(alternatives[0])
+            return {key: without_nullable_delta(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [without_nullable_delta(item) for item in value]
+        return value
+
+    def remove_assignment_input_schema(value, request_kind):
         if isinstance(value, dict):
             properties = value.get("properties", {})
             if "assignment_inputs" in properties:
-                assignment_input_schemas.append(properties.pop("assignment_inputs"))
+                assignment_input_schemas.append((request_kind, properties.pop("assignment_inputs")))
             for item in value.values():
-                remove_assignment_input_schema(item)
+                remove_assignment_input_schema(item, request_kind)
         elif isinstance(value, list):
             for item in value:
-                remove_assignment_input_schema(item)
+                remove_assignment_input_schema(item, request_kind)
 
-    remove_assignment_input_schema(without_assignment_inputs)
+    for row in [*without_assignment_inputs["requests"], *without_assignment_inputs["operations"]]:
+        remove_assignment_input_schema(row, row.get("kind", row.get("id")))
     assert len(assignment_input_schemas) == 3
-    assert all(row["type"] == "object" for row in assignment_input_schemas)
+    for request_kind, row in assignment_input_schemas:
+        if request_kind == "planning/update/v1":
+            assert row["anyOf"][0]["type"] == "object"
+            assert row["anyOf"][1:] == [{"type": "null"}]
+        else:
+            assert row["type"] == "object"
     assignment_input_bytes = len(json.dumps(planning)) - len(json.dumps(without_assignment_inputs))
-    assert 0 < assignment_input_bytes < 2_300, assignment_input_bytes
+    assignment_delta_bytes = sum(
+        len(json.dumps(row)) - len(json.dumps(without_nullable_delta(row)))
+        for request_kind, row in assignment_input_schemas
+        if request_kind == "planning/update/v1"
+    )
+    assert 0 < assignment_delta_bytes < 500, assignment_delta_bytes
+    assert 0 < assignment_input_bytes - assignment_delta_bytes < 2_300, assignment_input_bytes
+    # Semantic updates may omit fields and delete optional members. Attribute
+    # only their nullable schema wrappers in full introspection; the original
+    # assignment, remaining-state and compact budgets stay unchanged.
+    update = next(row for row in without_assignment_inputs["requests"] if row["kind"] == "planning/update/v1")
+    nullable_delta_bytes = len(json.dumps(update)) - len(json.dumps(without_nullable_delta(update)))
+    assert 0 < nullable_delta_bytes < 5_000, nullable_delta_bytes
     # A Verification investigation reuses an exact native receipt; its one
     # optional request property is introspection only until explicitly supplied.
     analysis_request = next(row for row in verification["requests"] if row["kind"] == "verification/requirements/v1")
@@ -342,7 +400,9 @@ def test_former_selection_requires_exact_current_agent_request(
         + consequence_bytes
         + evidence_bytes
         + plugin_bytes
+        + setup_request_bytes
         + assignment_input_bytes
+        + nullable_delta_bytes
         + analysis_receipt_bytes
         + manual_bytes
         + candidate_bytes
@@ -352,7 +412,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + candidate_continuation_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
-    assert len(json.dumps(contract)) - schema_extensions < 86_000
+    assert len(json.dumps(contract)) - schema_extensions - resource_schema_bytes < 86_000
     assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
     terminal_retention = first["planning"]["terminal_retention"]
     offered_discovery = terminal_retention["discovery_request"]
@@ -382,6 +442,14 @@ def test_former_selection_requires_exact_current_agent_request(
     assert selection_requests[0]["arguments"] == {}
     assert len(json.dumps(selection_requests)) < 650
     state["planning"] = {key: value for key, value in state["planning"].items() if key != "selection_requests"}
+    # Full detail also offers one passive setup discovery envelope. Like the
+    # Planning selection envelope above, this is separately bounded catalogue
+    # detail; the remaining-state and ordinary compact ceilings still stand.
+    setup_discovery = state["configuration_write"]["setup_job_request"]
+    assert setup_discovery["request_kind"] == "configuration/setup-job/v1"
+    assert setup_discovery["arguments"] == {"job": "refresh-payload"}
+    assert len(json.dumps(setup_discovery)) < 700
+    state["configuration_write"] = {key: value for key, value in state["configuration_write"].items() if key != "setup_job_request"}
     # Full Memory detail offers only the bounded candidate read envelope until
     # relevant material or a current scoped selection exists. No candidate rows
     # or candidate effect revision may leak into this unrelated entry.

@@ -271,6 +271,10 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
         .as_array_mut()
         .unwrap()
         .push(crate::native_configuration_procedure::declaration());
+    owner["requests"]
+        .as_array_mut()
+        .unwrap()
+        .extend(crate::native_configuration_procedure::job_declarations());
     crate::native_skill_exposure::declarations(&mut owner);
     crate::native_plugin_exposure::declarations(&mut owner);
     crate::native_adoption::declarations(&mut owner);
@@ -392,6 +396,10 @@ pub(crate) fn view_selected(
     result["behavior_request"] = template(
         crate::native_configuration_procedure::READ,
         json!({"concern":"instructions"}),
+    );
+    result["setup_job_request"] = template(
+        crate::native_configuration_procedure::JOB,
+        json!({"job":"refresh-payload"}),
     );
     result["payload_discovery_request"] = template(READ_PAYLOAD, json!({}));
     result["skill_exposure_request"] = template(crate::native_skill_exposure::READ, json!({}));
@@ -589,6 +597,73 @@ pub(crate) fn view_selected(
     }
     if matches!(
         request["request_kind"].as_str(),
+        Some(
+            crate::native_configuration_procedure::JOB
+                | crate::native_configuration_procedure::ASSESS
+        )
+    ) {
+        let args = &request["arguments"];
+        let assessing = request["request_kind"] == crate::native_configuration_procedure::ASSESS;
+        let job = if assessing {
+            "assess-setup"
+        } else {
+            args["job"].as_str().unwrap()
+        };
+        let scope = args["scope"].as_str().unwrap_or("repository");
+        let concern = args["concern"].as_str().unwrap_or("instructions");
+        let (kind, arguments) = match job {
+            "refresh-payload" => (READ_PAYLOAD, json!({})),
+            "expose-skill" => (crate::native_skill_exposure::READ, json!({})),
+            "expose-plugin" => (crate::native_plugin_exposure::READ, json!({})),
+            "remove-adoption" => (crate::native_adoption::READ, json!({})),
+            "configure-behavior" => (
+                crate::native_configuration_procedure::READ,
+                json!({"concern":concern,"scope":scope}),
+            ),
+            "assess-setup" => (crate::native_configuration_assessment::READ, {
+                let mut assessment = json!({"scope":scope,"reconsider":assessing});
+                if let Some(dependencies) = args.get("dependencies") {
+                    assessment["dependencies"] = dependencies.clone();
+                }
+                assessment
+            }),
+            _ => return Err(err("unsupported setup job")),
+        };
+        let delegated = template(kind, arguments);
+        let mut selected = view_selected(target, work, config, contract, Some(&delegated), detail)?;
+        selected["selected_setup_job"] = json!({"job":job,"concern":if matches!(job,"configure-behavior"|"assess-setup"){json!(concern)}else{Value::Null},"scope":scope});
+        if matches!(job, "configure-behavior" | "assess-setup") {
+            selected["requested_behavior"] = json!(concern);
+            selected["requested_behavior_scope"] = json!(scope);
+        }
+        if job == "configure-behavior" {
+            selected["choice_requests"] = json!(
+                CHOICES
+                    .iter()
+                    .filter(|(source, key)| {
+                        *source
+                            == if scope == "machine-local" {
+                                LOCAL
+                            } else {
+                                SHARED
+                            }
+                            && crate::native_configuration_procedure::concern(key) == Some(concern)
+                            && args["key"].as_str().is_none_or(|selected| selected == *key)
+                    })
+                    .map(|(source, key)| template(READ, json!({"source":source,"key":key})))
+                    .collect::<Vec<_>>()
+            );
+        }
+        if job == "assess-setup" {
+            selected["concern_assessment_request"] = template(
+                crate::native_configuration_procedure::ASSESS,
+                json!({"concern":concern,"scope":scope,"judgment":"pending","reason":""}),
+            );
+        }
+        return Ok(selected);
+    }
+    if matches!(
+        request["request_kind"].as_str(),
         Some(crate::native_adoption::READ | crate::native_adoption::EDIT)
     ) {
         crate::native_adoption::view(target, request, &binding, &template, &mut result)?;
@@ -734,6 +809,10 @@ pub(crate) fn view_selected(
         }
         result["status"] = json!("choice-delivered");
         result["selected_choice"] = json!({"source":source,"key":key,"value":value,"schema":schema,"edit_request":template(EDIT,json!({"source":source,"key":key,"value":value}))});
+        if let Some(concern) = crate::native_configuration_procedure::concern(key) {
+            result["selected_setup_job"] = json!({"job":"configure-behavior","concern":concern,
+                "scope":if source == LOCAL {"machine-local"} else {"repository"}});
+        }
         return Ok(result);
     }
     let source = args["source"]

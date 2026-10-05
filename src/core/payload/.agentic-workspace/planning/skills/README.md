@@ -20,5 +20,7 @@ Use the target configured `start`/`invoke` and shared startup carriage.
 Canonical sources are under `.agentic-workspace/planning/skills` in the AW source
 checkout. The package's explicit host surface declaration ships these procedures
 through repository adoption while preserving Planning ownership. Installed and
-generated copies distribute the same resources. Missing runtime permits source reads only.
+generated copies distribute the same resources. Missing runtime withholds AW
+custody and effects; independently authorised repository work can continue under
+[canonical fallback](../../skills/workspace-startup/references/unavailable.md).
 No optional method waives native restrictions.

@@ -1134,13 +1134,9 @@ mod tests {
                 start(&context, Value::Null)["planning"]["creation_requests"][0].clone();
             create["arguments"] = json!({"material":material});
             let created = invoke(&context, &start(&context, create));
-            let selection_context = &created["value"]["selection_context"];
-            invoke(
-                selection_context,
-                &start(
-                    selection_context,
-                    created["value"]["selection_request"].clone(),
-                ),
+            assert_eq!(
+                created["value"]["selection"]["effect_outcome"]["status"],
+                "committed"
             );
             let continuation =
                 start(&context, Value::Null)["planning"]["selection_requests"][0].clone();

@@ -11,8 +11,12 @@ Measurement admission comes from the native owner and its current private receip
 not labels or helper arithmetic. Semantic protocol/domain applicability comes
 from exact current judgments; never match task words or reinterpret the manifest.
 
-Use current `proof.claim_review.request` to propose a bounded judgment with the
-actual evidence refs and reason. Return its authorized answer through ordinary `start`.
+Use `verification_context.next_step` in the current proof continuation with its
+reentry. Supply only the sufficiency judgment and reason; Verification carries
+the selected evidence. Inspect the resulting bounded claim question and return
+its authorized answer through ordinary `start`. For explicit external evidence
+or exceptional full detail, use `verification.claim_review.request` with the
+actual evidence refs and reason.
 Required source reconciliation and independent reviewer custody stay separate.
 `strict_closeout` still requires a task claim judgment with no matching protocol.
 A method's availability, skill identity or completion never grants proof or claims.

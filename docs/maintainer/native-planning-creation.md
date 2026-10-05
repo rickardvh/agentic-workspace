@@ -37,15 +37,30 @@ or relevance classifier. Reworded continuation still requires explicit judgement
 
 The public Planning `planning/create/v1` request creates one current compact `planning-execplan/v1` owner. Request material uses the canonical schema's existing field definitions. The acting agent authors outcome, scope, constraints, stops, dependency facts, proof obligations, continuation and next action. Rust supplies only the confined work-bound identity/path and initial planned/shaping revision; it does not fill placeholder judgements or generate proof.
 
-Creation exclusively acquires an absent owner document. It does not acquire a selector, alter the former Planning state file, or activate another owner. Its result offers a separate exact current continuation request. Existing selector ownership remains preserved. Direct unrelated work creates no state.
+The `planning.create` operation uses `planning-create-current-owner-v2` semantics.
+Its typed action declares `establish_current_owner: true`: it exclusively creates
+an absent owner document, then establishes that exact owner for the current task
+through a separately admitted `planning.reconcile` selector effect. Both effects
+are within the declared `planning-state` category; each keeps its own immutable
+attempt and commit custody. Selection reobserves current source, policy, work and
+selector ownership before writing. It cannot bypass ambiguity or a required
+selector-transfer judgment. The former Planning state file is preserved. Direct
+unrelated work creates no state.
+
+The result distinguishes committed creation from selection in `value.selection`.
+A selection failure or unavailable continuation preserves the created document
+and reports an exact selection gap/recovery; it does not roll back or recreate
+the plan. A replay cannot undo a subsequent owner selection. Historical
+create-only invocations have a different operation revision and cannot be replayed
+as the coupled operation.
 
 The new document retains only typed creation provenance: exact invocation digest and prepared immutable attempt/commit custody. The full invocation is retained once by the immutable effect owner. The common attempt owner validates those references; Planning verifies the exact creation record and original owner identity before excluding provenance from semantic identity. Exact initial bytes are required only to replay creation; later current owner edits remain readable and produce normal semantic-versus-attempt reconciliation. The final file digest is not an input to its own prepared commit, avoiding circular provenance identity. This is one existing owner document, not a new ledger or Planning representation.
 
 Completed creation can replay in a fresh process with exact retained commit evidence. Creation replay with a missing commit or changed source/provenance stays uncertain or rejected, with no overwrite or blind retry. Creation grants no completion claim or proof. Later source-owner semantic revisions stale dependent work; same-semantic attempt observations preserve subject identity. Neither may replay the stale creation invocation or pretend it still owns the changed bytes.
 
-Public proof independently exercises native CLI with no Python/Node on PATH, Python, TypeScript and JSON start/invoke, separate selection and fresh owner continuation, stale work/arguments/occupied paths, changed provenance/material, and missing completion evidence. A missing commit fixture proves conservative uncertainty, not actual OS crash scheduling or power-loss durability. Existing native attempt and owner tests cover their separate process-interruption contracts.
+Public proof independently exercises native CLI with no Python/Node on PATH, Python, TypeScript and JSON start/invoke, declared creation-to-selection and fresh owner continuation, stale work/arguments/occupied paths, changed provenance/material, and missing completion evidence. A missing commit fixture proves conservative uncertainty, not actual OS crash scheduling or power-loss durability. Existing native attempt and owner tests cover their separate process-interruption contracts.
 
-An explicit destination request can now switch an already native-owned selector. The existing Planning reconciliation invocation retains its exact prior selector digest, independently inspected committed producer custody and destination selector fields. These are effect-currentness inputs, separate from material Planning identity. Creation still does not select the new owner. The selector owner validates and retains the same bounded transition in its existing carrier and common immutable attempt; it creates no transfer ledger and changes neither Plan body.
+An explicit destination request can switch an already native-owned selector. The existing Planning reconciliation invocation retains its exact prior selector digest, independently inspected committed producer custody and destination selector fields. These are effect-currentness inputs, separate from material Planning identity. Coupled creation uses this same admitted transition for its exact new owner. The selector owner validates and retains the bounded transition in its existing carrier and common immutable attempt; it creates no transfer ledger and changes neither Plan body.
 
 Fresh continuation accepts retained transition context only after producer validation and exact current postimage comparison. Stale preimages, changed destination semantics, forged invocation fields and unfamiliar postimages preserve current bytes. Public proof exercises all four consumers, and a child-process exit fixture proves recovery in another process after both attempt and commit retention. This proves these explicit publication boundaries, not power-loss durability or universal writer coordination. The owner recomputes the small current selector/source projection and reuses only exactly validated producer evidence; no memoisation framework is introduced (#2981).
 

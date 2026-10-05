@@ -60,7 +60,15 @@ def test_exact_native_command_evidence_discharges_only_its_profile_obligation(
         if manual:
             request["arguments"]["result"] = "passed"
         action = call({**context, "request": request})["decision_packet"]["primary_action"]
-        return call({**context, "invocation": action})["value"]["publication"]["reference"]
+        result = call({**context, "invocation": action})
+        evidence = result["continuation"]["result"]["verification"]["evidence"]
+        if manual:
+            assert evidence == []
+        else:
+            assert len(evidence) == 1
+            assert evidence[0]["reference"] == result["value"]["publication"]["reference"]
+            assert evidence[0]["evidence_freshness"] == "reusable"
+        return result["value"]["publication"]["reference"]
 
     def claim(refs, task=None):
         current = {**context, "task": task or context["task"]}

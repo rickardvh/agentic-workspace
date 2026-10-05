@@ -1,14 +1,12 @@
-# Admit the exact receipt
+# Use the current proof continuation
 
-Use this step after a check publishes an execution receipt. The receipt records
-what ran; Verification must still decide whether it is current evidence for this
-task. Do not invent a receipt when only terminal output is available.
+After a native check, use its effect outcome and current continuation. Verification
+automatically authenticates the exact receipt and revalidates its subject, source,
+scope and strategy. Judge the remaining obligations or gaps through
+[claim interpretation](claim.md); success alone grants no task completion or review.
 
-Use the current continuation and its exact Verification evidence request. Supply
-the published receipt reference in `evidence_refs`, retaining any still-current
-scope/strategy request set. Let Verification authenticate evidence and determine
-remaining obligations; process exit zero alone is not evidence admission.
+Failed, skipped, timed out or incomplete execution remains limited evidence.
+If continuation is missing, preserve the effect and use [exact recovery](recovery.md).
 
-Do not reconstruct missing assessment envelopes from an invocation. If carriage
-or sources changed, freshly resolve the owner and preserve the committed effect.
-Then make any separate claim judgment through [claim interpretation](claim.md).
+External evidence still uses the owner's explicit request and exact available
+reference. Never fabricate a native receipt from terminal output.
