@@ -1,5 +1,6 @@
 """Transport controls are deterministic proof, never live-provider acceptance."""
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -9,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
 sys.path.insert(0, str(ROOT / "src/tooling/model-cli-harness"))
-from consumer_agent import CodexActor, SandboxConsumer, bounded_codex, portable_continuation  # noqa: E402
+from consumer_agent import CodexActor, ProviderMessages, SandboxConsumer, bounded_codex, portable_continuation  # noqa: E402
 
 
 def test_fresh_machine_continuation_excludes_local_custody():
@@ -82,6 +83,50 @@ def test_timeout_stops_actor_without_completion():
     result = bounded_codex([sys.executable, "-c", "import time; time.sleep(30)"], seconds=1, stop=lambda: stopped.append(True))
     assert result["status"] == "timeout"
     assert result["claim"] is None
+    assert stopped == [True]
+
+
+def test_visible_provider_messages_are_live_bounded_redacted_and_not_product_evidence(tmp_path):
+    path = tmp_path / "provider.jsonl"
+    captured = ProviderMessages(path)
+    event = {
+        "type": "item.completed",
+        "item": {"type": "reasoning", "text": "Visible summary https://example.invalid/token Bearer fake-secret"},
+    }
+    captured.observe(event)
+    # Inspect before close: the live diagnostic survives eventual actor cleanup.
+    assert json.loads(path.read_bytes())["text"] == "Visible summary [endpoint] [redacted]"
+    captured.observe({"type": "item.completed", "item": {"type": "private_state", "text": "must not be retained"}})
+    for _ in range(100):
+        captured.observe({"type": "item.completed", "item": {"type": "agent_message", "text": "秘密" * 4000}})
+    captured.close()
+    result = captured.summary()
+    raw = path.read_bytes()
+    assert len(raw) <= 128 * 1024 and len(result["messages"]) <= 64
+    assert result["dropped_messages"] > 0
+    assert any(row["text_truncated"] for row in result["messages"])
+    assert result["artifact"]["bytes"] == len(raw)
+    assert result["artifact"]["sha256"] == hashlib.sha256(raw).hexdigest()
+    assert b"must not be retained" not in raw and b"fake-secret" not in raw
+    assert "not private state, native receipts or effect authority" in result["authority"]
+    with pytest.raises(FileExistsError):
+        ProviderMessages(path)
+
+
+def test_provider_summary_survives_timeout_with_unchanged_actor_stop(tmp_path):
+    path = tmp_path / "provider.jsonl"
+    stopped = []
+    event = {"type": "item.completed", "item": {"type": "reasoning", "text": "Inspecting current owner choice."}}
+    result = bounded_codex(
+        [sys.executable, "-u", "-c", "import time; print(" + repr(json.dumps(event)) + "); time.sleep(30)"],
+        seconds=1,
+        stop=lambda: stopped.append(True),
+        diagnostic_path=path,
+    )
+    assert result["status"] == "timeout" and result["claim"] is None
+    assert result["provider_messages"]["messages"][0]["text"] == event["item"]["text"]
+    assert result["provider_messages"]["artifact"]["bytes"] == path.stat().st_size
+    assert "product_calls" not in result
     assert stopped == [True]
 
 
