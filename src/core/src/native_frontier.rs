@@ -166,13 +166,18 @@ mod tests {
                     .iter()
                     .position(|v| *v == "post-effect-continuation")
                     .unwrap();
-                assert_eq!(&work[boundary + 1..], &["verification-contribution"]);
-                let mut claim =
-                    effect["continuation"]["result"]["verification"]["requests"][0].clone();
-                claim["arguments"]["evidence_refs"] =
-                    json!([effect["value"]["publication"]["reference"]]);
-                let mut admitted_context = context.clone();
-                admitted_context["request"] = claim;
+                // Fresh observation and automatic same-work receipt admission
+                // each compose mandatory obligations, without optional builders.
+                assert_eq!(
+                    &work[boundary + 1..],
+                    &["verification-contribution", "verification-contribution"]
+                );
+                let admitted_context = effect["continuation"]["context"].clone();
+                assert_eq!(
+                    effect["continuation"]["result"]["verification"]["evidence"][0]["checked_scope"]
+                        ["claim"],
+                    "selected-command-passed"
+                );
                 let (admitted, admission_work) =
                     observe(admitted_context.clone(), Resolution::Frontier(None));
                 assert_eq!(admission_work, vec!["verification-contribution"]);

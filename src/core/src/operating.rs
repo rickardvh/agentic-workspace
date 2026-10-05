@@ -366,7 +366,7 @@ fn reconcile_restriction_routes(value: &mut Value, recovery: &[Value]) {
                     .get("resolution")
                     .is_some_and(|r| r == "owner-resolution-unavailable")
                     || nominated)
-                    && let Some(id) = object.get("consequence_id")
+                    && let Some(id) = object.get("consequence_id").filter(|id| id.is_string())
                     && let Some(route) = recovery.iter().find(|r| {
                         r["consequences"]
                             .as_array()
@@ -1037,6 +1037,10 @@ fn use_selected(
         ));
     }
     let mut result = json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"});
+    // Detail identities remain bound to the owner's source observation. Report
+    // restriction routes from that same current surface after validating it.
+    let recovery = consequence_recovery(&current, &context)?;
+    reconcile_restriction_routes(&mut result["value"], &recovery);
     if selector.starts_with("request:") {
         attach_request_answer(&mut result, &current, &context, &selected_entry);
     }
@@ -1461,12 +1465,26 @@ fn project_invocation(
     if result["continuation"]["status"] == "current" {
         let full = result["continuation"]["result"].take();
         let context = result["continuation"]["context"].clone();
-        match if projection == "full" && detail.is_some() {
-            Ok(full)
-        } else {
-            project_start(full, context, projection)
-        } {
-            Ok(projected) => result["continuation"]["result"] = projected,
+        match consequence_recovery(&full, &context).and_then(|recovery| {
+            let projected = if projection == "full" && detail.is_some() {
+                let mut full = full;
+                reconcile_restriction_routes(&mut full, &recovery);
+                if !recovery.is_empty() {
+                    full["consequence_recovery"] = json!(recovery);
+                }
+                full
+            } else {
+                project_start(full, context, projection)?
+            };
+            Ok((projected, recovery))
+        }) {
+            Ok((projected, recovery)) => {
+                // Effect summaries were observed before operating projection.
+                // Reconcile only the exact current consequence identities;
+                // discovering a route never settles the restriction.
+                reconcile_restriction_routes(&mut result, &recovery);
+                result["continuation"]["result"] = projected;
+            }
             Err(failure) => {
                 result["continuation_status"] = json!("unavailable");
                 result["next_decision"] = Value::Null;
@@ -1856,8 +1874,9 @@ mod tests {
 
     #[test]
     fn restriction_routes_select_owner_nomination_and_keep_unavailable_scope() {
+        let root = temp_root("restriction-routes");
         let work = json!({"kind":"current-work","id":"fixture"});
-        let context = json!({"target":"fixture","task":"bounded", "changed":["a"],
+        let context = json!({"target":std::fs::canonicalize(&root).unwrap(),"task":"bounded", "changed":["a"],
             "maintenance":{"kind":"fixture"}, "request":[{"prior":"answer"}]});
         let request = |kind: &str| {
             json!({"kind":"agentic-workspace/public-request/v1",
@@ -1874,6 +1893,74 @@ mod tests {
         let mut full = json!({"current_work":work,
             "sample":{"requests":[request("sample/unrelated"),request("sample/evidence")]},
             "decision_packet":{"blockers":[nominated,blocker("selection")],"primary_action":null}});
+        full["decision_packet"]["claim_boundary"] = json!({"allowed":[],"blocked":["complete"]});
+        full["configuration_behavior"] = json!({"remaining_restrictions":[blocker("selection"),blocker("different-consequence")]});
+        let effect = json!({"effect_outcome":{"status":"committed"},"continuation_status":"current",
+            "continuation":{"status":"current","result":full,"context":context},
+            "configuration_behavior":full["configuration_behavior"],
+            "setup_result":{"remaining_gaps":[blocker("selection"),blocker("different-consequence")],"effect":"committed"}});
+        for projection in ["compact", "carried", "full"] {
+            for detail in [None, Some(Some("configuration"))] {
+                let result = project_invocation(effect.clone(), &json!(projection), detail);
+                assert_eq!(
+                    result["configuration_behavior"]["remaining_restrictions"][0]["resolution"],
+                    "current-owner-route",
+                    "{projection} {detail:?}: {result}"
+                );
+                assert_eq!(
+                    result["setup_result"]["remaining_gaps"][0]["resolution"],
+                    "current-owner-route"
+                );
+                assert_eq!(
+                    result["setup_result"]["remaining_gaps"][1]["resolution"],
+                    "owner-resolution-unavailable"
+                );
+                assert_eq!(
+                    result["setup_result"]["remaining_gaps"][0]["affects"],
+                    json!(["claim:complete"])
+                );
+                assert_eq!(result["effect_outcome"], effect["effect_outcome"]);
+                let current = if projection == "carried" {
+                    &result["continuation"]["result"]["view"]
+                } else {
+                    &result["continuation"]["result"]
+                };
+                assert_eq!(
+                    current["decision_packet"]["claim_boundary"],
+                    full["decision_packet"]["claim_boundary"]
+                );
+            }
+        }
+        let entry = entries(&full, &context)
+            .unwrap()
+            .into_iter()
+            .find(|e| e["selector"] == "/configuration_behavior")
+            .unwrap();
+        let detail = use_selected(
+            context.clone(),
+            full.clone(),
+            entry,
+            None,
+            false,
+            &json!("compact"),
+            None,
+        )
+        .unwrap();
+        assert_eq!(
+            detail["value"]["remaining_restrictions"][0]["resolution"],
+            "current-owner-route"
+        );
+        assert_eq!(
+            detail["value"]["remaining_restrictions"][1]["resolution"],
+            "owner-resolution-unavailable"
+        );
+        assert_eq!(detail["authority"], "detail-only");
+        let mut unavailable = effect;
+        unavailable["continuation"]["status"] = json!("unavailable");
+        assert_eq!(
+            project_invocation(unavailable.clone(), &json!("compact"), None)["setup_result"],
+            unavailable["setup_result"]
+        );
         let view = compact(&full, &context, true).unwrap();
         let routes = &view["consequence_recovery"];
         assert_eq!(routes[0]["selection"]["status"], "owner-nominated");
@@ -1906,6 +1993,7 @@ mod tests {
             absent["decision_packet"]["blockers"][1]["resolution"],
             "owner-resolution-unavailable"
         );
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
