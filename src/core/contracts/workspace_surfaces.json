@@ -17,6 +17,7 @@
     ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
     ".agentic-workspace/skills/workspace-startup/references/evidence.md",
     ".agentic-workspace/skills/workspace-startup/references/owners.md",
+    ".agentic-workspace/skills/workspace-startup/references/transport.md",
     ".agentic-workspace/skills/workspace-startup/references/reconcile.md",
     ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
     ".agentic-workspace/skills/workspace-startup/procedure.md",
@@ -28,6 +29,7 @@
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
@@ -86,7 +88,10 @@
       "refresh": "configuration.repository-adoption",
       "remove": "configuration.repository-adoption",
       "justification": "Canonical passive plugin metadata for optional repository host exposure",
-      "materialization": { "mode": "package-verbatim", "source": ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json" }
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json"
+      }
     },
     {
       "path": ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
@@ -96,7 +101,10 @@
       "refresh": "configuration.repository-adoption",
       "remove": "configuration.repository-adoption",
       "justification": "Claude metadata over the same passive repository bundle",
-      "materialization": { "mode": "package-verbatim", "source": ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json" }
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json"
+      }
     },
     {
       "path": ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md",
@@ -106,7 +114,10 @@
       "refresh": "configuration.repository-adoption",
       "remove": "configuration.repository-adoption",
       "justification": "One generated passive bridge to the current repository startup procedure",
-      "materialization": { "mode": "package-verbatim", "source": ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md" }
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md"
+      }
     },
     {
       "path": ".agentic-workspace/READING.json",
@@ -267,6 +278,19 @@
       }
     },
     {
+      "path": ".agentic-workspace/skills/workspace-startup/references/transport.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/references/transport.md"
+      }
+    },
+    {
       "path": ".agentic-workspace/skills/workspace-startup/references/reconcile.md",
       "ownership": "package-managed",
       "lifetime": "adopted-host",
@@ -407,6 +431,19 @@
       "materialization": {
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md"
       }
     },
     {
@@ -1096,6 +1133,14 @@
   "source_maintenance_contract": "source_maintenance_surfaces.json",
   "retired_package_surfaces": [
     {
+      "path": ".agentic-workspace/planning/skills/planning-work/references/legacy.md",
+      "sha256": "5cc29b456d5b7d3c376054a4f0846e23a0785cda2d5cfa1f8f5bc7d1c5d3f622"
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/legacy.md",
+      "sha256": "19432d129ad6b19c83943d3becce400c545ec1ce77512947d716e438f4525858"
+    },
+    {
       "path": ".agentic-workspace/WORKFLOW.md",
       "sha256": "75162f6469347e428ab284a7e1478a0fdd62ab4f61897a8e913f5a5f6600afa7"
     },
@@ -1144,6 +1189,7 @@
       ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
       ".agentic-workspace/skills/workspace-startup/references/evidence.md",
       ".agentic-workspace/skills/workspace-startup/references/owners.md",
+      ".agentic-workspace/skills/workspace-startup/references/transport.md",
       ".agentic-workspace/skills/workspace-startup/references/reconcile.md",
       ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
       ".agentic-workspace/skills/workspace-startup/procedure.md",
@@ -1155,6 +1201,7 @@
       ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+      ".agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
       ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",

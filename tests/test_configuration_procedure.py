@@ -65,6 +65,29 @@ def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_cor
     result = call(**{**ready["reentry"], "invocation": ready["decision_packet"]["primary_action"]})
     assert result["setup_result"]["effect"] == "committed"
     assert result["setup_result"]["consumer_verification"]["status"] == "verified"
+    restrictions = {row["consequence_id"]: row for row in result["continuation"]["result"]["decision_packet"]["blockers"]}
+    assert any(row["resolution"] == "current-owner-route" for row in restrictions.values())
+    for rows in (
+        result["setup_result"]["remaining_gaps"],
+        result["configuration_behavior"]["remaining_restrictions"],
+    ):
+        assert rows
+        for row in rows:
+            current = restrictions[row["consequence_id"]]
+            assert row["resolution"] == current["resolution"]
+            assert row["affects"] == current["affects"]
+    fresh_job = call()["configuration_write"]["setup_job_request"]
+    fresh_job["arguments"] = {"job": "configure-behavior", "concern": "instructions"}
+    fresh = call(request=fresh_job, projection="compact")
+    detail = call(
+        **{
+            **fresh["reentry"],
+            "reference": fresh["detail_refs"]["/configuration_behavior"],
+            "projection": "compact",
+        }
+    )
+    assert detail["authority"] == "detail-only"
+    assert detail["value"]["remaining_restrictions"] == fresh["decision_packet"]["blockers"]
     assert selected["configuration_behavior"]["observation"]["selected_source"] != "GUIDE.md"
 
     job = call()["configuration_write"]["setup_job_request"]

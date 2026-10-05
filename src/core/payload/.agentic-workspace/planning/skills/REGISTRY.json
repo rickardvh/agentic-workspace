@@ -100,7 +100,7 @@
       "path": "bootstrap-upgrade/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "Refresh managed guidance while preserving Planning state and custody."
+      "summary": "Planning host-discovery entry for shared Setup package refresh; preserve plans and custody."
     },
     {
       "id": "planning-closeout-trust",

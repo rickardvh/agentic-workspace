@@ -226,6 +226,18 @@ fn request_entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreErro
         }
         let mut found = Vec::new();
         requests(value, &mut found, 0);
+        if owner == "setup_context" {
+            // Selected native setup choices are row records, not request lists.
+            // Index only their advertised request slots; do not widen discovery
+            // into arbitrary arrays, caller material or nested choice metadata.
+            for choice in value["choices"].as_array().into_iter().flatten().take(512) {
+                for (key, request) in choice.as_object().into_iter().flatten() {
+                    if key == "request" || key.ends_with("_request") {
+                        request_list(request, &mut found, 1);
+                    }
+                }
+            }
+        }
         for request in found {
             if request["task_identity"] != full["current_work"] {
                 continue;
@@ -366,7 +378,7 @@ fn reconcile_restriction_routes(value: &mut Value, recovery: &[Value]) {
                     .get("resolution")
                     .is_some_and(|r| r == "owner-resolution-unavailable")
                     || nominated)
-                    && let Some(id) = object.get("consequence_id")
+                    && let Some(id) = object.get("consequence_id").filter(|id| id.is_string())
                     && let Some(route) = recovery.iter().find(|r| {
                         r["consequences"]
                             .as_array()
@@ -392,6 +404,32 @@ fn reconcile_restriction_routes(value: &mut Value, recovery: &[Value]) {
         }
     }
     visit(value, recovery);
+}
+
+fn same_pending_action(pending: &Value, invocation: &Value) -> bool {
+    if pending == invocation {
+        return true;
+    }
+    if invocation["kind"] != "agentic-workspace/operation-invocation/v1" {
+        return false;
+    }
+    let Some(mut proposal) = invocation.as_object().cloned() else {
+        return false;
+    };
+    // Native preparation adds the invocation kind and renames these custody
+    // fields. Reverse only that mapping for exact presentation comparison;
+    // distinct scope, sources, arguments or unknown material must remain visible.
+    proposal.remove("kind");
+    for (prepared, pending) in [
+        ("expected_dependency_revision", "dependency_revision"),
+        ("idempotency_key", "logical_effect_id"),
+    ] {
+        let Some(value) = proposal.remove(prepared) else {
+            return false;
+        };
+        proposal.insert(pending.to_owned(), value);
+    }
+    pending == &Value::Object(proposal)
 }
 
 fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreError> {
@@ -469,16 +507,27 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             }
         }
     }
-    // The selected question/action already appears above; retain other peers
-    // before adding presentation-only fields to their bounded views.
-    for (field, selected) in [
-        ("actions", "primary_action"),
-        ("decisions", "decision_request"),
-    ] {
-        let selected = &full["decision_packet"][selected];
-        if let Some(values) = packet["pending_consequences"][field].as_array_mut() {
-            values.retain(|value| value != selected);
-        }
+    // Prepared actions already appear above. Remove their raw proposal copies,
+    // retaining every unadmitted or materially different peer. Compare against
+    // native envelopes before carried presentation replaces them with views.
+    let admitted = std::iter::once(&full["decision_packet"]["primary_action"])
+        .chain(
+            full["decision_packet"]["ready_actions"]
+                .as_array()
+                .into_iter()
+                .flatten(),
+        )
+        .filter(|action| !action.is_null())
+        .collect::<Vec<_>>();
+    if let Some(values) = packet["pending_consequences"]["actions"].as_array_mut() {
+        values.retain(|value| {
+            !admitted
+                .iter()
+                .any(|action| same_pending_action(value, action))
+        });
+    }
+    if let Some(values) = packet["pending_consequences"]["decisions"].as_array_mut() {
+        values.retain(|value| value != &full["decision_packet"]["decision_request"]);
     }
     let proposal_reference = refs.get("/verification/claim_review/proposal").cloned();
     if let Some(reference) = proposal_reference {
@@ -1037,6 +1086,10 @@ fn use_selected(
         ));
     }
     let mut result = json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"});
+    // Detail identities remain bound to the owner's source observation. Report
+    // restriction routes from that same current surface after validating it.
+    let recovery = consequence_recovery(&current, &context)?;
+    reconcile_restriction_routes(&mut result["value"], &recovery);
     if selector.starts_with("request:") {
         attach_request_answer(&mut result, &current, &context, &selected_entry);
     }
@@ -1461,12 +1514,26 @@ fn project_invocation(
     if result["continuation"]["status"] == "current" {
         let full = result["continuation"]["result"].take();
         let context = result["continuation"]["context"].clone();
-        match if projection == "full" && detail.is_some() {
-            Ok(full)
-        } else {
-            project_start(full, context, projection)
-        } {
-            Ok(projected) => result["continuation"]["result"] = projected,
+        match consequence_recovery(&full, &context).and_then(|recovery| {
+            let projected = if projection == "full" && detail.is_some() {
+                let mut full = full;
+                reconcile_restriction_routes(&mut full, &recovery);
+                if !recovery.is_empty() {
+                    full["consequence_recovery"] = json!(recovery);
+                }
+                full
+            } else {
+                project_start(full, context, projection)?
+            };
+            Ok((projected, recovery))
+        }) {
+            Ok((projected, recovery)) => {
+                // Effect summaries were observed before operating projection.
+                // Reconcile only the exact current consequence identities;
+                // discovering a route never settles the restriction.
+                reconcile_restriction_routes(&mut result, &recovery);
+                result["continuation"]["result"] = projected;
+            }
             Err(failure) => {
                 result["continuation_status"] = json!("unavailable");
                 result["next_decision"] = Value::Null;
@@ -1660,6 +1727,41 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn selected_setup_choices_bind_only_native_request_slots() {
+        let work = json!({"kind":"current-work", "id":"bounded-work"});
+        let request = json!({"kind":"agentic-workspace/public-request/v1", "owner":"configuration",
+            "request_kind":"configuration/edit-source/v1", "task_identity":work,
+            "arguments":{"source":"managed.md", "key":"package.payload", "value":"current-artifact"}});
+        let mut foreign = request.clone();
+        foreign["arguments"]["source"] = json!("caller-material.md");
+        let full = json!({"current_work":work,
+            "setup_context":{"choices":[{"request":request,"subject":"managed.md",
+                "arguments":{"request":foreign}, "material":[{"request":foreign}],
+                "metadata":{"request":foreign}}]},
+            "material":[{"request":foreign}],
+            "configuration_write":{"arguments":{"requests":[foreign]},
+                "creation_provenance":{"request":foreign}, "other_array":[{"request":foreign}]}});
+        let found = request_entries(&full, &json!({"target":"fixture", "task":"bounded"})).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0]["envelope"], request);
+        assert!(
+            found[0]["reference"]
+                .as_str()
+                .unwrap()
+                .starts_with("request:setup_context:")
+        );
+        let mut different_work = full;
+        different_work["current_work"]["id"] = json!("another-work");
+        assert!(
+            request_entries(
+                &different_work,
+                &json!({"target":"fixture", "task":"bounded"})
+            )
+            .unwrap()
+            .is_empty()
+        );
+    }
     #[test]
     fn public_owner_identity_resolves_exact_requests_without_rebinding() {
         let root = temp_root("owner-reference");
@@ -1856,8 +1958,9 @@ mod tests {
 
     #[test]
     fn restriction_routes_select_owner_nomination_and_keep_unavailable_scope() {
+        let root = temp_root("restriction-routes");
         let work = json!({"kind":"current-work","id":"fixture"});
-        let context = json!({"target":"fixture","task":"bounded", "changed":["a"],
+        let context = json!({"target":std::fs::canonicalize(&root).unwrap(),"task":"bounded", "changed":["a"],
             "maintenance":{"kind":"fixture"}, "request":[{"prior":"answer"}]});
         let request = |kind: &str| {
             json!({"kind":"agentic-workspace/public-request/v1",
@@ -1874,6 +1977,74 @@ mod tests {
         let mut full = json!({"current_work":work,
             "sample":{"requests":[request("sample/unrelated"),request("sample/evidence")]},
             "decision_packet":{"blockers":[nominated,blocker("selection")],"primary_action":null}});
+        full["decision_packet"]["claim_boundary"] = json!({"allowed":[],"blocked":["complete"]});
+        full["configuration_behavior"] = json!({"remaining_restrictions":[blocker("selection"),blocker("different-consequence")]});
+        let effect = json!({"effect_outcome":{"status":"committed"},"continuation_status":"current",
+            "continuation":{"status":"current","result":full,"context":context},
+            "configuration_behavior":full["configuration_behavior"],
+            "setup_result":{"remaining_gaps":[blocker("selection"),blocker("different-consequence")],"effect":"committed"}});
+        for projection in ["compact", "carried", "full"] {
+            for detail in [None, Some(Some("configuration"))] {
+                let result = project_invocation(effect.clone(), &json!(projection), detail);
+                assert_eq!(
+                    result["configuration_behavior"]["remaining_restrictions"][0]["resolution"],
+                    "current-owner-route",
+                    "{projection} {detail:?}: {result}"
+                );
+                assert_eq!(
+                    result["setup_result"]["remaining_gaps"][0]["resolution"],
+                    "current-owner-route"
+                );
+                assert_eq!(
+                    result["setup_result"]["remaining_gaps"][1]["resolution"],
+                    "owner-resolution-unavailable"
+                );
+                assert_eq!(
+                    result["setup_result"]["remaining_gaps"][0]["affects"],
+                    json!(["claim:complete"])
+                );
+                assert_eq!(result["effect_outcome"], effect["effect_outcome"]);
+                let current = if projection == "carried" {
+                    &result["continuation"]["result"]["view"]
+                } else {
+                    &result["continuation"]["result"]
+                };
+                assert_eq!(
+                    current["decision_packet"]["claim_boundary"],
+                    full["decision_packet"]["claim_boundary"]
+                );
+            }
+        }
+        let entry = entries(&full, &context)
+            .unwrap()
+            .into_iter()
+            .find(|e| e["selector"] == "/configuration_behavior")
+            .unwrap();
+        let detail = use_selected(
+            context.clone(),
+            full.clone(),
+            entry,
+            None,
+            false,
+            &json!("compact"),
+            None,
+        )
+        .unwrap();
+        assert_eq!(
+            detail["value"]["remaining_restrictions"][0]["resolution"],
+            "current-owner-route"
+        );
+        assert_eq!(
+            detail["value"]["remaining_restrictions"][1]["resolution"],
+            "owner-resolution-unavailable"
+        );
+        assert_eq!(detail["authority"], "detail-only");
+        let mut unavailable = effect;
+        unavailable["continuation"]["status"] = json!("unavailable");
+        assert_eq!(
+            project_invocation(unavailable.clone(), &json!("compact"), None)["setup_result"],
+            unavailable["setup_result"]
+        );
         let view = compact(&full, &context, true).unwrap();
         let routes = &view["consequence_recovery"];
         assert_eq!(routes[0]["selection"]["status"], "owner-nominated");
@@ -1906,8 +2077,104 @@ mod tests {
             absent["decision_packet"]["blockers"][1]["resolution"],
             "owner-resolution-unavailable"
         );
+        std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn compact_removes_only_exact_prepared_proposals_and_preserves_peers() {
+        let invocation = json!({
+            "kind":"agentic-workspace/operation-invocation/v1",
+            "operation_id":"owned.write", "operation_revision":"operation-current",
+            "source_owner":"owner", "authority":"owner",
+            "consequence_id":"effect:owned-write", "effects":["owned-write"],
+            "arguments":{"path":"current.txt"}, "source_requests":[],
+            "expected_dependency_revision":"dependency-current", "idempotency_key":"logical-current"
+        });
+        let proposal = json!({
+            "operation_id":"owned.write", "operation_revision":"operation-current",
+            "source_owner":"owner", "authority":"owner",
+            "consequence_id":"effect:owned-write", "effects":["owned-write"],
+            "arguments":{"path":"current.txt"}, "source_requests":[],
+            "dependency_revision":"dependency-current", "logical_effect_id":"logical-current"
+        });
+        let mut peers = Vec::new();
+        for (field, different) in [
+            ("source_owner", json!("another-owner")),
+            ("authority", json!("another-authority")),
+            ("operation_revision", json!("another-operation")),
+            ("logical_effect_id", json!("another-logical-effect")),
+            ("dependency_revision", json!("another-dependency")),
+            ("consequence_id", json!("effect:another-write")),
+            ("arguments", json!({"path":"another.txt"})),
+            ("effects", json!(["another-write"])),
+            (
+                "source_requests",
+                json!([{"source":"another-current-source"}]),
+            ),
+            ("new_owner_material", json!({"stop":"preserve-foreign"})),
+        ] {
+            let mut peer = proposal.clone();
+            peer[field] = different;
+            peers.push(peer);
+        }
+        let blockers =
+            json!([{"owner":"peer", "code":"review-required", "affects":["claim:complete"]}]);
+        let full = json!({"decision_packet":{
+            "status":"actionable", "primary_action":invocation, "ready_actions":[invocation],
+            "decision_request":null, "blockers":blockers, "claim_boundary":{"blocked":["complete"]},
+            "pending_consequences":{"actions":std::iter::once(proposal.clone()).chain(peers.clone()).collect::<Vec<_>>(),
+                "decisions":[], "blockers":blockers}
+        }});
+        let context = json!({"target":"fixture", "task":"bounded"});
+        for carried in [false, true] {
+            let view = compact(&full, &context, carried).unwrap();
+            assert_eq!(
+                view["decision_packet"]["pending_consequences"]["actions"],
+                json!(peers)
+            );
+            assert_eq!(view["decision_packet"]["blockers"], blockers);
+            assert_eq!(
+                view["decision_packet"]["claim_boundary"],
+                full["decision_packet"]["claim_boundary"]
+            );
+            assert_eq!(
+                view["decision_packet"]["primary_action"]["arguments"],
+                invocation["arguments"]
+            );
+        }
+        // No current admission means even the matching proposal stays visible.
+        let mut unadmitted = full.clone();
+        unadmitted["decision_packet"]["primary_action"] = Value::Null;
+        unadmitted["decision_packet"]["ready_actions"] = json!([]);
+        assert_eq!(
+            compact(&unadmitted, &context, false).unwrap()["decision_packet"]["pending_consequences"]
+                ["actions"],
+            full["decision_packet"]["pending_consequences"]["actions"]
+        );
+
+        // Multiple independent ready actions keep their prepared invocations;
+        // only their exact raw copies disappear, leaving the unadmitted peers.
+        let mut other = invocation.clone();
+        other["operation_id"] = json!("other.write");
+        let mut other_proposal = proposal;
+        other_proposal["operation_id"] = json!("other.write");
+        let mut multiple = full;
+        multiple["decision_packet"]["primary_action"] = Value::Null;
+        multiple["decision_packet"]["ready_actions"] = json!([invocation, other]);
+        multiple["decision_packet"]["pending_consequences"]["actions"]
+            .as_array_mut()
+            .unwrap()
+            .push(other_proposal);
+        let view = compact(&multiple, &context, false).unwrap();
+        assert_eq!(
+            view["decision_packet"]["ready_actions"],
+            multiple["decision_packet"]["ready_actions"]
+        );
+        assert_eq!(
+            view["decision_packet"]["pending_consequences"]["actions"],
+            json!(peers)
+        );
+    }
     #[test]
     fn compact_preserves_peer_restrictions_claims_and_unknown_material() {
         let selected = json!({"operation_id":"independent.write","source_owner":"action-owner","effects":["owned-write"],

@@ -257,7 +257,7 @@ pub(crate) fn attach_setup(target: &Path, invocation: &Value, result: &mut Value
         json!({"status":"not-checked","message":"The exact owned footprint was changed. Runtime capability behavior has not been certified."})
     };
     let gaps:Vec<_> = current["decision_packet"]["blockers"].as_array().into_iter().flatten()
-        .map(|r|json!({"owner":r["owner"],"message":r["message"],"affects":r["affects"],"resolution":r["resolution"]})).collect();
+        .map(|r|json!({"consequence_id":r["consequence_id"],"owner":r["owner"],"message":r["message"],"affects":r["affects"],"resolution":r["resolution"]})).collect();
     result["setup_result"] = json!({"job":job,"effect":if committed{"committed"}else{"not-established"},
         "changed_subject":args.get("source").or_else(||args.get("name")).or_else(||args.get("host")).cloned().unwrap_or(json!("owned repository footprint")),"consumer_verification":consumer,
         "remaining_gaps":gaps,"host_actions":result["value"]["host_actions"],"reentry":result["continuation"]["reentry"],

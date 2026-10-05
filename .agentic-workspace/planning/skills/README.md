@@ -17,10 +17,8 @@ Use the target configured `start`/`invoke` and shared startup carriage.
 - `planning-review-continuation`
   - Receive current review findings and route justified Planning continuation without granting approval.
 
-Canonical sources are under `.agentic-workspace/planning/skills` in the AW source
-checkout. The package's explicit host surface declaration ships these procedures
-through repository adoption while preserving Planning ownership. Installed and
-generated copies distribute the same resources. Missing runtime withholds AW
+Repository adoption exposes these procedures while preserving Planning ownership.
+Missing runtime withholds AW
 custody and effects; independently authorised repository work can continue under
 [canonical fallback](../../skills/workspace-startup/references/unavailable.md).
 No optional method waives native restrictions.

@@ -17,13 +17,18 @@ request through the public reference:
 ```
 
 Resolve an owner reference with ordinary `start --target . --task "<actual task>"`
-and `--reference owner:request:planning:planning/create/v1`. Fill only its requested
-`arguments.material` using the returned schema/current Planning detail. For an
-existing owner, first explicitly select or resume it for this task, then use its update
-request below. Supply only the semantic material that changed. Submit the filled
-request through `start`, invoke only the returned admitted action, and inspect the
-effect outcome and current continuation. Native creation establishes the current
-owner for this task through the existing selection admission. Verify that current
+and `--reference owner:request:planning:planning/create/v1`. Submit the returned
+`reentry` unchanged through `start`, with its exact `next_step.reference` and an
+`answer` containing `material` that satisfies `next_step.answer_schema`.
+Author that material from the task's meaning; the discovery identity only looks
+up the request, and the returned template does not supply the plan content.
+For substantial material, follow the shared [owner answer procedure](../../../../skills/workspace-startup/references/owners.md)
+and submit UTF-8 JSON with `start --input <path>`. For an existing owner, first
+explicitly select or resume it for this task, then use its update request below.
+Supply only the semantic material that changed. Invoke only the returned admitted
+action, and inspect the effect outcome and current continuation. Native creation
+establishes the current owner for this task through the existing selection
+admission. Verify that current
 Planning names the created owner; a successful write alone is not selection or
 task completion. Genuine ambiguity or unavailable admission remains an explicit
 selection gap with a bounded next request.
@@ -50,7 +55,7 @@ Prefer leaving these observations with their current source. If `proof.observed`
 contains only a captured check result or status, classify it with
 `material_lifetimes.proof_observed: observation`. First separate real obligations
 into `proof.remaining` and accepted results needed for continuation into durable
-`continuation` fields. Unclassified or mixed legacy meaning stays retained;
+`continuation` fields. Unclassified or mixed meaning stays retained;
 classification requires judgment, not matching words such as "passed".
 Replace current continuation rather than append transcript history, source bodies,
 raw logs or carriage. A retained conclusion needs its rationale, not every step.

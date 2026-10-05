@@ -5,8 +5,7 @@ from fresh native `start` with the current task/changed context. Judge the
 opportunity's future value and whether its scope is current work or proactive.
 A material finding from ordinary source/test work is enough to consider this path; no failure or human prompt is required. Weak cosmetic observations remain no-action/no-retention. Awareness remains visible even when latitude permits no action. No material opportunity means no action. Effective latitude yields: `none` no nomination, `reporting` a bounded
 report, `conservative` a current-work proposal (report out-of-work opportunities),
-and `proactive` a proposal in either scope. The former `balanced` value is removed:
-its current-work initiative is already represented by `conservative`.
+and `proactive` a proposal in either scope.
 
 This selects initiative only. Trusted corrections, hard owner defects, source
 admission and publication still follow the [destination procedure](destination.md). Do not run this

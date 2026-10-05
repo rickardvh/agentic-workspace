@@ -33,8 +33,11 @@ preserve the effect and never replay it to obtain a missing observation.
 Removal preserves custom policy, notes, plans and optional domain state. Remove
 authenticated host exposures first when required. Domain-state disposition needs
 that owner's authority and the user's intent. Sibling repositories remain outside
-the target. Source-checkout maintainers edit owning sources and regenerate the
-payload separately from a target-repository effect.
+the target.
+
+Only for a development source checkout or a returned source reassessment gap,
+use [source-checkout preparation](source-checkout.md). Installed consumer setup
+needs no maintainer build or regeneration recipe.
 
 Detailed assessment records, consumer witnesses, provenance and preservation
 diagnostics remain available through lazy `configuration_write` detail and its

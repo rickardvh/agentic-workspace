@@ -1173,9 +1173,15 @@ mod tests {
 
             update["arguments"]["material"] = closed;
             invoke(&context, &start(&context, json!([continuation, update])));
-            let quiet = start(&context, Value::Null);
+            // The execution owner is now closed. Retirement is separate work;
+            // its discovery must not resume that quiescent execution subject.
+            let mut retirement_context = context.clone();
+            retirement_context["task"] = json!(format!(
+                "Retire prior completed fixture owners after cycle {n}"
+            ));
+            let quiet = start(&retirement_context, Value::Null);
             let current = start(
-                &context,
+                &retirement_context,
                 quiet["planning"]["terminal_retention"]["discovery_request"].clone(),
             );
             if n > 0 {
@@ -1187,7 +1193,10 @@ mod tests {
                 disposition["arguments"]["reason"] = json!(
                     "Previous fixture work is complete; only current selection retains value."
                 );
-                invoke(&context, &start(&context, disposition));
+                invoke(
+                    &retirement_context,
+                    &start(&retirement_context, disposition),
+                );
             }
             assert_eq!(
                 crate::native_proof::local_receipt(&f.0, proof_reference).unwrap(),

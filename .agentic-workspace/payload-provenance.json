@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:05e2c9b0e497586e404f985f21edaac950333dc60eae57e062b025f6b246ad86",
+  "managed_revision": "sha256:389a975452dc3ee0b059ba48a0c30b18d978196226298349ce73ad908b531cab",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -20,6 +20,7 @@
     ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
     ".agentic-workspace/skills/workspace-startup/references/evidence.md",
     ".agentic-workspace/skills/workspace-startup/references/owners.md",
+    ".agentic-workspace/skills/workspace-startup/references/transport.md",
     ".agentic-workspace/skills/workspace-startup/references/reconcile.md",
     ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
     ".agentic-workspace/skills/workspace-startup/procedure.md",
@@ -31,6 +32,7 @@
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",

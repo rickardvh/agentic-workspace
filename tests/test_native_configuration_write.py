@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -52,6 +53,18 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
     wrong["arguments"]["value"] = "sha256:caller-chosen-content"
     with pytest.raises(AssertionError, match="artifact"):
         call(request=wrong)
+    # Refresh choices must support the ordinary exact-reference answer path,
+    # including requests nested in native setup rows rather than request lists.
+    job = call()["configuration_write"]["setup_job_request"]
+    job["arguments"] = {"job": "refresh-payload"}
+    for projection in ("compact", "carried"):
+        selected = call(request=job, projection=projection)
+        visible = selected["view"] if projection == "carried" else selected
+        choice = next(row for row in visible["setup_context"]["choices"] if row["subject"] == initial[0]["source"])
+        assert "source_revision" not in json.dumps(visible["setup_context"])
+        prepared = call(**{**visible["reentry"], "reference": choice["request"]["reference"], "answer": {}})
+        assert prepared["configuration_write"]["proposal"]["source"] == initial[0]["source"]
+        assert prepared["decision_packet"]["decision_request"] is not None
     for row in initial:
         request = next(item["request"] for item in choices() if item["source"] == row["source"])
         proposal = call(request=request)

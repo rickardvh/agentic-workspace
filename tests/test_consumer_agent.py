@@ -1,5 +1,6 @@
 """Transport controls are deterministic proof, never live-provider acceptance."""
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -9,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
 sys.path.insert(0, str(ROOT / "src/tooling/model-cli-harness"))
-from consumer_agent import CodexActor, SandboxConsumer, bounded_codex, portable_continuation  # noqa: E402
+from consumer_agent import CodexActor, ProviderMessages, SandboxConsumer, bounded_codex, portable_continuation  # noqa: E402
 
 
 def test_fresh_machine_continuation_excludes_local_custody():
@@ -23,6 +24,8 @@ def test_fresh_machine_continuation_excludes_local_custody():
 
 
 def test_containment_challenges_actor_auth_file(monkeypatch):
+    import subprocess
+
     import consumer_agent
 
     commands = []
@@ -40,6 +43,14 @@ def test_containment_challenges_actor_auth_file(monkeypatch):
     consumer.restrict_actor()
     assert 'test ! -e "$CODEX_HOME/auth.json"' in commands[-1][-1]
     assert "OPENAI_API_KEY|CODEX_API_KEY" in commands[-1][-1]
+    assert "test ! -w /run/ssh-agent.sock" in commands[-1][-1]
+
+    def accessible_socket(argv):
+        raise subprocess.CalledProcessError(1, argv, stderr="ssh-socket-accessible\n")
+
+    monkeypatch.setattr(consumer, "exec", accessible_socket)
+    with pytest.raises(ValueError, match="Actor containment preflight failed: ssh-socket-accessible"):
+        consumer.restrict_actor()
 
 
 def test_subscription_records_unknown_cost_without_requiring_tokens():
@@ -72,6 +83,50 @@ def test_timeout_stops_actor_without_completion():
     result = bounded_codex([sys.executable, "-c", "import time; time.sleep(30)"], seconds=1, stop=lambda: stopped.append(True))
     assert result["status"] == "timeout"
     assert result["claim"] is None
+    assert stopped == [True]
+
+
+def test_visible_provider_messages_are_live_bounded_redacted_and_not_product_evidence(tmp_path):
+    path = tmp_path / "provider.jsonl"
+    captured = ProviderMessages(path)
+    event = {
+        "type": "item.completed",
+        "item": {"type": "reasoning", "text": "Visible summary https://example.invalid/token Bearer fake-secret"},
+    }
+    captured.observe(event)
+    # Inspect before close: the live diagnostic survives eventual actor cleanup.
+    assert json.loads(path.read_bytes())["text"] == "Visible summary [endpoint] [redacted]"
+    captured.observe({"type": "item.completed", "item": {"type": "private_state", "text": "must not be retained"}})
+    for _ in range(100):
+        captured.observe({"type": "item.completed", "item": {"type": "agent_message", "text": "秘密" * 4000}})
+    captured.close()
+    result = captured.summary()
+    raw = path.read_bytes()
+    assert len(raw) <= 128 * 1024 and len(result["messages"]) <= 64
+    assert result["dropped_messages"] > 0
+    assert any(row["text_truncated"] for row in result["messages"])
+    assert result["artifact"]["bytes"] == len(raw)
+    assert result["artifact"]["sha256"] == hashlib.sha256(raw).hexdigest()
+    assert b"must not be retained" not in raw and b"fake-secret" not in raw
+    assert "not private state, native receipts or effect authority" in result["authority"]
+    with pytest.raises(FileExistsError):
+        ProviderMessages(path)
+
+
+def test_provider_summary_survives_timeout_with_unchanged_actor_stop(tmp_path):
+    path = tmp_path / "provider.jsonl"
+    stopped = []
+    event = {"type": "item.completed", "item": {"type": "reasoning", "text": "Inspecting current owner choice."}}
+    result = bounded_codex(
+        [sys.executable, "-u", "-c", "import time; print(" + repr(json.dumps(event)) + "); time.sleep(30)"],
+        seconds=1,
+        stop=lambda: stopped.append(True),
+        diagnostic_path=path,
+    )
+    assert result["status"] == "timeout" and result["claim"] is None
+    assert result["provider_messages"]["messages"][0]["text"] == event["item"]["text"]
+    assert result["provider_messages"]["artifact"]["bytes"] == path.stat().st_size
+    assert "product_calls" not in result
     assert stopped == [True]
 
 
@@ -141,12 +196,38 @@ def test_spoofed_tool_output_never_becomes_product_evidence():
     assert "unknown" in result["measurement_boundary"]
 
 
-@pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code", "session"])
+@pytest.mark.parametrize("extra", ["stdout", "executable", "subject", "exit_code", "session", "env", "host_session_identity"])
 def test_product_boundary_rejects_caller_authored_receipts(extra):
     from consumer_product_boundary import validate_request
 
     with pytest.raises(ValueError, match="Only argv and stdin"):
         validate_request({"argv": ["start"], "stdin": "", extra: "fabricated"})
+
+
+def test_product_boundary_carries_controller_identity_without_inherited_environment(monkeypatch):
+    from types import SimpleNamespace
+
+    import consumer_product_boundary as boundary
+
+    environments = []
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-reach-product")
+    monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "caller-cannot-select-identity")
+
+    def execute(argv, **kwargs):
+        environments.append(kwargs["env"])
+        assert kwargs["user"] == 10002 and kwargs["group"] == 10002
+        assert kwargs["extra_groups"] == []
+        assert argv == [str(boundary.ROOT / "subject/agentic-workspace"), "start"]
+        kwargs["stdout"].write(b"{}")
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(boundary.subprocess, "run", execute)
+    config = {"subject": {"sha256": "fixed-subject"}, "run_id": "controller-run"}
+    calls = [boundary.invoke({"argv": ["start"], "stdin": ""}, config, session) for session in (1, 1, 2)]
+    identities = [call["host_session_identity"] for call in calls]
+    assert identities == ["consumer:controller-run:session:1", "consumer:controller-run:session:1", "consumer:controller-run:session:2"]
+    assert [env["AW_SESSION_LOGICAL_IDENTITY"] for env in environments] == identities
+    assert all(set(env) == {"PATH", "HOME", "TMPDIR", "AW_SESSION_LOGICAL_IDENTITY"} for env in environments)
 
 
 def test_product_budget_rejection_drains_request_and_retains_controller_failure(tmp_path, monkeypatch):
@@ -163,7 +244,8 @@ def test_product_budget_rejection_drains_request_and_retains_controller_failure(
     scratch = tmp_path / "fixture-scratch"
     scratch.write_text("temporary fixture material")
 
-    def invoke(value, config):
+    def invoke(value, config, session):
+        assert session == json.loads((tmp_path / "session.json").read_text())
         invoked.append(value)
         if value["argv"] == ["invoke", "fixture-cleanup"]:
             scratch.unlink()

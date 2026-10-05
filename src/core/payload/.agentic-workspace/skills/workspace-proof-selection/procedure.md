@@ -18,7 +18,7 @@
     },
     {
       "id": "receipt",
-      "description": "Submit the receipt from a completed check for evidence admission",
+      "description": "Use the current evidence continuation, or admit an external receipt explicitly",
       "next": "references/receipt.md"
     },
     {

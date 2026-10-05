@@ -28,7 +28,7 @@
     },
     {
       "id": "boundaries",
-      "description": "Build the source runtime or handle unavailable setup tooling",
+      "description": "Handle unavailable setup tooling or an owner boundary",
       "next": "references/boundaries.md"
     }
   ],

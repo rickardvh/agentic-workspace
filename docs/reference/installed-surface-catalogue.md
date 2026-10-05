@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:cfe89b79e416a03ae0d1177c00ec8dde216a2cd53901e0fc3826f355b7a7a78c`
+- Contract digest: `sha256:1dc915c6466b9e35fe0bb740314bf7cca126c2a6fbc5e70dfe40c1b4727bb91f`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -23,6 +23,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-startup/references/ordinary.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/evidence.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/owners.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-startup/references/transport.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/reconcile.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/references/unavailable.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-startup/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -34,6 +35,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/package.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Selectively loaded repository working-rule authoring procedure |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -101,6 +103,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-startup/references/ordinary.md`
 - `.agentic-workspace/skills/workspace-startup/references/evidence.md`
 - `.agentic-workspace/skills/workspace-startup/references/owners.md`
+- `.agentic-workspace/skills/workspace-startup/references/transport.md`
 - `.agentic-workspace/skills/workspace-startup/references/reconcile.md`
 - `.agentic-workspace/skills/workspace-startup/references/unavailable.md`
 - `.agentic-workspace/skills/workspace-startup/procedure.md`
@@ -112,6 +115,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/package.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
+- `.agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md`
@@ -183,6 +187,8 @@ Skill-discovery links are removed through their authenticated Configuration expo
 
 These exact preimages are retained only for de-adoption compatibility. Current-version update hygiene uses current ownership declarations and requires no retirement entry or historical hash.
 
+- `.agentic-workspace/planning/skills/planning-work/references/legacy.md` -- `sha256:5cc29b456d5b7d3c376054a4f0846e23a0785cda2d5cfa1f8f5bc7d1c5d3f622`
+- `.agentic-workspace/skills/workspace-proof-selection/references/legacy.md` -- `sha256:19432d129ad6b19c83943d3becce400c545ec1ce77512947d716e438f4525858`
 - `.agentic-workspace/WORKFLOW.md` -- `sha256:75162f6469347e428ab284a7e1478a0fdd62ab4f61897a8e913f5a5f6600afa7`
 - `.agentic-workspace/docs/jumpstart-contract.md` -- `sha256:f37d653f52fdb3616758d8c5f31123f5d65d704e4c2cb971edd45f9729abbd4e`
 - `.agentic-workspace/docs/module-map.md` -- `sha256:e87c87007f08021c0a9af478e758a784782c543cc427d1e07db9ea2e9ce869df`

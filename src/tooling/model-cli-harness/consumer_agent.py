@@ -185,7 +185,9 @@ class SandboxConsumer(DockerConsumer):
             "cli_sha256": self.observation["installed"]["cli_sha256"],
             "core_sha256": self.observation["installed"]["sha256"],
         }
-        config = json.dumps({"subject": self.product_subject})
+        # The controller owns the host session identity, independently of the
+        # actor's environment and of any product decision or evidence claim.
+        config = json.dumps({"subject": self.product_subject, "run_id": uuid.uuid4().hex})
         wrapper = '#!/bin/sh\nexec /usr/bin/python3 -I /opt/aw-observer/boundary.py client "$@"\n'
         self.root_exec(
             [
@@ -283,8 +285,7 @@ class SandboxConsumer(DockerConsumer):
             raise ValueError("Product observer failure exceeds bound")
         failure = json.loads(raw)
         if failure is not None and (
-            failure.get("subject") != self.product_subject
-            or failure.get("kind") != "agentic-workspace/product-observer-failure/v1"
+            failure.get("subject") != self.product_subject or failure.get("kind") != "agentic-workspace/product-observer-failure/v1"
         ):
             raise ValueError("Product observer failure subject differs from the admitted installation")
         return failure
@@ -310,7 +311,9 @@ class SandboxConsumer(DockerConsumer):
     def restrict_actor(self):
         # Provider proxy auth is allowed; publishing, repository write and SSH
         # credentials must not be reachable by the tested actor.
-        run([self.sbx, "exec", "--user", "root", self.name, "sh", "-ec", "test ! -S /run/ssh-agent.sock || chmod 000 /run/ssh-agent.sock"])
+        # Installation blocks the SSH socket. Reobserve containment under the
+        # actual actor below; refuse an accessible replacement instead of
+        # repeatedly mutating a vendor-mounted socket before that check.
         run(
             [
                 self.sbx,
@@ -389,7 +392,70 @@ class SandboxConsumer(DockerConsumer):
             raise
 
 
-def bounded_codex(command, *, seconds, token_ceiling=None, stop):
+def redact_provider_text(text):
+    text = re.sub(r"https?://\S+", "[endpoint]", text)
+    return re.sub(r"(?i)(bearer\s+|sk-|ghp_|gho_)[A-Za-z0-9_.-]+", "[redacted]", text)
+
+
+class ProviderMessages:
+    """Bounded CLI-emitted summaries/messages, never private provider state.
+
+    These explain actor behavior; they are not authenticated product evidence.
+    Flush each record so the controller can inspect it during the bounded run.
+    """
+
+    def __init__(self, path=None):
+        self.path = Path(path) if path is not None else None
+        self.stream = self.path.open("xb") if self.path is not None else None
+        self.messages, self.events = [], {}
+        self.bytes, self.dropped = 0, 0
+        self.digest = hashlib.sha256()
+        self.started = time.monotonic()
+
+    def observe(self, event):
+        item = event.get("item") or {}
+        label = f"{event.get('type', 'unknown')}/{item.get('type', '')}"[:96]
+        if label not in self.events and len(self.events) >= 32:
+            label = "other"
+        self.events[label] = self.events.get(label, 0) + 1
+        if event.get("type") != "item.completed" or item.get("type") not in {"reasoning", "agent_message"}:
+            return
+        text = item.get("text")
+        if not isinstance(text, str):
+            return
+        encoded = redact_provider_text(text).encode()
+        record = {
+            "elapsed_seconds": round(time.monotonic() - self.started, 3),
+            "kind": item["type"],
+            "text": encoded[:8192].decode(errors="ignore"),
+            "text_truncated": len(encoded) > 8192,
+        }
+        data = (json.dumps(record, ensure_ascii=False) + "\n").encode()
+        if len(self.messages) >= 64 or self.bytes + len(data) > 128 * 1024:
+            self.dropped += 1
+            return
+        if self.stream is not None:
+            self.stream.write(data)
+            self.stream.flush()
+        self.messages.append(record)
+        self.bytes += len(data)
+        self.digest.update(data)
+
+    def close(self):
+        if self.stream is not None:
+            self.stream.close()
+
+    def summary(self):
+        return {
+            "messages": self.messages,
+            "event_counts": self.events,
+            "dropped_messages": self.dropped,
+            "artifact": {"path": str(self.path), "bytes": self.bytes, "sha256": self.digest.hexdigest()} if self.path is not None else None,
+            "authority": "Diagnostic CLI-emitted summaries/progress/final messages only; not private state, native receipts or effect authority.",
+        }
+
+
+def bounded_codex(command, *, seconds, token_ceiling=None, stop, diagnostic_path=None):
     """Bound wall time/output and stop on observed usage; no cost is fabricated.
 
     Token telemetry arrives after requests, so this is an observed stop threshold,
@@ -397,7 +463,12 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
     """
     if not 1 <= seconds <= 900 or (token_ceiling is not None and token_ceiling <= 0):
         raise ValueError("A bounded session and, when supplied, positive token threshold are required")
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+    provider_messages = ProviderMessages(diagnostic_path)
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+    except BaseException:
+        provider_messages.close()
+        raise
     events = queue.Queue(maxsize=256)
     finished = threading.Event()
 
@@ -445,10 +516,10 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
                 event = json.loads(line)
             except ValueError:
                 continue
+            provider_messages.observe(event)
             if event.get("type") in {"error", "turn.failed"}:
                 detail = str(event.get("message") or event.get("error", {}))[:1000]
-                detail = re.sub(r"https?://\S+", "[endpoint]", detail)
-                detail = re.sub(r"(?i)(bearer\s+|sk-|ghp_|gho_)[A-Za-z0-9_.-]+", "[redacted]", detail)
+                detail = redact_provider_text(detail)
                 diagnostics = (diagnostics + [detail])[-3:]
             if event.get("type") == "turn.completed":
                 calls += 1
@@ -486,9 +557,12 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
         try:
             stop()
         finally:
-            if process.poll() is None:
-                process.kill()
-            process.wait(timeout=10)
+            try:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=10)
+            finally:
+                provider_messages.close()
     claim = None
     if message:
         try:
@@ -506,6 +580,7 @@ def bounded_codex(command, *, seconds, token_ceiling=None, stop):
         "thread_id": thread_id,
         "command_trace": command_trace,
         "command_output_bytes": command_output_bytes,
+        "provider_messages": provider_messages.summary(),
         "measurement_boundary": "provider-reported command output; hidden host context and truncation loss unknown",
         "token_ceiling": token_ceiling,
         "budget_enforcement": "wall-time-output" + ("-and-observed-token-stop" if token_ceiling is not None else ""),
@@ -550,7 +625,8 @@ class CodexActor:
         self.sessions_started += 1
         consumer.begin_observation(self.sessions_started)
         observation_start = len(consumer.product_receipts())
-        result = bounded_codex(command, seconds=self.seconds, token_ceiling=self.token_ceiling, stop=consumer.stop_actor)
+        diagnostic_path = consumer.scratch / f"{consumer.name}.provider-session-{self.sessions_started}.jsonl"
+        result = bounded_codex(command, seconds=self.seconds, token_ceiling=self.token_ceiling, stop=consumer.stop_actor, diagnostic_path=diagnostic_path)
         receipts = consumer.product_receipts()[observation_start:]
         self.observations.append(
             {
