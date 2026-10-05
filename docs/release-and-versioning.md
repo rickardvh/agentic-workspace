@@ -28,7 +28,7 @@ migration, not whether a JSON field, result identity or Rust type changed.
 | Durable component records | Planning, Memory, Verification and other supported durable records remain readable or safely migratable, preserving their meaning, authority and outstanding obligations. Manual semantic reconstruction or abandonment requires a major. |
 | Package-managed integration | Installed skills, generated catalogues, payload and internal owner requests/results may evolve together through normal setup/refresh or deterministic migration. No separately promised stable API may break. Ordinary agents consume current results; they need no adapters for historical internal envelopes. |
 | Named public APIs | The entrypoints below retain their documented calling, transport, error and exit behaviour, except evolution explicitly allowed by their declared compatibility contract. Removing or incompatibly changing one requires a major. |
-| Independently negotiated operations | Integrations use the operation's declared profile/schema compatibility and fingerprints, not the package version alone. A changed operation fingerprint need not mean a package major; breaking the supported discovery or negotiation mechanism does. |
+| Current capability discovery | Integrations inspect the capability contract returned by native `start`, including current request schemas and operation declarations, and carry exact returned requests/actions. Package version alone does not establish operation availability or compatibility. Breaking this supported discovery/carriage boundary requires a major; changing a runtime-owned descriptor does not by itself. |
 | Source-only maintainer machinery | Use `semver:none` when the shipped package/runtime is intentionally unaffected. This remains an explicit decision, never a filename heuristic. |
 
 The supported distributions share this boundary:
@@ -43,18 +43,34 @@ The supported distributions share this boundary:
   `start`, `invoke`, `resources`, `selectReference`, `answerCarried` and
   `invokeCarried`, with their declared argument types. Private transport files and
   source-only semantic helpers are not additional public exports.
-- **Rust/Cargo:** `agentic-workspace-core` and `agentic-workspace-cli` support the
-  same-version paired executable/protocol distribution. Direct Rust library
-  embedding is not currently a supported stable API. `pub` visibility alone does
-  not establish an embedding promise.
+- **Rust/Cargo:** the core crate supports embedding through
+  `agentic_workspace_core::operating::{start, invoke}` with the signatures
+  `serde_json::Value -> Result<serde_json::Value, CoreError>`. `CoreError` remains
+  a `Debug`, `Clone`, `Display` and `std::error::Error` type; its private
+  representation and diagnostic wording are not stable APIs. The two Cargo
+  crates also support the same-version paired executable/protocol distribution.
+  Other `pub` modules, source assembly and helper symbols are not thereby stable
+  embedding APIs. See the [API guide](architecture/shared-rust-core.md).
 
 These entrypoints transport current component data. Their availability and
 documented transport obligations are stable; every nested dynamic request/result
-field is not thereby a package ABI. Preserve the #2194/#2197 distinction between
-package/client identity, schema identity and operation compatibility. Integrations
-must use supported current discovery and exact-reference/carriage mechanisms
-and any operation-specific compatibility declaration. An undocumented internal
-schema or retained source contract is not a negotiated external API.
+field is not thereby a package ABI. The current discovery boundary is
+`capability_contract` from `start` with `projection: "full"`, or its selected
+detail reference in the compact result. It declares owners' request `kind`,
+`input_schema` and `result_kind`, and operations' `id`, `input_schema`,
+`result_kind`, `semantic_revision`, reads and effects. Revisions identify the
+current declaration; they are opaque identities, not ordered versions or a
+promise that unequal revisions are incompatible. Validate the contract your
+integration needs and submit exact current requests/actions; discovery alone
+does not authorise an effect.
+
+There is no separately supported operation-profile negotiation API or external
+fingerprint compatibility range today. #2194/#2197 motivate separating package
+identity from operation compatibility; their retired catalogues and conformance
+exports are not current APIs. The current capability discovery and exact carriage
+contract are stable package APIs. A minor may evolve their runtime-owned contents
+when current clients can discover and carry them without changing supported
+consumer code/configuration or losing durable state.
 
 Choose **patch** for corrections that preserve these promises and require no new
 consumer migration; **minor** for compatible additions or evolution with safe
@@ -134,6 +150,12 @@ layouts and platform requirements, and [release validation](maintainer/release-v
 for the replacement's evidence.
 
 ## Withdraw 2.0.0 and resume 1.x
+
+The repository owner's withdrawal decision is tracked separately in
+[issue #3835](https://github.com/rickardvh/agentic-workspace/issues/3835).
+Issue #3832 owns the compatibility policy; merging that policy does not establish
+registry withdrawal. Keep #3835 open until replacement publication and all
+withdrawal states below are verified.
 
 The reviewed `.release/version-line-correction.json` records the authorised
 replacement of 2.0.0 by 1.11.0, the exact 2.0 source and the preceding 1.10.2

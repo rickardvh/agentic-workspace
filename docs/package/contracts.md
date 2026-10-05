@@ -7,13 +7,14 @@ handwritten field list. For using the product, start with the
 [reference index](../reference/index.md).
 
 The [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
-names the stable CLI, Python and TypeScript entrypoints and the paired Cargo
-executable boundary. It protects supported user inputs and durable component
+names the stable CLI, Python, TypeScript and Rust `operating::{start, invoke}`
+entrypoints and the paired Cargo executable boundary. It protects supported user inputs and durable component
 records across minor upgrades. Package-managed payload and current internal
 requests/results may evolve together; a serialised field is not automatically a
-stable external API. Independent integrations use declared operation/schema
-compatibility rather than package-version guessing. Direct Rust embedding is
-outside the current stable support contract.
+stable external API. Independent integrations inspect the current capability
+contract from native `start`, including request schemas and operation semantic
+revisions, rather than guessing from a package version. No separate operation
+profile/fingerprint negotiation API is currently supported.
 
 ## Which source answers which question?
 

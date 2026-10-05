@@ -14,6 +14,12 @@ Use the [Rust, Python or TypeScript API](architecture/shared-rust-core.md), or c
 the [CLI](package/commands.md) and consume JSON. Keep model credentials, provider
 sessions and other host-specific state in the host application.
 
+The stable Rust embedding calls are `operating::start` and `operating::invoke`;
+other public core modules are outside that promise. Inspect `start`'s current
+capability contract for request schemas and operation declarations, then carry
+the exact returned requests/actions. The [compatibility policy](release-and-versioning.md#package-compatibility-boundary)
+defines this boundary; package versions alone do not establish operation compatibility.
+
 Start by asking AW what applies to the current task. Supply the target repository,
 the task and any known changed paths. Present relevant returned information to the
 agent; load optional detail only when needed.

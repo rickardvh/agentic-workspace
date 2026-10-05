@@ -28,8 +28,9 @@ binding never starts Cargo or falls back to a Python/generated command host.
 
 The [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
 protects these named entrypoints, supported user inputs and durable records.
-The Cargo core is part of the paired executable distribution; direct Rust
-embedding is not currently a supported stable API.
+The Cargo core also supports embedding through `operating::{start, invoke}` and
+their `CoreError` result type, as specified in the [API guide](../architecture/shared-rust-core.md).
+Other public Rust implementation modules are outside that stable API.
 
 The installed consumer contract is the capability contract returned by native
 `start`. The prerelease `external_operation_conformance_receipts` Python export

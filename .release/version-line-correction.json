@@ -11,5 +11,5 @@
     "source_commit": "2ae498d1a7578d86f9ef971ee51be653b513525f"
   },
   "replacement": "1.11.0",
-  "reason": "Repository owner authorised withdrawing 2.0.0 and returning to 1.11 while implementing #3832. The current resource result and managed skills evolve together without a supported consumer migration. Preserve the original release identity, receipts and major fragment."
+  "reason": "Repository owner authorised withdrawing 2.0.0 and returning to 1.11; #3835 owns that separate operational outcome, coupled to the #3832 compatibility policy. The current resource result and managed skills evolve together without a supported consumer migration. Preserve the original release identity, receipts and major fragment."
 }

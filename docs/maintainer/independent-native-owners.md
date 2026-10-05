@@ -6,9 +6,10 @@ authority. Python, TypeScript, JSON and the native CLI project that same runtime
 The separate crate in `tests/fixtures/native-independent-owner` exercises this
 boundary without putting its owner names in product dispatch.
 
-This is a source-assembly extension for maintainers, not a stable Cargo library
-embedding API. Independent integrations consuming released packages use the
-documented executable/facade boundary and declared operation compatibility; see
+This registration/assembly extension is for maintainers and is outside the stable
+Rust `operating::{start, invoke}` embedding API. Independent integrations consuming
+released packages use the documented entrypoints and the current capability
+contract returned by `start`; see
 the [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary).
 
 ## Installation and admission

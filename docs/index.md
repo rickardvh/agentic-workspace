@@ -18,6 +18,9 @@ You do not need to read the reference or understand the implementation before us
 
 [CLI](reference/cli-catalogue.md) · [Configuration](reference/workspace-config.md) · [Rust, Python and TypeScript APIs](architecture/shared-rust-core.md)
 
+The [package compatibility policy](release-and-versioning.md#package-compatibility-boundary)
+names the supported calls, including Rust `operating::{start, invoke}`.
+
 Use the [reference index](reference/index.md) to look up a particular interface. [Compatibility and support](evidence-and-support.md) explains release and environment limits; the [security guide](security/threat-model.md) covers execution and credentials.
 
 ## Build on AW

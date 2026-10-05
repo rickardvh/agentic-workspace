@@ -12,8 +12,8 @@ according to your tooling. Keep using that installation when running AW.
 Minor upgrades preserve supported configuration and durable work, with normal
 managed-file refresh when needed. See the
 [compatibility policy](release-and-versioning.md#package-compatibility-boundary).
-Cargo provides the paired executables; direct embedding of the core Rust library
-is not currently a supported stable API.
+Cargo provides the paired executables. For embedding, the supported core Rust
+API is [`operating::{start, invoke}`](architecture/shared-rust-core.md).
 
 Package registries resolve the current stable release. A repository-local npm
 install can record the resolved version exactly; for other package managers, add

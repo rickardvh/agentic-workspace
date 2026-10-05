@@ -7,7 +7,7 @@ setting or API. For a first task, start with [Getting started](../agentic-worksp
 | --- | --- |
 | Run AW from a terminal | [CLI examples](../package/commands.md) and [all commands and options](cli-catalogue.md) |
 | Configure a project | [Shared settings](workspace-config.md) and [local overrides](workspace-local-override.md) |
-| Call AW from a program | [Rust, Python and TypeScript APIs](../architecture/shared-rust-core.md) |
+| Call AW from a program | [Rust `operating::{start, invoke}`, Python and TypeScript APIs](../architecture/shared-rust-core.md) |
 | Write project instructions or skills | [Configuration guide](../customization.md) |
 | Inspect files installed in a repository | [Installed-surface catalogue](installed-surface-catalogue.md) |
 | Add an independent capability | [Native module contract](../module-capability-contract.md) |

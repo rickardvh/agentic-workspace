@@ -38,6 +38,11 @@ The CLI and Rust, Python and TypeScript APIs all use the same Rust implementatio
 for current queries and controlled updates. The repository's AW skill teaches the
 agent when to use those tools without imposing a command sequence on every task.
 
+For Rust applications, the stable calls are `operating::start` and
+`operating::invoke`. The [API guide](../architecture/shared-rust-core.md) and
+[compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
+define the supported calls and current capability discovery contract.
+
 [Configure your project](../customization.md) for rules and procedures;
 [Your repository and data](installed-surfaces.md) for saved files and removal;
 [Architecture](../architecture.md) for implementation details.
