@@ -6,6 +6,12 @@ authority. Python, TypeScript, JSON and the native CLI project that same runtime
 The separate crate in `tests/fixtures/native-independent-owner` exercises this
 boundary without putting its owner names in product dispatch.
 
+This registration/assembly extension is for maintainers and is outside the stable
+Rust `operating::{start, invoke}` embedding API. Independent integrations consuming
+released packages use the documented entrypoints and the current capability
+contract returned by `start`; see
+the [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary).
+
 ## Installation and admission
 
 A Rust crate registers a compact `Registration` using the exported `submit!`

@@ -12,6 +12,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import cargo_release
 import coordinated_release
 import preview_release
 import registry_release
@@ -67,13 +68,36 @@ def publication_receipts(repository, tag, source, directory):
     return True
 
 
+def completed_release(repository, tag, source, *, allow_yanked=False):
+    """Verify historical publication bytes even when the recorded release is yanked."""
+    response = subprocess.run(["gh", "api", f"repos/{repository}/releases/tags/{tag}"], capture_output=True, text=True)
+    if response.returncode:
+        if "HTTP 404" not in response.stderr:
+            raise ValueError("Unknown remote release state: " + response.stderr)
+        return None
+    release = json.loads(response.stdout)
+    if release.get("draft") or release.get("prerelease"):
+        return None
+    with tempfile.TemporaryDirectory() as temporary:
+        dist = Path(temporary) / "dist"
+        registry_release.fetch_admitted(dist, tag, repository)
+        identity, artifacts = registry_release.admitted_artifacts(dist, tag, source)
+        if not publication_receipts(repository, tag, source, dist):
+            return None
+        statuses = [registry_release.observe(a, dist, allow_yanked=allow_yanked) for a in artifacts]
+        cargo = json.loads((dist / "cargo-release-manifest.json").read_text())
+        statuses.extend(cargo_release.observe(a, allow_yanked=allow_yanked) for a in cargo["packages"])
+        if any(status != "matching" for status in statuses):
+            return None
+        return {**identity, "source_commit": source}
+
+
 def observe_stable(repository):
     """A reserved tag and a completed release answer different questions."""
-    import cargo_release
-
     tags = api(repository, "git/matching-refs/tags/")
     versions = []
     stable = []
+    reservations = []
     for row in tags:
         tag = row["ref"].removeprefix("refs/tags/")
         try:
@@ -81,41 +105,45 @@ def observe_stable(repository):
         except ValueError:
             continue
         versions.append(str(version))
+        reservations.append((str(version), tag))
         if channel == "stable":
             stable.append((version, tag))
     if not stable:
         raise ValueError("No completed stable boundary; use the exceptional first-stable recovery procedure")
+    correction = coordinated_release.version_line_correction(git("rev-parse", "HEAD").strip())
+    withdrawn = None
+    if correction:
+        if any(version == correction["withdrawn"]["version"] and tag != correction["withdrawn"]["tag"] for version, tag in reservations):
+            raise ValueError("Version-line correction conflicts with another reservation at 2.0.0")
+        for key in ("previous", "withdrawn"):
+            subject = correction[key]
+            if api(repository, f"commits/{subject['tag']}")["sha"] != subject["source_commit"]:
+                raise ValueError("Version-line correction conflicts with immutable remote source")
+        subject = correction["withdrawn"]
+        if subject["tag"] not in {tag for _, tag in stable}:
+            raise ValueError("Version-line correction lacks the reserved withdrawn tag")
+        withdrawn = completed_release(repository, subject["tag"], subject["source_commit"], allow_yanked=True)
+        if withdrawn is None or withdrawn.get("version") != subject["version"]:
+            raise ValueError("Version-line correction requires verified completed original publication")
     completed = None
     partial = []
     for _, tag in sorted(stable, reverse=True):
+        if correction and tag == correction["withdrawn"]["tag"]:
+            continue
         source = api(repository, f"commits/{tag}")["sha"]
-        response = subprocess.run(["gh", "api", f"repos/{repository}/releases/tags/{tag}"], capture_output=True, text=True)
-        if response.returncode:
-            if "HTTP 404" not in response.stderr:
-                raise ValueError("Unknown remote release state: " + response.stderr)
+        completed = completed_release(repository, tag, source)
+        if completed is None:
             partial.append(tag)
             continue
-        release = json.loads(response.stdout)
-        if release.get("draft") or release.get("prerelease"):
-            partial.append(tag)
-            continue
-        with tempfile.TemporaryDirectory() as temporary:
-            dist = Path(temporary) / "dist"
-            registry_release.fetch_admitted(dist, tag, repository)
-            identity, artifacts = registry_release.admitted_artifacts(dist, tag, source)
-            if not publication_receipts(repository, tag, source, dist):
-                partial.append(tag)
-                continue
-            statuses = [registry_release.observe(a, dist) for a in artifacts]
-            cargo = json.loads((dist / "cargo-release-manifest.json").read_text())
-            statuses.extend(cargo_release.observe(a) for a in cargo["packages"])
-            if any(status != "matching" for status in statuses):
-                partial.append(tag)
-                continue
-            completed = {**identity, "source_commit": source}
-            break
+        if correction and coordinated_release.Version.parse(completed["version"]) <= coordinated_release.Version.parse(
+            correction["previous"]["version"]
+        ):
+            completed = withdrawn
+        break
     if completed is None:
         raise ValueError("No verified completed stable boundary; recover " + ", ".join(partial))
+    if correction:
+        completed["version_line_correction"] = correction
     # Public versions may be reserved without a Git tag. Unknown metadata fails closed.
     ownership = coordinated_release.load_ownership()
     documents = []
@@ -138,8 +166,14 @@ def observe_stable(repository):
         if re.fullmatch(r"\d+\.\d+\.\d+", version):
             versions.append(version)
             if (
-                coordinated_release.Version.parse(version) > coordinated_release.Version.parse(completed["version"])
+                coordinated_release.Version.parse(version)
+                > coordinated_release.Version.parse(
+                    correction["previous"]["version"]
+                    if correction and completed["tag"] == correction["withdrawn"]["tag"]
+                    else completed["version"]
+                )
                 and "v" + version not in partial
+                and not (correction and version == correction["withdrawn"]["version"])
             ):
                 partial.append("v" + version)
     return completed, versions, partial
@@ -230,7 +264,7 @@ def verify_bundle(directory, identity):
     if not identity.get("legacy"):
         manifest = json.loads((directory / "agentic-workspace-release-manifest.json").read_text())
         staged = json.loads((directory / IDENTITY_FILE).read_text())
-        for key in ("source_commit", "version", "tag", "changesets", "boundary", "transform"):
+        for key in ("source_commit", "version", "tag", "changesets", "boundary", "transform", "version_line_correction"):
             if staged.get(key) != manifest["staging"].get(key):
                 raise ValueError("Bundle staging identity mismatch")
         if staged["source_commit"] != identity["source_commit"] or staged["tag"] != identity["tag"]:
@@ -254,12 +288,12 @@ def publish_github(repository, identity):
         if "HTTP 404" not in remote.stderr:
             raise ValueError("Unknown tag state: " + remote.stderr)
         completed, versions, partial = observe_stable(repository)
-        if partial or coordinated_release.Version.parse(completed["version"]) >= coordinated_release.Version.parse(identity["version"]):
+        if partial:
             raise ValueError("Release state changed before publication; recover the reserved subject")
         current = coordinated_release.select_release(
             coordinated_release.load_ownership(), source=source, completed=completed, reserved=versions, partial=partial
         )
-        if current.get("tag") != tag or current.get("changesets") != identity.get("changesets"):
+        if any(current.get(key) != identity.get(key) for key in ("tag", "changesets", "boundary", "version_line_correction")):
             raise ValueError("Reserved versions or completed source changed before publication")
         annotation = {
             "kind": "agentic-workspace/release-tag/v1",
@@ -300,7 +334,22 @@ def publish_github(repository, identity):
     if response.returncode:
         if "HTTP 404" not in response.stderr:
             raise ValueError("Unknown release state: " + response.stderr)
-        run("gh", "release", "create", tag, "--repo", repository, "--verify-tag", "--title", tag, "--notes-file", "dist/release-notes.md")
+        command = [
+            "gh",
+            "release",
+            "create",
+            tag,
+            "--repo",
+            repository,
+            "--verify-tag",
+            "--title",
+            tag,
+            "--notes-file",
+            "dist/release-notes.md",
+        ]
+        if identity.get("version_line_correction"):
+            command.append("--latest")
+        run(*command)
         release = api(repository, f"releases/tags/{tag}")
     else:
         release = json.loads(response.stdout)

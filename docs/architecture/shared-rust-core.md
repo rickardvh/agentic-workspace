@@ -7,6 +7,14 @@ the language of the repository being worked on.
 For terminal use, read the [CLI guide](../package/commands.md). For deciding what
 an agent integration needs to do, read [Integrate an agent or tool](../extension-boundary.md).
 
+The [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
+protects the named calls below across minor upgrades. The stable Rust embedding
+API is `operating::start` and `operating::invoke`, both accepting `serde_json::Value`
+and returning `Result<Value, CoreError>`. `CoreError` implements `Debug`, `Clone`,
+`Display` and `std::error::Error`; its private layout and diagnostic wording may
+change. Other public Rust modules and source assembly helpers are implementation
+interfaces outside this promise.
+
 ## Install in your application's environment
 
 | Client | Dependency |
@@ -101,7 +109,7 @@ try {
 ```
 
 These calls are synchronous and return JSON objects. The package includes
-[TypeScript declarations](../../src/cli/typescript/operating.d.mts); they describe the
+[TypeScript declarations](../../src/cli/typescript/native/operating.d.mts); they describe the
 transport, while Rust validates requests. The same exports are available from
 `@agentic-workspace/workspace-cli/operating`.
 
@@ -110,6 +118,14 @@ transport, while Rust validates requests. The same exports are available from
 A work context contains `target`, a description in `task`, and optional `changed`
 paths. Keep that context consistent when submitting a returned request or action.
 Use `request` with `start`, and `invocation` with `invoke`.
+
+To inspect the installed runtime's current request schemas and operation
+declarations, request `projection: "full"` and read `capability_contract`, or select
+its detail reference from the compact result. Request declarations carry `kind`,
+`input_schema` and `result_kind`; operation declarations carry `id`, `input_schema`,
+`result_kind` and `semantic_revision`. These describe the current contract, not an
+operation-version range negotiated from a package version. A revision is an opaque
+identity. Re-enter when sources change and use the exact returned requests/actions.
 
 The exact `projection` field controls how much detail the API returns. `compact`
 keeps optional detail behind references. `full` expands it. `carried` also returns

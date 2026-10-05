@@ -6,6 +6,11 @@ Installed wheel, npm and host-labelled native archives carry the paired CLI/core
 see [release topology](../maintainer/native-release-topology.md) for provenance
 and the supported artefact boundary.
 
+The [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
+protects the documented entrypoints and transport behaviour below. Current owner
+requests/results travel with the installed runtime; serialisation alone does not
+make their internal fields stable across package versions.
+
 The CLI owns argument parsing, JSON transport, rendering and exit codes. Its
 public command and option declarations come from `source_decision_contract.json`:
 
@@ -31,8 +36,8 @@ the CLI cannot reconstruct it from an action's identity.
 Clients cannot invent source admission, custody, capability contracts or proof.
 
 Python `agentic_workspace` and the installed npm root/`./operating` exports
-project `start`, `invoke` and the reference/carriage helpers. The npm `./native`
-export provides low-level JSON transport. JSON and native entry independently
+project `start`, `invoke`, `resources` and the reference/carriage helpers.
+JSON and native entry independently
 consume the same Rust authority; no binding supplies a parallel domain runtime.
 The native executable does not launch Python or Node to decide semantics.
 Missing or incompatible paired cores fail explicitly, without source-build or

@@ -9,6 +9,12 @@ Pin AW per repository when repositories need independent versions; otherwise a
 shared installation is fine. Choose npm, Python/uv, Cargo or a standalone archive
 according to your tooling. Keep using that installation when running AW.
 
+Minor upgrades preserve supported configuration and durable work, with normal
+managed-file refresh when needed. See the
+[compatibility policy](release-and-versioning.md#package-compatibility-boundary).
+Cargo provides the paired executables. For embedding, the supported core Rust
+API is [`operating::{start, invoke}`](architecture/shared-rust-core.md).
+
 Package registries resolve the current stable release. A repository-local npm
 install can record the resolved version exactly; for other package managers, add
 an explicit version when your repository needs the same version on every machine.

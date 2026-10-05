@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Define supported package compatibility and resume the 1.x line at 1.11.0 after withdrawing the conservatively classified 2.0.0 release; preserve user configuration and durable records while current managed runtime and skills evolve together."
