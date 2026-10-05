@@ -394,6 +394,32 @@ fn reconcile_restriction_routes(value: &mut Value, recovery: &[Value]) {
     visit(value, recovery);
 }
 
+fn same_pending_action(pending: &Value, invocation: &Value) -> bool {
+    if pending == invocation {
+        return true;
+    }
+    if invocation["kind"] != "agentic-workspace/operation-invocation/v1" {
+        return false;
+    }
+    let Some(mut proposal) = invocation.as_object().cloned() else {
+        return false;
+    };
+    // Native preparation adds the invocation kind and renames these custody
+    // fields. Reverse only that mapping for exact presentation comparison;
+    // distinct scope, sources, arguments or unknown material must remain visible.
+    proposal.remove("kind");
+    for (prepared, pending) in [
+        ("expected_dependency_revision", "dependency_revision"),
+        ("idempotency_key", "logical_effect_id"),
+    ] {
+        let Some(value) = proposal.remove(prepared) else {
+            return false;
+        };
+        proposal.insert(pending.to_owned(), value);
+    }
+    pending == &Value::Object(proposal)
+}
+
 fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreError> {
     if !full["decision_packet"].is_object() {
         return Ok(full.clone()); // Compatibility/recovery is already bounded.
@@ -469,16 +495,27 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             }
         }
     }
-    // The selected question/action already appears above; retain other peers
-    // before adding presentation-only fields to their bounded views.
-    for (field, selected) in [
-        ("actions", "primary_action"),
-        ("decisions", "decision_request"),
-    ] {
-        let selected = &full["decision_packet"][selected];
-        if let Some(values) = packet["pending_consequences"][field].as_array_mut() {
-            values.retain(|value| value != selected);
-        }
+    // Prepared actions already appear above. Remove their raw proposal copies,
+    // retaining every unadmitted or materially different peer. Compare against
+    // native envelopes before carried presentation replaces them with views.
+    let admitted = std::iter::once(&full["decision_packet"]["primary_action"])
+        .chain(
+            full["decision_packet"]["ready_actions"]
+                .as_array()
+                .into_iter()
+                .flatten(),
+        )
+        .filter(|action| !action.is_null())
+        .collect::<Vec<_>>();
+    if let Some(values) = packet["pending_consequences"]["actions"].as_array_mut() {
+        values.retain(|value| {
+            !admitted
+                .iter()
+                .any(|action| same_pending_action(value, action))
+        });
+    }
+    if let Some(values) = packet["pending_consequences"]["decisions"].as_array_mut() {
+        values.retain(|value| value != &full["decision_packet"]["decision_request"]);
     }
     let proposal_reference = refs.get("/verification/claim_review/proposal").cloned();
     if let Some(reference) = proposal_reference {
@@ -1996,6 +2033,101 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn compact_removes_only_exact_prepared_proposals_and_preserves_peers() {
+        let invocation = json!({
+            "kind":"agentic-workspace/operation-invocation/v1",
+            "operation_id":"owned.write", "operation_revision":"operation-current",
+            "source_owner":"owner", "authority":"owner",
+            "consequence_id":"effect:owned-write", "effects":["owned-write"],
+            "arguments":{"path":"current.txt"}, "source_requests":[],
+            "expected_dependency_revision":"dependency-current", "idempotency_key":"logical-current"
+        });
+        let proposal = json!({
+            "operation_id":"owned.write", "operation_revision":"operation-current",
+            "source_owner":"owner", "authority":"owner",
+            "consequence_id":"effect:owned-write", "effects":["owned-write"],
+            "arguments":{"path":"current.txt"}, "source_requests":[],
+            "dependency_revision":"dependency-current", "logical_effect_id":"logical-current"
+        });
+        let mut peers = Vec::new();
+        for (field, different) in [
+            ("source_owner", json!("another-owner")),
+            ("authority", json!("another-authority")),
+            ("operation_revision", json!("another-operation")),
+            ("logical_effect_id", json!("another-logical-effect")),
+            ("dependency_revision", json!("another-dependency")),
+            ("consequence_id", json!("effect:another-write")),
+            ("arguments", json!({"path":"another.txt"})),
+            ("effects", json!(["another-write"])),
+            (
+                "source_requests",
+                json!([{"source":"another-current-source"}]),
+            ),
+            ("new_owner_material", json!({"stop":"preserve-foreign"})),
+        ] {
+            let mut peer = proposal.clone();
+            peer[field] = different;
+            peers.push(peer);
+        }
+        let blockers =
+            json!([{"owner":"peer", "code":"review-required", "affects":["claim:complete"]}]);
+        let full = json!({"decision_packet":{
+            "status":"actionable", "primary_action":invocation, "ready_actions":[invocation],
+            "decision_request":null, "blockers":blockers, "claim_boundary":{"blocked":["complete"]},
+            "pending_consequences":{"actions":std::iter::once(proposal.clone()).chain(peers.clone()).collect::<Vec<_>>(),
+                "decisions":[], "blockers":blockers}
+        }});
+        let context = json!({"target":"fixture", "task":"bounded"});
+        for carried in [false, true] {
+            let view = compact(&full, &context, carried).unwrap();
+            assert_eq!(
+                view["decision_packet"]["pending_consequences"]["actions"],
+                json!(peers)
+            );
+            assert_eq!(view["decision_packet"]["blockers"], blockers);
+            assert_eq!(
+                view["decision_packet"]["claim_boundary"],
+                full["decision_packet"]["claim_boundary"]
+            );
+            assert_eq!(
+                view["decision_packet"]["primary_action"]["arguments"],
+                invocation["arguments"]
+            );
+        }
+        // No current admission means even the matching proposal stays visible.
+        let mut unadmitted = full.clone();
+        unadmitted["decision_packet"]["primary_action"] = Value::Null;
+        unadmitted["decision_packet"]["ready_actions"] = json!([]);
+        assert_eq!(
+            compact(&unadmitted, &context, false).unwrap()["decision_packet"]["pending_consequences"]
+                ["actions"],
+            full["decision_packet"]["pending_consequences"]["actions"]
+        );
+
+        // Multiple independent ready actions keep their prepared invocations;
+        // only their exact raw copies disappear, leaving the unadmitted peers.
+        let mut other = invocation.clone();
+        other["operation_id"] = json!("other.write");
+        let mut other_proposal = proposal;
+        other_proposal["operation_id"] = json!("other.write");
+        let mut multiple = full;
+        multiple["decision_packet"]["primary_action"] = Value::Null;
+        multiple["decision_packet"]["ready_actions"] = json!([invocation, other]);
+        multiple["decision_packet"]["pending_consequences"]["actions"]
+            .as_array_mut()
+            .unwrap()
+            .push(other_proposal);
+        let view = compact(&multiple, &context, false).unwrap();
+        assert_eq!(
+            view["decision_packet"]["ready_actions"],
+            multiple["decision_packet"]["ready_actions"]
+        );
+        assert_eq!(
+            view["decision_packet"]["pending_consequences"]["actions"],
+            json!(peers)
+        );
+    }
     #[test]
     fn compact_preserves_peer_restrictions_claims_and_unknown_material() {
         let selected = json!({"operation_id":"independent.write","source_owner":"action-owner","effects":["owned-write"],

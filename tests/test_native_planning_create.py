@@ -406,6 +406,23 @@ def test_public_creation_continues_with_current_owner(tmp_path: Path, shared_cor
     assert operation["semantic_revision"] == "planning-create-current-owner-v2"
     assert action["arguments"]["establish_current_owner"] is True
     Draft202012Validator(operation["input_schema"]).validate(action["arguments"])
+    # A real native proposal and its prepared invocation have different shapes.
+    # Ordinary presentation must leave one invocable action, not a duplicate raw
+    # proposal that fails invocation-kind admission when forwarded unchanged.
+    proposal = ready["decision_packet"]["pending_consequences"]["actions"][0]
+    assert "kind" not in proposal
+    assert proposal["logical_effect_id"] == action["idempotency_key"]
+    for projection in ("compact", "carried"):
+        projected = call({**context, "request": request, "projection": projection})
+        visible = projected["view"] if projection == "carried" else projected
+        packet = visible["decision_packet"]
+        assert packet["pending_consequences"]["actions"] == []
+        assert packet["primary_action"]["operation_id"] == "planning.create"
+        assert packet["blockers"] == ready["decision_packet"]["blockers"]
+        assert packet["claim_boundary"] == ready["decision_packet"]["claim_boundary"]
+        if projection == "compact":
+            assert packet["primary_action"] == action
+            action = packet["primary_action"]
     create_only = json.loads(json.dumps(action))
     del create_only["arguments"]["establish_current_owner"]
     with pytest.raises(AssertionError):

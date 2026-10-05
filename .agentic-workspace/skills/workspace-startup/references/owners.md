@@ -19,8 +19,9 @@ changed paths and projection together; do not also pass conflicting context flag
 or construct nested semantic JSON in a shell command. Simple answers need no
 scratch file; the supported reference/answer inputs remain sufficient.
 
-Invoke only the exact admitted action. A complete invocation input contains
-`target`, `task`, `changed` and the unchanged returned `invocation`; include
+Invoke `decision_packet.primary_action`, or an admitted `ready_actions` item
+when several independent actions are ready. A complete invocation input contains
+`target`, `task`, `changed` and that unchanged action as `invocation`; include
 `changed: []` for an empty scope. An action alone cannot reconstruct its work
 context. Use the repository's configured invocation through native `invoke`.
 Preserve the whole effect result and owner-specific next requests. Follow a
