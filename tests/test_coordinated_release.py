@@ -115,6 +115,67 @@ def test_completed_source_consumes_revisions_and_staging_rejects_other_changes(t
         release.stamp_release(ownership, corrupted)
 
 
+def test_reviewed_version_line_correction_consumes_withdrawn_source_without_reusing_versions(tmp_path, monkeypatch):
+    release = _load_module()
+    monkeypatch.setattr(release, "ROOT", tmp_path)
+
+    def git(*args):
+        return subprocess.check_output(["git", *args], cwd=tmp_path, text=True).strip()
+
+    def commit():
+        git("add", ".")
+        git("commit", "-qm", "fixture")
+        return git("rev-parse", "HEAD")
+
+    def fragment(name, bump):
+        (tmp_path / f".release/changes/{name}.toml").write_text(
+            f'schema_version = "{release.CHANGESET_SCHEMA}"\nbump = "{bump}"\nsummary = "{name}"\n'
+        )
+
+    git("init", "-q")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test")
+    (tmp_path / ".release/changes").mkdir(parents=True)
+    fragment("previous", "patch")
+    previous = commit()
+    fragment("historical-major", "major")
+    withdrawn = commit()
+    record = {
+        "kind": "agentic-workspace/version-line-correction/v1",
+        "previous": {"tag": "v1.10.2", "version": "1.10.2", "source_commit": previous},
+        "withdrawn": {"tag": "v2.0.0", "version": "2.0.0", "source_commit": withdrawn},
+        "replacement": "1.11.0",
+        "reason": "Reviewed repository-owner correction",
+    }
+    (tmp_path / release.CORRECTION_PATH).write_text(json.dumps(record))
+    fragment("policy", "minor")
+    source = commit()
+    completed = {**record["withdrawn"], "version_line_correction": record}
+    plan = release.select_release({}, source=source, completed=completed, reserved=["1.10.2", "2.0.0"], partial=[])
+    assert plan["tag"] == "v1.11.0"
+    assert plan["boundary"] == {"tag": "v2.0.0", "source_commit": withdrawn}
+    assert [r["path"] for r in plan["changesets"]] == [".release/changes/policy.toml"]
+    with pytest.raises(ValueError, match="remote admission"):
+        release.select_release({}, source=source, completed=record["withdrawn"], reserved=[], partial=[])
+    with pytest.raises(ValueError, match="recovery"):
+        release.select_release({}, source=source, completed=completed, reserved=["1.11.0", "2.0.0"], partial=["v1.11.0"])
+    with pytest.raises(ValueError, match="differs from reviewed"):
+        release.select_release({}, source=source, completed=completed, reserved=["1.11.0", "2.0.0"], partial=[])
+    completed = {"source_commit": source, "tag": "v1.11.0", "version": "1.11.0", "version_line_correction": record}
+    fragment("later-fix", "patch")
+    later = commit()
+    assert release.select_release({}, source=later, completed=completed, reserved=["1.11.0", "2.0.0"], partial=[])["tag"] == "v1.11.1"
+    fragment("real-break", "major")
+    later = commit()
+    assert release.select_release({}, source=later, completed=completed, reserved=["1.11.0", "2.0.0"], partial=[])["tag"] == "v3.0.0"
+    record = json.loads(json.dumps(record))
+    record["withdrawn"]["source_commit"] = source
+    (tmp_path / release.CORRECTION_PATH).write_text(json.dumps(record))
+    altered = commit()
+    with pytest.raises(ValueError, match="remote admission"):
+        release.select_release({}, source=altered, completed=completed, reserved=[], partial=[])
+
+
 def _load_module():
     spec = importlib.util.spec_from_file_location("coordinated_release_under_test", SCRIPT)
     assert spec is not None

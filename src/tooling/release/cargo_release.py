@@ -177,7 +177,7 @@ def admitted_manifest(dist, ownership, source, version):
     }
 
 
-def observe(crate, *, get=json_response, download=fetch):
+def observe(crate, *, get=json_response, download=fetch, allow_yanked=False):
     metadata = get(f"https://crates.io/api/v1/crates/{crate['name']}/{crate['version']}")
     if metadata is None:
         return "absent"
@@ -186,7 +186,7 @@ def observe(crate, *, get=json_response, download=fetch):
         version["crate"] != crate["name"]
         or version["num"] != crate["version"]
         or version["checksum"] != crate["sha256"]
-        or version.get("yanked")
+        or (version.get("yanked") and not allow_yanked)
     ):
         raise ValueError("Immutable crates.io identity/checksum conflict")
     data = download(f"https://static.crates.io/crates/{crate['name']}/{crate['name']}-{crate['version']}.crate")

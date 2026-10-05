@@ -181,7 +181,7 @@ def admitted_artifacts(dist, tag, source):
     return identity, result
 
 
-def observe(artifact, dist, *, get=json_response, download=fetch):
+def observe(artifact, dist, *, get=json_response, download=fetch, allow_yanked=False):
     name, version = artifact["name"], artifact["version"]
     if artifact["ecosystem"] == "python":
         metadata = get(f"https://pypi.org/pypi/{quote(name, safe='')}/{quote(version, safe='')}/json")
@@ -194,7 +194,7 @@ def observe(artifact, dist, *, get=json_response, download=fetch):
         files = [row for row in metadata["urls"] if row["filename"] == artifact["asset"]]
         if not files:
             return "absent"
-        if len(files) != 1 or files[0].get("yanked") or files[0]["digests"]["sha256"] != artifact["sha256"]:
+        if len(files) != 1 or (files[0].get("yanked") and not allow_yanked) or files[0]["digests"]["sha256"] != artifact["sha256"]:
             raise ValueError("PyPI immutable file conflict")
         url, host = files[0]["url"], "files.pythonhosted.org"
     else:
@@ -355,10 +355,7 @@ def converge(
         index_matches = index_ready is None or index_ready()
         if not absent and channel_matches and index_matches:
             return observations
-        diagnostic = (
-            f"absent artifacts: {absent}; channel matching: {channel_matches}; "
-            f"installer index matching: {index_matches}"
-        )
+        diagnostic = f"absent artifacts: {absent}; channel matching: {channel_matches}; installer index matching: {index_matches}"
         remaining = deadline - clock()
         if remaining <= 0:
             raise ValueError(f"Registry convergence timed out; {diagnostic}")

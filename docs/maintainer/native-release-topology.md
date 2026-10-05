@@ -16,8 +16,8 @@ remain unchanged. No duplicate source implementation is retained.
 
 The installed Python API exports `start`, `invoke`, `resources`, `select_reference`,
 `answer_carried` and `invoke_carried`; npm exports their camel-case equivalents
-from the package root and `./operating`, with TypeScript declarations. `./native`
-retains the low-level JSON transport projection. The command launchers forward
+from the package root and `./operating`, with TypeScript declarations.
+The command launchers forward
 to the paired Rust CLI. Packaged manifests bind version and binary digests;
 missing or altered executables fail explicitly. Source developers must build
 both binaries with `cargo build --locked --workspace --bins`. The source Python
@@ -25,6 +25,11 @@ binding and repository launcher resolve that checkout's prepared pair. Custom
 build directories and standalone Node development use an explicit
 `AGENTIC_WORKSPACE_CORE_BINARY` override. Importing a
 binding never starts Cargo or falls back to a Python/generated command host.
+
+The [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
+protects these named entrypoints, supported user inputs and durable records.
+The Cargo core is part of the paired executable distribution; direct Rust
+embedding is not currently a supported stable API.
 
 The installed consumer contract is the capability contract returned by native
 `start`. The prerelease `external_operation_conformance_receipts` Python export
@@ -174,13 +179,13 @@ for all 13 release assets. `gh attestation verify` on the downloaded manifest
 succeeded for this repository and identified the master preview workflow and that
 publication run. These checks do not extend the Linux x64 support boundary.
 
-#3274 closed after the corrected-head independent acceptance in #3281 and its
+Issue #3274 closed after the corrected-head independent acceptance in #3281 and its
 accepted-base merge. #2767 closed by reconciling #3280's final source-runtime and
 former-local-intent correction with accepted #3178 source writes, #3185 independent
 settings ingress, #3230 configuration decisions/progressive discovery, #3241 lazy
 owner schemas, and #3252/#3254 lived-in and composed-upgrade convergence. Their
 existing owner evidence is reused; closure does not assert new provider guarantees.
-#3275 was administratively closed before publication; the run and byte evidence
+Issue #3275 was administratively closed before publication; the run and byte evidence
 above establish the subsequent publication outcome. #2985 remains open for final
 support-bearing admission, and the maturity promotion reason remains explicit.
 
@@ -216,7 +221,7 @@ ready for independent review; merged implementation does not prove publication.
 
 Candidate C has no publication record here. Reopened #3361 owns the remaining
 PyPI/npm bootstrap, trusted-publisher and public-byte/install outcome; reopened
-#3362 owns the corresponding paired Cargo outcome. Their merged repository
+issue #3362 owns the corresponding paired Cargo outcome. Their merged repository
 implementations do not close those external requirements. Release-owner
 environment setup and exact hosted artefacts also remain required.
 Follow the existing first-stable RC preparation path

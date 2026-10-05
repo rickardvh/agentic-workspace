@@ -16,6 +16,33 @@ CHANGESET_SCHEMA = "agentic-workspace/release-change/v1"
 BUMP_ORDER = {"patch": 0, "minor": 1, "major": 2}
 PREVIEW_TAG_PREFIX = "preview-v"
 STAGING_KIND = "agentic-workspace/release-staging/v1"
+CORRECTION_PATH = ".release/version-line-correction.json"
+
+
+def version_line_correction(source: str) -> dict[str, Any] | None:
+    """Read the single reviewed 2.0-to-1.11 exception from the pinned source."""
+    entry = _run(["git", "ls-tree", source, "--", CORRECTION_PATH]).stdout.split()
+    if not entry:
+        return None
+    if entry[0] != "100644":
+        raise ValueError("Version-line correction must be a regular reviewed file")
+    record = json.loads(_run(["git", "show", f"{source}:{CORRECTION_PATH}"]).stdout)
+    if (
+        record.get("kind") != "agentic-workspace/version-line-correction/v1"
+        or record.get("withdrawn", {}).get("version") != "2.0.0"
+        or record.get("previous", {}).get("version") != "1.10.2"
+        or record.get("replacement") != "1.11.0"
+        or not isinstance(record.get("reason"), str)
+        or not record["reason"].strip()
+    ):
+        raise ValueError("Unsupported version-line correction")
+    for key in ("previous", "withdrawn"):
+        subject = record[key]
+        if subject.get("tag") != "v" + subject["version"] or not re.fullmatch(r"[0-9a-f]{40}", subject.get("source_commit", "")):
+            raise ValueError("Invalid version-line correction subject")
+    _run(["git", "merge-base", "--is-ancestor", record["previous"]["source_commit"], record["withdrawn"]["source_commit"]])
+    _run(["git", "merge-base", "--is-ancestor", record["withdrawn"]["source_commit"], source])
+    return record
 
 
 def selected_changes(ownership: dict[str, Any], boundary: str, source: str) -> list[dict[str, str]]:
@@ -61,11 +88,11 @@ def select_release(
     """Remote observation is supplied by the lifecycle owner, never inferred from literals."""
     if partial:
         raise ValueError("Partial release requires existing-tag recovery: " + ", ".join(partial))
+    correction = version_line_correction(source)
+    if correction != completed.get("version_line_correction"):
+        raise ValueError("Version-line correction lacks matching remote admission")
     boundary = completed["source_commit"]
     fragments = selected_changes(ownership, boundary, source)
-    floor = (
-        max(Version.parse(completed["version"]), *(Version.parse(v) for v in reserved)) if reserved else Version.parse(completed["version"])
-    )
     result = {
         "kind": STAGING_KIND,
         "source_commit": source,
@@ -73,9 +100,24 @@ def select_release(
         "changesets": fragments,
         "release_required": bool(fragments),
     }
+    if correction:
+        result["version_line_correction"] = correction
     if fragments:
         bump = max((item["bump"] for item in fragments), key=BUMP_ORDER.__getitem__)
+        base = completed["version"]
+        versions = reserved
+        if correction and bump != "major":
+            versions = [v for v in reserved if v != correction["withdrawn"]["version"]]
+            if completed["tag"] == correction["withdrawn"]["tag"]:
+                base = correction["previous"]["version"]
+                if bump != "minor":
+                    raise ValueError("Version-line replacement requires a minor fragment")
+        floor = max([Version.parse(base), *(Version.parse(v) for v in versions)])
         version = str(floor.bump(bump))
+        if version in reserved:
+            raise ValueError("A reserved version cannot be reused")
+        if correction and completed["tag"] == correction["withdrawn"]["tag"] and version != correction["replacement"]:
+            raise ValueError("Version-line replacement differs from reviewed 1.11.0 intent")
         result.update(release_identity("v" + version))
         result["bump"] = bump
     return result
@@ -145,6 +187,8 @@ def stamp_release(ownership: dict[str, Any], identity: dict[str, Any], *, verify
         raise ValueError("Staging requires the pinned reviewed source checkout")
     if identity["changesets"] != selected_changes(ownership, identity["boundary"]["source_commit"], source):
         raise ValueError("Selected fragment revisions changed")
+    if identity.get("version_line_correction") != version_line_correction(source):
+        raise ValueError("Staging version-line correction differs from the reviewed source")
     expected = staging_files(ownership, source, version)
     changed = set(_run(["git", "diff", "--name-only", "HEAD"]).stdout.splitlines())
     if changed - expected.keys():

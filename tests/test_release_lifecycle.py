@@ -238,3 +238,63 @@ def test_publication_and_maintenance_have_separate_verdicts():
         assert "!inputs.qualify_only" in release["jobs"][name]["if"]
     maintenance = yaml.load((ROOT / ".github/workflows/maintenance.yml").read_text(), Loader=yaml.BaseLoader)
     assert maintenance["on"]["workflow_run"]["workflows"] == ["Release"]
+
+
+@pytest.mark.parametrize("replacement_complete", [False, True])
+def test_version_line_observation_keeps_withdrawn_bytes_verified_and_other_partials_blocking(monkeypatch, replacement_complete):
+    correction = {
+        "withdrawn": {"tag": "v2.0.0", "version": "2.0.0", "source_commit": "a" * 40},
+        "previous": {"tag": "v1.10.2", "version": "1.10.2", "source_commit": "b" * 40},
+        "replacement": "1.11.0",
+    }
+    tags = ["v2.0.0", "v1.10.2"] + (["v1.11.0"] if replacement_complete else [])
+    commits = {"v2.0.0": "a" * 40, "v1.10.2": "b" * 40, "v1.11.0": "c" * 40}
+    monkeypatch.setattr(lifecycle, "git", lambda *args: "c" * 40)
+    monkeypatch.setattr(lifecycle.coordinated_release, "version_line_correction", lambda _: correction)
+    monkeypatch.setattr(
+        lifecycle.coordinated_release,
+        "load_ownership",
+        lambda: {"packages": [{"name": "python"}], "typescript_packages": [{"name": "npm"}], "cargo_packages": [{"name": "core"}]},
+    )
+
+    def api(_, endpoint):
+        if endpoint.startswith("git/matching-refs"):
+            return [{"ref": "refs/tags/" + tag} for tag in tags]
+        return {"sha": commits[endpoint.removeprefix("commits/")]}
+
+    seen = []
+
+    def completed(_, tag, source, *, allow_yanked=False):
+        seen.append((tag, allow_yanked))
+        return {"tag": tag, "version": tag[1:], "source_commit": source}
+
+    monkeypatch.setattr(lifecycle, "api", api)
+    monkeypatch.setattr(lifecycle, "completed_release", completed)
+    versions = ["1.10.2", "2.0.0"] + (["1.11.0"] if replacement_complete else [])
+    monkeypatch.setattr(
+        lifecycle.registry_release,
+        "json_response",
+        lambda _: (
+            {"releases": dict.fromkeys(versions), "versions": dict.fromkeys(versions)}
+            if "crates.io" not in _
+            else {"versions": [{"num": v} for v in versions]}
+        ),
+    )
+    subject, reserved, partial = lifecycle.observe_stable("repo")
+    assert subject["tag"] == ("v1.11.0" if replacement_complete else "v2.0.0")
+    assert subject["version_line_correction"] == correction
+    assert "2.0.0" in reserved and not partial
+    assert seen[0] == ("v2.0.0", True)
+    assert all(not allow for tag, allow in seen if tag != "v2.0.0")
+    versions.append("1.12.0")
+    assert lifecycle.observe_stable("repo")[2] == ["v1.12.0"]
+    tags.append("preview-v2.0.0")
+    with pytest.raises(ValueError, match="another reservation"):
+        lifecycle.observe_stable("repo")
+    tags.pop()
+    monkeypatch.setattr(lifecycle, "completed_release", lambda *args, **kwargs: None)
+    with pytest.raises(ValueError, match="verified completed original"):
+        lifecycle.observe_stable("repo")
+    monkeypatch.setattr(lifecycle, "api", lambda *args: (_ for _ in ()).throw(TimeoutError("unknown remote state")))
+    with pytest.raises(TimeoutError):
+        lifecycle.observe_stable("repo")

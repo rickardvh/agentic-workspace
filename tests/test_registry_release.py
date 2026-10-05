@@ -60,8 +60,13 @@ def test_registry_absence_matching_bytes_and_conflict(tmp_path, ecosystem):
         }
     assert registry.observe(artifact, tmp_path, get=lambda _: None) == "absent"
     assert registry.observe(artifact, tmp_path, get=lambda _: metadata, download=lambda _: data) == "matching"
+    if ecosystem == "python":
+        metadata["urls"][0]["yanked"] = True
+        with pytest.raises(ValueError, match="immutable file conflict"):
+            registry.observe(artifact, tmp_path, get=lambda _: metadata, download=lambda _: data)
+        assert registry.observe(artifact, tmp_path, get=lambda _: metadata, download=lambda _: data, allow_yanked=True) == "matching"
     with pytest.raises(ValueError, match="Public registry bytes"):
-        registry.observe(artifact, tmp_path, get=lambda _: metadata, download=lambda _: b"different")
+        registry.observe(artifact, tmp_path, get=lambda _: metadata, download=lambda _: b"different", allow_yanked=True)
 
     def unavailable(_):
         raise TimeoutError("uncertain transport")

@@ -6,6 +6,11 @@ authority. Python, TypeScript, JSON and the native CLI project that same runtime
 The separate crate in `tests/fixtures/native-independent-owner` exercises this
 boundary without putting its owner names in product dispatch.
 
+This is a source-assembly extension for maintainers, not a stable Cargo library
+embedding API. Independent integrations consuming released packages use the
+documented executable/facade boundary and declared operation compatibility; see
+the [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary).
+
 ## Installation and admission
 
 A Rust crate registers a compact `Registration` using the exported `submit!`

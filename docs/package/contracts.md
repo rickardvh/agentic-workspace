@@ -6,6 +6,15 @@ handwritten field list. For using the product, start with the
 [user guide](../index.md); for looking up an interface, use the
 [reference index](../reference/index.md).
 
+The [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
+names the stable CLI, Python and TypeScript entrypoints and the paired Cargo
+executable boundary. It protects supported user inputs and durable component
+records across minor upgrades. Package-managed payload and current internal
+requests/results may evolve together; a serialised field is not automatically a
+stable external API. Independent integrations use declared operation/schema
+compatibility rather than package-version guessing. Direct Rust embedding is
+outside the current stable support contract.
+
 ## Which source answers which question?
 
 | Question | Source |

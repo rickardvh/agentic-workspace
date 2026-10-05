@@ -5,6 +5,12 @@ Your source, tests, ordinary documentation and project decisions stay where they
 already are. Installing AW does not import the repository into a separate
 knowledge database.
 
+Across minor upgrades, AW must preserve supported configuration and durable
+Planning, Memory and Verification records, or migrate them safely without
+changing their meaning or authority. Managed skills and payload can be refreshed
+with the runtime. The [compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
+defines when a migration burden instead requires a major release.
+
 ## What AW may add
 
 ```text

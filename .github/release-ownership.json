@@ -121,7 +121,7 @@
       "registry_status": "trusted-publication-required"
     }
   ],
-  "version_floor_rule": "Completed stable source consumes fragment revisions. All remotely reserved stable/preview and public registry versions bound the next version; a partial publication requires recovery.",
+  "version_floor_rule": "Completed stable source consumes fragment revisions. All remotely reserved stable/preview and public registry versions bound the next version; a partial publication requires recovery. The reviewed .release/version-line-correction.json alone permits replacing completed 2.0.0 with 1.11.0, consuming the original source without reusing its immutable identity. It excludes only 2.0.0 from subsequent minor/patch floors; future majors still clear every reservation.",
   "release_candidate": {
     "tag_pattern": "v1.0.0-rc.N (N is a positive canonical integer)",
     "target_stable_tag": "v1.0.0",

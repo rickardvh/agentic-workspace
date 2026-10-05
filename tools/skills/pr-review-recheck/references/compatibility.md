@@ -6,7 +6,16 @@ application of existing contracts from a change to their meaning or guarantees.
 Classify from source and evidence, not a task keyword, filename or numerical risk
 score. Preserve uncertainty when the affected consumer cannot be observed.
 
-Use the repository's current compatibility policy and release identity. A passing
+Apply the [package compatibility boundary](../../../../docs/release-and-versioning.md#package-compatibility-boundary):
+identify the supported consumer-owned input/code or durable state that must change,
+whether normal refresh or deterministic migration preserves meaning and authority,
+and whether the changed interface is a named stable API, a separately negotiated
+operation contract or runtime-owned protocol. Do not infer a major from a typed
+result identity, serialised field or public Rust symbol alone. Direct core-crate
+embedding is outside the current stable support contract. A real incompatible
+supported migration remains major even when an agent could manually repair it.
+
+Use the current release identity. A passing
 example cannot certify an untested support boundary; a prerelease history cannot
 silently excuse a breaking change to a stable contract. Route a demonstrated
 generic defect to its smallest responsible owner rather than hiding it in a

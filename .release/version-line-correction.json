@@ -1,0 +1,15 @@
+{
+  "kind": "agentic-workspace/version-line-correction/v1",
+  "withdrawn": {
+    "tag": "v2.0.0",
+    "version": "2.0.0",
+    "source_commit": "8ddd966151125ddf600df20c5fb58626f010ef6f"
+  },
+  "previous": {
+    "tag": "v1.10.2",
+    "version": "1.10.2",
+    "source_commit": "2ae498d1a7578d86f9ef971ee51be653b513525f"
+  },
+  "replacement": "1.11.0",
+  "reason": "Repository owner authorised withdrawing 2.0.0 and returning to 1.11 while implementing #3832. The current resource result and managed skills evolve together without a supported consumer migration. Preserve the original release identity, receipts and major fragment."
+}

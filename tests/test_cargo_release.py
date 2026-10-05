@@ -144,6 +144,9 @@ def test_cargo_registry_recovery_distinguishes_absence_conflict_and_uncertainty(
     with pytest.raises(ValueError, match="Public crate bytes"):
         cargo.observe(crate, get=lambda _: metadata, download=lambda _: b"changed")
     metadata["version"]["yanked"] = True
+    assert cargo.observe(crate, get=lambda _: metadata, download=lambda _: data, allow_yanked=True) == "matching"
+    with pytest.raises(ValueError, match="Public crate bytes"):
+        cargo.observe(crate, get=lambda _: metadata, download=lambda _: b"changed", allow_yanked=True)
     with pytest.raises(ValueError, match="conflict"):
         cargo.observe(crate, get=lambda _: metadata)
 
