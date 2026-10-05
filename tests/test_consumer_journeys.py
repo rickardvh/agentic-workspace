@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -13,6 +14,187 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src/tooling/releas
 import pytest
 from consumer_journeys import INDEPENDENT_NOTES, Workspace, check_removed, check_stale_rejection, clean_context_snapshot  # noqa: E402
 from first_contact import journey  # noqa: E402
+
+
+def prepared_affordance(target):
+    import consumer_journeys as journeys
+
+    container = ".agentic-workspace/local/scratch/" + "a" * 64
+    files = {
+        **journeys.INITIAL,
+        ".agentic-workspace/planning/execplans/migration.plan.json": json.dumps(
+            {"kind": "planning-execplan/v1", "next_action": "Read release.json; finish and retire scratch"}
+        ).encode(),
+        container + "/.aw-scratch.json": json.dumps(
+            {"kind": "agentic-workspace/task-scratch/v1", "target": target, "task": "Migrate port", "path": container, "retain": True}
+        ).encode(),
+        container + "/migration-draft.json": json.dumps(
+            {
+                "kind": "service-port-migration-draft/v1",
+                "from_port": 8080,
+                "target_port": None,
+                "approval_source": "release.json",
+                "files": ["settings.json", "README.md"],
+                "note": "Wait for approval, then update both port examples and retire storage.",
+            }
+        ).encode(),
+    }
+    return files, container
+
+
+@pytest.mark.parametrize(
+    "mutation,gap",
+    [
+        ("missing", "draft-missing"),
+        ("empty", "draft-empty"),
+        ("misplaced", "draft-misplaced"),
+        ("nested", "draft-misplaced"),
+        ("invalid-json", "draft-invalid"),
+        ("marker-as-draft", "draft-invalid"),
+        ("wrong-port", "draft-invalid"),
+        ("blank-note", "draft-invalid"),
+        ("oversize", "draft-invalid"),
+        ("foreign-custody", "managed-scratch-missing-or-invalid"),
+        ("no-plan", "retained-plan-missing-or-invalid"),
+        ("premature-port", "pending-source-or-preservation-changed"),
+        ("lost-notes", "pending-source-or-preservation-changed"),
+    ],
+)
+def test_preparation_requires_actual_draft_bytes(tmp_path, mutation, gap):
+    import consumer_journeys as journeys
+
+    prepared, container = prepared_affordance(str(tmp_path))
+    name = container + "/migration-draft.json"
+    if mutation == "missing":
+        del prepared[name]
+    elif mutation in {"misplaced", "nested"}:
+        prepared[("migration-draft.json" if mutation == "misplaced" else container + "/nested/migration-draft.json")] = prepared.pop(name)
+    elif mutation == "empty":
+        prepared[name] = b" \n"
+    elif mutation == "invalid-json":
+        prepared[name] = b"\xffnot JSON"
+    elif mutation == "marker-as-draft":
+        prepared[name] = prepared[container + "/.aw-scratch.json"]
+    elif mutation in {"wrong-port", "blank-note"}:
+        draft = json.loads(prepared[name])
+        draft.update({"target_port": 8081} if mutation == "wrong-port" else {"note": " "})
+        prepared[name] = json.dumps(draft).encode()
+    elif mutation == "oversize":
+        prepared[name] += b" " * 16384
+    elif mutation == "foreign-custody":
+        marker = json.loads(prepared[container + "/.aw-scratch.json"])
+        marker["target"] = str(tmp_path / "other")
+        prepared[container + "/.aw-scratch.json"] = json.dumps(marker).encode()
+    elif mutation == "no-plan":
+        del prepared[".agentic-workspace/planning/execplans/migration.plan.json"]
+    elif mutation == "premature-port":
+        prepared["settings.json"] = b'{"port":8081}'
+    elif mutation == "lost-notes":
+        del prepared["notes.txt"]
+    with pytest.raises(journeys.PreparationGap) as failure:
+        journeys.check_affordance_preparation(journeys.INITIAL, prepared, str(tmp_path))
+    assert failure.value.gap == gap
+
+
+@pytest.mark.parametrize("with_draft", [False, True])
+def test_affordance_phase_boundary_and_outer_cleanup(tmp_path, monkeypatch, with_draft):
+    import consumer_agent
+    import consumer_journeys as journeys
+    import run_model_cli_harness as harness
+
+    class Consumer:
+        profile = "standalone"
+        command = ["aw"]
+        repo = tmp_path / "consumer"
+        observation = {"installed": True}
+        cleanup = "not-started"
+
+        def __init__(self, *args):
+            self.repo.mkdir()
+
+        def __enter__(self):
+            return self
+
+        def install(self):
+            pass
+
+        def __exit__(self, *args):
+            # Exercise the actual outer driver's context cleanup on both paths.
+            self.cleanup = "removed"
+
+    class Actor:
+        source_sha256 = "fixture"
+        sessions_started = 0
+
+        def __init__(self, **kwargs):
+            self.observations = []
+
+        def session(self, work, prompt):
+            self.sessions_started += 1
+            self.observations.append({"session": self.sessions_started})
+            if self.sessions_started == 1:
+                prepared, container = prepared_affordance(str(work.consumer.repo.resolve()))
+                if not with_draft:
+                    del prepared[container + "/migration-draft.json"]
+                for name, data in prepared.items():
+                    work.write(name, data)
+                return {"status": "complete", "message": "Draft complete"}
+            assert work.files()["release.json"] == b'{"port":8081,"approved":true}\n'
+            work.write("settings.json", b'{"port":8081,"host":"localhost"}\n')
+            work.write("README.md", b"Connect using port 8081.\n")
+            for name in list(work.files()):
+                if "/local/scratch/" in name:
+                    (work.consumer.repo / name).unlink()
+            return {"status": "complete"}
+
+    monkeypatch.setattr(consumer_agent, "SandboxConsumer", Consumer)
+    monkeypatch.setattr(consumer_agent, "CodexActor", Actor)
+    monkeypatch.setattr(journeys, "setup", lambda work: None)
+    monkeypatch.setattr(journeys, "validate_pointer_files", lambda files: None)
+    # This inert regression tests the byte/phase contract; it grants no model interaction evidence.
+    monkeypatch.setattr(
+        journeys,
+        "affordance_observations",
+        lambda *args: {
+            "disposition": "observed",
+            "coverage": {"fixture": True},
+            "findings": [],
+        },
+    )
+    output = tmp_path / "result.json"
+    args = SimpleNamespace(
+        family="operational-affordance",
+        driver="agent",
+        backend="sandbox",
+        model="fixture",
+        reasoning="medium",
+        seconds=1,
+        token_ceiling=None,
+        billing="subscription",
+        scratch=tmp_path,
+        profile="standalone",
+        target="fixture",
+        template=None,
+        sbx="fixture",
+        result=output,
+    )
+    subject = SimpleNamespace(identity=lambda: {"fixture": True})
+    code = harness.run_case(args, frozen_subject=subject)
+    result = json.loads(output.read_text())
+    assert result["cleanup"] == "removed"
+    assert result["sessions_started"] == (2 if with_draft else 1)
+    assert (Consumer.repo / "release.json").exists() == with_draft
+    for name in ("policy.md", "notes.txt"):
+        assert (Consumer.repo / name).read_bytes() == journeys.INITIAL[name]
+    if with_draft:
+        assert code == 0 and result["status"] == "passed"
+        assert result["preparation"]["draft"]["bytes"] > 0
+        assert len(result["preparation"]["draft"]["sha256"]) == 64
+    else:
+        assert code == 1 and result["failure_class"] == "preparation-boundary"
+        assert result["failure_phase"] == "preparation"
+        assert result["preparation"]["gap"] == "draft-missing"
+        assert (Consumer.repo / "settings.json").read_bytes() == journeys.INITIAL["settings.json"]
 
 
 def test_public_first_contact_finishes_task_and_preserves_repository(tmp_path, native_cli):
