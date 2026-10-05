@@ -467,6 +467,7 @@ def execute(consumer, family, *, actor=None):
 
 DRAFT_NAME = "migration-draft.json"
 DRAFT_KIND = "service-port-migration-draft/v1"
+AFFORDANCE_TASK = "Migrate the service port after approval, preserving repository policy and notes."
 
 
 class PreparationGap(ValueError):
@@ -475,20 +476,29 @@ class PreparationGap(ValueError):
         super().__init__("Preparation boundary: " + gap)
 
 
-def check_affordance_preparation(before, prepared, target):
-    """Inspect stopped repository bytes, never the actor's completion claim."""
+def check_affordance_preparation(before, prepared, target, current):
+    """Bind inert bytes to the trusted native observation of AFFORDANCE_TASK."""
     for name in ("settings.json", "README.md", "policy.md", "notes.txt"):
         if prepared.get(name) != before.get(name):
             raise PreparationGap("pending-source-or-preservation-changed")
-    plans = [
-        data for name, data in prepared.items() if name.startswith(".agentic-workspace/planning/execplans/") and name.endswith(".plan.json")
-    ]
     try:
-        retained_plan = any(
-            json.loads(data).get("kind") == "planning-execplan/v1" and bool(json.loads(data).get("next_action", "").strip())
-            for data in plans
+        planning = current["planning"]
+        selected = planning["selected_owner"]
+        plan_ref = selected["ref"]
+        plan_bytes = prepared[plan_ref]
+        plan = json.loads(plan_bytes)
+        retained_plan = (
+            planning["task_relation"] == "continues"
+            and planning["current_owner"]["current"] is True
+            and plan_ref.startswith(".agentic-workspace/planning/execplans/")
+            and plan_ref.endswith(".plan.json")
+            and selected["source"]["path"] == plan_ref
+            and selected["source"]["revision"] == "sha256:" + hashlib.sha256(plan_bytes).hexdigest()
+            and plan["id"] == selected["id"]
+            and plan["kind"] == "planning-execplan/v1"
+            and bool(plan["next_action"].strip())
         )
-    except (ValueError, AttributeError, TypeError):
+    except (KeyError, ValueError, AttributeError, TypeError):
         retained_plan = False
     if not retained_plan:
         raise PreparationGap("retained-plan-missing-or-invalid")
@@ -503,7 +513,8 @@ def check_affordance_preparation(before, prepared, target):
         raise PreparationGap("draft-misplaced")
     marker_name = container + "/.aw-scratch.json"
     try:
-        marker = json.loads(prepared[marker_name])
+        marker_bytes = prepared[marker_name]
+        marker = json.loads(marker_bytes) if len(marker_bytes) <= 16384 else None
 
         def normal_target(value):
             return os.path.normcase(os.path.normpath(value.removeprefix("\\\\?\\")))
@@ -512,9 +523,14 @@ def check_affordance_preparation(before, prepared, target):
             marker.get("kind") == "agentic-workspace/task-scratch/v1"
             and marker.get("path") == container
             and isinstance(marker.get("retain"), bool)
-            and isinstance(marker.get("task"), str)
-            and bool(marker["task"].strip())
+            and marker.get("task") == AFFORDANCE_TASK
             and normal_target(marker["target"]) == normal_target(target)
+            and container.rsplit("/", 1)[1]
+            == hashlib.sha256(
+                json.dumps(
+                    {"target": marker["target"], "task": marker["task"]}, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            ).hexdigest()
         )
     except (KeyError, ValueError, AttributeError, TypeError):
         valid_marker = False
@@ -542,7 +558,11 @@ def check_affordance_preparation(before, prepared, target):
     if not valid_draft:
         raise PreparationGap("draft-invalid")
     scratch = {path for path in prepared if path.startswith(".agentic-workspace/local/scratch/") and path not in before}
-    return scratch, {"status": "passed", "draft": {"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}}
+    return scratch, {
+        "status": "passed",
+        "planning": {"path": plan_ref, "source_revision": selected["source"]["revision"], "work": current["current_work"]},
+        "draft": {"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()},
+    }
 
 
 def execute_affordance(consumer, actor):
@@ -567,7 +587,9 @@ def execute_affordance(consumer, actor):
         before = work.files()
         actor.session(
             work,
-            "Prepare a service port migration. Retain a plan for the whole task using the installed workspace's planning support. "
+            "Prepare a service port migration. Use this exact workspace task throughout preparation: " + AFFORDANCE_TASK + " "
+            "Start preparation with an empty changed-file list; follow later scope changes returned by workspace continuations. "
+            "Retain a current selected plan for this whole task using installed planning support. "
             "Create managed temporary task storage and put migration-draft.json directly inside it. "
             'The UTF-8 JSON draft must have kind "service-port-migration-draft/v1", from_port 8080, target_port null, '
             'approval_source "release.json", files ["settings.json", "README.md"], and a nonempty note describing the pending migration. '
@@ -577,12 +599,20 @@ def execute_affordance(consumer, actor):
         )
         prepared = work.files()
         target = str(consumer.repo.resolve()) if hasattr(consumer, "repo") else "/home/consumer/repo"
-        scratch, preparation = check_affordance_preparation(before, prepared, target)
+        try:
+            # A controller read through the exact installed command, with no
+            # actor-supplied selector or owner answer. Native Planning validates
+            # current selection, schema and retained origin for this work.
+            current = work.client.call("start", "--task", AFFORDANCE_TASK, "--projection", "full")
+        except (Exception, KeyboardInterrupt) as failure:
+            raise PreparationGap("planning-current-observation-unavailable") from failure
+        scratch, preparation = check_affordance_preparation(before, prepared, target, current)
         # A changed ordinary source and fresh provider session force reentry.
         work.write("release.json", b'{"port":8081,"approved":true}\n')
         claim = actor.session(
             work,
             "Resume the prepared service migration from current repository state; there is no earlier conversation. "
+            "The retained whole-task description is: " + AFFORDANCE_TASK + " "
             "The approved target is now in release.json. Update settings.json and README.md to that port, "
             "retire the temporary task storage through its supported lifecycle, and reconcile the retained plan. "
             "Preserve policy.md, notes.txt and the approved release source.",

@@ -16,19 +16,43 @@ from consumer_journeys import INDEPENDENT_NOTES, Workspace, check_removed, check
 from first_contact import journey  # noqa: E402
 
 
-def prepared_affordance(target):
+def prepared_affordance(target, native_cli, task=None):
     import consumer_journeys as journeys
+    from tests.test_native_planning_create import material
 
-    container = ".agentic-workspace/local/scratch/" + "a" * 64
-    files = {
-        **journeys.INITIAL,
-        ".agentic-workspace/planning/execplans/migration.plan.json": json.dumps(
-            {"kind": "planning-execplan/v1", "next_action": "Read release.json; finish and retire scratch"}
-        ).encode(),
-        container + "/.aw-scratch.json": json.dumps(
-            {"kind": "agentic-workspace/task-scratch/v1", "target": target, "task": "Migrate port", "path": container, "retain": True}
-        ).encode(),
-        container + "/migration-draft.json": json.dumps(
+    root = Path(target)
+    root.mkdir(parents=True, exist_ok=True)
+    for name, data in journeys.INITIAL.items():
+        if not (root / name).exists():
+            (root / name).write_bytes(data)
+    context = {"target": str(root), "task": task or journeys.AFFORDANCE_TASK, "changed": []}
+
+    def call(extra=None, command="start"):
+        result = subprocess.run(
+            [str(native_cli), command, "--input", "-"],
+            input=json.dumps(context | (extra or {})),
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        return json.loads(result.stdout)
+
+    request = call({"projection": "full"})["planning"]["creation_requests"][0]
+    intent = material()
+    intent.update(title="Approved service migration", next_action="Read release.json; finish and retire scratch")
+    request["arguments"] = {"material": intent}
+    action = call({"request": request, "projection": "full"})["decision_packet"]["primary_action"]
+    created = call({"invocation": action}, "invoke")
+    assert created["effect_outcome"]["status"] == "committed"
+    proposal = call({"request": {"operation": "scratch-create"}}, "resources")
+    result = subprocess.run(
+        [str(native_cli), "resources", "--input", "-"], input=json.dumps(proposal["action"]), text=True, capture_output=True, check=True
+    )
+    scratch = json.loads(result.stdout)
+    assert scratch["effect_outcome"] == "committed"
+    container = json.loads((Path(scratch["path"]) / ".aw-scratch.json").read_bytes())["path"]
+    (root / container / "migration-draft.json").write_bytes(
+        json.dumps(
             {
                 "kind": "service-port-migration-draft/v1",
                 "from_port": 8080,
@@ -37,9 +61,11 @@ def prepared_affordance(target):
                 "files": ["settings.json", "README.md"],
                 "note": "Wait for approval, then update both port examples and retire storage.",
             }
-        ).encode(),
-    }
-    return files, container
+        ).encode()
+    )
+    current = call({"task": journeys.AFFORDANCE_TASK, "projection": "full"})
+    files = Workspace(SimpleNamespace(repo=root, command=[str(native_cli)])).files()
+    return files, container, current
 
 
 @pytest.mark.parametrize(
@@ -55,15 +81,18 @@ def prepared_affordance(target):
         ("blank-note", "draft-invalid"),
         ("oversize", "draft-invalid"),
         ("foreign-custody", "managed-scratch-missing-or-invalid"),
+        ("oversize-marker", "managed-scratch-missing-or-invalid"),
         ("no-plan", "retained-plan-missing-or-invalid"),
+        ("fake-plan", "retained-plan-missing-or-invalid"),
+        ("foreign-scratch-task", "managed-scratch-missing-or-invalid"),
         ("premature-port", "pending-source-or-preservation-changed"),
         ("lost-notes", "pending-source-or-preservation-changed"),
     ],
 )
-def test_preparation_requires_actual_draft_bytes(tmp_path, mutation, gap):
+def test_preparation_requires_actual_draft_bytes(tmp_path, native_cli, mutation, gap):
     import consumer_journeys as journeys
 
-    prepared, container = prepared_affordance(str(tmp_path))
+    prepared, container, current = prepared_affordance(str(tmp_path), native_cli)
     name = container + "/migration-draft.json"
     if mutation == "missing":
         del prepared[name]
@@ -85,26 +114,61 @@ def test_preparation_requires_actual_draft_bytes(tmp_path, mutation, gap):
         marker = json.loads(prepared[container + "/.aw-scratch.json"])
         marker["target"] = str(tmp_path / "other")
         prepared[container + "/.aw-scratch.json"] = json.dumps(marker).encode()
+    elif mutation == "oversize-marker":
+        prepared[container + "/.aw-scratch.json"] += b" " * 16384
     elif mutation == "no-plan":
-        del prepared[".agentic-workspace/planning/execplans/migration.plan.json"]
+        del prepared[current["planning"]["selected_owner"]["ref"]]
+    elif mutation == "fake-plan":
+        prepared[current["planning"]["selected_owner"]["ref"]] = b'{"kind":"planning-execplan/v1","next_action":"anything"}'
+    elif mutation == "foreign-scratch-task":
+        marker = json.loads(prepared[container + "/.aw-scratch.json"])
+        marker["task"] = "Unrelated bounded work"
+        prepared[container + "/.aw-scratch.json"] = json.dumps(marker).encode()
     elif mutation == "premature-port":
         prepared["settings.json"] = b'{"port":8081}'
     elif mutation == "lost-notes":
         del prepared["notes.txt"]
     with pytest.raises(journeys.PreparationGap) as failure:
-        journeys.check_affordance_preparation(journeys.INITIAL, prepared, str(tmp_path))
+        journeys.check_affordance_preparation(journeys.INITIAL, prepared, str(tmp_path), current)
     assert failure.value.gap == gap
 
 
-@pytest.mark.parametrize("with_draft", [False, True])
-def test_affordance_phase_boundary_and_outer_cleanup(tmp_path, monkeypatch, with_draft):
+def test_preparation_rejects_unrelated_but_valid_scratch(tmp_path, native_cli):
+    import consumer_journeys as journeys
+
+    prepared, original, current = prepared_affordance(str(tmp_path), native_cli)
+    context = {"target": str(tmp_path), "task": "Unrelated bounded work", "request": {"operation": "scratch-create"}}
+    proposed = subprocess.run(
+        [str(native_cli), "resources", "--input", "-"], input=json.dumps(context), text=True, capture_output=True, check=True
+    )
+    committed = subprocess.run(
+        [str(native_cli), "resources", "--input", "-"],
+        input=json.dumps(json.loads(proposed.stdout)["action"]),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    path = Path(json.loads(committed.stdout)["path"])
+    marker = json.loads((path / ".aw-scratch.json").read_bytes())
+    foreign = marker["path"]
+    prepared[foreign + "/.aw-scratch.json"] = (path / ".aw-scratch.json").read_bytes()
+    prepared[foreign + "/migration-draft.json"] = prepared.pop(original + "/migration-draft.json")
+    # Both resources were really created. The current selected Plan is correct,
+    # but the only draft belongs to the other task's genuine custody.
+    with pytest.raises(journeys.PreparationGap) as failure:
+        journeys.check_affordance_preparation(journeys.INITIAL, prepared, str(tmp_path), current)
+    assert failure.value.gap == "managed-scratch-missing-or-invalid"
+
+
+@pytest.mark.parametrize("preparation", ["no-draft", "valid", "unrelated-work"])
+def test_affordance_phase_boundary_and_outer_cleanup(tmp_path, native_cli, monkeypatch, preparation):
     import consumer_agent
     import consumer_journeys as journeys
     import run_model_cli_harness as harness
 
     class Consumer:
         profile = "standalone"
-        command = ["aw"]
+        command = [str(native_cli)]
         repo = tmp_path / "consumer"
         observation = {"installed": True}
         cleanup = "not-started"
@@ -117,6 +181,9 @@ def test_affordance_phase_boundary_and_outer_cleanup(tmp_path, monkeypatch, with
 
         def install(self):
             pass
+
+        def exec(self, command):
+            return subprocess.run(command, cwd=self.repo, text=True, capture_output=True, check=True)
 
         def __exit__(self, *args):
             # Exercise the actual outer driver's context cleanup on both paths.
@@ -133,11 +200,11 @@ def test_affordance_phase_boundary_and_outer_cleanup(tmp_path, monkeypatch, with
             self.sessions_started += 1
             self.observations.append({"session": self.sessions_started})
             if self.sessions_started == 1:
-                prepared, container = prepared_affordance(str(work.consumer.repo.resolve()))
-                if not with_draft:
-                    del prepared[container + "/migration-draft.json"]
-                for name, data in prepared.items():
-                    work.write(name, data)
+                prepared, container, _ = prepared_affordance(
+                    str(work.consumer.repo.resolve()), native_cli, "Unrelated bounded work" if preparation == "unrelated-work" else None
+                )
+                if preparation == "no-draft":
+                    (work.consumer.repo / container / "migration-draft.json").unlink()
                 return {"status": "complete", "message": "Draft complete"}
             assert work.files()["release.json"] == b'{"port":8081,"approved":true}\n'
             work.write("settings.json", b'{"port":8081,"host":"localhost"}\n')
@@ -182,6 +249,7 @@ def test_affordance_phase_boundary_and_outer_cleanup(tmp_path, monkeypatch, with
     code = harness.run_case(args, frozen_subject=subject)
     result = json.loads(output.read_text())
     assert result["cleanup"] == "removed"
+    with_draft = preparation == "valid"
     assert result["sessions_started"] == (2 if with_draft else 1)
     assert (Consumer.repo / "release.json").exists() == with_draft
     for name in ("policy.md", "notes.txt"):
@@ -193,7 +261,7 @@ def test_affordance_phase_boundary_and_outer_cleanup(tmp_path, monkeypatch, with
     else:
         assert code == 1 and result["failure_class"] == "preparation-boundary"
         assert result["failure_phase"] == "preparation"
-        assert result["preparation"]["gap"] == "draft-missing"
+        assert result["preparation"]["gap"] == ("draft-missing" if preparation == "no-draft" else "retained-plan-missing-or-invalid")
         assert (Consumer.repo / "settings.json").read_bytes() == journeys.INITIAL["settings.json"]
 
 
