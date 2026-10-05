@@ -226,6 +226,18 @@ fn request_entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreErro
         }
         let mut found = Vec::new();
         requests(value, &mut found, 0);
+        if owner == "setup_context" {
+            // Selected native setup choices are row records, not request lists.
+            // Index only their advertised request slots; do not widen discovery
+            // into arbitrary arrays, caller material or nested choice metadata.
+            for choice in value["choices"].as_array().into_iter().flatten().take(512) {
+                for (key, request) in choice.as_object().into_iter().flatten() {
+                    if key == "request" || key.ends_with("_request") {
+                        request_list(request, &mut found, 1);
+                    }
+                }
+            }
+        }
         for request in found {
             if request["task_identity"] != full["current_work"] {
                 continue;
@@ -1715,6 +1727,41 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn selected_setup_choices_bind_only_native_request_slots() {
+        let work = json!({"kind":"current-work", "id":"bounded-work"});
+        let request = json!({"kind":"agentic-workspace/public-request/v1", "owner":"configuration",
+            "request_kind":"configuration/edit-source/v1", "task_identity":work,
+            "arguments":{"source":"managed.md", "key":"package.payload", "value":"current-artifact"}});
+        let mut foreign = request.clone();
+        foreign["arguments"]["source"] = json!("caller-material.md");
+        let full = json!({"current_work":work,
+            "setup_context":{"choices":[{"request":request,"subject":"managed.md",
+                "arguments":{"request":foreign}, "material":[{"request":foreign}],
+                "metadata":{"request":foreign}}]},
+            "material":[{"request":foreign}],
+            "configuration_write":{"arguments":{"requests":[foreign]},
+                "creation_provenance":{"request":foreign}, "other_array":[{"request":foreign}]}});
+        let found = request_entries(&full, &json!({"target":"fixture", "task":"bounded"})).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0]["envelope"], request);
+        assert!(
+            found[0]["reference"]
+                .as_str()
+                .unwrap()
+                .starts_with("request:setup_context:")
+        );
+        let mut different_work = full;
+        different_work["current_work"]["id"] = json!("another-work");
+        assert!(
+            request_entries(
+                &different_work,
+                &json!({"target":"fixture", "task":"bounded"})
+            )
+            .unwrap()
+            .is_empty()
+        );
+    }
     #[test]
     fn public_owner_identity_resolves_exact_requests_without_rebinding() {
         let root = temp_root("owner-reference");
