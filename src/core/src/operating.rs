@@ -85,13 +85,31 @@ impl SourceAvailability {
 }
 
 fn reference(context: &Value, selector: &str, envelope: &Value) -> Result<String, CoreError> {
-    let hash = digest(
-        &json!({"kind":CARRIAGE,"context":context,"selector":selector,"envelope":envelope}),
-    )?;
+    let mut bound = context.clone();
+    if selector.starts_with("request:setup_context:")
+        && let Some(request) = bound.get("request")
+    {
+        let mut requests = if let Some(requests) = request.as_array() {
+            requests.clone()
+        } else {
+            vec![request.clone()]
+        };
+        requests.sort_by_key(|request| request.to_string());
+        bound["request"] = json!(requests);
+    }
+    let hash =
+        digest(&json!({"kind":CARRIAGE,"context":bound,"selector":selector,"envelope":envelope}))?;
     if envelope["kind"] == "agentic-workspace/lazy-owner-detail/v1" {
         Ok(format!(
             "detail:{}:{hash}",
             selector.strip_prefix('/').unwrap_or(selector)
+        ))
+    } else if selector.starts_with("request:setup_context:") {
+        // A lost selected-job context can be identified without treating the
+        // reference as current authority. Work changes still fail closed.
+        Ok(format!(
+            "request:setup_context:{}:{hash}",
+            setup_work(context)?
         ))
     } else if selector.starts_with("request:") {
         Ok(format!(
@@ -101,6 +119,151 @@ fn reference(context: &Value, selector: &str, envelope: &Value) -> Result<String
     } else {
         Ok(hash)
     }
+}
+
+fn setup_work(context: &Value) -> Result<String, CoreError> {
+    digest(&json!({"target":context["target"],"task":context["task"],"changed":context["changed"]}))
+}
+
+fn setup_step(full: &Value, context: &Value, carried: bool) -> Result<Option<Value>, CoreError> {
+    let setup = &full["setup_context"];
+    let choices = setup["choices"].as_array();
+    let choosing = choices.is_some_and(|choices| choices.len() > 1);
+    let request = if choosing {
+        &setup["selection_request"]
+    } else if let Some(choice) = choices.and_then(|choices| choices.first()) {
+        crate::native_configuration_procedure::choice_request(choice)
+    } else {
+        &setup["request"]
+    };
+    if request["kind"] != "agentic-workspace/public-request/v1" {
+        return Ok(None);
+    }
+    let Some(selected) = request_entries(full, context)?.into_iter().find(|entry| {
+        entry["envelope"] == *request
+            && entry["selector"]
+                .as_str()
+                .unwrap()
+                .starts_with(if setup["job"].is_null() {
+                    "request:configuration_write:"
+                } else {
+                    "request:setup_context:"
+                })
+    }) else {
+        return Ok(None);
+    };
+    let mut presentation = json!({});
+    attach_request_answer(&mut presentation, full, context, &selected);
+    let mut step = presentation["next_step"].clone();
+    let mut input = context.clone();
+    let requests = if let Some(requests) = context["request"].as_array() {
+        requests.clone()
+    } else if context["request"].is_object() {
+        vec![context["request"].clone()]
+    } else {
+        vec![]
+    };
+    if let Some(job) = requests
+        .iter()
+        .find(|request| request["request_kind"] == crate::native_configuration_procedure::JOB)
+    {
+        input["setup"] = job["arguments"].clone();
+        let peers: Vec<_> = requests
+            .iter()
+            .filter(|request| request["request_kind"] != crate::native_configuration_procedure::JOB)
+            .cloned()
+            .collect();
+        if peers.is_empty() {
+            input.as_object_mut().unwrap().remove("request");
+        } else {
+            input["request"] = json!(peers);
+        }
+    }
+    input["reference"] = selected["reference"].clone();
+    input["projection"] = json!(if carried { "carried" } else { "compact" });
+    step["input"] = input;
+    step["use"] = json!(
+        "Submit input unchanged with only answer. The input carries the selected job, work and earlier answers; owners reobserve sources. This step grants no write or readiness authority."
+    );
+    if choosing {
+        let subjects: Vec<_> = choices
+            .unwrap()
+            .iter()
+            .map(crate::native_configuration_procedure::choice_subject)
+            .collect();
+        step["question"] = json!("Which current setup choice should continue?");
+        step["choices"] = json!(subjects);
+        step["answer_shape"] = json!({"choice":"<one returned choice>"});
+        step["answer_schema"] = json!({"type":"object","required":["choice"],"additionalProperties":false,
+            "properties":{"choice":{"enum":subjects}}});
+    } else {
+        step["question"] = choices.and_then(|choices| choices.first()).and_then(|choice| choice.get("question")).cloned()
+            .unwrap_or(json!("Continue this selected setup choice? Inspect any separately returned authorization question before invoking an effect."));
+        step["answer_shape"] = match request["request_kind"].as_str() {
+            Some("configuration/edit-source/v1")
+                if request["arguments"]["key"] != "package.payload" =>
+            {
+                step["answer_schema"] = json!({"type":"object","required":["value"],"additionalProperties":false,
+                    "properties":{"value":choices.and_then(|choices| choices.first()).map(|choice| &choice["value_schema"]).unwrap_or(&Value::Null)}});
+                json!({"value":request["arguments"]["value"]})
+            }
+            Some(crate::native_configuration_procedure::ASSESS) => {
+                let schema = &presentation["next_step"]["answer_schema"]["properties"];
+                step["answer_schema"] = json!({"type":"object","required":["judgment","reason"],"additionalProperties":false,
+                    "properties":{"judgment":schema["judgment"],"reason":schema["reason"],"resume":schema["resume"]}});
+                json!({"judgment":"pending","reason":"<current consumer evidence or gap>","resume":"<next responsible owner/action if unfinished>"})
+            }
+            Some(crate::native_configuration_procedure::JOB) => request["arguments"].clone(),
+            _ => {
+                step["answer_schema"] =
+                    json!({"type":"object","additionalProperties":false,"properties":{}});
+                json!({})
+            }
+        };
+    }
+    Ok(Some(step))
+}
+
+fn setup_selection_recovery(
+    full: &Value,
+    context: &Value,
+    selected: &Value,
+    projection: &Value,
+) -> Result<Option<Value>, CoreError> {
+    let Some(reference) = selected
+        .as_str()
+        .and_then(|value| value.strip_prefix("request:setup_context:"))
+    else {
+        return Ok(None);
+    };
+    if full["configuration_write"]["selected_setup_job"].is_object() {
+        return Ok(None);
+    }
+    let prefix = format!("{}:sha256:", setup_work(context)?);
+    let Some(hash) = reference.strip_prefix(&prefix) else {
+        return Err(error(
+            "setup reference work context changed or reference is invalid",
+        ));
+    };
+    if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(error("invalid setup reference"));
+    }
+    // Never reconstruct or answer the lost choice from its opaque digest. A
+    // fresh native job selection is the only recovery; old source/ref validity
+    // remains unknown until that selection has been established again.
+    let mut current = full.clone();
+    current["setup_context"] = json!({"status":"selection-context-required",
+        "request":full["configuration_write"]["setup_job_request"],
+        "reason":"The selected setup job is absent from this input. Re-select the current job before answering its choice; the previous choice reference is not admitted."});
+    let mut result = project_start(current, context.clone(), projection)?;
+    let view = if projection == "carried" {
+        &mut result["view"]
+    } else {
+        &mut result
+    };
+    view["status"] = json!("selection-context-required");
+    view["authority_effect"] = json!("none");
+    Ok(Some(result))
 }
 
 fn entry(context: &Value, selector: &str, envelope: &Value) -> Result<Value, CoreError> {
@@ -571,6 +734,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         }
         let mut setup = full["setup_context"].clone();
         references(&mut setup, &request_entries(full, context)?);
+        if let Some(step) = setup_step(full, context, carried)? {
+            setup["next_step"] = step;
+        }
         result["setup_context"] = setup;
     }
     if full["planning"]["selected_owner"].is_object() {
@@ -1281,6 +1447,36 @@ fn operate_current(
         return Err(error("unknown operating projection"));
     }
     let field = if invoking { "invocation" } else { "request" };
+    if let Some(setup) = value.as_object_mut().unwrap().remove("setup") {
+        if invoking {
+            return Err(error(
+                "setup selection is read-only; invoke only an independently admitted action",
+            ));
+        }
+        let mut context = normalize_context(value)?;
+        let mut requests = match context.get("request") {
+            Some(Value::Array(requests)) => requests.clone(),
+            Some(request) if !request.is_null() => vec![request.clone()],
+            _ => vec![],
+        };
+        if requests
+            .iter()
+            .any(|request| request["request_kind"] == crate::native_configuration_procedure::JOB)
+        {
+            return Err(error(
+                "setup input contains competing job selection contexts",
+            ));
+        }
+        let current = native_public::start_selected(
+            context.clone(),
+            &Resolution::Frontier(Some("configuration_write".into())),
+        )?;
+        let mut job = current["configuration_write"]["setup_job_request"].clone();
+        job["arguments"] = setup;
+        requests.push(job);
+        context["request"] = json!(requests);
+        value = context;
+    }
     if let Some(mut selected) = selected {
         if let Some(identity) = selected.as_str().and_then(|s| s.strip_prefix("owner:")) {
             let parts: Vec<_> = identity.splitn(3, ':').collect();
@@ -1359,6 +1555,11 @@ fn operate_current(
                         ));
                     }
                     return resolve_owner_reference(&current, &carrier.context, &selected);
+                }
+                if let Some(recovery) =
+                    setup_selection_recovery(&current, &carrier.context, &selected, &projection)?
+                {
+                    return Ok(recovery);
                 }
                 let selected_entry = select_entry(&current, &carrier.context, &selected)?;
                 return use_selected(
@@ -1457,6 +1658,12 @@ fn operate_current(
                 ));
             }
             return resolve_owner_reference(&current, &context, &selected);
+        }
+        if !invoking
+            && let Some(recovery) =
+                setup_selection_recovery(&current, &context, &selected, &projection)?
+        {
+            return Ok(recovery);
         }
         let selected_entry = select_entry(&current, &context, &selected)?;
         return use_selected(
@@ -1646,6 +1853,9 @@ pub(crate) fn project_start(
         full["procedure_continuation"] = json!(nominations);
     }
     if projection == "full" {
+        if let Some(step) = setup_step(&full, &context, false)? {
+            full["setup_context"]["next_step"] = step;
+        }
         let context = normalize_context(value)?;
         let recovery = consequence_recovery(&full, &context)?;
         if !recovery.is_empty() {

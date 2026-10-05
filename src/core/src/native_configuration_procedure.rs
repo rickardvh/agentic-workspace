@@ -12,7 +12,8 @@ pub(crate) fn job_declarations() -> Vec<Value> {
     vec![
         json!({"kind":JOB,"result_kind":"agentic-workspace/setup-job/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["job"],"properties":{
             "job":{"enum":["refresh-payload","expose-skill","expose-plugin","configure-behavior","assess-setup","remove-adoption"]},
-            "concern":concerns,"scope":{"enum":["repository","machine-local"]},"key":{"type":"string","maxLength":128}},
+            "concern":concerns,"scope":{"enum":["repository","machine-local"]},"key":{"type":"string","maxLength":128},
+            "choice":{"type":"string","minLength":1,"maxLength":4096}},
             "allOf":[{"if":{"properties":{"job":{"enum":["configure-behavior","assess-setup"]}}},"then":{"required":["concern"]}}]}}),
         json!({"kind":ASSESS,"result_kind":"agentic-workspace/setup-job/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["concern","judgment","reason"],"properties":{
             "concern":concerns,"scope":{"enum":["repository","machine-local"]},
@@ -116,7 +117,33 @@ pub(crate) fn assessment_proposal(
     Ok(Some(proposed))
 }
 
-pub(crate) fn setup_view(current: &Value) -> Value {
+pub(crate) fn choice_subject(choice: &Value) -> Value {
+    [
+        &choice["subject"],
+        &choice["setting"],
+        &choice["request"]["arguments"]["source"],
+        &choice["request"]["request_kind"],
+    ]
+    .into_iter()
+    .find(|value| value.is_string())
+    .cloned()
+    .unwrap_or(Value::Null)
+}
+
+pub(crate) fn choice_request(choice: &Value) -> &Value {
+    [
+        "recovery_request",
+        "request",
+        "expose_request",
+        "remove_request",
+    ]
+    .into_iter()
+    .map(|key| &choice[key])
+    .find(|request| request.is_object())
+    .unwrap_or(&choice["request"])
+}
+
+pub(crate) fn setup_view(current: &Value) -> Result<Value, CoreError> {
     let configuration = &current["configuration_write"];
     let selected = &configuration["selected_setup_job"];
     if !selected.is_object() {
@@ -127,11 +154,11 @@ pub(crate) fn setup_view(current: &Value) -> Value {
         if configuration["setup_assessment"]["assessment_due"] == true {
             needed.push(json!({"job":"assess-setup","reason":"A relevant setup source changed; consider only the affected concern."}));
         }
-        return if needed.is_empty() {
+        return Ok(if needed.is_empty() {
             Value::Null
         } else {
             json!({"needed":needed,"request":configuration["setup_job_request"],"readiness_authority":"The responsible consumer owner still establishes readiness."})
-        };
+        });
     }
     let job = selected["job"].as_str().unwrap();
     let mut choices = Vec::new();
@@ -190,12 +217,24 @@ pub(crate) fn setup_view(current: &Value) -> Value {
         }
         _ => {}
     }
+    if let Some(wanted) = selected["choice"].as_str() {
+        choices.retain(|choice| choice_subject(choice) == wanted);
+        if choices.len() != 1 {
+            return Err(CoreError::new(
+                "Setup choice is not uniquely available in the current selected job; reobserve the job.",
+            ));
+        }
+    }
     let concern = selected["concern"].as_str();
     let consumer = concern.map(|c| consumer_view(c,current)).unwrap_or(json!({"status":"not-checked","message":"Package and exposure effects establish their exact footprint; capability behavior needs its consumer's evidence."}));
-    json!({"job":job,"concern":selected["concern"],"scope":selected["scope"],
+    let mut result = json!({"job":job,"concern":selected["concern"],"scope":selected["scope"],
         "status":configuration["status"],"choices":choices,"consumer_verification":consumer,
         "consideration_complete":configuration["setup_assessment"]["review_complete"],
-        "readiness_authority":"This setup consideration certifies no Assignment, module, launch or machine readiness."})
+        "readiness_authority":"This setup consideration certifies no Assignment, module, launch or machine readiness."});
+    if choices.len() > 1 {
+        result["selection_request"] = configuration["setup_job_request"].clone();
+    }
+    Ok(result)
 }
 
 fn consumer_view(concern: &str, current: &Value) -> Value {

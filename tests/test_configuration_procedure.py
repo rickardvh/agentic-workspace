@@ -16,6 +16,125 @@ from tests.test_native_public_cli import native_cli as native_cli
 TASK = "Configure the requested repository behavior"
 
 
+@pytest.mark.parametrize("projection", ["compact", "carried"])
+def test_setup_step_carries_selection_and_recovers_missing_context(tmp_path, shared_core_binary, native_cli, projection):
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    source = workspace / "config.toml"
+    source.write_text("[workspace]\nenabled=true\n")
+    context = {"target": str(tmp_path), "task": TASK}
+
+    def call(data):
+        return consume("json", shared_core_binary, native_cli, data)
+
+    def view(result):
+        return result["view"] if "view" in result else result
+
+    discovery = call(context | {"reference": "owner:request:configuration:configuration/setup-job/v1"})
+    selected = call(
+        discovery["reentry"]
+        | {
+            "reference": discovery["next_step"]["reference"],
+            "answer": {"job": "configure-behavior", "concern": "instructions"},
+            "projection": projection,
+        }
+    )
+    step = view(selected)["setup_context"]["next_step"]
+    before = source.read_bytes()
+    rejected = consume("json", shared_core_binary, native_cli, step["input"] | {"invocation": {}}, allow_failure=True)
+    assert rejected["effect_outcome"]["status"] == "rejected-before-effect"
+    # Only an ordinary semantic answer accompanies the product's complete input.
+    read = call(step["input"] | {"answer": {}})
+    edit = view(read)["setup_context"]["next_step"]
+    assert edit["answer_shape"] == {"value": "AGENTS.md"}
+    Draft202012Validator(edit["answer_schema"]).validate({"value": "GUIDE.md"})
+    proposed = call(edit["input"] | {"answer": {"value": "GUIDE.md"}})
+    assert source.read_bytes() == before
+    assert view(proposed)["decision_packet"]["decision_request"]["choices"]
+
+    lost = copy.deepcopy(step["input"])
+    lost.pop("setup")
+    recovery = view(call(lost | {"answer": {}}))
+    assert recovery["status"] == "selection-context-required"
+    assert recovery["authority_effect"] == "none"
+    assert not recovery["decision_packet"]["primary_action"]
+    resumed = view(
+        call(recovery["setup_context"]["next_step"]["input"] | {"answer": {"job": "configure-behavior", "concern": "instructions"}})
+    )
+    assert resumed["setup_context"]["job"] == "configure-behavior"
+    assert resumed["setup_context"]["next_step"]
+    assert source.read_bytes() == before
+
+    foreign = copy.deepcopy(lost)
+    foreign["task"] = "Different work"
+    with pytest.raises(AssertionError, match="work context changed"):
+        call(foreign | {"answer": {}})
+    for field, changed in (("task", "Different work"), ("changed", ["source.txt"])):
+        foreign = copy.deepcopy(step["input"])
+        foreign[field] = changed
+        with pytest.raises(AssertionError, match="stale|changed"):
+            call(foreign | {"answer": {}})
+    forged = copy.deepcopy(step["input"])
+    forged["reference"] = forged["reference"][:-1] + ("0" if forged["reference"][-1] != "0" else "1")
+    with pytest.raises(AssertionError, match="stale|unknown"):
+        call(forged | {"answer": {}})
+    source.write_bytes(before + b"\n# Changed source\n")
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(step["input"] | {"answer": {}})
+    assert source.read_bytes() == before + b"\n# Changed source\n"
+
+
+@pytest.mark.parametrize("projection", ["compact", "carried"])
+def test_refresh_job_selects_semantic_source_before_separate_authorization(tmp_path, shared_core_binary, native_cli, projection):
+    from tests.test_native_public_cli import ROOT
+
+    context = {"target": str(tmp_path), "task": "Refresh the requested package file"}
+    source = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    sentinel = tmp_path / "needed.txt"
+    sentinel.write_text("Preserve unrelated authored material")
+
+    def call(data):
+        return consume("native", shared_core_binary, native_cli, data)
+
+    def view(result):
+        return result["view"] if "view" in result else result
+
+    discovery = call(context | {"reference": "owner:request:configuration:configuration/setup-job/v1"})
+    selected = view(
+        call(
+            discovery["reentry"]
+            | {"reference": discovery["next_step"]["reference"], "answer": {"job": "refresh-payload"}, "projection": projection}
+        )
+    )
+    step = selected["setup_context"]["next_step"]
+    assert source in step["choices"]
+    with pytest.raises(AssertionError, match="not uniquely available"):
+        call(step["input"] | {"answer": {"choice": "foreign/source"}})
+    narrowed = view(call(step["input"] | {"answer": {"choice": source}}))
+    assert len(narrowed["setup_context"]["choices"]) == 1
+    Draft202012Validator(narrowed["setup_context"]["next_step"]["answer_schema"]).validate({})
+    proposed = view(call(narrowed["setup_context"]["next_step"]["input"] | {"answer": {}}))
+    assert not (tmp_path / source).exists()
+    question = proposed["decision_packet"]["decision_request"]
+    ready_result = call(proposed["reentry"] | {"reference": question["reference"], "answer": "authorize-write", "projection": projection})
+    ready = view(ready_result)
+    assert not (tmp_path / source).exists()
+    committed = (
+        call(ready["reentry"] | {"invocation": ready["decision_packet"]["primary_action"]})
+        if projection == "compact"
+        else call(
+            {
+                "invocation": ready_result["carriage"],
+                "reference": ready["decision_packet"]["primary_action"]["reference"],
+                "projection": "carried",
+            }
+        )
+    )
+    assert committed["effect_outcome"]["status"] == "committed"
+    assert (tmp_path / source).read_bytes() == (ROOT / "src/core/payload" / source).read_bytes()
+    assert sentinel.read_text() == "Preserve unrelated authored material"
+
+
 def test_setup_job_prepares_bounded_behavior_and_assessment(tmp_path, shared_core_binary, native_cli):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     workspace = tmp_path / ".agentic-workspace"
