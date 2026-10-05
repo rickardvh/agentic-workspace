@@ -12,12 +12,14 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 
 @pytest.mark.parametrize("projection", ["compact", "carried", "full"])
-@pytest.mark.parametrize("kind", ["scratch", "worktree"])
+@pytest.mark.parametrize("kind", ["scratch", "worktree", "worktree-default"])
 def test_created_resource_result_drives_existing_lifecycle(tmp_path, shared_core_binary, native_cli, projection, kind):
     from tests.test_native_resources import repository
 
     root = tmp_path / "repo"
     root.mkdir()
+    default_path = kind == "worktree-default"
+    kind = "worktree" if default_path else kind
     if kind == "worktree":
         repository(root)
     context = {"target": str(root), "task": "Create and retire exact task resource"}
@@ -28,7 +30,9 @@ def test_created_resource_result_drives_existing_lifecycle(tmp_path, shared_core
     request = call(context)["resources"]["requests"][0]
     args = {"operation": f"{kind}-create"}
     if kind == "worktree":
-        args |= {"path": str(tmp_path / "isolated"), "need": "destructive-validation", "reason": "Isolate destructive validation"}
+        args |= {"need": "destructive-validation", "reason": "Isolate destructive validation"}
+        if not default_path:
+            args["path"] = str(tmp_path / "isolated")
         request["arguments"]["request"] = args
         policy = call(context | {"request": request})["resources"]["proposal"]["policy_revision"]
         args |= {"policy_revision": policy, "policy_answer": "permits-isolation"}

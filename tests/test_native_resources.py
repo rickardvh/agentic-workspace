@@ -47,6 +47,27 @@ def resource(surface, binary, native, context):
     return json.loads(result.stdout)
 
 
+@pytest.mark.parametrize("surface", ["json", "native"])
+def test_default_worktree_creation_returns_exact_primitive_lifecycle(tmp_path, shared_core_binary, native_cli, surface):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    context = {"target": str(repo), "task": "Create and retire the default worktree"}
+    request = {"operation": "worktree-create", "need": "destructive-validation", "reason": "Isolate validation"}
+    proposal = resource(surface, shared_core_binary, native_cli, context | {"request": request})
+    request |= {"policy_revision": proposal["policy_revision"], "policy_answer": "permits-isolation"}
+    ready = resource(surface, shared_core_binary, native_cli, context | {"request": request})
+    created = resource(surface, shared_core_binary, native_cli, ready["action"])
+    path = Path(created["path"])
+    assert path.is_absolute() and path.is_dir() and path.parent.name == ".aw-worktrees"
+    lifecycle = created["lifecycle_request"]
+    assert Path(lifecycle["request"]["path"]) == path
+    removal = resource(surface, shared_core_binary, native_cli, lifecycle)
+    assert not removal["blockers"]
+    removed = resource(surface, shared_core_binary, native_cli, removal["action"])
+    assert removed["effect_outcome"] == "committed" and not path.exists()
+
+
 def test_task_scratch_reentry_cleanup_and_owner_preservation(tmp_path, shared_core_binary, native_cli):
     root = tmp_path / ".agentic-workspace/local"
     (root / "instructions").mkdir(parents=True)

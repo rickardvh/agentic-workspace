@@ -1395,7 +1395,8 @@ fn view_checked(
             "status":result["operation_result"]["status"],"effects":result["operation_result"]["effects"],
             "effect_outcome":"committed","retry_effect":false,
             "lifecycle_request":{"target":target,"task":input.task,"changed":changed,
-                "request":{"operation":if request.operation == "scratch-create" {"scratch-remove"} else {"worktree-remove"},"path":relative}},
+                "request":{"operation":if request.operation == "scratch-create" {"scratch-remove"} else {"worktree-remove"},
+                    "path":if request.operation == "scratch-create" {json!(relative)} else {json!(path)}}},
             "authority":"Creation establishes the exact path and custody. The lifecycle request only proposes a fresh, separately admitted effect; reobserve before cleanup."});
         if let Some(environment) = result.get("build_environment") {
             created["build_environment"] = environment.clone();

@@ -1,3 +1,3 @@
 schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Return coherent committed scratch and worktree creation results with exact paths, observed custody and current lifecycle proposal steps."
+bump = "major"
+summary = "Breaking resource API change: operation result identity is resource-result/v1; creation results expose current resource custody and lifecycle_request instead of the proposal preimage and nested operation_result. Consume path/resource/status/effects directly and resolve the returned lifecycle step before a separate effect."
