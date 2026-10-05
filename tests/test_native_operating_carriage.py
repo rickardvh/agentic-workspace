@@ -182,7 +182,7 @@ def test_shell_carriage_keeps_transport_outside_model_output(tmp_path, shared_co
     context = proposal("native", shared_core_binary, native_cli, tmp_path)
     request = tmp_path / "proposal.json"
     request.write_text(json.dumps(context["request"]), encoding="utf-8")
-    guide = (Path(__file__).resolve().parents[1] / ".agentic-workspace/skills/workspace-startup/references/owners.md").read_text()
+    guide = (Path(__file__).resolve().parents[1] / ".agentic-workspace/skills/workspace-startup/references/transport.md").read_text()
     examples = [block.split("```", 1)[0] for block in guide.split("```powershell\n")[1:]]
     # The ordinary entry example has no proposal. This caller already holds one;
     # add only that existing request, retaining the exact documented transport.
