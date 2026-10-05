@@ -14,6 +14,8 @@ export interface WorkContext {
   available_sources?: { reference: string; revision: string; extent: string; selector?: string; content_revision?: string }[];
 }
 export interface StartInput extends WorkContext {
+  /** Native-carried read-only setup job selection; submit the returned input unchanged. */
+  setup?: JsonObject;
   reference?: string;
   answer?: Json;
 }

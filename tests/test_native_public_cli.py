@@ -199,7 +199,7 @@ def consume(
             command += ["--delivered", reference]
         for path in context.get("changed", []):
             command += ["--changed", path]
-        if context.get("request") or context.get("invocation") or "material" in context or "maintenance" in context:
+        if context.get("request") or context.get("invocation") or "material" in context or "maintenance" in context or "setup" in context:
             command += ["--input", "-"]
         if verb == "invoke" and "target" in context and "task" in context:
             # Preserve explicit empty scope through the supported invoke envelope.
@@ -207,7 +207,9 @@ def consume(
             stdin = json.dumps({"changed": [], **context})
         else:
             stdin = json.dumps(
-                context if "material" in context or "maintenance" in context else context.get("invocation", context.get("request"))
+                context
+                if "material" in context or "maintenance" in context or "setup" in context
+                else context.get("invocation", context.get("request"))
             )
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})

@@ -79,7 +79,7 @@ pub(crate) fn start_selected(value: Value, resolution: &Resolution) -> Result<Va
         let mut prepared = resolve_selected(&input, &target, false, None, resolution)?;
         prepared["configuration_write"]["selected_setup_job"] =
             current["configuration_write"]["selected_setup_job"].clone();
-        prepared["setup_context"] = crate::native_configuration_procedure::setup_view(&current);
+        prepared["setup_context"] = crate::native_configuration_procedure::setup_view(&current)?;
         return Ok(prepared);
     }
     Ok(current)
@@ -2069,7 +2069,7 @@ fn resolve_selected(
             public["configuration_write"]["requested_behavior_scope"].clone();
     }
     crate::native_configuration_assessment::validate_consumers(target, &public)?;
-    let setup = crate::native_configuration_procedure::setup_view(&public);
+    let setup = crate::native_configuration_procedure::setup_view(&public)?;
     if !setup.is_null() {
         public["setup_context"] = setup;
     }

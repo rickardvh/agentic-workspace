@@ -465,6 +465,106 @@ def execute(consumer, family, *, actor=None):
     return result
 
 
+DRAFT_NAME = "migration-draft.json"
+DRAFT_KIND = "service-port-migration-draft/v1"
+AFFORDANCE_TASK = "Migrate the service port after approval, preserving repository policy and notes."
+
+
+class PreparationGap(ValueError):
+    def __init__(self, gap):
+        self.gap = gap
+        super().__init__("Preparation boundary: " + gap)
+
+
+def check_affordance_preparation(before, prepared, target, current):
+    """Bind inert bytes to the trusted native observation of AFFORDANCE_TASK."""
+    for name in ("settings.json", "README.md", "policy.md", "notes.txt"):
+        if prepared.get(name) != before.get(name):
+            raise PreparationGap("pending-source-or-preservation-changed")
+    try:
+        planning = current["planning"]
+        selected = planning["selected_owner"]
+        plan_ref = selected["ref"]
+        plan_bytes = prepared[plan_ref]
+        plan = json.loads(plan_bytes)
+        retained_plan = (
+            planning["task_relation"] == "continues"
+            and planning["current_owner"]["current"] is True
+            and plan_ref.startswith(".agentic-workspace/planning/execplans/")
+            and plan_ref.endswith(".plan.json")
+            and selected["source"]["path"] == plan_ref
+            and selected["source"]["revision"] == "sha256:" + hashlib.sha256(plan_bytes).hexdigest()
+            and plan["id"] == selected["id"]
+            and plan["kind"] == "planning-execplan/v1"
+            and bool(plan["next_action"].strip())
+        )
+    except (KeyError, ValueError, AttributeError, TypeError):
+        retained_plan = False
+    if not retained_plan:
+        raise PreparationGap("retained-plan-missing-or-invalid")
+    candidates = [name for name in prepared if PurePosixPath(name).name == DRAFT_NAME and name not in before]
+    if not candidates:
+        raise PreparationGap("draft-missing")
+    if len(candidates) != 1:
+        raise PreparationGap("draft-ambiguous")
+    name = candidates[0]
+    container = str(PurePosixPath(name).parent)
+    if not re.fullmatch(r"\.agentic-workspace/local/scratch/[0-9a-f]{64}", container):
+        raise PreparationGap("draft-misplaced")
+    marker_name = container + "/.aw-scratch.json"
+    try:
+        marker_bytes = prepared[marker_name]
+        marker = json.loads(marker_bytes) if len(marker_bytes) <= 16384 else None
+
+        def normal_target(value):
+            return os.path.normcase(os.path.normpath(value.removeprefix("\\\\?\\")))
+
+        valid_marker = (
+            marker.get("kind") == "agentic-workspace/task-scratch/v1"
+            and marker.get("path") == container
+            and isinstance(marker.get("retain"), bool)
+            and marker.get("task") == AFFORDANCE_TASK
+            and normal_target(marker["target"]) == normal_target(target)
+            and container.rsplit("/", 1)[1]
+            == hashlib.sha256(
+                json.dumps(
+                    {"target": marker["target"], "task": marker["task"]}, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            ).hexdigest()
+        )
+    except (KeyError, ValueError, AttributeError, TypeError):
+        valid_marker = False
+    if not valid_marker or marker_name in before:
+        raise PreparationGap("managed-scratch-missing-or-invalid")
+    data = prepared[name]
+    if not data.strip():
+        raise PreparationGap("draft-empty")
+    try:
+        draft = json.loads(data.decode("utf-8-sig")) if len(data) <= 16384 else None
+        valid_draft = (
+            isinstance(draft, dict)
+            and draft.get("kind") == DRAFT_KIND
+            and type(draft.get("from_port")) is int
+            and draft["from_port"] == 8080
+            and "target_port" in draft
+            and draft["target_port"] is None
+            and draft.get("approval_source") == "release.json"
+            and draft.get("files") == ["settings.json", "README.md"]
+            and isinstance(draft.get("note"), str)
+            and 0 < len(draft["note"].strip()) <= 4096
+        )
+    except (ValueError, UnicodeError):
+        valid_draft = False
+    if not valid_draft:
+        raise PreparationGap("draft-invalid")
+    scratch = {path for path in prepared if path.startswith(".agentic-workspace/local/scratch/") and path not in before}
+    return scratch, {
+        "status": "passed",
+        "planning": {"path": plan_ref, "source_revision": selected["source"]["revision"], "work": current["current_work"]},
+        "draft": {"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()},
+    }
+
+
 def execute_affordance(consumer, actor):
     """Two ordinary sessions; only installed guidance and repository state cross.
 
@@ -474,34 +574,49 @@ def execute_affordance(consumer, actor):
     work = Workspace(consumer)
     started, error, claim, before, after = time.monotonic(), None, None, {}, {}
     final_exported = False
+    preparation = {"status": "not-observed"}
     try:
         if actor is None or consumer.profile != "standalone":
             raise ValueError("Affordance observation requires the live standalone actor and trusted product receipts")
         recipe(work, "first-contact")
-        work.write(".agentic-workspace/config.toml", (
-            '[workspace]\nagent_instructions_file="AGENTS.md"\ncli_invoke=' + json.dumps(" ".join(consumer.command)) + "\n"
-        ).encode())
+        work.write(
+            ".agentic-workspace/config.toml",
+            ('[workspace]\nagent_instructions_file="AGENTS.md"\ncli_invoke=' + json.dumps(" ".join(consumer.command)) + "\n").encode(),
+        )
         setup(work)
         before = work.files()
-        actor.session(work,
-            "Prepare a service port migration. Retain a plan for the whole task using the installed workspace's planning support. "
-            "Create managed temporary task storage and put a draft migration note there. Record enough to resume and retire that storage. "
+        actor.session(
+            work,
+            "Prepare a service port migration. Use this exact workspace task throughout preparation: " + AFFORDANCE_TASK + " "
+            "Start preparation with an empty changed-file list; follow later scope changes returned by workspace continuations. "
+            "Retain a current selected plan for this whole task using installed planning support. "
+            "Create managed temporary task storage and put migration-draft.json directly inside it. "
+            'The UTF-8 JSON draft must have kind "service-port-migration-draft/v1", from_port 8080, target_port null, '
+            'approval_source "release.json", files ["settings.json", "README.md"], and a nonempty note describing the pending migration. '
+            "Record enough to resume and retire that storage. "
             "Do not change settings.json or README.md yet: the target port is awaiting confirmation. Preserve policy.md and notes.txt. "
-            "Stop after preparation; the next session will have no conversation history.")
+            "Stop after preparation; the next session will have no conversation history.",
+        )
         prepared = work.files()
-        if prepared["settings.json"] != before["settings.json"] or prepared["README.md"] != before["README.md"]:
-            raise ValueError("Preparation crossed the pending port-confirmation boundary")
-        scratch = {name for name in prepared if "/local/scratch/" in name and name not in before}
-        plans = {name for name in prepared if "/planning/execplans/" in name and name.endswith(".plan.json")}
-        if not scratch or not plans:
-            raise ValueError("Preparation did not establish retained Planning and managed scratch")
+        target = str(consumer.repo.resolve()) if hasattr(consumer, "repo") else "/home/consumer/repo"
+        try:
+            # A controller read through the exact installed command, with no
+            # actor-supplied selector or owner answer. Native Planning validates
+            # current selection, schema and retained origin for this work.
+            current = work.client.call("start", "--task", AFFORDANCE_TASK, "--projection", "full")
+        except (Exception, KeyboardInterrupt) as failure:
+            raise PreparationGap("planning-current-observation-unavailable") from failure
+        scratch, preparation = check_affordance_preparation(before, prepared, target, current)
         # A changed ordinary source and fresh provider session force reentry.
         work.write("release.json", b'{"port":8081,"approved":true}\n')
-        claim = actor.session(work,
+        claim = actor.session(
+            work,
             "Resume the prepared service migration from current repository state; there is no earlier conversation. "
+            "The retained whole-task description is: " + AFFORDANCE_TASK + " "
             "The approved target is now in release.json. Update settings.json and README.md to that port, "
             "retire the temporary task storage through its supported lifecycle, and reconcile the retained plan. "
-            "Preserve policy.md, notes.txt and the approved release source.")
+            "Preserve policy.md, notes.txt and the approved release source.",
+        )
         after = work.files()
         final_exported = True
         validate_pointer_files(after)
@@ -509,6 +624,8 @@ def execute_affordance(consumer, actor):
             raise ValueError("Temporary task storage remains or the approved release source changed")
     except (Exception, KeyboardInterrupt) as failure:
         error = str(failure)[:2000]
+        if isinstance(failure, PreparationGap):
+            preparation = {"status": "failed", "gap": failure.gap}
         try:
             after = work.files()
             final_exported = True
@@ -518,8 +635,15 @@ def execute_affordance(consumer, actor):
     interactions = affordance_observations(observations, claim)
     expected = expected_task()
     expected = replace(expected, allowed_changes=(*expected.allowed_changes, "release.json"))
-    result = evaluate(before, after, expected, claim=claim, executed=bool(observations),
-                      subject_verified=bool(consumer.observation.get("installed")), execution_error=error)
+    result = evaluate(
+        before,
+        after,
+        expected,
+        claim=claim,
+        executed=bool(observations),
+        subject_verified=bool(consumer.observation.get("installed")),
+        execution_error=error,
+    )
     if interactions["disposition"] == "observer-limited":
         # Product routes observed before a controller admission denial do not
         # establish that the actor could continue. Do not infer claim truth from
@@ -528,15 +652,33 @@ def execute_affordance(consumer, actor):
     coverage = all(interactions["coverage"].values())
     if interactions["findings"] or not coverage:
         result.update(status="failed", failure_class="affordance-finding" if interactions["findings"] else "affordance-coverage")
+    if preparation["status"] == "failed":
+        result.update(status="failed", failure_class="preparation-boundary", failure_phase="preparation")
     if not final_exported:
-        result.update(status="failed", failure_class="artifact-export", outcome="unknown", authority="unknown",
-                      claim_honesty="unverified", checks={}, unauthorized=[], preservation_failures=[])
-    result.update(family="operational-affordance", driver="agent", actor=observations,
-                  interactions=interactions, environment=consumer.observation,
-                  recipe_sha256=RECIPE_SHA256, scorer_sha256=SCORER_SHA256,
-                  actor_sha256=getattr(actor, "source_sha256", None), elapsed_seconds=round(time.monotonic()-started, 3),
-                  finding_route="tools/skills/self-improvement-dogfooding/SKILL.md",
-                  support_boundary="One exact installed subject; interaction findings require owner triage, not universal model scoring.")
+        result.update(
+            status="failed",
+            failure_class="artifact-export",
+            outcome="unknown",
+            authority="unknown",
+            claim_honesty="unverified",
+            checks={},
+            unauthorized=[],
+            preservation_failures=[],
+        )
+    result.update(
+        family="operational-affordance",
+        driver="agent",
+        actor=observations,
+        preparation=preparation,
+        interactions=interactions,
+        environment=consumer.observation,
+        recipe_sha256=RECIPE_SHA256,
+        scorer_sha256=SCORER_SHA256,
+        actor_sha256=getattr(actor, "source_sha256", None),
+        elapsed_seconds=round(time.monotonic() - started, 3),
+        finding_route="tools/skills/self-improvement-dogfooding/SKILL.md",
+        support_boundary="One exact installed subject; interaction findings require owner triage, not universal model scoring.",
+    )
     return result
 
 

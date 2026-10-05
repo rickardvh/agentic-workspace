@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Carry selected setup jobs through directly answerable native steps and recover missing selection without admitting stale work or effects."

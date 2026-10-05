@@ -1367,11 +1367,45 @@ fn view_checked(
         }
         _ => (),
     }
+    // Observe custody after creation while the effect is still owned here. The
+    // proposal's snapshot is a preimage, never the created resource's state.
+    if request.operation == "scratch-create" {
+        let current = scratch_snapshot(&target, relative, None)?;
+        result["resource_state"] = json!({"status":current["status"],
+            "custody":current["marker"],"retained":current["marker"]["retain"]});
+    } else if request.operation == "worktree-create" {
+        let current = worktrees(&target, &path)?
+            .into_iter()
+            .find(|row| {
+                normalized_path(Path::new(row["worktree"].as_str().unwrap_or("")))
+                    == normalized_path(&path)
+            })
+            .ok_or_else(|| err("created worktree registration unavailable; preserve exact path"))?;
+        result["resource_state"] = json!({"status":"present",
+            "custody":current["resource_custody"],"retained":current["locked"].is_string()});
+    }
     result["operation_result"] = crate::operation_result_value(json!({"invocation":invocation,
         "outcome":{"status":if effected {"applied"} else {"unchanged"},"effects":if effected {json!(["task-resource"])} else {json!([])},"value":{"operation":request.operation,"path":path}},"decision":null}))?;
     result["effect_outcome"] = json!("committed");
     result["retry_effect"] = json!(false);
     result.as_object_mut().unwrap().remove("action");
+    if result["resource_state"].is_object() {
+        let mut created = json!({"kind":"agentic-workspace/resource-result/v1",
+            "operation":request.operation,"path":path,"resource":result["resource_state"],
+            "status":result["operation_result"]["status"],"effects":result["operation_result"]["effects"],
+            "effect_outcome":"committed","retry_effect":false,
+            "lifecycle_request":{"target":target,"task":input.task,"changed":changed,
+                "request":{"operation":if request.operation == "scratch-create" {"scratch-remove"} else {"worktree-remove"},
+                    "path":if request.operation == "scratch-create" {json!(relative)} else {json!(path)}}},
+            "authority":"Creation establishes the exact path and custody. The lifecycle request only proposes a fresh, separately admitted effect; reobserve before cleanup."});
+        if let Some(environment) = result.get("build_environment") {
+            created["build_environment"] = environment.clone();
+        }
+        if let Some(outputs) = result.get("disposable_outputs") {
+            created["disposable_outputs"] = outputs.clone();
+        }
+        return Ok(created);
+    }
     Ok(result)
 }
 

@@ -632,6 +632,10 @@ pub(crate) fn view_selected(
         let delegated = template(kind, arguments);
         let mut selected = view_selected(target, work, config, contract, Some(&delegated), detail)?;
         selected["selected_setup_job"] = json!({"job":job,"concern":if matches!(job,"configure-behavior"|"assess-setup"){json!(concern)}else{Value::Null},"scope":scope});
+        if let Some(choice) = args.get("choice") {
+            selected["selected_setup_job"]["choice"] = choice.clone();
+        }
+        selected["setup_job_request"]["arguments"] = args.clone();
         if matches!(job, "configure-behavior" | "assess-setup") {
             selected["requested_behavior"] = json!(concern);
             selected["requested_behavior_scope"] = json!(scope);
