@@ -122,6 +122,7 @@ pub(crate) fn choice_subject(choice: &Value) -> Value {
         &choice["subject"],
         &choice["setting"],
         &choice["request"]["arguments"]["source"],
+        &choice["request"]["arguments"]["mode"],
         &choice["request"]["request_kind"],
     ]
     .into_iter()

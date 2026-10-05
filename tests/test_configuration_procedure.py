@@ -17,6 +17,73 @@ TASK = "Configure the requested repository behavior"
 
 
 @pytest.mark.parametrize("projection", ["compact", "carried"])
+def test_remove_job_distinguishes_interrupted_adoption_recovery(tmp_path, shared_core_binary, native_cli, projection):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    sentinel = tmp_path / "needed.txt"
+    sentinel.write_text("Preserve independent repository material")
+    context = {"target": str(tmp_path), "task": "Recover adoption then remove its owned footprint"}
+
+    def call(data):
+        return consume("native", shared_core_binary, native_cli, data, host_path=os.environ["PATH"])
+
+    def view(result):
+        return result["view"] if "view" in result else result
+
+    def authorize(proposed):
+        question = view(proposed)["decision_packet"]["decision_request"]
+        if question:
+            ready = view(call(view(proposed)["reentry"] | {"reference": question["reference"], "answer": "authorize-write"}))
+        else:
+            authorization = next(
+                row["response_request"]
+                for row in view(proposed)["decision_packet"]["pending_consequences"]["decisions"]
+                if row["id"] == "repository-adoption-authorization"
+            )
+            authorization["arguments"]["answer"] = "authorize-write"
+            ready = call(context | {"request": authorization})
+        return call(context | {"invocation": ready["decision_packet"]["primary_action"]})
+
+    initial = call(context)
+    owner = call(context | {"request": initial["configuration_write"]["repository_adoption_request"]})["configuration_write"]
+    install = next(row for row in owner["adoption_requests"] if row["arguments"]["mode"] == "adopt")
+    committed = authorize(call(context | {"request": install, "projection": "compact"}))
+    assert committed["effect_outcome"]["status"] == "committed"
+    # Lose only publication evidence after a real effect; the owner supplies its
+    # authentic interrupted-effect recovery beside normal removal.
+    (tmp_path / committed["custody"]["committed"]["path"]).unlink()
+    job = call(context)["configuration_write"]["setup_job_request"]
+    job["arguments"] = {"job": "remove-adoption"}
+    selected = view(call(context | {"request": job, "projection": projection}))
+    step = selected["setup_context"]["next_step"]
+    assert set(step["choices"]) == {"remove", "recover"}
+    assert len(step["choices"]) == 2
+    preserved = {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+    for choice in ("remove", "recover"):
+        narrowed = view(call(step["input"] | {"answer": {"choice": choice}}))
+        assert len(narrowed["setup_context"]["choices"]) == 1
+        proposed = call(narrowed["setup_context"]["next_step"]["input"] | {"answer": {}, "projection": "compact"})
+        assert all(path.read_bytes() == data for path, data in preserved.items())
+        if choice == "remove":
+            assert not view(proposed)["decision_packet"]["primary_action"]
+        else:
+            recovered = authorize(proposed)
+            assert recovered["effect_outcome"]["status"] == "committed"
+    fresh = view(
+        call(
+            context
+            | {
+                "request": call(context)["configuration_write"]["setup_job_request"] | {"arguments": {"job": "remove-adoption"}},
+                "projection": projection,
+            }
+        )
+    )
+    removed = authorize(call(fresh["setup_context"]["next_step"]["input"] | {"answer": {}, "projection": "compact"}))
+    assert removed["effect_outcome"]["status"] == "committed"
+    assert not (tmp_path / ".agentic-workspace/adoption.json").exists()
+    assert sentinel.read_text() == "Preserve independent repository material"
+
+
+@pytest.mark.parametrize("projection", ["compact", "carried"])
 def test_setup_step_carries_selection_and_recovers_missing_context(tmp_path, shared_core_binary, native_cli, projection):
     workspace = tmp_path / ".agentic-workspace"
     workspace.mkdir()
