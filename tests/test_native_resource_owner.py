@@ -3,11 +3,77 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+@pytest.mark.parametrize("projection", ["compact", "carried", "full"])
+@pytest.mark.parametrize("kind", ["scratch", "worktree"])
+def test_created_resource_result_drives_existing_lifecycle(tmp_path, shared_core_binary, native_cli, projection, kind):
+    from tests.test_native_resources import repository
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    if kind == "worktree":
+        repository(root)
+    context = {"target": str(root), "task": "Create and retire exact task resource"}
+
+    def call(data):
+        return consume("json", shared_core_binary, native_cli, data)
+
+    request = call(context)["resources"]["requests"][0]
+    args = {"operation": f"{kind}-create"}
+    if kind == "worktree":
+        args |= {"path": str(tmp_path / "isolated"), "need": "destructive-validation", "reason": "Isolate destructive validation"}
+        request["arguments"]["request"] = args
+        policy = call(context | {"request": request})["resources"]["proposal"]["policy_revision"]
+        args |= {"policy_revision": policy, "policy_answer": "permits-isolation"}
+    request["arguments"]["request"] = args
+    ready = call(context | {"request": request})
+    created = call(context | {"invocation": ready["decision_packet"]["primary_action"], "projection": projection})
+    assert created["effect_outcome"]["status"] == "committed"
+    assert created["continuation"]["status"] == "current"
+    value = created["value"]
+    path = Path(value["path"])
+    assert path.is_dir() and path.is_absolute()
+    assert value["resource"]["status"] == "present"
+    assert value["resource"]["custody"]["task"] == context["task"]
+    assert "snapshot" not in value and "operation_result" not in value
+    step = value["next_step"]
+    # Answer the returned current step, without extracting a raw public request
+    # or reconstructing resource identity from the preceding proposal.
+    answer = step["answer_shape"]
+    if kind == "scratch":
+        answer["request"]["reason"] = "Keep the requested draft until checked"
+        retained = call(step["reentry"] | {"reference": step["reference"], "answer": answer})
+        held = call(step["reentry"] | {"invocation": retained["decision_packet"]["primary_action"]})
+        assert held["effect_outcome"]["status"] == "committed"
+        assert json.loads((path / ".aw-scratch.json").read_text())["retain"] is True
+        selected = call(context | {"reference": "owner:request:workspace-resources:resources/propose/v1"})
+        release = call(
+            selected["reentry"]
+            | {
+                "reference": selected["next_step"]["reference"],
+                "answer": {"request": answer["request"] | {"operation": "scratch-release", "reason": "Draft checked"}},
+            }
+        )
+        assert call(context | {"invocation": release["decision_packet"]["primary_action"]})["effect_outcome"]["status"] == "committed"
+    else:
+        # A created path conveys no permission to discard newly authored work.
+        (path / "needed.txt").write_text("Preserve authored material")
+        blocked = call(step["reentry"] | {"reference": step["reference"], "answer": answer})
+        assert not blocked["resources"]["proposal"].get("action")
+        assert (path / "needed.txt").read_text() == "Preserve authored material"
+        (path / "needed.txt").unlink()
+    answer["request"]["operation"] = f"{kind}-remove"
+    answer["request"].pop("reason", None)
+    removal = call(step["reentry"] | {"reference": step["reference"], "answer": answer})
+    assert call(context | {"invocation": removal["decision_packet"]["primary_action"]})["effect_outcome"]["status"] == "committed"
+    assert not path.exists()
 
 
 def test_resource_action_carries_selected_planning_answer(tmp_path, shared_core_binary, native_cli):

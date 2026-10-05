@@ -39,7 +39,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
             "required":["target","task","changed","request"],"additionalProperties":false,
             "properties":{"target":{"type":"string"},"task":{"type":"string"},
                 "changed":{"type":"array","items":{"type":"string"}},"request":{"type":"object"}}},
-        "result_kind":"agentic-workspace/resource-proposal/v1","effects":["task-resource"],"reads":[OWNER]
+        "result_kind":"agentic-workspace/resource-result/v1","effects":["task-resource"],"reads":[OWNER]
     })).collect();
     let rev = revision()?;
     Ok(
@@ -120,8 +120,32 @@ pub(crate) fn execute(invocation: &Value) -> Result<Value, CoreError> {
             "resource effect not established; preserve exact proposal and reobserve",
         ));
     }
+    let mut value = json!({"kind":"agentic-workspace/resource-result/v1",
+        "operation":result["operation"],"path":result["path"],
+        "authority":"The exact owner effect is established. Resource custody does not authorize cleanup; every later effect requires fresh admission."});
+    if let Some(state) = result.get("resource") {
+        value["resource"] = state.clone();
+    }
+    if let Some(environment) = result.get("build_environment") {
+        value["build_environment"] = environment.clone();
+    }
+    if let Some(outputs) = result.get("disposable_outputs") {
+        value["disposable_outputs"] = outputs.clone();
+    }
+    if matches!(
+        result["operation"].as_str(),
+        Some("scratch-create" | "worktree-create")
+    ) {
+        // This is semantic input to the existing owner, not a new handle or
+        // cleanup capability. The owner will reobserve policy and custody.
+        value["next_step"] = json!({"reference":"owner:request:workspace-resources:resources/propose/v1",
+            "answer_shape":{"request":{"operation":if result["operation"] == "scratch-create" {"scratch-retain"} else {"worktree-remove"},
+                "path":invocation["arguments"]["request"]["path"]}},
+            "operations":if result["operation"] == "scratch-create" {json!(["scratch-retain","scratch-release","scratch-remove"])} else {json!(["worktree-remove"])},
+            "use":"Use this resource path now, or select this read-only owner reference with the returned continuation reentry. Answer with the desired listed operation and this path; retention/release also requires a reason. Selection never repeats creation or authorizes removal. Full resource diagnostics are available through this same owner."});
+    }
     Ok(
-        json!({"outcome":{"status":result["operation_result"]["status"],
-        "effects":result["operation_result"]["effects"],"value":result},"post_effect_changed_paths":[]}),
+        json!({"outcome":{"status":if result["kind"] == "agentic-workspace/resource-result/v1" {&result["status"]} else {&result["operation_result"]["status"]},
+        "effects":if result["kind"] == "agentic-workspace/resource-result/v1" {&result["effects"]} else {&result["operation_result"]["effects"]},"value":value},"post_effect_changed_paths":[]}),
     )
 }

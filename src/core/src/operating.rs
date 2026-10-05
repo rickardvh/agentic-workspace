@@ -1514,6 +1514,26 @@ fn project_invocation(
     if result["continuation"]["status"] == "current" {
         let full = result["continuation"]["result"].take();
         let context = result["continuation"]["context"].clone();
+        if result["value"]["kind"] == "agentic-workspace/resource-result/v1"
+            && result["value"]["next_step"].is_object()
+        {
+            let selected = resolve_owner_reference(
+                &full,
+                &context,
+                &json!({"kind":"request","owner":"workspace-resources","id":"resources/propose/v1"}),
+            );
+            if let Ok(selected) = selected
+                && selected["status"] == "current"
+            {
+                result["value"]["next_step"]["reference"] = selected["reference"].clone();
+                result["value"]["next_step"]["reentry"] = context.clone();
+                result["value"]["next_step"]["answer_schema"] =
+                    selected["next_step"]["answer_schema"].clone();
+                result["value"]["next_step"]["use"] = json!(
+                    "Send reentry unchanged with this reference and answer containing the desired operation and path from answer_shape. Retention/release also requires a reason. This proposes a separately admitted lifecycle effect; it never repeats creation."
+                );
+            }
+        }
         match consequence_recovery(&full, &context).and_then(|recovery| {
             let projected = if projection == "full" && detail.is_some() {
                 let mut full = full;
@@ -1544,6 +1564,16 @@ fn project_invocation(
     }
     if projection != "full" {
         result.as_object_mut().unwrap().remove("next_decision");
+    }
+    if result["value"]["kind"] == "agentic-workspace/resource-result/v1"
+        && result["continuation"]["status"] != "current"
+    {
+        // A committed path remains useful even if later entry failed. Do not
+        // advertise a current answer reference or infer permission to retry.
+        result["value"].as_object_mut().unwrap().remove("next_step");
+        result["value"]["recovery"] = json!(
+            "Use the committed path; reobserve through continuation.reentry before any lifecycle proposal. Do not repeat creation."
+        );
     }
     result
 }
@@ -1644,6 +1674,33 @@ pub(crate) fn project_start(
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn resource_effect_survives_unavailable_continuation_without_a_current_step() {
+        let value = json!({"kind":"agentic-workspace/resource-result/v1", "path":"/exact/created",
+            "resource":{"status":"present","retained":false},"next_step":{"reference":"old"}});
+        for projection in ["compact", "carried", "full"] {
+            let result = project_invocation(
+                json!({"effect_outcome":{"status":"committed"},
+                "value":value,"continuation":{"status":"unavailable","retry_effect":false},
+                "continuation_status":"unavailable"}),
+                &json!(projection),
+                None,
+            );
+            assert_eq!(result["effect_outcome"]["status"], "committed");
+            assert_eq!(result["value"]["path"], value["path"]);
+            assert_eq!(result["value"]["resource"], value["resource"]);
+            assert!(result["value"].get("next_step").is_none());
+            assert_eq!(result["continuation"]["retry_effect"], false);
+            for status in ["rejected-before-effect", "uncertain"] {
+                let failure = json!({"effect_outcome":{"status":status},"continuation":{"status":"unavailable"}});
+                assert_eq!(
+                    project_invocation(failure.clone(), &json!(projection), None),
+                    failure
+                );
+            }
+        }
+    }
 
     fn temp_root(label: &str) -> PathBuf {
         let root = std::env::temp_dir().join(format!(
