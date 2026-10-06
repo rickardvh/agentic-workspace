@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Resolve supported installed major upgrades through Configuration migration assessment while preserving unknown and newer integrations."

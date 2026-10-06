@@ -40,7 +40,7 @@ pub(crate) fn assessment_proposal(
     let assessment = &current["configuration_write"]["setup_assessment"];
     let mut proposed = assessment["record_request"].clone();
     if !proposed.is_object() {
-        return Ok(None);
+        return Err(CoreError::new(assessment["migration_gap"]["reason"].as_str().unwrap_or("No supported writable setup assessment is available; reobserve the current Configuration gap.")));
     }
     let status = match args["judgment"].as_str().unwrap() {
         "working" => "effective",
@@ -113,6 +113,9 @@ pub(crate) fn assessment_proposal(
     }
     if value["source_reassessment"].is_object() {
         value["source_reassessment"]["reason"] = args["reason"].clone();
+    }
+    if value["package_migration"]["assessment_revision"].is_string() {
+        value["package_migration"]["reason"] = args["reason"].clone();
     }
     Ok(Some(proposed))
 }
@@ -213,7 +216,7 @@ pub(crate) fn setup_view(current: &Value) -> Result<Value, CoreError> {
                 );
             }
         }
-        "assess-setup" => {
+        "assess-setup" if configuration["setup_assessment"]["record_request"].is_object() => {
             choices.push(json!({"request":configuration["concern_assessment_request"],"question":"What changed for this concern, what actually works, and what owner or action remains? Configuration supplies source bindings and consumer observations."}));
         }
         _ => {}
@@ -232,6 +235,10 @@ pub(crate) fn setup_view(current: &Value) -> Result<Value, CoreError> {
         "status":configuration["status"],"choices":choices,"consumer_verification":consumer,
         "consideration_complete":configuration["setup_assessment"]["review_complete"],
         "readiness_authority":"This setup consideration certifies no Assignment, module, launch or machine readiness."});
+    if job == "assess-setup" && configuration["setup_assessment"]["migration_gap"].is_object() {
+        result["status"] = json!("preserved-blocked");
+        result["gap"] = configuration["setup_assessment"]["migration_gap"].clone();
+    }
     if choices.len() > 1 {
         result["selection_request"] = configuration["setup_job_request"].clone();
     }
