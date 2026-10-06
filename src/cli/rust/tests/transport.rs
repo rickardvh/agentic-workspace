@@ -3,11 +3,43 @@ use std::{
     fs,
     path::PathBuf,
     process::Command,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        Once,
+        atomic::{AtomicU64, Ordering},
+    },
     time::{SystemTime, UNIX_EPOCH},
 };
 
 static NEXT_TARGET: AtomicU64 = AtomicU64::new(0);
+static CORE: Once = Once::new();
+
+fn cli_with_current_core() -> Command {
+    CORE.call_once(|| {
+        let cli = PathBuf::from(env!("CARGO_BIN_EXE_agentic-workspace"));
+        let output = cli.parent().unwrap();
+        let mut build = Command::new(env!("CARGO"));
+        build
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
+            .args([
+                "build",
+                "--locked",
+                "-p",
+                "agentic-workspace-core",
+                "--bin",
+                "agentic-workspace-core",
+                "--target-dir",
+            ])
+            .arg(output.parent().unwrap());
+        if output.file_name().unwrap() == "release" {
+            build.arg("--release");
+        }
+        assert!(
+            build.status().unwrap().success(),
+            "prepare the current paired core before transport checks"
+        );
+    });
+    Command::new(env!("CARGO_BIN_EXE_agentic-workspace"))
+}
 
 struct Target(PathBuf);
 impl Target {
@@ -34,7 +66,7 @@ impl Drop for Target {
 #[test]
 fn empty_target_is_direct_without_python_or_node() {
     let target = Target::empty();
-    let result = Command::new(env!("CARGO_BIN_EXE_agentic-workspace"))
+    let result = cli_with_current_core()
         .args(["start", "--target"])
         .arg(&target.0)
         .args(["--task", "Inspect this empty workspace", "--format", "json"])
@@ -62,7 +94,7 @@ fn actual_registry_selection_is_current_then_stale_without_language_runtimes() {
     let text = include_str!("../../../../tools/skills/REGISTRY.json");
     fs::write(&registry, text).unwrap();
     let start = |input: Option<&PathBuf>| {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_agentic-workspace"));
+        let mut command = cli_with_current_core();
         command
             .args(["start", "--target"])
             .arg(&target.0)

@@ -222,6 +222,22 @@ fn dependencies(
     observe(root, &references(root, scope, &extra)?)
 }
 fn compatibility(record: &Value) -> &'static str {
+    compatibility_at(record, version())
+}
+fn known_migration(value: &Value) -> bool {
+    let fields = ["runtime_version", "provenance_revision", "reason"];
+    value.as_object().is_some_and(|o| {
+        o.len() == fields.len()
+            && fields
+                .iter()
+                .all(|key| value[key].as_str().is_some_and(|s| !s.trim().is_empty()))
+            && value["runtime_version"]
+                .as_str()
+                .and_then(version_tuple)
+                .is_some()
+    })
+}
+fn compatibility_at(record: &Value, runtime: &str) -> &'static str {
     if record.is_null() {
         return "compatible";
     }
@@ -230,16 +246,19 @@ fn compatibility(record: &Value) -> &'static str {
     }
     match (
         record["runtime_version"].as_str().and_then(version_tuple),
-        version_tuple(version()),
+        version_tuple(runtime),
     ) {
-        (Some(old), Some(now)) if old[0] != now[0] => "major-transition",
         (Some(old), Some(now)) if old > now => "newer-integration-preserved",
+        (Some(old), Some(now)) if old[0] != now[0] => "major-transition",
         (Some(_), Some(_)) => "compatible",
         _ => "unavailable",
     }
 }
 fn transition(root: &Dir, record: &Value) -> Result<&'static str, CoreError> {
-    let accepted = compatibility(record);
+    transition_at(root, record, version())
+}
+fn transition_at(root: &Dir, record: &Value, runtime: &str) -> Result<&'static str, CoreError> {
+    let accepted = compatibility_at(record, runtime);
     if accepted != "compatible" {
         return Ok(accepted);
     }
@@ -248,8 +267,174 @@ fn transition(root: &Dir, record: &Value) -> Result<&'static str, CoreError> {
     if installed.is_null() {
         return Ok(accepted);
     }
-    Ok(compatibility(
+    if installed["kind"] != "agentic-workspace/payload-provenance/v1"
+        || installed["payload_schema"] != "agentic-workspace/payload/v1"
+        || installed["release_identity"]["package"] != "agentic-workspace"
+    {
+        return Ok("unavailable");
+    }
+    let status = compatibility_at(
         &json!({"kind":KIND,"runtime_version":installed["release_identity"]["version"]}),
+        runtime,
+    );
+    let migration = &record["package_migration"];
+    if status == "major-transition"
+        && known_migration(migration)
+        && migration["runtime_version"] == runtime
+        && migration["provenance_revision"] == digest(&installed)?
+        && migration["reason"]
+            .as_str()
+            .is_some_and(|s| !s.trim().is_empty())
+        && record["basis"] == basis()
+        && record["coverage"]
+            .as_str()
+            .is_some_and(|s| !s.trim().is_empty())
+        && matches!(
+            record["scope"].as_str(),
+            Some("repository" | "machine-local")
+        )
+        && record["dependencies"]
+            == json!(dependencies(
+                root,
+                record["scope"].as_str().unwrap(),
+                &record["selected_dependencies"]
+            )?)
+        && record["dispositions"]
+            .as_array()
+            .is_some_and(|rows| !rows.is_empty() && rows.iter().all(valid_settlement))
+    {
+        return Ok("compatible");
+    }
+    Ok(status)
+}
+
+/// Current migration judgment over known records, bound to the exact prior
+/// assessment and payload provenance. It grants no policy or domain-state write.
+fn package_migration(
+    root: &Dir,
+    source: &str,
+    record: &Value,
+    runtime: &str,
+) -> Result<Option<Value>, CoreError> {
+    let Some(now) = version_tuple(runtime).filter(|v| v[0] > 0) else {
+        return Ok(None);
+    };
+    if !record.is_null()
+        && (record["kind"] != KIND
+            || (!record["package_migration"].is_null()
+                && (!known_migration(&record["package_migration"])
+                    || record["package_migration"]["runtime_version"]
+                        != record["runtime_version"]))
+            || !record["basis"].is_string()
+            || !record["coverage"]
+                .as_str()
+                .is_some_and(|s| !s.trim().is_empty())
+            || !record["selected_dependencies"]
+                .as_array()
+                .is_some_and(|rows| rows.iter().all(Value::is_string))
+            || serde_json::from_value::<Vec<deps::Observation>>(record["dependencies"].clone())
+                .is_err()
+            || !record["dispositions"].as_array().is_some_and(|rows| {
+                !rows.is_empty()
+                    && rows.iter().all(|row| {
+                        valid_settlement(row)
+                            && row.as_object().is_some_and(|o| {
+                                o.keys().all(|k| {
+                                    [
+                                        "subject",
+                                        "status",
+                                        "reason",
+                                        "concern",
+                                        "observation",
+                                        "resume",
+                                    ]
+                                    .contains(&k.as_str())
+                                })
+                            })
+                    })
+            })
+            || !(record["continuation"].is_null() || record["continuation"].is_object())
+            || record["scope"]
+                != if source == LOCAL {
+                    "machine-local"
+                } else {
+                    "repository"
+                }
+            || !record.as_object().is_some_and(|o| {
+                o.keys().all(|k| {
+                    [
+                        "kind",
+                        "runtime_version",
+                        "scope",
+                        "basis",
+                        "selected_dependencies",
+                        "dependencies",
+                        "coverage",
+                        "dispositions",
+                        "continuation",
+                        "package_migration",
+                    ]
+                    .contains(&k.as_str())
+                })
+            }))
+    {
+        return Ok(None);
+    }
+    let Some(provenance) = read(root, ".agentic-workspace/payload-provenance.json")? else {
+        return Ok(None);
+    };
+    // An old assessment alone cannot establish which installed package is being
+    // migrated. Missing, current-major and unknown provenance grant no admission.
+    if provenance["kind"] != "agentic-workspace/payload-provenance/v1"
+        || provenance["payload_schema"] != "agentic-workspace/payload/v1"
+        || provenance["release_identity"]["package"] != "agentic-workspace"
+        || !provenance["release_identity"].as_object().is_some_and(|o| {
+            o.keys()
+                .all(|k| ["package", "version"].contains(&k.as_str()))
+        })
+        || !provenance.as_object().is_some_and(|o| {
+            o.keys().all(|k| {
+                [
+                    "kind",
+                    "payload_schema",
+                    "managed_revision",
+                    "payload_capabilities",
+                    "payload_files",
+                    "release_identity",
+                    "rule",
+                ]
+                .contains(&k.as_str())
+            })
+        })
+        || !provenance["release_identity"]["version"]
+            .as_str()
+            .and_then(version_tuple)
+            .is_some_and(|old| old[0] > 0 && old[0] < now[0])
+    {
+        return Ok(None);
+    }
+    let mut prior_major = false;
+    for old in [
+        record.get("runtime_version"),
+        provenance["release_identity"].get("version"),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        let Some(old) = old
+            .as_str()
+            .and_then(version_tuple)
+            .filter(|v| v[0] > 0 && *v <= now)
+        else {
+            return Ok(None);
+        };
+        prior_major |= old[0] < now[0];
+    }
+    if !prior_major {
+        return Ok(None);
+    }
+    Ok(Some(
+        json!({"runtime_version":runtime,"assessment_revision":digest(record)?,"provenance_revision":digest(&provenance)?,"reason":""}),
     ))
 }
 /// A source-current development checkout can contain an assessment made by a
@@ -261,6 +446,9 @@ fn source_reassessment(
     record: &Value,
 ) -> Result<Option<Value>, CoreError> {
     if !matches!(version(), "0.0.0-dev.0" | "0.0.0.dev0")
+        || (!record["package_migration"].is_null()
+            && (!known_migration(&record["package_migration"])
+                || record["package_migration"]["runtime_version"] != record["runtime_version"]))
         || !matches!(
             compatibility(record),
             "major-transition" | "newer-integration-preserved"
@@ -277,6 +465,7 @@ fn source_reassessment(
                     "coverage",
                     "dispositions",
                     "continuation",
+                    "package_migration",
                 ]
                 .contains(&k.as_str())
             })
@@ -341,7 +530,11 @@ pub(crate) fn repair_action(action: &Value) -> bool {
 pub(crate) fn admit_maintenance(target: &Path) -> Result<(), CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for source in [SHARED, LOCAL] {
-        let status = transition(&root, &read(&root, source)?.unwrap_or(Value::Null))?;
+        let record = read(&root, source)?;
+        if source == LOCAL && record.is_none() {
+            continue;
+        }
+        let status = transition(&root, &record.unwrap_or(Value::Null))?;
         if status != "compatible" {
             return Err(err(format!(
                 "{status}: preserve package integration; current Configuration migration judgment is required"
@@ -543,7 +736,12 @@ fn view_inner(
         } else {
             None
         };
-        if compatibility == "compatible" || reassessment.is_some() {
+        let migration = if compatibility == "major-transition" {
+            package_migration(&root, source, &record, version())?
+        } else {
+            None
+        };
+        if compatibility == "compatible" || reassessment.is_some() || migration.is_some() {
             let mut value = json!({"kind":KIND,"runtime_version":version(),"scope":scope,"basis":setup,"selected_dependencies":extra,"dependencies":observed,"coverage":"","dispositions":[],"continuation":null});
             if !record.is_null() {
                 for field in ["coverage", "dispositions", "continuation"] {
@@ -555,10 +753,26 @@ fn view_inner(
                 result["setup_assessment"]["judgment_schema"]["properties"]["source_reassessment"] = json!({"type":"object","description":"Preserve every returned observation and fill only reason with the standing authority and why this exact development source checkout should reassess the retained record. Configuration reobserves the complete witness before publication; this does not permit a newer installed package downgrade."});
                 value["source_reassessment"] = reassessment;
             }
+            if let Some(migration) = migration {
+                result["setup_assessment"]["status"] = json!("migration-assessment-required");
+                result["setup_assessment"]["judgment_schema"]["properties"]["package_migration"] = json!({"type":"object","description":"Preserve Configuration's exact assessment/provenance observations and fill only reason explaining this supported installed major upgrade. The current judgment authorises payload refresh only after all existing scopes are assessed; policy and domain records remain unchanged."});
+                value["package_migration"] = migration;
+            } else if compatibility == "compatible"
+                && record["package_migration"].is_object()
+                && record["package_migration"]["provenance_revision"] == digest(&provenance)?
+                && compatibility_at(
+                    &json!({"kind":KIND,"runtime_version":provenance["release_identity"]["version"]}),
+                    version(),
+                ) == "major-transition"
+            {
+                value["package_migration"] = record["package_migration"].clone();
+            }
             result["setup_assessment"]["record_request"] = template(
                 "configuration/edit-source/v1",
                 json!({"source":source,"key":KEY,"value":value}),
             );
+        } else {
+            result["setup_assessment"]["migration_gap"] = json!({"status":"unsupported","reason":format!("{compatibility}: no supported migration assessment for this format/version/source; preserve integration and obtain a supported package migration."),"retry_answer":false});
         }
     }
     if scope == "repository" && deps::read(&root, LOCAL)?.is_some() {
@@ -591,6 +805,7 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
                 "dispositions",
                 "continuation",
                 "source_reassessment",
+                "package_migration",
             ]
             .contains(&k.as_str())
         })
@@ -603,25 +818,43 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let record = read(&root, source)?.unwrap_or(Value::Null);
     if transition(&root, &record)? != "compatible" {
-        let mut supplied = value["source_reassessment"].clone();
-        if !supplied["reason"]
-            .as_str()
-            .is_some_and(|s| !s.trim().is_empty())
-        {
-            return Err(err(
-                "incompatible or newer integration preserved; current source reassessment reason required",
-            ));
-        }
-        supplied["reason"] = json!("");
-        if source_reassessment(target, source, &record)?.as_ref() != Some(&supplied) {
-            return Err(err(
-                "source reassessment changed or unavailable; preserve integration",
-            ));
+        if let Some(mut expected) = package_migration(&root, source, &record, version())? {
+            let reason = value["package_migration"]["reason"]
+                .as_str()
+                .filter(|s| !s.trim().is_empty())
+                .ok_or_else(|| err("current package migration reason required"))?;
+            expected["reason"] = json!(reason);
+            if value["package_migration"] != expected || value.get("source_reassessment").is_some()
+            {
+                return Err(err(
+                    "package migration changed or unavailable; preserve integration",
+                ));
+            }
+        } else {
+            let mut supplied = value["source_reassessment"].clone();
+            if !supplied["reason"]
+                .as_str()
+                .is_some_and(|s| !s.trim().is_empty())
+            {
+                return Err(err(
+                    "incompatible or newer integration preserved; current source reassessment reason required",
+                ));
+            }
+            supplied["reason"] = json!("");
+            if source_reassessment(target, source, &record)?.as_ref() != Some(&supplied) {
+                return Err(err(
+                    "source reassessment changed or unavailable; preserve integration",
+                ));
+            }
         }
     } else if value.get("source_reassessment").is_some() {
         return Err(err(
             "source reassessment is stale; obtain current assessment",
         ));
+    } else if value.get("package_migration").is_some()
+        && value["package_migration"] != record["package_migration"]
+    {
+        return Err(err("package migration is stale; obtain current assessment"));
     }
     let scope = if source == LOCAL {
         "machine-local"
@@ -678,9 +911,25 @@ pub(crate) fn proposed(target: &Path, source: &str, value: &Value) -> Result<Vec
         }
     }
     // The exact migration judgment remains in the immutable write attempt.
-    // The current assessment retains no second version/migration history.
+    // Installed migration retains only the current provenance admission until
+    // refresh. The full prior-source witness stays in the immutable write attempt.
     let mut saved = value.clone();
     saved.as_object_mut().unwrap().remove("source_reassessment");
+    let provenance =
+        read(&root, ".agentic-workspace/payload-provenance.json")?.unwrap_or(Value::Null);
+    if saved["package_migration"].is_object()
+        && compatibility_at(
+            &json!({"kind":KIND,"runtime_version":provenance["release_identity"]["version"]}),
+            version(),
+        ) == "major-transition"
+    {
+        saved["package_migration"]
+            .as_object_mut()
+            .unwrap()
+            .remove("assessment_revision");
+    } else {
+        saved.as_object_mut().unwrap().remove("package_migration");
+    }
     let mut bytes = serde_json::to_vec_pretty(&saved).map_err(err)?;
     if bytes.len() > 128 * 1024 {
         return Err(err(
@@ -805,4 +1054,121 @@ pub(crate) fn consumer_witness(
     Ok(
         json!({"owner":o["owner"],"scope":scope,"revision":digest(&json!({"scope":scope,"material":material}))?}),
     )
+}
+
+#[cfg(test)]
+mod migration_tests {
+    use super::*;
+
+    #[test]
+    fn installed_migration_binds_known_older_sources_and_current_provenance() {
+        let target = std::env::temp_dir().join(format!(
+            "aw-installed-migration-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(target.join(".agentic-workspace")).unwrap();
+        let root = Dir::open_ambient_dir(&target, ambient_authority()).unwrap();
+        let mut provenance: Value = serde_json::from_slice(
+            &crate::native_payload::shipped(".agentic-workspace/payload-provenance.json").unwrap(),
+        )
+        .unwrap();
+        provenance["release_identity"]["version"] = json!("1.10.2");
+        let path = target.join(".agentic-workspace/payload-provenance.json");
+        std::fs::write(&path, serde_json::to_vec(&provenance).unwrap()).unwrap();
+        for (source, scope) in [(SHARED, "repository"), (LOCAL, "machine-local")] {
+            let mut record = json!({"kind":KIND,"runtime_version":"1.10.2","scope":scope,"basis":basis(),"selected_dependencies":[],"dependencies":dependencies(&root,scope,&json!([])).unwrap(),"coverage":"Prior setup preserved","dispositions":[{"subject":"Optional setup","status":"excluded","reason":"No optional setup required"}],"continuation":null});
+            let mut witness = package_migration(&root, source, &record, "2.0.0")
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                transition_at(&root, &record, "2.0.0").unwrap(),
+                "major-transition"
+            );
+            witness["reason"] =
+                json!("Known setup and policy preserve their meaning in the installed upgrade");
+            witness
+                .as_object_mut()
+                .unwrap()
+                .remove("assessment_revision");
+            record["runtime_version"] = json!("2.0.0");
+            record["package_migration"] = witness;
+            assert_eq!(
+                transition_at(&root, &record, "2.0.0").unwrap(),
+                "compatible"
+            );
+            record["package_migration"]["future_field"] = json!("Preserve unknown admission");
+            assert_eq!(
+                transition_at(&root, &record, "2.0.0").unwrap(),
+                "major-transition"
+            );
+            assert!(
+                package_migration(&root, source, &record, "2.0.0")
+                    .unwrap()
+                    .is_none()
+            );
+            record["package_migration"]
+                .as_object_mut()
+                .unwrap()
+                .remove("future_field");
+            let original = provenance.clone();
+            provenance["managed_revision"] = json!("Different prior payload");
+            std::fs::write(&path, serde_json::to_vec(&provenance).unwrap()).unwrap();
+            assert_eq!(
+                transition_at(&root, &record, "2.0.0").unwrap(),
+                "major-transition"
+            );
+            provenance = original.clone();
+            std::fs::write(&path, serde_json::to_vec(&provenance).unwrap()).unwrap();
+            record["runtime_version"] = json!("3.0.0");
+            assert_eq!(
+                transition_at(&root, &record, "2.0.0").unwrap(),
+                "newer-integration-preserved"
+            );
+            assert!(
+                package_migration(&root, source, &record, "2.0.0")
+                    .unwrap()
+                    .is_none()
+            );
+            record["runtime_version"] = json!("1.10.2");
+            record["future_field"] = json!("Preserve unknown meaning");
+            assert!(
+                package_migration(&root, source, &record, "2.0.0")
+                    .unwrap()
+                    .is_none()
+            );
+            record.as_object_mut().unwrap().remove("future_field");
+            std::fs::remove_file(&path).unwrap();
+            assert!(
+                package_migration(&root, source, &record, "2.0.0")
+                    .unwrap()
+                    .is_none()
+            );
+            provenance["kind"] = json!("future-format");
+            std::fs::write(&path, serde_json::to_vec(&provenance).unwrap()).unwrap();
+            assert!(
+                package_migration(&root, source, &record, "2.0.0")
+                    .unwrap()
+                    .is_none()
+            );
+            provenance = original;
+            provenance["release_identity"]["future_field"] = json!("Preserve unknown identity");
+            std::fs::write(&path, serde_json::to_vec(&provenance).unwrap()).unwrap();
+            assert!(
+                package_migration(&root, source, &record, "2.0.0")
+                    .unwrap()
+                    .is_none()
+            );
+            provenance["release_identity"]
+                .as_object_mut()
+                .unwrap()
+                .remove("future_field");
+            std::fs::write(&path, serde_json::to_vec(&provenance).unwrap()).unwrap();
+        }
+        drop(root);
+        std::fs::remove_dir_all(target).unwrap();
+    }
 }

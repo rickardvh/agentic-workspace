@@ -569,14 +569,18 @@ def test_setup_assessment_routes_integrates_and_reuses_current_sources(tmp_path,
     # Managed-only identity changes request bounded refresh, not semantic review.
     provenance = workspace / "payload-provenance.json"
     runtime_version = json.loads(saved)["runtime_version"]
-    provenance.write_text(json.dumps({"release_identity": {"version": runtime_version}, "managed_revision": "prior-managed-bytes"}))
+    provenance_record = {
+        "kind": "agentic-workspace/payload-provenance/v1",
+        "payload_schema": "agentic-workspace/payload/v1",
+        "release_identity": {"package": "agentic-workspace", "version": runtime_version},
+        "managed_revision": "prior-managed-bytes",
+    }
+    provenance.write_text(json.dumps(provenance_record))
     changed = call()["configuration_write"]
     assert changed["managed_refresh"]["required"] is True
     assert changed["setup_assessment"]["status"] == "settled"
     assert changed["setup_assessment"]["assessment_due"] is False
-    provenance.write_text(
-        json.dumps({"release_identity": {"version": runtime_version}, "managed_revision": changed["managed_refresh"]["revision"]})
-    )
+    provenance.write_text(json.dumps({**provenance_record, "managed_revision": changed["managed_refresh"]["revision"]}))
     assert call()["configuration_write"]["managed_refresh"]["required"] is False
     assert (workspace / "configuration-assessment.json").read_bytes() == saved
     # A skipped compatible version with the same setup basis is quiet. A source
@@ -667,7 +671,7 @@ def test_setup_dispositions_preserve_unfinished_and_incompatible_state(tmp_path,
     path = workspace / "configuration-assessment.json"
     saved = json.loads(path.read_text())
     major = saved["runtime_version"].split(".")[0]
-    for version, status in [("99.0.0", "major-transition"), (major + ".99.0", "newer-integration-preserved")]:
+    for version, status in [("99.0.0", "newer-integration-preserved"), (major + ".99.0", "newer-integration-preserved")]:
         saved["runtime_version"] = version
         path.write_text(json.dumps(saved))
         before = path.read_bytes()
