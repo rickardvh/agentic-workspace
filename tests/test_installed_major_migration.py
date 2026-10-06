@@ -12,12 +12,13 @@ import shutil
 import subprocess
 
 import pytest
-from src.tooling.release import coordinated_release
+from tests.test_coordinated_release import _load_module
 from tests.test_native_public_cli import ROOT, consume
 
 
 @pytest.fixture(scope="module")
 def installed_major_pair(tmp_path_factory):
+    coordinated_release = _load_module()
     fixture = tmp_path_factory.mktemp("installed-major")
     source = fixture / "source"
     # Copy tracked working bytes so the candidate includes uncommitted repairs,
