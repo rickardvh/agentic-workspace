@@ -1,83 +1,66 @@
 # Current live affordance observation
 
-Observed 4 October 2026 UTC. **Completed and satisfied.** The current trusted
-operational exercise completed both fresh sessions, observed all four required
-interaction classes, passed independent migration, authority and preservation
-checks, and retired its managed scratch. The detector reports `passed`, no
-findings and `direct-progress`. The sandbox was removed.
+Observed 6 October 2026 UTC. **Unknown: provider authentication unavailable.**
+The final #3810 aggregate has not completed. Accepted child evidence remains
+accepted; it cannot establish this final aggregate. Verification owns the standing
+assessment. This note supplies its future reference consumer, with no independent
+PR acceptance or parent closure.
 
-This note supplies the standing Verification observation's future reference
-consumer. It supplies no independent PR acceptance or parent-lane closure.
+## Subject and execution
 
-## Exact subject and execution
-
-- Clean standalone candidate `019be58be6f33711c9cdd0aa45242cbb644d9f03`, version
+- Frozen clean source `088e0dcd16ea75c6f87b856d6cf1001cd06d2ae5`, standalone
   `0.0.0.dev0`, target `x86_64-unknown-linux-gnu`.
-- Inventory SHA-256: `dea4d55816987b5fcf2eb1d129d8200a537ae9bbcd02819c78c2f94be2f6a1bf`.
-- Archive SHA-256: `461f653a7c7dbf2648d5a830b084ce1eb1774c779dce3f1d6752c72a453ab033`.
+- Inventory/archive SHA-256:
+  `2637b9f81ef8b741743746d8c682c0b3a37a005638096b1a2c17f7a80512d67a` /
+  `857942ab3e566dec9b8bd8b2cb2cd81f8ee56ecdcae8a6a9d87f888d923668a2`.
 - CLI/core SHA-256:
-  `40ca74ce3323d9160b233a9aa414238b3cf4a5c89587c7274fa1c723bed5c8e5` /
-  `10bd1bb0a264afd8547baf83cb3bd98313a7986fe1191332d29f584b979a6302`.
-- Local Docker Sandboxes on Windows, Linux guest evidence; Codex CLI 0.149.1,
-  `gpt-5.6-sol`, medium reasoning, subscription billing. Each fresh session had
-  900 seconds and 128 product calls, with unchanged aggregate receipt/output
-  bounds. The trusted controller alone starts an allowance. Elapsed: 694.271 seconds.
-- Template: `sha256:a68b972a59148c6359ade441387159033f6d196d48aef9dda06d2d4bb26eb41e`.
+  `d0c2478f4a11c49cb3ca6ee42b3e657e24f420d293bb4c8c42aca6c7794316e5` /
+  `0f052f4f11974e0f02b0e3b5b1e67b5b5173e719e39d8f4ee2ee7ac292aeac3a`.
+- Windows Docker Sandboxes 0.45.1, Linux guest, Codex CLI 0.149.1,
+  `gpt-6.1-sol`, medium reasoning, subscription billing. The controller allows
+  three fresh sessions for the combined parent journeys, each 900 seconds and
+  128 observed product calls, retaining the 40 MiB bound. No allowance was
+  extended. This is not a completed ordinary two-session standing exercise.
+- Immutable template:
+  `sha256:a68b972a59148c6359ade441387159033f6d196d48aef9dda06d2d4bb26eb41e`.
 - Recipe/scorer/actor SHA-256:
-  `454ee81cda399fd71244f9bd40e735bfa2f9bbde327f620a740f540761181233` /
+  `5b0b4eb3dff8a100591878630b4fbe7f73f26748e6fb08ea43487b9349b78c70` /
   `29b67cf14993243f405ad4dc52fbb8cfe59c113b4c3f1285ee63eea2d31477da` /
-  `c0138d5e39f94db7b3b2aa2f0ec95f7da656c966a964a3778b66f8acdd5046c5`.
-- Root observer SHA-256: `3e2f83e2e5f587d62aa632d156c806c5e69a02b86fb9a408fdae609ff431f969`.
+  `5d41ea09d8780c8b3f2d809d0b684a7b8a248cd17cbac75c4b4d34e05d1cb3fa`.
 
-## Repair and observed completion
+## Failures and correction
 
-The preceding aggregate's Planning phase failed before any provider session:
-a repeated root SSH-socket permission mutation failed. Installation already
-blocks that socket. The repaired session preflight checks the actual non-root
-actor's credentials, SSH/Docker access, sudo and network containment without
-repeating that mutation. All 24 transport tests passed. A separate provider-free
-preflight admitted the clean actor, refused a credential marker, readmitted after
-its exact removal, and removed its sandbox. No guard or allowance was weakened.
+Raw evidence remains outside Git in AW task scratch
+`499acb0273b3d30ec07ba17b224b01e820a39b21d4f1d74a126f3bff28e3b4ec`.
+Every attempt stopped in preparation; every sandbox was removed.
 
-Only the missing operational family was exercised again after that named repair.
-There were four setup calls, 23 preparation calls and 34 fresh resume calls.
-Receipts establish coupled Planning creation/current selection, semantic updates,
-fresh reconciliation, managed scratch retirement and final retained progress.
-All routed-restriction, composed-action, effect and fresh-reentry coverage checks
-are true. Preparation respected pending port confirmation; final settings/README,
-policy, notes, approved release source and installed-subject checks passed.
+| Result | SHA-256 | Outcome |
+| --- | --- | --- |
+| `aggregate-reader-first.json` | `6c93d8d3c7c2cac446e6b98b3ed1496f2d0e8307cc1309928f6de1ad23af04d3` | Failed controller/checker scope: source reconciliation conflated with current selected Plan. |
+| `aggregate-reader-corrected.json` | `45bab6d2edd45171d2060f26918bef06fab7691f2fb8177cd5947102fda92472` | Failed controller: scope taken from a peer resource reply. |
+| `aggregate-reader-corrected-2.json` | `ceeaca946e07a72d85c257d486ddd7ec19e1fb16430bdcd0329a50b0eb5ec008` | Failed controller: CLI changed paths serialized as a JSON-text path. |
+| `aggregate-reader-corrected-3.json` | `217d5ff114aa2c1c2535b18bdf67b7ea9301f287169bb5fc48ec22d8f456abc5` | Provider `401 token_invalidated` / `token_expired`; no completed actor turn. |
 
-The earlier #3810 baseline used Luna: preparation took 17 installed calls and four
-explicit skill-read commands but failed to establish retained Planning/scratch;
-its separate follow-through took 23 calls and five reads. Current Sol preparation
-and resume took 23/34 calls and five/five explicit skill-read commands. These are
-observed command counts, including mixed reads and rejected calls; hidden context
-and consumed skill bytes are unknown. Unequal completed phases and models establish
-no causal read/round, token, elapsed-time or economic reduction. Current receipts
-demonstrate native owner continuation and semantic updates rather than full-record
-reconstruction. The fresh readers opened no legacy or source-checkout maintenance
-reference; one resumed reader also inspected optional client transport detail.
+The independent preparation substitute retains canonical draft, real managed
+scratch/task custody, exact selected Plan identity/revision and task-relation
+checks. It uses native selected-owner `status: current`, exposing the separate
+source-reconciliation boolean; it admits no effect, proof or completion.
+Helper SHA-256:
+`cb359e3690d343d5caa5835da06cb9db6dce1c3cf286b27a178dfe33b0a5353d`.
+Deterministic controls reject missing drafts, corrupt Plans, foreign markers and
+unrelated tasks. Actual installed-CLI controls establish returned Planning scope
+and typed changed-path continuation. The checked-in preparation/phase-boundary
+suite passed 20 tests. These controls do not establish provider success.
 
-Reported session token totals were 1,626,444 and 1,893,112. Cache accounting and
-marginal monetary cost remain unknown. No Windows-native or minimal-toolchain
-claim follows from this Linux guest.
+Invocation rejections were triaged: the actor mixed startup request carriage into
+an effect invocation, then recovered by passing the exact action and work context.
+Input errors and controller failures remain visible; recovery relabels no result.
+Fresh supported Docker OAuth cannot start because Windows reserves TCP 1448–1547,
+including fixed callback port 1455. Reauthentication precedes any new execution.
+System reservations and unrelated runtimes remain unchanged.
 
-## Preserved evidence and limits
-
-Current raw result remains outside Git: SHA-256
-`1981e18e105a99a33c86375b95b81583d0558164c2ced4c851ac3eb35a5e9cb3`.
-The first baseline remains `f606a5de3f133ebda5874e2e6d941ef4475d44c7cc1300a309634027121959ce`.
-The preceding aggregate remains
-`38f0d3a75b15597de281b09ad1641bf34d317313692892fa85348fdeed8fcbfa`:
-its operational phase failed, while its separate 94-call proof/setup/resource/control
-phase passed all five independent artifact checks. Earlier failed results and
-named diagnostics remain unchanged in task-local storage; successful later work
-does not erase them.
-
-That earlier phase's command evidence was reusable and its exact semantic claim
-was confirmed with no final Verification blockers. A native command receipt's
-whole-task `unadmitted` status is not failed command admission: it contains no
-whole-task receipt judgment. The separate source-bound semantic claim supplies
-that judgment. Required independent producers and all peer restrictions still
-apply. Those older bytes do not establish an all-path run on the current subject;
-this current standing observation covers the operational family stated above.
+Structural comparison with pre-lane `2ae498d1a7578d86f9ef971ee51be653b513525f`
+finds 4,674 to 2,563 words across eight ordinary references, with fewer manual
+selection, full-record update and receipt-forwarding steps. No successful final
+trace establishes actual reader rounds or reads. Token, cache, monetary and
+causal model/economic comparisons remain unknown.
