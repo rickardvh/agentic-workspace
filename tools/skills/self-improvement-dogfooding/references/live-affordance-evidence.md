@@ -38,13 +38,39 @@ The completed execution is `aggregate-reader-authorized.json`, SHA-256
 Its raw `failed` status is preserved: the temporary build detector required a
 literal checkout path in command text, but the command summary omits cwd.
 `aggregate-completed-assessment.json` supplies the separate sufficiency judgment.
+The [promoted source and replay result](https://github.com/rickardvh/agentic-workspace/pull/3837#issuecomment-6018567609)
+make that judgment reviewable: full controller/dependency, preparation substitute,
+lifecycle checker and original assessor source are included, together with the
+read-only seven-journey replay and its passed result. The replay re-executes every
+original assessment gate; the reproduced base assessment retains SHA-256
+`fc746754508607ba071dddbac4841a80dd2c716dbfaee50d666709c765b764ff`.
+Independent acceptance of the evidence method remains pending.
+
+| Parent journey | One-based phase/call witnesses |
+| --- | --- |
+| Planning create/resume/update | Create 1/17; update 1/27, 2/60, 3/11,27,36; resume/reconcile 2/36, 3/8; exact selected Plan source and final empty remaining lists |
+| Proof to semantic continuation | Committed selected service proof 2/41, 3/20; satisfied bounded confirmations 2/51, 3/25 |
+| Selected setup answer | Selected job/input/answer schema 2/21, successful read-choice continuation 2/22; subsequent Configuration writes and actual capture |
+| Managed scratch lifecycle | Exact draft container create 1/21, retain 1/24, release 3/29, remove 3/31; final retirement check |
+| Isolated worktree/custom output | Creation 3/14 declares reproducible root; builder shell command event 3/19; removal 3/23; original preview preserved |
+| Thin package refresh | Actual bootstrap-upgrade and Configuration write 2/13; managed byte checks pass; Plan/custom note preserved |
+| Quiet unrelated control | Separate final command event 3/36, no AW call; exact notes artifact |
+
+The promoted replay passed eight negative controls: missing draft, corrupt Plan,
+foreign scratch marker, unrelated task, the preceding incomplete trace despite
+its true absence check, missing creation, missing removal, and a build mentioned
+only in Plan text. Both raw trace digests remained unchanged. This is the
+reviewer's bounded source-promotion option, not a new permanent harness or model
+run. Phase-one preservation uses the trusted controller's inspected predicates;
+the retained prepared-record subset is not a complete phase-one file snapshot.
 
 Authenticated phase-three calls 14/23 created/removed the sibling `preview` checkout,
-with `generated/rendered-preview` declared before creation. The recorded builder
-and service invocation exited zero. Isolation is assessed from that lifecycle
+with `generated/rendered-preview` declared before creation. The enclosing
+builder/service shell command reports exit zero. Isolation is assessed from that lifecycle
 and returned build environment, frozen builder preservation, ordered commands
 with no original-preview restoration, and preserved original preview bytes.
-The precise cwd is not separately recorded. Updated deterministic controls reject
+The precise cwd and standalone builder exit are not separately recorded.
+Updated deterministic controls reject
 the preceding incomplete trace despite its true checkout-absence check, and
 exclude mere build mentions in Plan patches. Independent lifecycle checker SHA-256:
 `1506ce3af02154a42c973fd777d3e213330d666f33c00a8678ac323cc280eab6`.

@@ -52,7 +52,13 @@ logging, preservation and control checks. Its raw temporary-checker failure is
 preserved alongside the separate equivalent assessment; no provider result was
 rewritten. The actual trace, structural comparison and scoped findings are in the
 [live evidence note](../../self-improvement-dogfooding/references/live-affordance-evidence.md).
-Raw evidence and controls remain in the exact retained AW task scratch named there,
+The independent evidence-method blocker on #3837 is addressed by promoting the
+exact controller/assessor source and a passed seven-journey replay with eight
+negative controls into its review context, linked from the live note. The base
+assessment and both raw traces retain their original digests. Acceptance of the
+bounded method remains with the independent reviewer; no new provider run or
+permanent issue-specific harness was added.
+Raw transcripts and local controls remain in the exact retained AW task scratch named there,
 pending independent acceptance of [#3837](https://github.com/rickardvh/agentic-workspace/pull/3837)
 and final disposition. Unrelated Plans were not read or adopted.
 
