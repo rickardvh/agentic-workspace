@@ -1598,6 +1598,18 @@
       "storage_class": "non-reconstructable-decision"
     },
     {
+      "checked_in_justification": "Reviewed exact version-line withdrawal and replacement decision is consumed from pinned release source; preserve its historical subjects and reason.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "notes": "Classification records the existing 2.0.0-to-1.11.0 exception; it grants no new release or withdrawal authority.",
+      "owner": "workspace-release-maintainers",
+      "pattern": ".release/version-line-correction.json",
+      "schema_or_validator": "validator: src/tooling/release/coordinated_release.py::version_line_correction",
+      "status": "typed-validator-backed",
+      "storage_class": "non-reconstructable-decision"
+    },
+    {
       "checked_in_justification": "Canonical portable owner declarations; generated host ledgers preserve these facts separately from source-maintenance policy.",
       "editable_by_agents": true,
       "format": "toml",

@@ -488,9 +488,8 @@ paths = [
     ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json",
 ]
 proof = [
-    "uv run agentic-planning doctor --target . --format json",
-    "uv run python scripts/check/check_planning_surfaces.py --format json",
-    "uv run pytest packages/planning/tests/test_branch_safe_planning.py -k integration_proposal -q",
+    "uv run --frozen --active --no-sync python src/tooling/check/check_structured_file_inventory.py --quiet-success",
+    "uv run --frozen --active --no-sync python -m pytest tests/test_native_planning_create.py tests/test_native_planning_lifetime.py -q",
 ]
 
 [[subsystems]]
@@ -515,7 +514,8 @@ paths = [
     ".agentic-workspace/planning/assignments/**",
     ".agentic-workspace/planning/lanes/**",
     ".agentic-workspace/planning/decompositions/**",
-    "packages/planning/**",
+    "src/core/src/modules/planning/**",
+    "src/core/src/planning.rs",
 ]
 proof = ["make check-planning-nosync"]
 
@@ -536,7 +536,7 @@ owns = [
 ]
 paths = [
     ".agentic-workspace/memory/**",
-    "packages/memory/**",
+    "src/core/src/modules/memory/**",
 ]
 proof = ["make check-memory-nosync"]
 
@@ -558,7 +558,7 @@ owns = [
 ]
 paths = [
     ".agentic-workspace/verification/**",
-    "packages/verification/**",
+    "src/core/src/modules/verification/**",
 ]
 proof = ["make check-verification-nosync"]
 
@@ -580,10 +580,13 @@ owns = [
     "workspace runtime source boundaries",
 ]
 paths = [
-    "generated/workspace/python/**",
-    "src/agentic_workspace/workspace_runtime*.py",
+    "src/core/src/native_public.rs",
+    "src/core/src/operating.rs",
+    "src/cli/rust/**",
+    "src/cli/python/agentic_workspace/**",
+    "src/cli/typescript/**",
 ]
-proof = ["uv run pytest tests/test_workspace_cli.py -q"]
+proof = ["make test-workspace-cli"]
 
 [[subsystems]]
 does_not_own = [
@@ -602,11 +605,15 @@ owns = [
     "harness scorer guardrails",
 ]
 paths = [
-    "tools/model-cli-harness/**",
-    "scripts/model_cli_harness/**",
-    "tests/test_external_agent_evaluation_lane.py",
+    "src/tooling/model-cli-harness/**",
+    "src/tooling/release/consumer_journeys.py",
+    "src/tooling/release/consumer_environment.py",
+    "tests/test_consumer_agent.py",
+    "tests/test_consumer_environment.py",
+    "tests/test_consumer_journeys.py",
+    "tests/test_consumer_outcomes.py",
 ]
-proof = ["uv run pytest tests/test_external_agent_evaluation_lane.py -q"]
+proof = ["uv run pytest tests/test_consumer_agent.py tests/test_consumer_environment.py tests/test_consumer_journeys.py tests/test_consumer_outcomes.py -q"]
 
 [workspace]
 main_skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
