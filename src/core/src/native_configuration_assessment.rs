@@ -380,30 +380,36 @@ fn package_migration(
     {
         return Ok(None);
     }
-    let provenance =
-        read(root, ".agentic-workspace/payload-provenance.json")?.unwrap_or(Value::Null);
-    if !provenance.is_null()
-        && (provenance["kind"] != "agentic-workspace/payload-provenance/v1"
-            || provenance["payload_schema"] != "agentic-workspace/payload/v1"
-            || provenance["release_identity"]["package"] != "agentic-workspace"
-            || !provenance["release_identity"].as_object().is_some_and(|o| {
-                o.keys()
-                    .all(|k| ["package", "version"].contains(&k.as_str()))
+    let Some(provenance) = read(root, ".agentic-workspace/payload-provenance.json")? else {
+        return Ok(None);
+    };
+    // An old assessment alone cannot establish which installed package is being
+    // migrated. Missing, current-major and unknown provenance grant no admission.
+    if provenance["kind"] != "agentic-workspace/payload-provenance/v1"
+        || provenance["payload_schema"] != "agentic-workspace/payload/v1"
+        || provenance["release_identity"]["package"] != "agentic-workspace"
+        || !provenance["release_identity"].as_object().is_some_and(|o| {
+            o.keys()
+                .all(|k| ["package", "version"].contains(&k.as_str()))
+        })
+        || !provenance.as_object().is_some_and(|o| {
+            o.keys().all(|k| {
+                [
+                    "kind",
+                    "payload_schema",
+                    "managed_revision",
+                    "payload_capabilities",
+                    "payload_files",
+                    "release_identity",
+                    "rule",
+                ]
+                .contains(&k.as_str())
             })
-            || !provenance.as_object().is_some_and(|o| {
-                o.keys().all(|k| {
-                    [
-                        "kind",
-                        "payload_schema",
-                        "managed_revision",
-                        "payload_capabilities",
-                        "payload_files",
-                        "release_identity",
-                        "rule",
-                    ]
-                    .contains(&k.as_str())
-                })
-            }))
+        })
+        || !provenance["release_identity"]["version"]
+            .as_str()
+            .and_then(version_tuple)
+            .is_some_and(|old| old[0] > 0 && old[0] < now[0])
     {
         return Ok(None);
     }
@@ -1135,6 +1141,12 @@ mod migration_tests {
                     .is_none()
             );
             record.as_object_mut().unwrap().remove("future_field");
+            std::fs::remove_file(&path).unwrap();
+            assert!(
+                package_migration(&root, source, &record, "2.0.0")
+                    .unwrap()
+                    .is_none()
+            );
             provenance["kind"] = json!("future-format");
             std::fs::write(&path, serde_json::to_vec(&provenance).unwrap()).unwrap();
             assert!(

@@ -138,8 +138,10 @@ jobs:
           docker pull ubuntu:24.04
           uv run pytest tests/test_native_proof_producer.py -k "isolated_proof or cannot_bypass or missing_executor" -q
       - name: Verify deferred configuration continuation
-        timeout-minutes: 2
-        run: uv run pytest tests/test_native_configuration_write.py::test_configuration_defer_resumes_outside_human_policy -v
+        timeout-minutes: 5
+        run: |
+          uv run pytest tests/test_native_configuration_write.py::test_configuration_defer_resumes_outside_human_policy -v
+          uv run pytest tests/test_installed_major_migration.py -q
       - name: Verify semantic review authority floor
         timeout-minutes: 2
         run: uv run pytest tests/test_native_claim_review.py::test_claim_review_cannot_impersonate_required_reviewer -v
