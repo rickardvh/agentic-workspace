@@ -46,18 +46,26 @@ separate from this fresh metadata validation.
 ## Continuation and preserved boundaries
 
 The actively relied-upon parent is [#3810](https://github.com/rickardvh/agentic-workspace/issues/3810).
-All product children and #3828 are accepted/closed. The remaining obligation is
-a successful final aggregate reader, its actual trace/structural comparison,
-current evidence and administrative closure. The attempted aggregate's controller
-repairs and provider-authentication gap are preserved in the
+All product children and #3828 are accepted/closed. The final combined reader
+completed, with independent preparation, positive resource lifecycle, proof,
+logging, preservation and control checks. Its raw temporary-checker failure is
+preserved alongside the separate equivalent assessment; no provider result was
+rewritten. The actual trace, structural comparison and scoped findings are in the
 [live evidence note](../../self-improvement-dogfooding/references/live-affordance-evidence.md).
-No aggregate result was relabeled successful. Raw evidence and the tested
-controller remain in the exact AW task scratch named there, pending authenticated
-execution and final disposition. Unrelated Plans were not read or adopted.
+Raw evidence and controls remain in the exact retained AW task scratch named there,
+pending independent acceptance of [#3837](https://github.com/rickardvh/agentic-workspace/pull/3837)
+and final disposition. Unrelated Plans were not read or adopted.
+
+Native root capture reached its documented 1 MiB stream bound. Old bytes and
+capture-failed responses were preserved; a caller-owned resumed identity linked
+through supported parent/correlation fields now reports full capture and writes a
+new canonical stream. This is not native rotation or backfill; that existing gap
+remains under #2995. Repository adoption/integration readiness remains outside
+this source-maintenance comparison and is not newly certified.
 
 The protected unresolved decision-point source remains untouched. Archived
 continuations, prior release decisions and historical receipts remain history,
 not an execution queue. This bounded comparison leaves no unresolved source
-mismatch after the corrections above. Parent closure remains unsupported because
-the final live aggregate is missing. Reobserve changed dependencies and external
+mismatch after the corrections above. Parent closure remains pending independent
+acceptance of the closeout PR. Reobserve changed dependencies and external
 acceptance before using this comparison for a broader claim.
