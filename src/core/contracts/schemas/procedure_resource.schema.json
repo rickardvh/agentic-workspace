@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/procedure-resource/v1/schema.json",
+  "title": "Selected procedure resource v1",
+  "description": "One passive agentic-procedure JSON fence in Markdown. Paths resolve relative to the procedure file inside the repository; native resolution also checks confinement, byte limits, unique branch IDs and required resources. This contract grants no execution or authority.",
+  "x-agentic-workspace-doc-role": "public-contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "id",
+    "question",
+    "branches"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/procedure/v1",
+      "description": "Existing versioned passive procedure contract."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$",
+      "description": "Question identity local to this selected source."
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192,
+      "pattern": "\\S",
+      "description": "Natural-language decision for the acting agent. Native resolution also bounds UTF-8 bytes."
+    },
+    "branches": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "description": "Named alternatives; branch IDs must be unique, and selection is supplied by the acting agent.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "next"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$",
+            "description": "Identity used by a semantic branch answer."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "\\S",
+            "description": "Observable situation in which this alternative helps; native resolution also bounds UTF-8 bytes."
+          },
+          "next": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Confined path relative to this procedure file. Native selected resolution diagnoses missing resources."
+          }
+        }
+      }
+    },
+    "context": {
+      "type": "array",
+      "maxItems": 32,
+      "description": "Required source files relative to this procedure file, read and revision-bound with the question.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "activation": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "occasions",
+        "applicability",
+        "outcome"
+      ],
+      "description": "Optional activation v1 declaration; omit when direct selection suffices. Native validation also checks UTF-8 byte limits and forbidden settlement selectors.",
+      "properties": {
+        "occasions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "enum": [
+              "observation",
+              "need",
+              "binding"
+            ]
+          },
+          "description": "Current observations, missing prerequisites or owner restrictions which may nominate this method."
+        },
+        "applicability": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "\\S",
+          "description": "Natural-language situation the acting agent judges relevant."
+        },
+        "outcome": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "\\S",
+          "description": "Observable result that ends this procedure."
+        },
+        "binding_owners": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "description": "Existing component identities whose current restrictions may nominate the method; grants no component authority."
+        },
+        "settled_by": {
+          "type": "array",
+          "maxItems": 8,
+          "description": "Exact current result facts which may make this method unnecessary. Material, activation, route and procedure prefixes cannot settle their own relevance.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "selector",
+              "value"
+            ],
+            "properties": {
+              "selector": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "pattern": "^/",
+                "description": "JSON pointer into a current component result; native validation rejects self-settling prefixes."
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ],
+                "description": "Exact non-null scalar current result."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -77,7 +77,16 @@
     ".agentic-workspace/planning/skills/README.md",
     ".agentic-workspace/planning/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-dogfooding/SKILL.md",
-    ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
+    ".agentic-workspace/skills/workspace-dogfooding/procedure.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/SKILL.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/procedure.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/plain.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/structured.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/helpers.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json"
   ],
   "surfaces": [
     {
@@ -1094,6 +1103,123 @@
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
       }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-skill-authoring/SKILL.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-skill-authoring/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/references/plain.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-skill-authoring/references/plain.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/references/structured.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-skill-authoring/references/structured.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/references/helpers.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-skill-authoring/references/helpers.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": "src/tooling/contracts/agent_facing_writing.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": "src/core/contracts/schemas/procedure_resource.schema.json"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": "src/core/contracts/schemas/executable_affordance.schema.json"
+      }
     }
   ],
   "identity": ".agentic-workspace/adoption.json",
@@ -1249,11 +1375,22 @@
       ".agentic-workspace/planning/skills/README.md",
       ".agentic-workspace/planning/skills/REGISTRY.json",
       ".agentic-workspace/skills/workspace-dogfooding/SKILL.md",
-      ".agentic-workspace/skills/workspace-dogfooding/procedure.md"
+      ".agentic-workspace/skills/workspace-dogfooding/procedure.md",
+      ".agentic-workspace/skills/workspace-skill-authoring/SKILL.md",
+      ".agentic-workspace/skills/workspace-skill-authoring/procedure.md",
+      ".agentic-workspace/skills/workspace-skill-authoring/references/plain.md",
+      ".agentic-workspace/skills/workspace-skill-authoring/references/structured.md",
+      ".agentic-workspace/skills/workspace-skill-authoring/references/helpers.md",
+      ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
+      "src/tooling/contracts/agent_facing_writing.md",
+      "src/core/contracts/schemas/procedure_resource.schema.json",
+      "src/core/contracts/schemas/executable_affordance.schema.json"
     ],
     "source_only_inputs": [
       ".agentic-workspace/OWNERSHIP.toml",
-      ".agentic-workspace/READING.json"
+      ".agentic-workspace/READING.json",
+      ".agentic-workspace/instructions/agent-facing-style.md",
+      "src/tooling/contracts/agent_facing_instruction.md"
     ],
     "rule": "Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden."
   },

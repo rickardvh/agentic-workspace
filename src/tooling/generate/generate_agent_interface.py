@@ -89,6 +89,25 @@ def render_host_payload(root: Path) -> dict[str, str]:
     return outputs
 
 
+def render_instruction_projections(root: Path, manifest: dict) -> dict[str, str]:
+    """Repository policy wrappers consume one writing body without exporting scope."""
+    outputs = {}
+    for projection in manifest.get("instruction_projections", []):
+        if set(projection) != {"path", "body", "wrapper"}:
+            raise ValueError("Instruction projection requires an exact destination, body and wrapper")
+        for reference in projection.values():
+            if "\\" in reference or ":" in reference or any(part in {"", ".", ".."} for part in reference.split("/")):
+                raise ValueError("Instruction projection requires repository-relative paths")
+            if not (root / reference).resolve().is_relative_to(root.resolve()):
+                raise ValueError("Instruction projection escapes its producer boundary")
+        body = (root / projection["body"]).read_text(encoding="utf-8")
+        wrapper = (root / projection["wrapper"]).read_text(encoding="utf-8")
+        if wrapper.count("{{writing_contract}}") != 1 or projection["path"] in outputs:
+            raise ValueError("Instruction projection requires one body insertion and one destination")
+        outputs[projection["path"]] = wrapper.replace("{{writing_contract}}", body)
+    return outputs
+
+
 def synchronize(*, check: bool = False) -> list[str]:
     from aw_maintainer.activation_index import synchronize as activation_index
 
@@ -107,6 +126,31 @@ def synchronize(*, check: bool = False) -> list[str]:
     host_outputs = render_host_payload(ROOT)
     if any(row["path"] in host_outputs for row in manifest.get("retired_surface_files", [])):
         raise ValueError("Source maintenance cannot retire a public host materialization")
+    instruction_outputs = render_instruction_projections(ROOT, manifest)
+    if instruction_outputs.keys() & host_outputs.keys():
+        raise ValueError("Repository instruction projections cannot overwrite public host materializations")
+    for reference, expected in instruction_outputs.items():
+        destination = ROOT / reference
+        if not destination.is_file() or destination.read_text(encoding="utf-8") != expected:
+            activation_drift.append(reference)
+            if not check:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(expected, encoding="utf-8", newline="\n")
+    # Canonical public contracts may be delivered under a bundle-relative name.
+    # Materialise that declared source projection too, rather than maintaining a
+    # second hand-authored schema or writing guide in the producer skill tree.
+    host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
+    for row in host["surfaces"]:
+        materialization = row["materialization"]
+        reference = row["path"]
+        if materialization.get("mode") == "package-verbatim" and materialization["source"] != reference:
+            destination = ROOT / reference
+            expected = host_outputs[reference]
+            if not destination.is_file() or destination.read_text(encoding="utf-8") != expected:
+                activation_drift.append(reference)
+                if not check:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text(expected, encoding="utf-8", newline="\n")
     payload = ROOT / "src/core/payload"
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 
