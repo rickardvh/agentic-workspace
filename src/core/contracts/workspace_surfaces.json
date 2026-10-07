@@ -1192,7 +1192,7 @@
       "justification": "On-demand repository skill authoring procedure or its canonical public contract",
       "materialization": {
         "mode": "package-verbatim",
-        "source": ".agentic-workspace/instructions/agent-facing-style.md"
+        "source": "src/tooling/contracts/agent_facing_writing.md"
       }
     },
     {
@@ -1382,13 +1382,15 @@
       ".agentic-workspace/skills/workspace-skill-authoring/references/structured.md",
       ".agentic-workspace/skills/workspace-skill-authoring/references/helpers.md",
       ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
-      ".agentic-workspace/instructions/agent-facing-style.md",
+      "src/tooling/contracts/agent_facing_writing.md",
       "src/core/contracts/schemas/procedure_resource.schema.json",
       "src/core/contracts/schemas/executable_affordance.schema.json"
     ],
     "source_only_inputs": [
       ".agentic-workspace/OWNERSHIP.toml",
-      ".agentic-workspace/READING.json"
+      ".agentic-workspace/READING.json",
+      ".agentic-workspace/instructions/agent-facing-style.md",
+      "src/tooling/contracts/agent_facing_instruction.md"
     ],
     "rule": "Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden."
   },

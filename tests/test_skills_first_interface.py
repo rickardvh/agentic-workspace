@@ -171,7 +171,13 @@ def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     contract_path = "src/core/contracts/workspace_surfaces.json"
     contract = json.loads((ROOT / contract_path).read_text())
-    for reference in [contract_path, *contract["derivation"]["portable_sources"], LEDGER, PROFILE]:
+    for reference in [
+        contract_path,
+        *contract["derivation"]["portable_sources"],
+        *contract["derivation"]["source_only_inputs"],
+        LEDGER,
+        PROFILE,
+    ]:
         destination = tmp_path / reference
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes((ROOT / reference).read_bytes())
@@ -184,7 +190,18 @@ def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
     )
     (tmp_path / LEDGER).write_text(poison)
     (tmp_path / PROFILE).write_text(render(poison, target=tmp_path))
+    # Repository instruction identity/scope never becomes an installed writing
+    # rule. The public body is a distinct, explicitly portable source.
+    for reference in [".agentic-workspace/instructions/agent-facing-style.md", "src/tooling/contracts/agent_facing_instruction.md"]:
+        (tmp_path / reference).write_text("PRODUCER_ONLY_WRITING_SCOPE")
     assert generator.render_host_payload(tmp_path) == baseline
+    writing = ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md"
+    body_ref = next(row["materialization"]["source"] for row in contract["surfaces"] if row["path"] == writing)
+    assert baseline[writing] == (tmp_path / body_ref).read_text(encoding="utf-8")
+    (tmp_path / body_ref).write_text("Changed portable writing contract", encoding="utf-8")
+    writing_changed = generator.render_host_payload(tmp_path)
+    assert {key for key in baseline if baseline[key] != writing_changed[key]} == {writing}
+    (tmp_path / body_ref).write_text(baseline[writing], encoding="utf-8")
     portable_ref = next(row["materialization"]["source"] for row in contract["surfaces"] if row["path"] == LEDGER)
     portable = tmp_path / portable_ref
     portable.write_text(portable.read_text().replace("Repository-native state", "Portable-input mutation: repository-native state"))
@@ -223,6 +240,7 @@ def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypat
         PROFILE,
         *host["derivation"]["portable_sources"],
         *maintenance["payload_files"],
+        *(row[key] for row in maintenance.get("instruction_projections", []) for key in ("body", "wrapper")),
     }
     for reference in references:
         destination = tmp_path / reference
@@ -236,6 +254,20 @@ def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypat
     monkeypatch.setattr(generator, "ROOT", tmp_path)
     assert generator.synchronize()
     assert generator.synchronize(check=True) == []
+    assert provenance.read_bytes() == original
+    projection = maintenance["instruction_projections"][0]
+    body = (tmp_path / projection["body"]).read_text(encoding="utf-8")
+    wrapper = (tmp_path / projection["wrapper"]).read_text(encoding="utf-8")
+    assert (tmp_path / projection["path"]).read_text(encoding="utf-8") == wrapper.replace("{{writing_contract}}", body)
+    # One maintained body feeds both projections; source-only wrapper changes
+    # affect only the scoped repository instruction, never the adopted host.
+    (tmp_path / projection["body"]).write_text(body + "\nA changed shared rule.\n", encoding="utf-8")
+    assert generator.synchronize()
+    changed_body = (tmp_path / projection["body"]).read_text(encoding="utf-8")
+    assert (tmp_path / projection["path"]).read_text(encoding="utf-8") == wrapper.replace("{{writing_contract}}", changed_body)
+    assert (tmp_path / ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md").read_text(
+        encoding="utf-8"
+    ) == changed_body
     assert provenance.read_bytes() == original
 
 

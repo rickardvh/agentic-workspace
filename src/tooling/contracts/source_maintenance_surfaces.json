@@ -1,5 +1,12 @@
 {
   "schema_version": "workspace-surfaces-manifest/v1",
+  "instruction_projections": [
+    {
+      "path": ".agentic-workspace/instructions/agent-facing-style.md",
+      "body": "src/tooling/contracts/agent_facing_writing.md",
+      "wrapper": "src/tooling/contracts/agent_facing_instruction.md"
+    }
+  ],
   "payload_files": [
     ".agentic-workspace/READING.json",
     ".agentic-workspace/WORKFLOW.md",

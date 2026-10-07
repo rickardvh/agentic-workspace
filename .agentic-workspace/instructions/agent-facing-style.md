@@ -25,6 +25,8 @@ paths:
   - src/tooling/contracts/schemas/skill_spec.schema.json
 ---
 
+<!-- GENERATED: edit src/tooling/contracts/agent_facing_writing.md or src/tooling/contracts/agent_facing_instruction.md and run the agent-interface generator. -->
+
 # Agent-facing writing guide
 
 Use this guide when writing or reviewing text an agent must act on: instructions,
@@ -32,13 +34,6 @@ skills, procedure choices, prompts, tool explanations and handoffs. Assume a
 capable reader who has not seen the author's chat or design discussion. Explain
 what the reader needs for this task, not the whole Agentic Workspace (AW)
 architecture.
-
-This is the canonical writing guide for this repository's agent-facing material.
-The path scope supplies it for the usual source locations. For agent-directed
-text embedded elsewhere, follow the same guide when that text is the subject of
-the change. It does not govern unrelated implementation code or require an AW
-command merely to read or apply it. Human-facing documentation also follows the
-[documentation style guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/documentation-style-guide.md).
 
 ## Start from the reader's situation
 
@@ -185,3 +180,12 @@ or permanent regression for every wording edit.
 Reviewers apply the same questions, not their familiarity with the implementation.
 Keep author validation distinct from independent review. Fix the source of an
 ambiguous instruction instead of adding another warning elsewhere.
+
+## Application in this repository
+
+This is the canonical writing guide for this repository's agent-facing material.
+The path scope supplies it for the usual source locations. For agent-directed
+text embedded elsewhere, follow the same guide when that text is the subject of
+the change. It does not govern unrelated implementation code or require an AW
+command merely to read or apply it. Human-facing documentation also follows the
+[documentation style guide](../../docs/documentation-style-guide.md).
