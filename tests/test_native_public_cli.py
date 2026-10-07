@@ -1327,8 +1327,11 @@ def test_internal_finding_has_current_dependencies_without_retention(tmp_path, s
         "pending_consequences",
         "claim_boundary",
         "terminal_authority",
+        "capability_revision",
     ):
         assert current["decision_packet"][field] == quiet["decision_packet"][field]
+    for operation, revision in quiet["decision_packet"]["operation_revisions"].items():
+        assert current["decision_packet"]["operation_revisions"][operation] == revision
     candidates = current["memory"]["candidates"]
     assert candidates["selected"] == []
     consider = [request for request in candidates["requests"] if request["arguments"]["operation"] == "consider"]
