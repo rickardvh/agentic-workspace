@@ -496,6 +496,25 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
         "planning/review/continuation",
     } <= expected
     current = call()
+    authoring_route = "workspace/skills/authoring"
+    authoring_root = target / ".agentic-workspace/skills/workspace-skill-authoring"
+    assert authoring_root.is_dir()
+    assert not current.get("procedure", {}).get("requests")
+    assert authoring_route not in json.dumps(current["semantic_routes"]["discovery"])
+    discover = current["semantic_routes"]["requests"][0]
+    discover["arguments"] = {"parent": authoring_route}
+    authoring = call(discover)
+    authoring_source = authoring["semantic_routes"]["discovery"]["detail"]["sources"][0]
+    assert authoring_source["skill_id"] == "workspace-skill-authoring"
+    assert authoring_source["procedure"]["resource"]["branches"][0]["id"] == "plain"
+    # The public authoring schemas are delivered with the procedure, independent
+    # of source checkout access. Core tests own malformed/currentness semantics.
+    from jsonschema import Draft202012Validator
+
+    procedure_schema = json.loads((authoring_root / "references/procedure.schema.json").read_text())
+    executable_schema = json.loads((authoring_root / "references/executable.schema.json").read_text())
+    Draft202012Validator.check_schema(procedure_schema)
+    Draft202012Validator.check_schema(executable_schema)
     assert "planning" in {row["id"] for row in current["semantic_routes"]["discovery"]["children"]}
     for route in sorted(expected):
         discover = current["semantic_routes"]["requests"][0]
@@ -519,35 +538,41 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
     assert inventory["entries"][".agentic-workspace/planning/skills/REGISTRY.json"]["owner"] == "planning"
     assert retained_plan.read_bytes() == retained_bytes
 
-    # Author an ordinary host skill; no module, executable helper or product-specific question schema.
-    bundle = target / ".agentic-workspace/skills/change-note"
+    # The authoring skill itself uses Configuration exposure. A custom method
+    # remains in the repository's own tree, never edited into the package registry.
+    bundle = target / "tools/skills/change-note"
     shutil.copytree(WORKSPACE_ROOT / "tests/fixtures/change-note", bundle)
-    registry_path = target / ".agentic-workspace/skills/REGISTRY.json"
-    registry = json.loads(registry_path.read_text())
-    registry["skills"].append(
-        {
-            "id": "change-note",
-            "path": "change-note/SKILL.md",
-            "scope": "specialized-subskill",
-            "visibility": "routed-on-demand",
-            "semantic_routes": ["example/change-note"],
-            "procedure_resource": "procedure.md",
-        }
-    )
+    registry_path = target / "tools/skills/REGISTRY.json"
+    registry = {
+        "schema_version": "skill-registry.v1",
+        "skills": [
+            {
+                "id": "change-note",
+                "path": "change-note/SKILL.md",
+                "scope": "specialized-subskill",
+                "visibility": "routed-on-demand",
+                "semantic_routes": ["example/change-note"],
+                "procedure_resource": "procedure.md",
+            }
+        ],
+    }
     registry_path.write_text(json.dumps(registry))
+    form = json.loads((bundle / "procedure.md").read_text().split("```agentic-procedure\n")[1].split("```")[0])
+    Draft202012Validator(procedure_schema).validate(form)
 
     def exposure(mode):
         read = call(call()["configuration_write"]["skill_exposure_request"])
-        row = next(r for r in read["configuration_write"]["skill_exposure"] if r["state"]["name"] == "change-note")
+        row = next(r for r in read["configuration_write"]["skill_exposure"] if r["state"]["name"] == "workspace-skill-authoring")
         proposed = call(row[f"{mode}_request"])
         authorization = proposed["configuration_write"]["authorization_request"]
         authorization["arguments"]["answer"] = "authorize-write"
         return call(invocation=call(authorization)["decision_packet"]["primary_action"])
 
     assert exposure("expose")["effect_outcome"]["status"] == "committed"
-    exposed = target / ".agents/skills/change-note"
-    for file in bundle.iterdir():
-        assert (exposed / file.name).read_bytes() == file.read_bytes()
+    exposed = target / ".agents/skills/workspace-skill-authoring"
+    for file in authoring_root.rglob("*"):
+        if file.is_file():
+            assert (exposed / file.relative_to(authoring_root)).read_bytes() == file.read_bytes()
     discover = call()["semantic_routes"]["requests"][0]
     discover["arguments"] = {"parent": "example/change-note"}
     leaf = call(discover)
@@ -562,7 +587,7 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
     resource = detail["sources"][0]["procedure"]["resource"]
     assert resource["selected"]["text"].encode("utf-8") == (bundle / "user-note.md").read_bytes()
     (bundle / "user-note.md").write_text("Host-authored replacement: return a draft only.")
-    assert (exposed / "user-note.md").read_text() == (bundle / "user-note.md").read_text()
+    assert call(discover)["semantic_routes"]["discovery"]["detail"] != detail
     assert exposure("remove")["effect_outcome"]["status"] == "committed"
     assert not exposed.exists()
     assert (bundle / "user-note.md").read_text() == "Host-authored replacement: return a draft only."

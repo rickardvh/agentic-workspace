@@ -1814,6 +1814,44 @@
       "checked_in_justification": "Current bounded requirement assessments are consumed by Verification.",
       "notes": "Assessments bind exact dependencies and owner publication custody; history is not current proof.",
       "lifetime": "Replace or retire through current Verification evidence operations when bound requirements change."
+    },
+    {
+      "pattern": ".agentic-workspace/skills/workspace-skill-authoring/references/*.schema.json",
+      "format": "json",
+      "owner": "workspace-agent-interface",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "validator: python src/tooling/generate/generate_agent_interface.py --check",
+      "storage_class": "generated-required-adapter",
+      "editable_by_agents": false,
+      "generated": true,
+      "checked_in_justification": "Installed, bundle-relative public procedure and helper schemas without requiring source-checkout access.",
+      "reconstructable_from": [
+        "src/core/contracts/schemas/procedure_resource.schema.json",
+        "src/core/contracts/schemas/executable_affordance.schema.json",
+        "src/core/contracts/workspace_surfaces.json",
+        "src/tooling/generate/generate_agent_interface.py"
+      ],
+      "notes": "Exact canonical schema bytes are projected by the existing declared host derivation; native readers validate the owning contracts.",
+      "lifetime": "Current replacement only through declared generation; Configuration refresh/removal owns installed lifetime. Generation parity and installed-package tests prove the bounded producer and consumer."
+    },
+    {
+      "pattern": "src/core/payload/.agentic-workspace/skills/workspace-skill-authoring/references/*.schema.json",
+      "format": "json",
+      "owner": "workspace-agent-interface",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "validator: python src/tooling/generate/generate_agent_interface.py --check",
+      "storage_class": "generated-required-adapter",
+      "editable_by_agents": false,
+      "generated": true,
+      "checked_in_justification": "Installed, bundle-relative public procedure and helper schemas without requiring source-checkout access.",
+      "reconstructable_from": [
+        "src/core/contracts/schemas/procedure_resource.schema.json",
+        "src/core/contracts/schemas/executable_affordance.schema.json",
+        "src/core/contracts/workspace_surfaces.json",
+        "src/tooling/generate/generate_agent_interface.py"
+      ],
+      "notes": "Exact canonical schema bytes are projected by the existing declared host derivation; native readers validate the owning contracts.",
+      "lifetime": "Current replacement only through declared generation; Configuration refresh/removal owns installed lifetime. Generation parity and installed-package tests prove the bounded producer and consumer."
     }
   ],
   "generated_mirrors": [
@@ -1896,6 +1934,26 @@
       "freshness_check": "uv run python src/tooling/generate/generate_skill_entry.py --check",
       "ordinary_agent_route": "plugin/catalogue drill-down only; native loader reads metadata to expose the optional bridge",
       "removal_or_demotion_path": "remove with the optional native plugin distribution when no supported host needs it"
+    },
+    {
+      "pattern": ".agentic-workspace/skills/workspace-skill-authoring/references/*.schema.json",
+      "max_bytes": 65536,
+      "source_command": "uv run python src/tooling/generate/generate_agent_interface.py",
+      "named_consumer": "on-demand repository skill authoring through the installed bundle",
+      "checked_in_justification": "Authoring consumers need the canonical public schemas without access to the producer source checkout.",
+      "freshness_check": "uv run python src/tooling/generate/generate_agent_interface.py --check",
+      "ordinary_agent_route": "workspace/skills/authoring; unrelated startup does not read the schemas",
+      "removal_or_demotion_path": "remove with the package-managed authoring bundle when its supported installed consumer is removed"
+    },
+    {
+      "pattern": "src/core/payload/.agentic-workspace/skills/workspace-skill-authoring/references/*.schema.json",
+      "max_bytes": 65536,
+      "source_command": "uv run python src/tooling/generate/generate_agent_interface.py",
+      "named_consumer": "on-demand repository skill authoring through the installed bundle",
+      "checked_in_justification": "Authoring consumers need the canonical public schemas without access to the producer source checkout.",
+      "freshness_check": "uv run python src/tooling/generate/generate_agent_interface.py --check",
+      "ordinary_agent_route": "workspace/skills/authoring; unrelated startup does not read the schemas",
+      "removal_or_demotion_path": "remove with the package-managed authoring bundle when its supported installed consumer is removed"
     }
   ],
   "kind": "agentic-workspace/structured-file-inventory/v1",

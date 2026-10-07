@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:1dc915c6466b9e35fe0bb740314bf7cca126c2a6fbc5e70dfe40c1b4727bb91f`
+- Contract digest: `sha256:8ea51be3f6423af80f71e721001fcdc10258c6ce532e8b676e40082445f8f941`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -84,6 +84,15 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/planning/skills/REGISTRY.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Planning-owned reusable procedure, without domain-state or assignment authority |
 | `.agentic-workspace/skills/workspace-dogfooding/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-dogfooding/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-skill-authoring/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/references/plain.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/references/structured.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/references/helpers.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/references/maintain.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/references/writing.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden.
 
@@ -164,6 +173,15 @@ Portable source promotions:
 - `.agentic-workspace/planning/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-dogfooding/SKILL.md`
 - `.agentic-workspace/skills/workspace-dogfooding/procedure.md`
+- `.agentic-workspace/skills/workspace-skill-authoring/SKILL.md`
+- `.agentic-workspace/skills/workspace-skill-authoring/procedure.md`
+- `.agentic-workspace/skills/workspace-skill-authoring/references/plain.md`
+- `.agentic-workspace/skills/workspace-skill-authoring/references/structured.md`
+- `.agentic-workspace/skills/workspace-skill-authoring/references/helpers.md`
+- `.agentic-workspace/skills/workspace-skill-authoring/references/maintain.md`
+- `.agentic-workspace/instructions/agent-facing-style.md`
+- `src/core/contracts/schemas/procedure_resource.schema.json`
+- `src/core/contracts/schemas/executable_affordance.schema.json`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 

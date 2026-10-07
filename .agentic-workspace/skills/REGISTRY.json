@@ -217,7 +217,7 @@
         }
       ],
       "stability": "contract-backed-projection",
-        "summary": "Resolve setup or a requested setting, preserve evidenced repository working rules, and verify the consumer.",
+      "summary": "Resolve setup or a requested setting, preserve evidenced repository working rules, and verify the consumer.",
       "visibility": "routed-on-demand"
     },
     {
@@ -269,6 +269,23 @@
       ],
       "stability": "package-managed",
       "summary": "Anonymise an AW product finding, deduplicate it upstream, and publish through available host capability or hand off.",
+      "visibility": "routed-on-demand"
+    },
+    {
+      "id": "workspace-skill-authoring",
+      "path": "workspace-skill-authoring/SKILL.md",
+      "procedure_resource": "procedure.md",
+      "scope": "specialized-subskill",
+      "semantic_routes": [
+        {
+          "id": "workspace/skills/authoring",
+          "description": "Create or maintain the smallest useful repository-owned ordinary or AW-assisted skill.",
+          "match": "exact",
+          "priority": 10
+        }
+      ],
+      "stability": "package-managed",
+      "summary": "Author, maintain or remove a repository-owned skill; select optional branches, current owner references and helpers only when useful.",
       "visibility": "routed-on-demand"
     }
   ],

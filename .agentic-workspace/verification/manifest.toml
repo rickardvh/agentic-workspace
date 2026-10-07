@@ -75,6 +75,7 @@ inputs = [
   ".agentic-workspace/fallback/no-cli-policy.json",
   ".agentic-workspace/fallback/no_cli_startup.py",
   ".agentic-workspace/instructions/workspace-operating.md",
+  ".agentic-workspace/instructions/agent-facing-style.md",
   ".agentic-workspace/instructions/workspace-ownership-audit.md",
   ".agentic-workspace/memory/repo/manifest.toml",
   ".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md",

@@ -24,6 +24,6 @@ One append-only canonical event in a local Agentic Workspace session chronology 
 | `physical_session_id` | string | yes |  | Identifier for the physical session-log directory. |  |  |
 | `parent_logical_session_id` | string | yes |  | Private parent logical-session identifier for delegated work, or empty. |  |  |
 | `correlation_id` | string | yes |  | Private host-provided correlation hash, or empty. |  |  |
-| `payload` | object | yes |  | Event-type-specific structured data. |  |  |
+| `payload` | object | yes |  | Event-type-specific diagnostics. Full native completions reference integrity-verifiable request/output/configuration artifacts; output chunks retain stream order and digests. Capture detail and omissions remain explicit; diagnostics grant no semantic authority. |  |  |
 | `local_only` | boolean | yes |  | Whether this record remains an ignored local diagnostic. |  |  |
 | `authoritative` | boolean | yes |  | Whether this diagnostic record is authoritative workflow state. |  |  |

@@ -52,7 +52,16 @@
     ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
-    ".agentic-workspace/skills/workspace-proof-selection/procedure.md"
+    ".agentic-workspace/skills/workspace-proof-selection/procedure.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/SKILL.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/procedure.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/plain.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/structured.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/helpers.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json",
+    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json"
   ],
   "necessary_surface_files": [
     ".agentic-workspace/READING.json",

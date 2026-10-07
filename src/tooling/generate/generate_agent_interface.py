@@ -107,6 +107,21 @@ def synchronize(*, check: bool = False) -> list[str]:
     host_outputs = render_host_payload(ROOT)
     if any(row["path"] in host_outputs for row in manifest.get("retired_surface_files", [])):
         raise ValueError("Source maintenance cannot retire a public host materialization")
+    # Canonical public contracts may be delivered under a bundle-relative name.
+    # Materialise that declared source projection too, rather than maintaining a
+    # second hand-authored schema or writing guide in the producer skill tree.
+    host = json.loads((ROOT / "src/core/contracts/workspace_surfaces.json").read_text())
+    for row in host["surfaces"]:
+        materialization = row["materialization"]
+        reference = row["path"]
+        if materialization.get("mode") == "package-verbatim" and materialization["source"] != reference:
+            destination = ROOT / reference
+            expected = host_outputs[reference]
+            if not destination.is_file() or destination.read_text(encoding="utf-8") != expected:
+                activation_drift.append(reference)
+                if not check:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text(expected, encoding="utf-8", newline="\n")
     payload = ROOT / "src/core/payload"
     from aw_maintainer.ownership_profile import LEDGER, PROFILE, render
 

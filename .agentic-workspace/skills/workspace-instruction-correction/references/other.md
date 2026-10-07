@@ -41,6 +41,9 @@ related prose is insufficient. Method adaptation cannot remove instruction scope
 checks, protections or reconciliation floors. Wider policy corrections need their
 proper explicit authority. Unsupported code/skill/Verification changes remain
 ordinary work under those owners; these requests do not provide a universal writer.
+When the accepted change is a reusable repository method, use
+[skill authoring](../../workspace-skill-authoring/SKILL.md) to maintain its source
+and check the intended consumer. It does not authorise retention by itself.
 
 After publication, resolve the affected work afresh and run the receiving owner's
 necessary validation. Equivalent already-applied changes become quiet through

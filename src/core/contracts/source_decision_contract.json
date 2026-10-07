@@ -81,7 +81,8 @@
       },
       "authority_effect": "none",
       "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities.",
-      "currentness": "Question source and declared judgment context are revision-bound. Branch destinations remain path-validated references; only a selected destination body is read and added to selected-detail dependencies."
+      "currentness": "Question source and declared judgment context are revision-bound. Branch destinations remain path-validated references; only a selected destination body is read and added to selected-detail dependencies.",
+      "schema": "schemas/procedure_resource.schema.json"
     },
     "procedure_answers": {
       "owner": "procedure",

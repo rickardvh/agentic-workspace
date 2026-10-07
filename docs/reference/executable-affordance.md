@@ -1,6 +1,6 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
 
-# Optional selected executable material
+# Optional selected executable material v1
 
 Flat material references in an existing skill registry. No execution or authority is implied.
 
@@ -11,6 +11,6 @@ Flat material references in an existing skill registry. No execution or authorit
 
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
-| (root) | object | yes |  | Flat material references in an existing skill registry. No execution or authority is implied. |  | x-agentic-workspace-doc-role: "public-contract" |
+| (root) | object | yes |  | Flat material references in an existing skill registry. No execution or authority is implied. |  | x-agentic-workspace-contract-version: "agentic-workspace/executable-affordance/v1"<br>x-agentic-workspace-doc-role: "public-contract" |
 | `entrypoint` |  | yes |  | Existing file helper or packaged native command; a reference is never an execution grant. |  |  |
 | `dependencies` | array of string | no |  | Exact repository-relative material files, excluding optional examples and incidental directory contents. |  |  |

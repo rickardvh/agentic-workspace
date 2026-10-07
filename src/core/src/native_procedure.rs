@@ -95,8 +95,15 @@ pub(crate) fn detail(
             .position(|line| *line == "```")
             .map(|i| start + i)
             .ok_or_else(|| error("procedure fence is not closed"))?;
-        let question: Question =
-            serde_json::from_str(&lines[start..end].join("\n")).map_err(error)?;
+        let value: Value = serde_json::from_str(&lines[start..end].join("\n")).map_err(error)?;
+        let schema: Value = serde_json::from_slice(include_bytes!(
+            "../contracts/schemas/procedure_resource.schema.json"
+        ))
+        .expect("checked procedure resource schema");
+        crate::schema_validator(&schema, "procedure resource")?
+            .validate(&value)
+            .map_err(error)?;
+        let question: Question = serde_json::from_value(value).map_err(error)?;
         if let Some(activation) = &question.activation {
             crate::native_activation::validate(activation)?;
         }

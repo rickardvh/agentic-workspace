@@ -30,7 +30,8 @@ Human configuration. Unknown fields are rejected; absence uses owner defaults.
 | `clarification` | object | no |  | Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope. |  |  |
 | `clarification.mode` | enum `"ask-first"`, `"suggest"`, `"auto-continue"` | no | `"suggest"` | Local control mode for clarification: stop and ask before proceeding when intent is unclear, surface the ask-human option without forcing it, or continue with the best bounded interpretation unless a hard blocker is present. |  |  |
 | `session_logging` | object | no |  | Machine-local session logging and path-normalisation preferences. |  |  |
-| `session_logging.enabled` | boolean | no |  | Whether this checkout should keep ignored local AW command session logs. |  |  |
+| `session_logging.enabled` | boolean | no |  | Whether this checkout should keep ignored local AW diagnostic inputs and outputs. Disabled by default. |  |  |
+| `session_logging.detail` | enum `"full"`, `"metadata"` | no | `"full"` | Full retains delivered native requests, stdout/stderr and configuration provenance in local artifacts; metadata explicitly omits bodies. Applies once configured, without command flags. |  |  |
 | `session_logging.path_mode` | enum `"absolute"`, `"repo-relative"`, `"redacted"` | no | `"absolute"` | Canonical setting for how local filesystem paths should be represented in session log markdown, indexes, and summaries. |  |  |
 | `delegation_targets` | object | no |  | Named local delegation targets available to this runtime. |  |  |
 | `delegation_targets.<^.+$>` | object | no |  | One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates. |  |  |
