@@ -6,67 +6,47 @@
 
 **Persistent, task-relevant project context for coding agents.**
 
-Agentic Workspace (AW) is an open-source developer tool you add to a Git repository to help coding agents carry useful project context across sessions.
+Agentic Workspace (AW) is an open-source developer tool you add to a Git repository to give coding agents persistent, task-relevant project context across sessions.
 
-It helps agents continue unfinished work, find applicable repository guidance, reuse procedures and lessons, and understand relevant verification state without loading everything into every task. The repository can use any programming language or framework.
+AW provides skills and command-line tools for finding project guidance, saving unfinished work and lessons, and checking whether earlier verification still applies.
 
-Keep your existing agent, editor, source tree, tests, and review process. AW adds a small repository-owned layer around them.
+Keep your existing coding agent, editor, source tree, tests and review process. Your project can use any programming language or framework.
 
-[Customise repository behaviour](https://github.com/rickardvh/agentic-workspace/blob/master/docs/customization.md) · [Get started](https://github.com/rickardvh/agentic-workspace#get-started) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md) · [Releases](https://github.com/rickardvh/agentic-workspace/releases)
+[Get started](https://github.com/rickardvh/agentic-workspace#get-started) · [Customise repository behaviour](https://github.com/rickardvh/agentic-workspace/blob/master/docs/customization.md) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md) · [Releases](https://github.com/rickardvh/agentic-workspace/releases)
 
 ## Why AW?
 
-Two ideas underpin AW:
+**Knowledge about a repository belongs with the repository.** Useful project knowledge should survive a change of session, developer or agent provider, rather than remain trapped in private conversations.
 
-**Knowledge about a repository belongs with the repository.** Useful project knowledge should not disappear with one agent conversation, machine or provider.
+**Not everything about a repository is relevant all the time.** Loading all accumulated guidance and state into every session replaces rediscovery with context overload.
 
-**Not everything about a repository is relevant all the time.** Loading all accumulated guidance and state into every session simply replaces rediscovery with context overload.
+Scoped instructions and on-demand skills are useful foundations. Instructions set rules; skills explain reusable procedures. Neither an ever-longer instruction file nor a growing skill catalogue, by itself, keeps track of where a task stopped or whether earlier evidence still applies.
 
-Repository instructions are a good home for durable rules, but continually adding every useful fact makes every agent consume an ever-growing body of guidance. Repository skills are a good home for reusable procedures, but not for changing work state, contingent lessons or verification evidence.
+AW builds on both with saved task records, lessons and verification evidence, plus tools for reading and updating them. The aim is to reduce the cost of completing and maintaining work:
 
-AW keeps those concerns separate, preserves the context that can change future work, and makes the relevant part cheap to reach:
-
-| Need | What AW provides |
+| Team benefit | How AW helps |
 | --- | --- |
-| Find the right guidance | Task-relevant instructions, source references, and reusable skills. |
-| Continue interrupted work | Retained outcomes, constraints, accepted progress, blockers, and next actions. |
-| Know what to verify | Relevant checking procedures, recorded evidence, and visible gaps. |
-| Hand work to another agent | Clearly limited assignments with the context, constraints, and expected result spelled out. |
-| Avoid repeated rediscovery | Useful lessons and corrections saved where later work will actually use them. |
-
-The result should be less repeated investigation, fewer explanations from maintainers, cheaper handoffs, less unnecessary checking and fewer avoidable repair loops—not a larger prompt or another workflow to manage.
+| Less repeated investigation | Find relevant rules, sources and reusable procedures without loading unrelated guidance. |
+| Cheaper continuation and handoffs | Preserve intent, accepted progress and remaining work; give the receiving agent the relevant constraints and expected result. |
+| Fewer repeated explanations | Save project corrections as scoped instructions and useful lessons as advice for later work. |
+| More focused verification | Find relevant checking procedures, reuse evidence when it still applies and identify what remains unverified. |
+| Less dependence on one agent provider | Keep shared project context in the repository rather than one provider's conversation history. |
 
 **Small tasks stay small.** A typo fix does not need Planning, Memory, Verification, delegation, or another artefact merely because those capabilities are available.
 
-## What using it looks like
-
-AW can help an agent find relevant project guidance and preserve useful working
-context between sessions. The agent still reads the source, reasons about the
-design and implements changes with its ordinary tools.
-
-For work that spans sessions, Planning can preserve the intended outcome, accepted progress, unresolved questions, and next action. A later session can recover that state instead of reconstructing the previous conversation.
-
-The same principle applies to lessons, verification and handoffs: preserve what will materially help later work, while checking that retained information still applies. Changed assumptions and missing evidence still need checking; an earlier successful result does not automatically apply to changed code.
-
-[See everyday examples →](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md)
-
 ## How it works
 
-**Skills teach procedure. Repository instructions and configuration set policy. The relevant AW components keep their own current state and evidence. Tools provide current information and controlled operations. The agent supplies judgement.**
+A small entry in `AGENTS.md` points to the repository's `workspace-startup` skill. It teaches the agent when to read project sources, load a specialised procedure or query AW's tools.
 
-A small repository entry point leads the agent to the repository's `workspace-startup` skill. That skill explains how to reach relevant sources, ask the runtime for current facts when they matter, and load specialised procedures only when useful.
-
-The underlying model is deliberately small:
+The Rust-backed runtime reads applicable rules and saved records, reports relevant requirements and available operations, and checks current sources and permissions before supported updates. The agent still makes implementation decisions and uses its ordinary development tools.
 
 ```text
 Find the relevant context → Do the work → Update what matters
 ```
 
-Internally, AW works out which rules and saved facts apply, shows the actions that are currently available, and records relevant results afterward. The user does not have to operate a separate phase machine around every task.
+Source code, documentation, tests and decisions stay in their existing homes. AW points agents to those sources and saves useful working context alongside them, rather than copying the repository or the conversation into a second knowledge system.
 
-Source code, documentation, tests, decisions, and other project material remain in their existing homes. AW points agents to those sources rather than copying the repository into a second knowledge system.
-
-[Product model](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/overview.md) · [Architecture](https://github.com/rickardvh/agentic-workspace/blob/master/docs/architecture.md)
+[Everyday examples](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Product model](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/overview.md) · [Architecture](https://github.com/rickardvh/agentic-workspace/blob/master/docs/architecture.md)
 
 ## Trust and support
 
@@ -80,14 +60,13 @@ Exact package identities, installation commands, runtime versions, operating-sys
 
 ## Get started
 
-1. Install AW using any supported distribution, either as a dev dependency in your repo (recommended) or as a globally accessible tool on your computer. See
-   [Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md).
-2. From your repo root, run `agentic-workspace setup` using that installation and
-   authorise the proposed integration.
+Use a **Git working tree** and an agent that can read repository instructions and run commands. The machine must be able to run a supported AW distribution; your project's language and build system need not match it.
+
+1. Install AW through npm, Python/uv, Cargo or a standalone release, either per repository or as a shared tool. Standalone binaries do not require a language toolchain. See the [Getting started guide](https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md) for platform requirements and installation commands.
+2. From the Git working-tree root, run `agentic-workspace setup` using that installation and authorise the proposed integration. For a repository-local npm installation, use `npm exec --no -- agentic-workspace setup`.
 3. Give your agent an ordinary task, such as correcting a documentation error.
 
-Installation supplies the runtime; setup adds the `.agentic-workspace/` directory and an `AGENTS.md`
-pointer. Your agent follows that pointer during ordinary work.
+Installation supplies the runtime; setup adds the `.agentic-workspace/` directory and a small `AGENTS.md` pointer. Review and commit the shared integration files, leaving ignored local state alone. Project rules and checking procedures still need to be defined; setup does not infer them.
 
 ## Your repository, your rules
 
