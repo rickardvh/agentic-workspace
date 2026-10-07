@@ -1316,10 +1316,30 @@ def test_internal_finding_has_current_dependencies_without_retention(tmp_path, s
     }
     current = consume("native", shared_core_binary, native_cli, {**context, "material": [finding]})
     assert current["current_work"] == quiet["current_work"]
-    assert current["decision_packet"] == quiet["decision_packet"]
+    # Findings now offer optional Memory consideration, which changes packet
+    # identity and owner inventory without granting an action or claim.
+    for field in (
+        "status",
+        "primary_action",
+        "ready_actions",
+        "decision_request",
+        "blockers",
+        "pending_consequences",
+        "claim_boundary",
+        "terminal_authority",
+    ):
+        assert current["decision_packet"][field] == quiet["decision_packet"][field]
+    candidates = current["memory"]["candidates"]
+    assert candidates["selected"] == []
+    consider = [request for request in candidates["requests"] if request["arguments"]["operation"] == "consider"]
+    assert len(consider) == 1
+    assert consider[0]["arguments"]["material_revision"] == current["material"]["items"][0]["revision"]
     assert current["material"]["items"][0]["currentness"] == "dependencies-current"
     assert current["material"]["items"][0]["trust"] == "caller-asserted"
-    assert "material" not in consume("native", shared_core_binary, native_cli, context)
+    again = consume("native", shared_core_binary, native_cli, context)
+    assert "material" not in again
+    assert again["decision_packet"] == quiet["decision_packet"]
+    assert "candidates" not in again["memory"]
     noise = {**finding, "summary": "A local variable name could be prettier."}
     assert consume("native", shared_core_binary, native_cli, {**context, "material": [noise]})["current_work"] == quiet["current_work"]
     assert list(tmp_path.iterdir()) == [source]
