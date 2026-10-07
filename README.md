@@ -4,21 +4,27 @@
 [![npm](https://img.shields.io/npm/v/%40agentic-workspace%2Fworkspace-cli)](https://www.npmjs.com/package/@agentic-workspace/workspace-cli)
 [![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/crates/agentic-workspace-cli)
 
-**Persistent project context and practical guidance for coding agents.**
+**Persistent, task-relevant project context for coding agents.**
 
-Agentic Workspace (AW) helps coding agents enter a repository with the right guidance, continue unfinished work across sessions, and preserve useful lessons without turning every task into a workflow.
+Agentic Workspace (AW) is an open-source developer tool you add to a Git repository to help coding agents carry useful project context across sessions.
 
-It builds on repository instructions and skills with saved project context and a small Rust-backed toolset for current information and controlled changes. Keep your existing agent, editor, source tree, tests, and review process; AW helps the agent reach the information that matters for the task at hand.
+It helps agents continue unfinished work, find applicable repository guidance, reuse procedures and lessons, and understand relevant verification state without loading everything into every task. The repository can use any programming language or framework.
+
+Keep your existing agent, editor, source tree, tests, and review process. AW adds a small repository-owned layer around them.
 
 [Customise repository behaviour](https://github.com/rickardvh/agentic-workspace/blob/master/docs/customization.md) · [Get started](https://github.com/rickardvh/agentic-workspace#get-started) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md) · [Releases](https://github.com/rickardvh/agentic-workspace/releases)
 
 ## Why AW?
 
-A repository instruction file can explain how to work in a project. By itself, it cannot tell a new session where a multi-step task stopped, which retained lesson is relevant now, whether earlier verification still supports a claim, or which deeper procedure is worth loading for this change.
+Two ideas underpin AW:
 
-As work spans sessions and agents, that context has to come from somewhere. Without a deliberate home, it tends to disappear into chat, duplicate into prose, or be reconstructed from source, issues, and history.
+**Knowledge about a repository belongs with the repository.** Useful project knowledge should not disappear with one agent conversation, machine or provider.
 
-AW keeps only the project context that can change how an agent should work, then makes the relevant part cheap to reach:
+**Not everything about a repository is relevant all the time.** Loading all accumulated guidance and state into every session simply replaces rediscovery with context overload.
+
+Repository instructions are a good home for durable rules, but continually adding every useful fact makes every agent consume an ever-growing body of guidance. Repository skills are a good home for reusable procedures, but not for changing work state, contingent lessons or verification evidence.
+
+AW keeps those concerns separate, preserves the context that can change future work, and makes the relevant part cheap to reach:
 
 | Need | What AW provides |
 | --- | --- |
@@ -28,33 +34,19 @@ AW keeps only the project context that can change how an agent should work, then
 | Hand work to another agent | Clearly limited assignments with the context, constraints, and expected result spelled out. |
 | Avoid repeated rediscovery | Useful lessons and corrections saved where later work will actually use them. |
 
-The goal is less repeated explanation, searching, handoff reconstruction, and repair—not a larger prompt or a new workflow to manage.
+The result should be less repeated investigation, fewer explanations from maintainers, cheaper handoffs, less unnecessary checking and fewer avoidable repair loops—not a larger prompt or another workflow to manage.
 
 **Small tasks stay small.** A typo fix does not need Planning, Memory, Verification, delegation, or another artefact merely because those capabilities are available.
 
 ## What using it looks like
 
-AW can help an agent find relevant project guidance and preserve unfinished work
-between sessions. The agent still reads the source, reasons about the design and
-implements changes with its ordinary tools.
+AW can help an agent find relevant project guidance and preserve useful working
+context between sessions. The agent still reads the source, reasons about the
+design and implements changes with its ordinary tools.
 
-For example, imagine an API change that spans two sessions in a repository with
-API guidance and verification procedures configured:
+For work that spans sessions, Planning can preserve the intended outcome, accepted progress, unresolved questions, and next action. A later session can recover that state instead of reconstructing the previous conversation.
 
-> Add pagination to the users API without breaking existing clients.
-
-The agent can use AW to find the relevant contract, load a useful implementation
-procedure and identify the checks expected for this change.
-
-If work stops partway through, Planning can preserve the intended outcome, accepted progress, unresolved questions, and next action.
-
-In a later session:
-
-> Continue the pagination work.
-
-The next agent can recover what remains to do rather than reconstructing the previous conversation. Changed assumptions and missing evidence still need checking; an earlier successful result does not automatically apply to changed code.
-
-The same principle applies to a handoff: preserve enough for the receiving agent to do the assigned work without copying the entire parent session. Returned work still needs appropriate integration and verification.
+The same principle applies to lessons, verification and handoffs: preserve what will materially help later work, while checking that retained information still applies. Changed assumptions and missing evidence still need checking; an earlier successful result does not automatically apply to changed code.
 
 [See everyday examples →](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md)
 
