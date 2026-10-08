@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -268,6 +269,26 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     config.write_text(text.replace(grant, "") if delegated else text.replace("[assurance]\n", "[assurance]\n" + grant))
     assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 1
+
+    # A receiving checkout needs its own judgment without erasing imported
+    # immutable history or transferring the former checkout's publication grant.
+    relocated = tmp_path.with_name(tmp_path.name + "-relocated")
+    shutil.copytree(tmp_path, relocated)
+    history = {path.relative_to(tmp_path): path.read_bytes() for path in receipts if path.exists()}
+
+    def receiving_call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, "target": str(relocated), **(extra or {})})
+
+    pending = receiving_call()["verification"]["source_reconciliation"]
+    assert pending["status"] == "judgment-material-required"
+    assert pending["coverage"]["accepted"] == 0
+    with pytest.raises(AssertionError):
+        receiving_call({"invocation": action})
+    fresh = receiving_call({"request": answer_for(receiving_call)})["decision_packet"]["primary_action"]
+    assert receiving_call({"invocation": fresh})["status"] == "applied"
+    assert receiving_call()["verification"]["source_reconciliation"]["status"] == "current"
+    for path, original in history.items():
+        assert (relocated / path).read_bytes() == original
 
 
 @pytest.mark.parametrize("stage", ["receipt", "temporary", "superseded"])

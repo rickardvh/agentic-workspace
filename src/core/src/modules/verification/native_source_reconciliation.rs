@@ -237,9 +237,9 @@ fn portable_record(mut record: Value) -> Result<Value, CoreError> {
     record["target_revisions"] = json!(targets);
     Ok(record)
 }
-fn restore_record(target: &Path, mut record: Value) -> Result<Value, CoreError> {
+fn restore_record(target: &Path, mut record: Value) -> Result<Option<Value>, CoreError> {
     let Some(expected) = record.get("target_revisions").cloned() else {
-        return Ok(record);
+        return Ok(Some(record));
     };
     let canonical = std::fs::canonicalize(target).map_err(err)?;
     let candidates = [json!(target), json!(canonical)];
@@ -247,13 +247,40 @@ fn restore_record(target: &Path, mut record: Value) -> Result<Value, CoreError> 
         if record.pointer(field) != Some(&json!(".")) {
             return Err(err("reconciliation relative target invalid"));
         }
+    }
+    let revisions = candidates
+        .iter()
+        .map(digest)
+        .collect::<Result<Vec<_>, _>>()?;
+    if !TARGET_FIELDS.iter().all(|field| {
+        expected[field]
+            .as_str()
+            .is_some_and(|v| revisions.iter().any(|r| r == v))
+    }) {
+        let foreign = expected[TARGET_FIELDS[0]].as_str().filter(|value| {
+            value.strip_prefix("sha256:").is_some_and(|hash| {
+                hash.len() == 64 && hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
+        });
+        if foreign.is_some()
+            && TARGET_FIELDS
+                .iter()
+                .all(|field| expected[field].as_str() == foreign)
+        {
+            // Imported history grants neither current evidence nor local custody.
+            // Preserve it while the existing owner obtains a fresh judgment.
+            return Ok(None);
+        }
+        return Err(err("reconciliation custody belongs to a different target"));
+    }
+    for field in TARGET_FIELDS {
         let restored = candidates
             .iter()
             .find(|value| digest(value).ok().as_deref() == expected[field].as_str())
             .ok_or_else(|| err("reconciliation custody belongs to a different target"))?;
         *record.pointer_mut(field).unwrap() = restored.clone();
     }
-    Ok(record)
+    Ok(Some(record))
 }
 
 fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>, CoreError> {
@@ -266,7 +293,9 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
     let Some(bytes) = published.as_ref().or(temporary.as_ref()) else {
         return Ok(None);
     };
-    let record = restore_record(target, serde_json::from_slice(bytes).map_err(err)?)?;
+    let Some(record) = restore_record(target, serde_json::from_slice(bytes).map_err(err)?)? else {
+        return Ok(None);
+    };
     let invocation = &record["invocation"];
     if invocation["operation_id"] != OP
         || invocation["source_owner"] != "verification"
@@ -500,6 +529,10 @@ fn relation_view(
     // well as current sources. No old receipt can survive an implementation
     // change merely because its repository dependencies stayed unchanged.
     let mut binding = binding;
+    // A fresh checkout must publish beside imported immutable receipts, rather
+    // than collide with the same semantic assessment's former destination.
+    binding["publication_target_revision"] =
+        json!(digest(&json!(std::fs::canonicalize(target).map_err(err)?))?);
     static PRODUCER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         digest(&json!([
             include_str!("native_source_reconciliation.rs"),
@@ -603,8 +636,11 @@ fn group_plan(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<
             .ok_or_else(|| err("current reconciliation receipt unavailable"))?;
         let record: Value = serde_json::from_slice(&bytes).map_err(err)?;
         let old = &record["invocation"]["arguments"]["binding"];
-        let held = retained(target, &old_path, old)?
-            .ok_or_else(|| err("current reconciliation custody unavailable"))?;
+        let Some(held) = retained(target, &old_path, old)? else {
+            // Only the operational projection is replaced. Foreign history is
+            // not an authenticated retirement candidate in this checkout.
+            continue;
+        };
         let group = old["work_postimages"]
             .as_object()
             .ok_or_else(|| err("invalid current group"))?;
