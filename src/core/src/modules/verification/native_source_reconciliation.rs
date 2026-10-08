@@ -312,10 +312,28 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
             "source reconciliation basis differs from the exact answer",
         ));
     }
-    let attempt = crate::attempt_store::read_source(
-        target.to_str().unwrap(),
-        &serde_json::from_value(record["custody"]["attempt"].clone()).map_err(err)?,
-    )?;
+    let attempt_ref: crate::attempt_store::Evidence =
+        serde_json::from_value(record["custody"]["attempt"].clone()).map_err(err)?;
+    let committed_ref: crate::attempt_store::Evidence =
+        serde_json::from_value(record["custody"]["committed"].clone()).map_err(err)?;
+    let expected_paths = crate::attempt_store::write_paths(invocation)?;
+    if attempt_ref.path != expected_paths[0]
+        || committed_ref.path != expected_paths[1]
+        || attempt_ref.owner != "verification"
+        || committed_ref.owner != "verification"
+    {
+        return Err(err("source reconciliation publication custody differs"));
+    }
+    if published.is_some()
+        && temporary.is_none()
+        && !crate::attempt_store::source_present(target.to_str().unwrap(), &attempt_ref)?
+        && !crate::attempt_store::source_present(target.to_str().unwrap(), &committed_ref)?
+    {
+        // A pathname can be reused by a fresh checkout. Without either exact
+        // local carrier, this checked-in receipt supplies no publication custody.
+        return Ok(None);
+    }
+    let attempt = crate::attempt_store::read_source(target.to_str().unwrap(), &attempt_ref)?;
     if attempt["invocation"] != *invocation {
         return Err(err(
             "source reconciliation publication has different producer custody",
@@ -846,6 +864,37 @@ fn same_basis(current: &Value, accepted: &Value) -> Result<bool, CoreError> {
         == Currentness::Current)
 }
 
+fn publication_path(target: &Path, binding: &Value) -> Result<String, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let mut identity = digest(binding)?;
+    for _ in 0..32 {
+        let path = format!(
+            ".agentic-workspace/proof/receipts/source-reconciliation-{}.json",
+            &identity[7..]
+        );
+        let published = native_planning::read(&root, &path)?;
+        if published.is_none() {
+            return Ok(path);
+        }
+        match retained(target, &path, binding) {
+            Ok(None) => (),
+            // Keep existing recovery and malformed-carrier handling in group_view.
+            Ok(Some(_)) | Err(_) => return Ok(path),
+        }
+        // Fresh exact authorization publishes beside imported immutable history.
+        // Binding the occupied bytes makes destination changes stale the action;
+        // no checkout registry or inferred deletion authority is needed.
+        identity = digest(&json!([
+            binding,
+            path,
+            crate::native_intent::hash(&published.unwrap())
+        ]))?;
+    }
+    Err(err(
+        "source reconciliation publication collision limit reached",
+    ))
+}
+
 fn group_view(
     inputs: Inputs<'_>,
     request: Option<&Value>,
@@ -867,10 +916,7 @@ fn group_view(
     let revision = digest(&binding)?;
     let source_revision = digest(&json!([revision, membership]))?;
     view["source_revision"] = json!(source_revision);
-    let path = format!(
-        ".agentic-workspace/proof/receipts/source-reconciliation-{}.json",
-        &revision[7..]
-    );
+    let path = publication_path(target, &binding)?;
     let issued = json!({"kind":"agentic-workspace/public-request/v1","owner":"verification","id":REQUEST,"request_kind":REQUEST,
         "owner_revision":contract["owners"].as_array().unwrap().iter().find(|o|o["owner"]=="verification").unwrap()["revision"],
         "source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,

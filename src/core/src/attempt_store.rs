@@ -118,6 +118,23 @@ fn confined(root: &Root, relative: &str, create_parents: bool) -> Result<PathBuf
     Ok(current)
 }
 
+/// Read-only presence through the store's target and confinement checks.
+/// Presence supplies no custody; the source owner decides what absence means.
+pub(crate) fn source_present(target: &str, reference: &Evidence) -> Result<bool, CoreError> {
+    let root = root(target)?;
+    if root.path != fs::canonicalize(&reference.target).map_err(error)? {
+        return Err(error("source custody belongs to a different target"));
+    }
+    match root
+        .dir
+        .symlink_metadata(checked(&root, &reference.path, false)?)
+    {
+        Ok(_) => Ok(true),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(error(e)),
+    }
+}
+
 /// The trusted source owner supplies this exact evidence; a caller-computed
 /// checksum or recognizable path is not admission of source authority.
 pub(crate) fn read_source(target: &str, reference: &Evidence) -> Result<Value, CoreError> {
