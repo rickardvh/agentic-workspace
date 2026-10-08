@@ -1,129 +1,70 @@
 # Scoped repository instructions
 
-Use an instruction for a repository rule. Use a skill for a reusable method.
+Ask the agent to save a repository rule and show where it applies. The installed,
+on-demand [instruction-authoring method](../../.agentic-workspace/skills/workspace-instruction-authoring/SKILL.md)
+helps it choose the smallest suitable rule, preview the Markdown, publish through
+AW's current write checks and inspect the result. An explicit authoring request
+needs no correction event.
 
-Shared instructions live under `.agentic-workspace/instructions/`. Machine-local
-instructions live under `.agentic-workspace/local/instructions/` and should stay
-out of version control.
+Use an instruction for a persistent rule and a [skill](skill-authoring.md) for a
+reusable method. A one-off request needs no saved instruction. Revise an adequate
+existing rule in place instead of adding a competing copy.
 
-## Choose where the rule applies
+## Choose scope and lifetime separately
 
-A plain Markdown file applies repository-wide. Front matter can limit it to
-matching repository-relative paths:
+Plain Markdown applies repository-wide: use it only for deliberately global
+guidance. Front matter can limit a rule to matching repository-relative `paths`,
+optionally combined with currently selected semantic `routes`. Both conditions
+must hold when both are present. Unresolved route selection is not a proven
+non-match.
 
-```markdown
----
-paths: [src/api/**]
-read: [docs/api-contract.md]
----
+Shared rules are direct `.md` files under `.agentic-workspace/instructions/`.
+Machine-local rules are direct `.md` files under
+`.agentic-workspace/local/instructions/`, untracked and ignored by Git. Local
+lifetime does not override a shared rule or grant extra permission.
 
-Preserve existing public response fields unless the accepted API change says
-otherwise.
-```
+## Source reconciliation
 
-The common fields are:
+For example, ask:
 
-| Field | Meaning |
-| --- | --- |
-| `paths` | Apply the instruction only to matching repository paths |
-| `read` | Supply named files as context |
-| `governed_by` | Say that another source defines the rule this instruction implements |
-| `reconcile` | Require the named files to be checked for consistency |
-| `use` | Prefer an existing skill when the task matches |
-| `checks` | Require evidence through Verification; `- run: ...` names a command |
-| `protect` | Restrict writes to matching paths |
+> For API adapter work, treat our existing API contract as the governing
+> specification; leave unrelated work alone. Save this as a shared rule.
 
-The [generated instruction reference](../reference/instruction-clause-program.md)
-defines exact field formats and limits.
-
-A local instruction has local lifetime only. It does not override a shared rule or
-grant extra permission.
-
-## Create or change an instruction
-
-Ask the agent for the rule you want and the scope where it should apply. The agent
-should show the proposed Markdown before writing it.
-
-When driving the native API directly:
-
-1. call `start` for the real repository, task and changed paths;
-2. use the exact returned `instructions/edit-source/v1` request;
-3. set only the source path and complete Markdown content the request asks for;
-4. submit the returned request through `start`;
-5. if AW returns an allowed action, pass that exact action to `invoke`;
-6. call `start` again if the next step depends on the changed instruction.
-
-Do not invent write-capable request fields from examples. A returned request or
-successful read does not itself permit a write.
-
-If an interrupted write may already have happened, use AW's returned recovery
-information before trying it again.
-
-## Require a check only when the repository really uses it
-
-Example:
-
-```markdown
----
-paths: [src/receipt.py]
-checks:
-  - run: python -B -m unittest discover -s tests -p test_receipt.py
----
-
-Verify the public receipt format.
-```
-
-Do not copy this command into a repository with a different test setup.
-
-A successful process exit is evidence only for the check that actually ran.
-Verification records whether that evidence satisfies the repository requirement.
-
-## Protect files deliberately
-
-A rule such as:
-
-```markdown
----
-protect: [generated/**]
----
-
-Do not edit generated files directly.
-```
-
-restricts writes to those paths. It does not grant permission elsewhere.
-
-If a requested check cannot run without violating an active protection, keep the
-conflict visible and use the repository's supported check or update path. Do not
-weaken the rule merely to make an example pass.
-
-## Keep consumers consistent with a source document
-
-Use `governed_by` when a named document defines behaviour that other files must
-follow:
+Assuming these paths exist in your repository, the instruction can be small:
 
 ```markdown
 ---
 paths: [src/adapters/**]
-governed_by: [spec/wire-format.md]
+governed_by: [docs/api-contract.md]
 ---
 
-Keep adapters consistent with the wire format.
+Keep API adapters consistent with the existing API contract.
 ```
 
-When the specification changes, Verification can identify the affected adapter
-group and ask for a judgement such as `updated` or `reviewed-current`.
+`governed_by` supplies the contract and requires a current Verification judgement
+of the affected adapters. When the contract changes, inspect the returned groups
+until every current consumer is covered. An adapter that is still correct needs
+no artificial edit. `read` alone supplies context without that obligation.
 
-A file that is still correct needs no artificial edit. If the specification
-really changes behaviour, update the affected consumers through their normal
-project workflow and then record the new result.
+Inspect matching and unrelated work after publication. The matching work should
+receive the rule and its applicable requirements; unrelated work should not.
+A successful write does not prove consistency, run a declared check or show that
+an agent followed the rule.
 
-Large consumer sets may be checked in groups. Completion requires every current
-consumer to be accounted for, not a sample.
+## Look up syntax and maintain the rule
 
-## Keep instructions simple
+The installed [Markdown reference](../../.agentic-workspace/skills/workspace-instruction-authoring/references/format.md)
+defines all eight supported fields: `paths`, `routes`, `read`, `governed_by`,
+`reconcile`, `use`, `checks` and `protect`. It explains their combinations, exact
+list/check forms and limits. This is constrained front matter, not arbitrary YAML.
+Add only the consequences the requested rule needs; name the repository's actual
+checks and governing sources.
 
-Do not turn instruction front matter into a second programming language. Use only
-the supported fields, keep paths repository-relative, and prefer a short rule plus
-a link to the real source over copied policy.
+Follow the installed [publication procedure](../../.agentic-workspace/skills/workspace-instruction-authoring/references/publish.md)
+for exact authorisation, revision and interrupted-write recovery. Publication is
+not a Git commit. Shared rules can travel through normal version control; local
+publication records do not transfer trust to another checkout.
 
-For reusable methods, see [Author a repository skill](skill-authoring.md).
+The current operation supports creation and revision, not general deletion or
+renaming. An unadmitted removal does not erase admitted governance. Removing or
+refreshing AW's package support preserves custom instruction files.

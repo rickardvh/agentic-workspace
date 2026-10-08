@@ -200,7 +200,10 @@ def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
     assert baseline[writing] == (tmp_path / body_ref).read_text(encoding="utf-8")
     (tmp_path / body_ref).write_text("Changed portable writing contract", encoding="utf-8")
     writing_changed = generator.render_host_payload(tmp_path)
-    assert {key for key in baseline if baseline[key] != writing_changed[key]} == {writing}
+    assert {key for key in baseline if baseline[key] != writing_changed[key]} == {
+        writing,
+        ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md",
+    }
     (tmp_path / body_ref).write_text(baseline[writing], encoding="utf-8")
     portable_ref = next(row["materialization"]["source"] for row in contract["surfaces"] if row["path"] == LEDGER)
     portable = tmp_path / portable_ref

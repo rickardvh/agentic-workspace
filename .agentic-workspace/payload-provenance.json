@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:165ad6e365f6a5d26dbc4642b893e5a60818101fbc6e116aab685340d2e2a8d6",
+  "managed_revision": "sha256:4a72602ccf6b015d00d4f0904e916a8478595d2e52f48cba6053b033a4e1144d",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -89,7 +89,12 @@
     ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
     ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md",
     ".agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json",
-    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json"
+    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json",
+    ".agentic-workspace/skills/workspace-instruction-authoring/SKILL.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/procedure.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md"
   ],
   "payload_schema": "agentic-workspace/payload/v1",
   "release_identity": {

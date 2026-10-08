@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -268,6 +269,79 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     config.write_text(text.replace(grant, "") if delegated else text.replace("[assurance]\n", "[assurance]\n" + grant))
     assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 1
+
+    # A receiving checkout needs its own judgment without erasing imported
+    # immutable history or transferring the former checkout's publication grant.
+    relocated = tmp_path.with_name(tmp_path.name + "-relocated")
+    shutil.copytree(tmp_path, relocated)
+    history = {path.relative_to(tmp_path): path.read_bytes() for path in receipts if path.exists()}
+
+    def receiving_call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, "target": str(relocated), **(extra or {})})
+
+    pending = receiving_call()["verification"]["source_reconciliation"]
+    assert pending["status"] == "judgment-material-required"
+    assert pending["coverage"]["accepted"] == 0
+    with pytest.raises(AssertionError):
+        receiving_call({"invocation": action})
+    fresh = receiving_call({"request": answer_for(receiving_call)})["decision_packet"]["primary_action"]
+    assert receiving_call({"invocation": fresh})["status"] == "applied"
+    assert receiving_call()["verification"]["source_reconciliation"]["status"] == "current"
+    for path, original in history.items():
+        assert (relocated / path).read_bytes() == original
+
+    # A fresh checkout may reuse exactly the same canonical pathname. Git keeps
+    # the published source/projection/receipts, but not ignored local custody.
+    receiving_receipts = sorted((relocated / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json"))
+    imported = {path: path.read_bytes() for path in receiving_receipts}
+    source_before = (relocated / "src/feature.txt").read_bytes()
+    projection = next((relocated / ".agentic-workspace/proof/current").glob("source-reconciliation-*.json"))
+    projection_before = projection.read_bytes()
+    current_receipt = json.loads((relocated / fresh["arguments"]["receipt_ref"]).read_bytes())
+    attempt_path = relocated / current_receipt["custody"]["attempt"]["path"]
+    attempt_bytes = attempt_path.read_bytes()
+    attempt_path.unlink()
+    with pytest.raises(AssertionError):  # A remaining local result is uncertain custody, not an import.
+        receiving_call()
+    attempt_path.write_bytes(attempt_bytes)
+    subprocess.run(
+        ["git", "-C", str(relocated), "add", "src", ".agentic-workspace/config.toml", ".agentic-workspace/proof"],
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(relocated),
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "shared assessment",
+        ],
+        check=True,
+        capture_output=True,
+    )
+    prior_checkout = relocated.with_name(relocated.name + "-prior")
+    relocated.rename(prior_checkout)
+    subprocess.run(["git", "clone", "-q", "--no-hardlinks", str(prior_checkout), str(relocated)], check=True, capture_output=True)
+    assert not (relocated / ".agentic-workspace/local").exists()
+    same_path = receiving_call()["verification"]["source_reconciliation"]
+    assert same_path["status"] == "judgment-material-required"
+    assert same_path["coverage"]["accepted"] == 0
+    assert projection.read_bytes() == projection_before
+    with pytest.raises(AssertionError):
+        receiving_call({"invocation": fresh})
+    replacement = receiving_call({"request": answer_for(receiving_call)})["decision_packet"]["primary_action"]
+    assert replacement["arguments"]["receipt_ref"] != fresh["arguments"]["receipt_ref"]
+    assert receiving_call({"invocation": replacement})["status"] == "applied"
+    assert receiving_call()["verification"]["source_reconciliation"]["status"] == "current"
+    assert (relocated / "src/feature.txt").read_bytes() == source_before
+    for path, original in imported.items():
+        assert path.read_bytes() == original
 
 
 @pytest.mark.parametrize("stage", ["receipt", "temporary", "superseded"])

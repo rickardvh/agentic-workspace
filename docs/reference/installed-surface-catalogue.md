@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:a0a20249462d89521e10bf5d177d1f117b9336cc70976dd7823c1925d856287d`
+- Contract digest: `sha256:16d270011f667c848963d3d8ef23795fe5907bd2b5de148106da7265aae597ad`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -93,6 +93,11 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-skill-authoring/references/writing.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
 | `.agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
 | `.agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-instruction-authoring/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand instruction authoring procedure or public Markdown reference |
+| `.agentic-workspace/skills/workspace-instruction-authoring/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand instruction authoring procedure or public Markdown reference |
+| `.agentic-workspace/skills/workspace-instruction-authoring/references/format.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand instruction authoring procedure or public Markdown reference |
+| `.agentic-workspace/skills/workspace-instruction-authoring/references/publish.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand instruction authoring procedure or public Markdown reference |
+| `.agentic-workspace/skills/workspace-instruction-authoring/references/writing.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden.
 
@@ -182,6 +187,10 @@ Portable source promotions:
 - `src/tooling/contracts/agent_facing_writing.md`
 - `src/core/contracts/schemas/procedure_resource.schema.json`
 - `src/core/contracts/schemas/executable_affordance.schema.json`
+- `.agentic-workspace/skills/workspace-instruction-authoring/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-authoring/procedure.md`
+- `.agentic-workspace/skills/workspace-instruction-authoring/references/format.md`
+- `.agentic-workspace/skills/workspace-instruction-authoring/references/publish.md`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 

@@ -331,6 +331,7 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheel:
     assert _venv_site_package_entry_names(tmp_path / ".venv", "command_generation") == []
     _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=workspace_exe, tmp_path=tmp_path)
     _assert_installed_procedure_bundle(workspace_exe, tmp_path / "procedure-consumer")
+    _assert_installed_instruction_authoring(workspace_exe, tmp_path / "instruction-consumer")
 
 
 def test_installed_delegation_choice_and_repository_replacement(workspace_wheel: Path, tmp_path: Path) -> None:
@@ -591,6 +592,166 @@ def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> Non
     assert exposure("remove")["effect_outcome"]["status"] == "committed"
     assert not exposed.exists()
     assert (bundle / "user-note.md").read_text() == "Host-authored replacement: return a draft only."
+
+
+def _assert_installed_instruction_authoring(workspace_exe: Path, target: Path) -> None:
+    """One installed author-to-consumer boundary; native tests own the field matrix."""
+    import copy
+    import re
+
+    target.mkdir()
+    subprocess.run(["git", "init", "-q", str(target)], check=True)
+    context = {"target": str(target), "task": "Save the requested repository rules", "changed": [], "projection": "full"}
+
+    def call(request=None, invocation=None, **work):
+        packet = target.parent / "instruction-request.json"
+        body = {**context, **work}
+        if request is not None:
+            body["request"] = request
+        if invocation is not None:
+            body["invocation"] = invocation
+        packet.write_text(json.dumps(body))
+        return _run_workspace_console_json(workspace_exe, target, "invoke" if invocation else "start", "--input", str(packet))
+
+    def author(source, content, publish=True):
+        request = call()["instructions"]["authoring"]["requests"][0]
+        request["arguments"] = {"source": source, "content": content}
+        before = (target / source).read_bytes() if (target / source).exists() else None
+        proposed = call(request)
+        assert ((target / source).read_bytes() if (target / source).exists() else None) == before
+        if not publish:
+            return proposed
+        question = next(
+            d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "instruction-write-authorization"
+        )
+        answer = question["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        assert call(invocation=call(answer)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
+        assert (target / source).read_text() == content
+
+    def observe(changed):
+        return call(changed=changed, task="Inspect current consumer work")
+
+    def reconcile(changed):
+        current = observe(changed)["verification"]["source_reconciliation"]
+        request = current["requests"][0]
+        request["arguments"]["judgments"] = {
+            source: {
+                "disposition": "reviewed-current",
+                "reason": "Compared the adapter's preserved response field with the exact API contract; no implementation edit is needed.",
+            }
+            for source in current["obligations"]
+        }
+        proposed = call(request, changed=changed, task="Inspect current consumer work")
+        answer = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "source-reconciliation")[
+            "response_request"
+        ]
+        answer["arguments"]["answer"] = "confirm"
+        ready = call(answer, changed=changed, task="Inspect current consumer work")
+        call(invocation=ready["decision_packet"]["primary_action"], changed=changed, task="Inspect current consumer work")
+        assert observe(changed)["verification"]["source_reconciliation"]["status"] == "current"
+
+    assert (
+        _run_workspace_console_json(workspace_exe, target, "setup", "--yes", "--format", "json")["effect_outcome"]["status"] == "committed"
+    )
+    bundle = target / ".agentic-workspace/skills/workspace-instruction-authoring"
+    current = call()
+    assert not current.get("procedure", {}).get("requests")
+    discover = current["semantic_routes"]["requests"][0]
+    discover["arguments"] = {"parent": "workspace/instructions/authoring"}
+    selected = call(discover)
+    assert selected["semantic_routes"]["discovery"]["detail"]["sources"][0]["skill_id"] == "workspace-instruction-authoring"
+    answer = call(selected["procedure"]["requests"][0])["procedure"]["requests"][0]
+    answer["arguments"]["answer"] = {"disposition": "answered", "branches": ["format"], "material": {}}
+    selected = call(answer)
+    discover["arguments"]["resource"] = selected["procedure"]["next"][0]
+    delivered = call(discover)["semantic_routes"]["discovery"]["detail"]["sources"][0]["procedure"]["resource"]["selected"]["text"]
+    assert delivered == (bundle / "references/format.md").read_text()
+    assert (bundle / "references/writing.md").read_bytes() == (
+        target / ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md"
+    ).read_bytes()
+    # Correction's installed handoff resolves to the same installed method.
+    correction = target / ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md"
+    for link in re.findall(r"\]\(([^)]+)\)", correction.read_text()):
+        assert (correction.parent / link).resolve() == bundle / "SKILL.md"
+
+    (target / "docs").mkdir()
+    contract = target / "docs/api-contract.md"
+    contract.write_text("Preserve the public response field id.\n")
+    adapter = target / "src/adapters/api.txt"
+    adapter.parent.mkdir(parents=True)
+    adapter.write_text("response: id\n")
+    examples = re.findall(r"```markdown\n(.*?)```", delivered, re.S)
+    # Validate the maintained examples through the installed proposal/parser,
+    # without treating declared example checks as executed checks.
+    for index, example in enumerate(examples):
+        author(f".agentic-workspace/instructions/example-{index}.md", example, publish=False)
+    global_source = ".agentic-workspace/instructions/language.md"
+    author(global_source, "Use British English in repository guidance.\n")
+    source = ".agentic-workspace/instructions/api.md"
+    content = examples[0] + "\nPreserve unrelated adapter comments.\n"
+    author(source, content)
+    author(".agentic-workspace/local/instructions/local.md", "Use this checkout's existing editor preferences.\n")
+    matched = observe(["src/adapters/api.txt"])
+    row = next(r for r in matched["instructions"]["sources"] if r["source"]["reference"] == source)
+    assert row["applicable"] and row["binding_admission"]["status"] == "current"
+    assert row["guidance"] and row["read"] == ["docs/api-contract.md"]
+    assert matched["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
+    quiet = observe(["unrelated.txt"])
+    row = next(r for r in quiet["instructions"]["sources"] if r["source"]["reference"] == source)
+    assert not row["applicable"] and not row["guidance"]
+    assert quiet["verification"]["source_reconciliation"]["status"] == "not-required"
+    assert next(r for r in quiet["instructions"]["sources"] if r["source"]["reference"] == global_source)["guidance"]
+    reconcile(["src/adapters/api.txt"])
+    # The real governing source changes outside consumer paths. The new text
+    # clarifies existing behaviour, so reviewed-current is a sufficient judgement.
+    contract.write_text("Preserve the public response field id, including its spelling.\n")
+    changed = ["docs/api-contract.md"]
+    assert observe(changed)["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
+    reconcile(changed)
+    author(source, content.replace("Keep API adapters consistent", "Keep all API adapters consistent"))
+    assert "Preserve unrelated adapter comments." in (target / source).read_text()
+    # Malformed control: no unintended source or change to the published rule.
+    before = (target / source).read_bytes()
+    request = copy.deepcopy(call()["instructions"]["authoring"]["requests"][0])
+    request["arguments"] = {"source": source, "content": "---\nunknown: [anything]\n---\nBroaden policy.\n"}
+    with pytest.raises(AssertionError, match="Markdown contract"):
+        call(request)
+    assert (target / source).read_bytes() == before
+
+    def exposure(mode):
+        inventory = call(call()["configuration_write"]["skill_exposure_request"])
+        row = next(r for r in inventory["configuration_write"]["skill_exposure"] if r["state"]["name"] == "workspace-instruction-authoring")
+        proposed = call(row[f"{mode}_request"])
+        answer = proposed["configuration_write"]["authorization_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        call(invocation=call(answer)["decision_packet"]["primary_action"])
+
+    exposure("expose")
+    exposed = target / ".agents/skills/workspace-instruction-authoring"
+    for file in bundle.rglob("*"):
+        if file.is_file():
+            assert (exposed / file.relative_to(bundle)).read_bytes() == file.read_bytes()
+    retained = {
+        p: p.read_bytes() for p in [target / global_source, target / source, target / ".agentic-workspace/local/instructions/local.md"]
+    }
+    (target / ".agentic-workspace/local/.gitignore").unlink()
+    assert (
+        _run_workspace_console_json(workspace_exe, target, "setup", "--yes", "--format", "json")["effect_outcome"]["status"] == "committed"
+    )
+    assert all(p.read_bytes() == data for p, data in retained.items())
+    exposure("remove")
+    assert not exposed.exists()
+    inventory = call(call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    remove = next(r for r in inventory["adoption_requests"] if r["arguments"]["mode"] == "remove")
+    proposed = call(remove)
+    answer = next(
+        d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+    )["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    call(invocation=call(answer)["decision_packet"]["primary_action"])
+    assert not any(p.is_file() for p in bundle.rglob("*"))
+    assert all(p.read_bytes() == data for p, data in retained.items())
 
 
 def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path, tmp_path: Path) -> None:
