@@ -86,7 +86,12 @@
     ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
     ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md",
     ".agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json",
-    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json"
+    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json",
+    ".agentic-workspace/skills/workspace-instruction-authoring/SKILL.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/procedure.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md"
   ],
   "surfaces": [
     {
@@ -1220,6 +1225,71 @@
         "mode": "package-verbatim",
         "source": "src/core/contracts/schemas/executable_affordance.schema.json"
       }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand instruction authoring procedure or public Markdown reference",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-authoring/SKILL.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand instruction authoring procedure or public Markdown reference",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-authoring/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand instruction authoring procedure or public Markdown reference",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand instruction authoring procedure or public Markdown reference",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand repository skill authoring procedure or its canonical public contract",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": "src/tooling/contracts/agent_facing_writing.md"
+      }
     }
   ],
   "identity": ".agentic-workspace/adoption.json",
@@ -1384,7 +1454,11 @@
       ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
       "src/tooling/contracts/agent_facing_writing.md",
       "src/core/contracts/schemas/procedure_resource.schema.json",
-      "src/core/contracts/schemas/executable_affordance.schema.json"
+      "src/core/contracts/schemas/executable_affordance.schema.json",
+      ".agentic-workspace/skills/workspace-instruction-authoring/SKILL.md",
+      ".agentic-workspace/skills/workspace-instruction-authoring/procedure.md",
+      ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md",
+      ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md"
     ],
     "source_only_inputs": [
       ".agentic-workspace/OWNERSHIP.toml",

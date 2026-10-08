@@ -287,7 +287,36 @@
       "stability": "package-managed",
       "summary": "Author, maintain or remove a repository-owned skill; select optional branches, current owner references and helpers only when useful.",
       "visibility": "routed-on-demand"
+    },
+    {
+      "id": "workspace-instruction-authoring",
+      "path": "workspace-instruction-authoring/SKILL.md",
+      "scope": "specialized-subskill",
+      "visibility": "routed-on-demand",
+      "stability": "package-managed",
+      "summary": "Create or revise a deliberately scoped repository rule, publish exact Markdown and inspect its effect.",
+      "semantic_routes": [
+        {
+          "id": "workspace/instructions/authoring",
+          "description": "Author a repository rule directly or publish an instruction already selected by correction intake.",
+          "match": "exact",
+          "priority": 10
+        }
+      ],
+      "procedure_resource": "procedure.md",
+      "required_resources": [
+        "instruction-markdown",
+        "instruction-writing"
+      ]
     }
   ],
-  "source_kind": "installed-workspace-skills"
+  "source_kind": "installed-workspace-skills",
+  "resources": {
+    "instruction-markdown": {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md"
+    },
+    "instruction-writing": {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md"
+    }
+  }
 }

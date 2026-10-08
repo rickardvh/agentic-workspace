@@ -68,7 +68,12 @@
     ".agentic-workspace/skills/workspace-skill-authoring/references/maintain.md",
     ".agentic-workspace/skills/workspace-skill-authoring/references/writing.md",
     ".agentic-workspace/skills/workspace-skill-authoring/references/procedure.schema.json",
-    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json"
+    ".agentic-workspace/skills/workspace-skill-authoring/references/executable.schema.json",
+    ".agentic-workspace/skills/workspace-instruction-authoring/SKILL.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/procedure.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md",
+    ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md"
   ],
   "necessary_surface_files": [
     ".agentic-workspace/READING.json",

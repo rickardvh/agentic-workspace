@@ -36,7 +36,9 @@ The path identifies when the instruction applies; `read` identifies a prerequisi
 
 Then inspect both a matching and an unrelated task. The matching task should receive the rule; the unrelated task should not acquire an API requirement.
 
-The [scoped-instruction reference](package/scoped-instructions.md) explains `paths`, `read`, `governed_by`, `reconcile`, `use`, `checks` and `protect`, including a worked inspection command. Add those fields only when their behaviour is needed.
+The [scoped-instruction guide](package/scoped-instructions.md) introduces the
+installed [instruction-authoring method](../.agentic-workspace/skills/workspace-instruction-authoring/SKILL.md)
+and its exact Markdown reference. Add fields only when their behaviour is needed.
 
 If the API contract governs the implementation, use `governed_by` in place of
 `read`. The contract is then supplied when implementation work needs it, and a change to
