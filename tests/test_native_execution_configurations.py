@@ -49,6 +49,20 @@ def test_passive_targets_are_latent_until_explicit_opportunity(tmp_path, shared_
     active = call(request=opportunity)
     assert active["task_requirements"]["result"]["status"] == "resolved"
     assert active["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+    assert active["task_requirements"]["assignment"]["result"]["selected"]["target"] == "local"
+    inputs = active["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(input_refs=["a.txt"], complete=False, reason="The exact independent inspection subject.")
+    captured = call(request=inputs)
+    inputs = captured["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(complete=True, reason="The captured source completely scopes this inspection.")
+    prepared = call(request=inputs)
+    comparison = prepared["task_requirements"]["assignment"]["requests"][0]
+    comparison[-1]["arguments"].update(alternative="worker:cli", reason="Use the eligible worker for this independently scoped inspection.")
+    delegated = call(request=comparison)
+    decision = delegated["task_requirements"]["assignment"]["result"]
+    assert decision["status"] == "assigned-nonlocal-handoff-required" and decision["binding"] is False
+    assert delegated["task_requirements"]["handoff"]["status"] == "export-ready"
+    assert delegated["decision_packet"]["primary_action"] is None
     with pytest.raises(AssertionError, match="stale|changed|identity"):
         call(task="A different requested outcome", request=opportunity)
     assert not (tmp_path / "marker.txt").exists() and not (tmp_path / ".agentic-workspace/local").exists()

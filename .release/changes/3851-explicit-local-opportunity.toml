@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Honor explicit eligible nonlocal Assignment choices under local-preferred policy while keeping the local default quiet."
