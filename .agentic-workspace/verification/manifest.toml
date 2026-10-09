@@ -61,6 +61,7 @@ inputs = [
   ".github/release-ownership.json",
   "docs/reference/cli-catalogue.md",
   "docs/reference/installed-surface-catalogue.md",
+  "docs/decisions/shared-semantic-authority.md",
   ".agentic-workspace/skills",
   ".agentic-workspace/planning/skills",
   ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
@@ -75,9 +76,12 @@ inputs = [
   ".agentic-workspace/fallback/no-cli-policy.json",
   ".agentic-workspace/fallback/no_cli_startup.py",
   ".agentic-workspace/instructions/workspace-operating.md",
+  ".agentic-workspace/instructions/github-issue-creation.md",
+  ".agentic-workspace/instructions/github-issue-refinement.md",
   ".agentic-workspace/instructions/agent-facing-style.md",
   ".agentic-workspace/instructions/workspace-ownership-audit.md",
   ".agentic-workspace/memory/repo/manifest.toml",
+  ".agentic-workspace/memory/repo/domains/example-runtime-boundary.md",
   ".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md",
   ".agentic-workspace/memory/skills/REGISTRY.json",
   ".agentic-workspace/memory/skills/memory-capture/procedure.md",
@@ -92,6 +96,7 @@ inputs = [
   "tools/skills/REGISTRY.json",
   "tools/skills/pr-review-recheck/procedure.md",
   "tools/skills/self-improvement-dogfooding/procedure.md",
+  "tools/skills/self-improvement-dogfooding/SKILL.md",
 ]
 scratch_paths = ["target"]
 [execution.environment]
@@ -2456,3 +2461,10 @@ blocking_claims = [
   "claim-work-complete",
 ]
 notes = "Model harness and test-knowledge changes need scorer proof and inventory review before broad completion claims."
+
+[assurance.domain_proof_lanes.semantic_route_carriage]
+purpose = "Current task selection survives read-only navigation, with scoped advice and execution preferences intact."
+applies_to_paths = ["src/core/src/semantic_routes.rs", "src/core/src/native_public.rs", "tests/test_native_route_navigation.py"]
+commands = ["uv run pytest tests/test_native_route_navigation.py tests/test_native_former_routes.py tests/test_native_assignment_policy.py tests/test_native_memory_declarations.py -q"]
+review_aids = ["Navigation remains read-only; changed task/source and explicit replacement keep currentness checks. No ambient route state or authority is introduced."]
+owner = "workspace-cli-runtime"

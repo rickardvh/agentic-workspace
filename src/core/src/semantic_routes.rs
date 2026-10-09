@@ -64,7 +64,18 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
     let mut request_identity = Value::Null;
     let mut stale = false;
     let mut contributions = Vec::new();
-    if let Some(request) = input.request {
+    let submitted = match input.request {
+        Some(Value::Array(rows)) => rows,
+        Some(row) => vec![row],
+        None => vec![],
+    };
+    if submitted.len() > 2 {
+        return Err(CoreError::new(
+            "route requests exceed bounded selection and discovery",
+        ));
+    }
+    let mut kinds = BTreeSet::new();
+    for request in submitted {
         // The generic request validator checks all public fields and declared
         // arguments. Historical task binding is checked below against the host.
         let prepared = prepare_request_value(
@@ -73,21 +84,24 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
         if request["owner"] != "semantic-routes" {
             return Err(CoreError::new("route request names another owner"));
         }
+        if !kinds.insert(request["request_kind"].as_str().unwrap_or("").to_owned()) {
+            return Err(CoreError::new("duplicate semantic route request kind"));
+        }
         request_identity = prepared["identity"].clone();
-        stale =
+        let mut request_stale =
             request["task_identity"] != work || request["source_revision"] != source["revision"];
         if request["request_kind"] == "semantic-routes/select/v1" {
             intent["semantic_task_routes"] = json!({"posture":request["arguments"]["posture"], "routes":request["arguments"]["routes"],
                 "task_identity":request["task_identity"], "source_revision":request["source_revision"],
                 "provenance":"agent-selected", "authority_effect":"applicability-only"});
             let fact = normalize_semantic_routes(&mut intent)?.expect("route source supplied");
-            stale |= fact["status"] != "current";
+            request_stale |= fact["status"] != "current";
             // Preserve the received selection for the single final compile's
             // currentness verdict rather than relabeling it as current.
             intent["semantic_task_routes"] = json!({"posture":request["arguments"]["posture"], "routes":request["arguments"]["routes"],
                 "task_identity":request["task_identity"], "source_revision":request["source_revision"],
                 "provenance":"agent-selected", "authority_effect":"applicability-only"});
-        } else if !stale {
+        } else if !request_stale {
             parent = request["arguments"]["parent"].as_str().unwrap().to_owned();
             after = request["arguments"]["after"]
                 .as_str()
@@ -95,8 +109,10 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
                 .to_owned();
             resource = request["arguments"]["resource"].clone();
         }
-        if !stale {
+        stale |= request_stale;
+        if !request_stale {
             intent["public_request"] = prepared["request"].clone();
+            contributions.clear();
             contributions.push(json!({"owner":"semantic-routes", "revision":source["revision"], "settled":true,
                 "request_response":{"request_identity":request_identity,"status":"settled","consequence_ids":[]}}));
         }

@@ -1956,7 +1956,7 @@ mod tests {
     }
 
     #[test]
-    fn carried_route_selection_replaces_completed_discovery() {
+    fn carried_route_selection_coexists_with_navigation() {
         let root = temp_root("route-carriage");
         std::fs::create_dir_all(root.join("tools/skills/checks")).unwrap();
         std::fs::write(root.join("tools/skills/REGISTRY.json"),
@@ -1988,8 +1988,16 @@ mod tests {
                 .iter()
                 .filter(|r| r["owner"] == "semantic-routes")
                 .count(),
-            1
+            2
         );
+        let browse = start(json!({"request":selected["carriage"],"reference":"owner:request:semantic-routes:semantic-routes/discover/v1"})).unwrap();
+        let navigated = start(json!({"request":selected["carriage"],"reference":browse["reference"],"answer":{"parent":"unrelated"},"projection":"carried"})).unwrap();
+        assert_eq!(
+            navigated["view"]["decision_packet"]["semantic_task_routes"],
+            selected["view"]["decision_packet"]["semantic_task_routes"]
+        );
+        let detail = start(json!({"request":navigated["carriage"],"reference":navigated["view"]["detail_refs"]["/semantic_routes"]})).unwrap();
+        assert_eq!(detail["value"]["discovery"]["parent"], "unrelated");
         assert!(!root.join(".agentic-workspace/local").exists());
         std::fs::remove_dir_all(root).unwrap();
     }

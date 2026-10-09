@@ -209,7 +209,10 @@ fn resolve_selected(
                 "resource route dependency must belong to semantic-routes",
             ));
         }
-        if let Some(existing) = requests.iter().find(|r| r["owner"] == "semantic-routes") {
+        if let Some(existing) = requests
+            .iter()
+            .find(|r| r["owner"] == "semantic-routes" && r["request_kind"] == route["request_kind"])
+        {
             if existing != &route {
                 return Err(CoreError::new("conflicting resource route dependency"));
             }
@@ -236,7 +239,9 @@ fn resolve_selected(
                 "advisory activity dependency must be an exact semantic selection",
             ));
         }
-        if let Some(existing) = requests.iter().find(|r| r["owner"] == "semantic-routes") {
+        if let Some(existing) = requests.iter().find(|r| {
+            r["owner"] == "semantic-routes" && r["request_kind"] == "semantic-routes/select/v1"
+        }) {
             if existing != route {
                 return Err(CoreError::new("conflicting advisory activity dependency"));
             }
@@ -331,9 +336,20 @@ fn resolve_selected(
     };
     let route_catalogue = native_routes::source(target)?;
     let (route_source, former_routes) = native_routes::former_selection(target, &route_catalogue)?;
+    let route_selection = requests.iter().find(|r| {
+        r["owner"] == "semantic-routes" && r["request_kind"] == "semantic-routes/select/v1"
+    });
+    let route_navigation = requests.iter().find(|r| {
+        r["owner"] == "semantic-routes" && r["request_kind"] == "semantic-routes/discover/v1"
+    });
+    let route_requests: Vec<Value> = [route_selection, route_navigation]
+        .into_iter()
+        .flatten()
+        .cloned()
+        .collect();
     let route_input = json!({
         "current_work":work, "source":route_source,
-        "request":request_for("semantic-routes")
+        "request":match route_requests.len() {0=>Value::Null,1=>route_requests[0].clone(),_=>json!(route_requests)}
     });
     let mut configuration = native_config::view(target)?;
     let independent = crate::native_independent::Runtime::discover(
@@ -425,11 +441,15 @@ fn resolve_selected(
     if let Some(view) = routes.as_mut()
         && input.maintenance.is_none()
         && view["status"] == "current"
-        && let Some(parent) = view["decision"]["semantic_task_routes"]["routes"]
-            .as_array()
-            .filter(|routes| routes.len() == 1)
-            .and_then(|routes| routes[0].as_str())
-            .or_else(|| view["discovery"]["parent"].as_str())
+        && let Some(parent) = if route_navigation.is_some() {
+            view["discovery"]["parent"].as_str()
+        } else {
+            view["decision"]["semantic_task_routes"]["routes"]
+                .as_array()
+                .filter(|routes| routes.len() == 1)
+                .and_then(|routes| routes[0].as_str())
+                .or_else(|| view["discovery"]["parent"].as_str())
+        }
         && (parent.starts_with(crate::native_candidate_skill::PREFIX)
             || route_catalogue["routes"]
                 .as_array()
@@ -805,7 +825,7 @@ fn resolve_selected(
                     )
                 }),
                 (destination == crate::native_memory_capture::Destination::Advisory)
-                    .then(|| request_for("semantic-routes"))
+                    .then_some(route_selection)
                     .flatten()
                     .filter(|r| r["request_kind"] == "semantic-routes/select/v1"),
             )?;
@@ -2122,7 +2142,7 @@ pub(crate) fn owner_request_key(request: &Value) -> String {
     let owner = request["owner"].as_str().unwrap_or("");
     if matches!(
         owner,
-        "verification" | "planning" | "assignment" | "delegation"
+        "verification" | "planning" | "assignment" | "delegation" | "semantic-routes"
     ) {
         format!("{owner}:{}", request["request_kind"].as_str().unwrap_or(""))
     } else {

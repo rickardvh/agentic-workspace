@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep current task activity while browsing unrelated semantic routes, preserving scoped Memory and executor preferences."
