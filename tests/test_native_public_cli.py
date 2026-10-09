@@ -1395,7 +1395,7 @@ def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_cor
     context = {"target": str(tmp_path), "task": "Validate current behaviour"}
     initial = consume("native", shared_core_binary, native_cli, context)
     assert initial["planning"]["status"] == "direct"
-    assert initial["planning"]["status_scope"] == "current-owner-obligations"
+    assert initial["planning"]["status_scope"] == "bound-owner-obligations"
     assert not any(c["entry"].get("skill_id") == "planning-work" for c in initial.get("activation", {}).get("candidates", []))
     material = [
         {

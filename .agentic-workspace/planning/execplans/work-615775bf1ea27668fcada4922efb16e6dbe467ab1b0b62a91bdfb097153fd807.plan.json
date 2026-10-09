@@ -1,18 +1,18 @@
 {
-  "blockers": [
-    "Live consumer runtime unavailable: sbx missing; baseline context-continuation-clean harness started zero sessions."
-  ],
+  "blockers": [],
   "canonical_core": {},
   "continuation": {
     "accepted": [
-      "Canonical startup now judges new-work decomposition/continuity early and reaches existing Planning native create/select; sufficient existing records and simple work stay direct.",
-      "Planning procedure applicability and generated payload/index agree. Native direct status has current-owner-obligations scope and does not judge task shape.",
-      "Remembered-owner transport controls passed on native, JSON, Python and TypeScript; quiet installed activation control passed. Rust remembered-owner and independent activation controls passed.",
-      "The frozen baseline is source 61da7aca07661bc19cd45882bf5e84f0daf979c2, target x86_64-unknown-linux-gnu, archive sha256:8ac7ca7928cf2a8266643376973823af98745aa9d56fa94588b1efd3426dc9e9."
+      "Windows Sandbox startup is restored through the existing same-user launcher; real installed-agent sessions now run and disposable VMs were removed.",
+      "Frozen master baseline 61da7aca completed validation and deferred export without a Plan. Its fresh continuation completed from files; no continuation failure is claimed for that baseline.",
+      "Frozen candidate 7fbfac2c independently read Planning guidance, created the native owner before implementation, and updated the actual Plan with validation/export contracts, progress, blocker and next action.",
+      "The fresh candidate reader recovered that actual objective early and completed export, but native reselection/update failed: invalid portable Planning update observation. The original source digest matched; reconciliation validated the update after removing creation provenance.",
+      "Reconciliation now validates both original provenance envelopes before stripping either. A four-interface create-then-update-to-fresh-custody regression passes and altered portable source still fails closed.",
+      "The focused public suite passes94 cases; Rust passes208 with3 preexisting ignored. The first public run passed90 and hit the unchanged28KB full-detail ceiling in4 cases. A shorter, precise bound-owner-obligations scope label preserves the original limit; no ceiling was relaxed."
     ],
     "remaining": [
-      "Supported live harness first attempt failed before any actor session: sbx executable missing. No original failing agent observation or before/after discovery comparison exists. New-work, direct, sufficient-owner and unrelated missing-branch controls plus fresh continuation remain required.",
-      "Independent review and native Verification claim admission remain separate; this PR is draft and does not close the issue."
+      "Freeze the corrected source, repeat ordinary new-work discovery and fresh continuation, and run sufficient-existing-source plus trivial/unrelated/missing-owner controls.",
+      "Update draft PR3848 with current evidence, then external independent review and required Verification admission remain separate."
     ]
   },
   "creation_provenance": {
@@ -46,22 +46,25 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Finish focused creation/continuation validation, commit and freeze the installed candidate, then create a draft PR. Run the supported live comparison with all #3846 controls once Docker Sandboxes is available; do not close #3846 without it.",
+  "next_action": "Commit and freeze the corrected Planning source; run the finite ordinary discovery/continuation and quiet controls, then update PR3848 readiness using actual results.",
   "owner_level": "slice",
   "parent": {},
   "phase": "shaping",
   "proof": {
     "remaining": [
-      "Exact frozen candidate installed deterministic checks",
-      "Supported fresh-agent before/after comparison with all four #3846 controls and fresh continuation",
-      "Independent review and native Verification admission"
+      "Exact-head public verification",
+      "Corrected ordinary installed-agent continuation and quiet controls",
+      "External independent review and required admission"
     ]
   },
   "references": [
-    "https://github.com/rickardvh/agentic-workspace/issues/3846"
+    "https://github.com/rickardvh/agentic-workspace/issues/3846",
+    "https://github.com/rickardvh/agentic-workspace/pull/3848",
+    ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388/3846-planning-baseline.json",
+    ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388/3846-planning-corrected.json"
   ],
   "relationships": {},
-  "revision": 2,
+  "revision": 3,
   "scope": {
     "excluded": [
       "ambient selection",
@@ -80,18 +83,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/60678f87ea93d2f74fe6235984bfe08330da230a0b7bbdb13b438f786be7ae5d.attempt.json",
-        "revision": "sha256:85a9724d6da7bafc0477cf93222bd005a23fd316be1cfb58b65f2996bf9122c9",
+        "path": ".agentic-workspace/local/effects/4891374d292444c817a46c57f8dd5a80d660484e4e7e0918dbbd3e19feaa9102.attempt.json",
+        "revision": "sha256:7eedc6e1931544aed54859d8ae2c722b14b3dd82b867123a7474d9d8258fadd4",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/60678f87ea93d2f74fe6235984bfe08330da230a0b7bbdb13b438f786be7ae5d.result.json",
-        "revision": "sha256:e01b068b876c4bbde5a688cdad9c66eaed94a20efa3514ed5037ee0e7f92a29a",
+        "path": ".agentic-workspace/local/effects/4891374d292444c817a46c57f8dd5a80d660484e4e7e0918dbbd3e19feaa9102.result.json",
+        "revision": "sha256:cdb49b92d1dadc9290334f4cb468744b33a1a3fc35ac5a34644541b146f4b429",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:de61fdb2334e9f6d772fbe93fdbd4ac9ca5abeb78856e0ceffc801d655fb508b",
+    "invocation_revision": "sha256:e4fe511889eab4b837dd916072e7be1b6854a45f31ab66011071ca4bd2ce46c3",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -99,7 +102,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:16e9bc78018d48c854e859e959827815b7d5d904923846a3bbfba4b02e36257a",
+        "document_revision": "sha256:3a3e6d433b99962b6953dc5fcb571d5d8da12ba6e787d825e1f15c3cd9ce0cbb",
         "owner_id": "work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807",
         "owner_path": ".agentic-workspace/planning/execplans/work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807.plan.json"
       }

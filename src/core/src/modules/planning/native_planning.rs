@@ -1132,7 +1132,7 @@ fn resolve_context(
     // This projection settles current owner obligations, not the semantic
     // suitability of new work for Planning. Keep discovery agent-owned without
     // consulting remembered selectors or introducing an ambient posture decision.
-    let status_scope = "current-owner-obligations";
+    let status_scope = "bound-owner-obligations";
     let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"status_scope":status_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
     let mut selection_request = template.clone();
     selection_request["id"] = json!("planning/select-owner/v1");
@@ -1971,7 +1971,7 @@ mod tests {
                 }
                 let initial = resolve(&target.0, &work(), None).unwrap();
                 assert_eq!(initial["status"], "direct");
-                assert_eq!(initial["status_scope"], "current-owner-obligations");
+                assert_eq!(initial["status_scope"], "bound-owner-obligations");
                 assert_eq!(
                     initial["contribution"]["facts"]["status_scope"],
                     initial["status_scope"]

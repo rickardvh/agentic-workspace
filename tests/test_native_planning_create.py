@@ -36,6 +36,55 @@ def test_native_update_observation_schema(schema_path: str) -> None:
     assert list(validator.iter_errors(body))
 
 
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_created_then_updated_plan_can_reacquire_fresh_custody(tmp_path, shared_core_binary, native_cli, surface):
+    producer = tmp_path / "producer"
+    producer.mkdir()
+    context = {"target": str(producer), "task": "Prepare validation before compatibility approval"}
+
+    def call(value):
+        return consume(surface, shared_core_binary, native_cli, value)
+
+    create = call(context)["planning"]["creation_requests"][0]
+    create["arguments"] = {"material": material()}
+    action = call({**context, "request": create})["decision_packet"]["primary_action"]
+    created = call({**context, "invocation": action})
+    context = created["continuation"]["context"]
+    update = call(context)["planning"]["update_requests"][0]
+    update["arguments"]["material"] = {"next_action": "Implement export after compatibility approval."}
+    action = call({**context, "request": update})["decision_packet"]["primary_action"]
+    call({**context, "invocation": action})
+    ref = created["value"]["owner_path"]
+    original = (producer / ref).read_bytes()
+    body = json.loads(original)
+    assert body["creation_provenance"]["kind"].endswith("/v2")
+    assert body["update_provenance"]["kind"].endswith("/v2")
+    receiver = tmp_path / "fresh-checkout"
+    path = receiver / ref
+    path.parent.mkdir(parents=True)
+    path.write_bytes(original)
+    fresh = {"target": str(receiver), "task": "Finish export after compatibility approval"}
+
+    def resume():
+        select = call(fresh)["planning"]["selection_requests"][0]
+        select["arguments"]["owner_ref"] = ref
+        return call({**fresh, "request": select})
+
+    selected = resume()
+    assert selected["planning"]["update_requests"] == []
+    request = selected["planning"]["requests"][0]
+    action = call({**fresh, "request": request})["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.reconcile"
+    call({**fresh, "invocation": action})
+    assert resume()["planning"]["update_requests"]
+    assert path.read_bytes() == original
+    # Transported producer observations still cannot admit altered source.
+    body["next_action"] = "Unadmitted replacement"
+    path.write_text(json.dumps(body))
+    with pytest.raises(AssertionError, match="portable Planning"):
+        resume()
+
+
 def material() -> dict:
     original = json.loads(fixture_source(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json").read_text())
     fields = [

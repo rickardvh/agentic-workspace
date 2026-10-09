@@ -1402,6 +1402,13 @@ commands = ["uv run pytest tests/test_native_execution_configurations.py tests/t
 owner = "workspace-cli-runtime"
 claim_boundary = "current-native-comparison-and-public-choice-without-worker-execution"
 
+[assurance.domain_proof_lanes.new_planning_continuation]
+purpose = "Native new-work custody, portable create-then-update continuation and quiet remembered-owner controls."
+applies_to_paths = ["src/core/src/planning.rs", "tests/test_native_planning_create.py"]
+commands = ["uv run pytest tests/test_native_planning_create.py tests/test_native_former_routes.py -q", "cargo test --locked -p agentic-workspace-core --lib"]
+owner = "planning"
+claim_boundary = "native-custody-and-public-continuation-not-ordinary-agent-discovery"
+
 [assurance.domain_proof_lanes.native_public_owners]
 purpose = "Native transport and source-owning Planning/Verification ingress through four independent consumers."
 applies_to_paths = [
