@@ -12,6 +12,16 @@ answer fields and exact reference. Return `reentry` unchanged with that referenc
 and your answer through `start --input`. The owner carries source identities and
 earlier answers; you need not open task-requirements detail or inspect request
 arrays. A caller that already keeps carriage may use the same reference with it.
+`handoff_preparation` shows current input observation/completeness, source-shaped
+defaults and its exact next reference. A shaped child may reuse accepted inputs;
+compare its marginal preparation, verification and integration costs rather than
+assuming the worker needs the full parent conversation. The coupled parent may
+remain local while independent children are assessed under their own current
+work and policy. A plan without typed inputs supplies no prepared handoff but
+does not itself prohibit an otherwise admitted local executor. The existing
+sealed packet and worker entry construct the prompt; manual transport supplies
+`manual_presentation.prompt`. Do not author a replacement prompt or infer token
+cost, price or competence from packet bytes.
 Read `policy_mode`, `binding` and `affects` with local continuation. Nonbinding
 advice does not require a comparison answer before local implementation, even
 when advice remains unresolved. Keep independent restrictions visible.

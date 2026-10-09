@@ -930,6 +930,47 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
     } else {
         "Nonbinding Assignment advice; local continuation has no Assignment gate. Independent restrictions, result admission, proof and completion remain separate."
     }});
+    if requirements["status"] == "resolved" && requirements["handoff_inputs"].is_object() {
+        let inputs = &requirements["handoff_inputs"];
+        let source_work = &requirements["source_work"];
+        result["handoff_preparation"] = json!({
+            "status":inputs["status"], "gaps":inputs["gaps"],
+            "observed_inputs":inputs["inputs"],
+            "input_refs":inputs["judgment"]["input_refs"],
+            "mutation_paths":inputs["judgment"]["mutation_paths"],
+            "source_work":if source_work.is_object() {
+                json!({"status":source_work["status"],"producer":source_work["producer"],
+                    "work":source_work["work"],"definition":source_work["definition"],"gaps":source_work["gaps"]})
+            } else { Value::Null },
+            "planning_definition":if source_work.is_object(){"source-shaped"}else{"not-declared"},
+            "sealed_handoff_status":requirements["handoff"]["status"],
+            "prompt_owner":"sealed-packet-and-worker-entry",
+            "prompt_authoring_required":false,
+            "authority":"Preparation facts only. A saved plan is not a prepared worker packet. Compare the bounded child's marginal preparation and verification/integration work; these facts grant no dispatch or return admission."
+        });
+        let requests = request_entries(full, context)?;
+        let wanted = if inputs["status"] != "ready" {
+            [
+                "assignment/judge-readonly-inputs/v1",
+                "assignment/judge-patch-inputs/v1",
+            ]
+        } else {
+            [
+                "assignment/export-readonly/v1",
+                "assignment/export-patch/v1",
+            ]
+        };
+        if let Some(request) = requests.iter().find(|r| {
+            wanted
+                .iter()
+                .any(|kind| r["envelope"]["request_kind"] == *kind)
+        }) {
+            result["handoff_preparation"]["next_step"] = json!({
+                "reference":request["reference"],"answer_shape":request["envelope"]["arguments"],
+                "use":"Use current reentry and this exact reference. First observe the bounded input set with complete false, then judge the current observed set with complete true and a reason. Reuse source-shaped defaults when sufficient. Changed preparation revalidates the comparison; an old selected answer is not reusable authority. Once ready, submit the returned export reference without composing a replacement prompt."
+            });
+        }
+    }
     let (kind, question, answer) = if requirements["status"] != "resolved" {
         result["target_scope_questions"] = requirements["target_scope_questions"].clone();
         result["source_work"] = requirements["source_work"].clone();

@@ -284,6 +284,41 @@ def test_semantic_routes_do_not_infer_from_task_text_or_widen_authority(shared_c
     assert selected["claim_boundary"] == lexical_only["claim_boundary"]
 
 
+def test_action_activity_dependency_uses_current_independent_readonly_contract(shared_core_binary: Path) -> None:
+    work = {"kind": "current-work", "id": "activity-bound-action"}
+    source = {"revision": "sha256:" + "a" * 64, "routes": ["repo/child-analysis"]}
+    offered = json.loads(_direct(shared_core_binary, {"semantic_route_view": {"current_work": work, "source": source}}).stdout)
+    request = next(r for r in offered["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    request["arguments"].update(posture="selected", routes=["repo/child-analysis"])
+    contribution = {
+        "owner": "workspace",
+        "revision": "w1",
+        "actions": [
+            {
+                "dependency_revision": "w1",
+                "operation_id": "workspace.inspect",
+                "effects": ["workspace-read"],
+                "source_requests": [request],
+            }
+        ],
+    }
+    intent = {"current_work": work, "semantic_route_source": source}
+    decision = compile_source_decision([contribution], intent=intent, capability_contract=CAPABILITY_CONTRACT)
+    assert decision["primary_action"]["source_requests"] == [request]
+    assert decision["primary_action"]["effects"] == ["workspace-read"]
+    assert request["capability_revision"] != decision["capability_revision"]
+    for drift in ["work", "catalogue", "owner_revision", "capability_revision", "request_kind"]:
+        changed_intent, changed = deepcopy(intent), deepcopy(contribution)
+        if drift == "work":
+            changed_intent["current_work"]["id"] = "other-work"
+        elif drift == "catalogue":
+            changed_intent["semantic_route_source"]["revision"] = "sha256:" + "b" * 64
+        else:
+            changed["actions"][0]["source_requests"][0][drift] = "unissued"
+        with pytest.raises(DecisionContractError, match="stale|undeclared|arguments|request"):
+            compile_source_decision([changed], intent=changed_intent, capability_contract=CAPABILITY_CONTRACT)
+
+
 def test_node_binding_executes_the_same_core(shared_core_binary: Path) -> None:
     subprocess.run(
         ["node", "--test", "src/cli/typescript/test/semantic-decision.test.mjs"],

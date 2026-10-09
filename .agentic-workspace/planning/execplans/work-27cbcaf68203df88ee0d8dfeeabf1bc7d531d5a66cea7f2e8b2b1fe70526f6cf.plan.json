@@ -1,15 +1,23 @@
 {
-  "blockers": [
-    "Accepted #3850 and #3851 source contracts remain prerequisites to reobserve.",
-    "Required successful exact-head installed-agent policy exercise remains absent; restored VM preflight contains no actor execution.",
-    "Broader public conformance remains failed with fixture gaps and an unattributed packet-equality failure."
-  ],
+  "blockers": [],
   "canonical_core": {
     "continuation_owner": "This Plan and issue3849",
     "requested_outcome": "Entire3849 acceptance including installed behavior"
   },
   "continuation": {
-    "accepted": "The user requested finishing all of #3849. Work remains unfinished. The current patch makes nonbinding Assignment admission explicit, exposes effective policy mode/binding/source/scope in compact output, removes the false advisory fallback prohibition, supplies status/reason fields for task restrictions, and front-loads policy-conditioned admission in the single shipped startup/Assignment procedure. Canonical and generated payload bytes match. No #3850 routing or #3851 comparator code was changed.",
+    "accepted": [
+      "All five implementation PRs exist: #3846â†’PR3848, #3847â†’PR3854, #3849â†’draft PR3855, #3850â†’PR3852, #3851â†’PR3853. #3848 is a PR, not a sixth issue.",
+      "Stack: masterâ†’3852(route)â†’3853(optional delegation)â†’3848(Planning)â†’3855(required/advisory Assignment). Memory PR3854 branches from3852. No self-review or merge has been performed.",
+      "Windows Sandboxes works through the existing same-user launcher; saved machine-local guidance is current. Existing sign-ins were preserved; contained real consumer VMs were removed.",
+      "Planning baseline61da7aca created no Plan but completed direct code and later continuation. Final candidate3d94c9ee independently created/updated a Plan before implementation; its fresh reader used the actual Plan and completed export. Sufficient-source and trivial/unrelated/missing-owner controls created no new Plan.",
+      "Planning's first receiving actor exposed portable create+update validation after creation provenance had been removed. Both original envelopes are now validated first. Four-interface custody/drift controls pass. Pre-stack94 public and208 Rust cases passed; final stack93 public cases passed with one retained unrelated signal11 failure.",
+      "Memory fb0b2a479 exposes first compact consideration and preserves its timestamp across clock ticks. Exact-head32 public cases and208 Rust cases passed. The substantive unprompted GPT6.1-Sol actor nominated the hardcoded/repeated-read finding, corrected the strongest pipeline source, and retained no duplicate note. A fresh consumer used exactly that result, with1 source read instead of32. Changed-data, absent-source and quiet one-off controls passed. Earlier narrow failed/no-retention observations remain retained.",
+      "#3850's44 public controls and208 Rust cases passed. #3851's explicit opt-in progression passes on all four surfaces; published pre-stack49 public and209 Rust passed. Its stacked run passed48 with one unrelated native signal11. All first failures remain retained.",
+      "#3849's source-shaped context control now keeps parent coordination local, compares independently shaped children with local still eligible, reuses accepted captured inputs, dispatches mock child contracts and retains distinct return custody. The compact policy and independent-activity positive/drift tests pass:4 focused cases. Rust library suite passes209 with3 preexisting ignored.",
+      "The context control exposed a real action-source seam: independently bound semantic activity requests were being validated against the composed effect contract. They now revalidate through their own current read-only owner, preserving work/catalogue/header checks and no effect authority. No issued revision is rewritten.",
+      "Earlier #3849 broader run:61passed, one test progression/source-request failure subsequently corrected, and2 unrelated signal11 terminations. Intermittent native process termination also occurred in other isolated runs; cause remains unresolved. Static frame inspection did not justify a stack-size workaround. No broad green claim is made.",
+      "Hosted CI for ready PRs fails before isolated tests when Docker Hub rate-limits unauthenticated ubuntu:24.04 pulls. One retry reproduced the unchanged blocker. Semver/security pass where observed; no green CI, independent acceptance or merge readiness is claimed."
+    ],
     "actor_evidence": "A paired Linux artifact was built offline from an exact git archive of f2c03330180b00df2b1aaf44672be2a4ba79e4fc and frozen under task scratch/baseline-candidate. The ordinary activation-local baseline uses the unchanged prompt Implement worker.py so its answer is 42, without AW/delegation instructions. Both recorded attempts failed before any provider session: stale Windows Sandbox socket files first, then the recovered daemon's backend could not connect to its own unix://C:\\...\\docker.sock. Actual actor target checkout, effective policy and activity therefore remain unobserved. These are host preparation failures, not agent compliance observations. Do not replace them or score them as successful baseline evidence.",
     "batch_authorization": "User explicitly authorized all #3846-3851 issues in separate PRs, stacked as necessary. #3848 is the existing draft PR for #3846. Implement #3850/#3851 prerequisites independently, consume them in dependent leaves, and finish existing #3848 instead of duplicating it.",
     "dependencies": "The accepted source contracts of #3850 and #3851 are prerequisites named by #3849. Both issues were still open with no matching PR at observation on 2026-10-09. Reobserve their current sources rather than treating this snapshot as permission or an execution queue.",
@@ -18,6 +26,12 @@
     "proof_findings": "A broader owner conformance run retained158passing cases and22failures.20name missing proof-snapshot fixtures (GitHub issue instructions, example-runtime-boundary memory note, shared-semantic-authority decision). The copied dogfooding fixture lacks its SKILL entry in that snapshot. A material/quiet packet-equality failure remains unattributed. This broad command is not green. Its source/fixture closure remains with Verification/public-interface evidence and was nominated through current material in finding-ingress.json. Do not change assertions to approve the symptom or retry the unchanged environment.",
     "publication": "No PR, independent review, merge or issue closure was performed. Repository instructions require each implementation PR to fully resolve its issue; missing actor evidence and dependencies prevent presenting this patch as ready. Implementation actors must not initiate their own independent reviewer.",
     "real_baseline": "After restored Windows launcher, first genuine f2c033301 activation-local actor session completed and VM cleanup removed. Raw baseline-required-local-restored-windows.json retains its artifact-only passed result, but policy compliance failed: actor read required-best-fit in exact guest local config, invoked unavailable bare agentic-workspace (exit127), read unavailable guidance and implemented worker.py locally without any protected native product call. Actual configured repository CLI remained available in shared config; actor did not follow precedence. No native admission was obtained. Preserve this first behavioral failure and metadata limits; tighten the harness to record effective policy/activity and admission rather than grading final file alone.",
+    "remaining": [
+      "#3849 exact frozen ordinary cases: positive nonlocal with two feasible executors, legitimate local admission, unresolved required blocker without implementation, advisory nonbinding, and quiet local/default.",
+      "Observe actual sealed process worker execution, stock worker-entry/return wrapping, native result admission/integration and fixture proof before marking PR3855 ready.",
+      "Rerun the focused new-code checks on the committed #3849 head; preserve any failures. Finish PR bodies with exact identities and material limits.",
+      "Final check of all attached PRs, scopes, stack, semver labels and retained resources. Independent review and accepted CI remain external requirements."
+    ],
     "resources": "Use the existing checkout on codex/3849-assignment-policy. No worktree or alternate clone was created. The temporary baseline build container was removed. sbx ls confirmed no actor sandboxes existed after the failed creations; failed cleanup receipts remain retained. Task scratch is needed for the frozen baseline, failed results and native receipt pointers. Preserve unrelated pre-existing untracked Plans and entry directories, and the protected decision-point source.",
     "sandbox_next": "Before further Sandbox calls, read and use the saved local launcher. Its healthy branch was verified. It needs -RecoverEmptyDaemon only for an inventory-confirmed empty failed daemon and preserves old state. The launcher hit one JSON parser error because an update banner followed daemon-status JSON, but its launch had succeeded; independent status/template checks and full preflight verified the result. No broad kernel/MSIX causal claim. Persisted machine-local instructions/sandbox-runtime.md through native instructions.write and verified its exact source/applicability and fresh ordinary startup delivery.",
     "sandbox_recovery": "User correction exposed that the successful Windows path had already been established in #3810. Today the daemon was stopped before the first attempt; direct agent-tree startup repeated the known AF_UNIX failure. Why it had stopped is not established. The agent overlooked Start-WorkspaceSandboxDaemon.ps1 and unnecessarily installed Linux sbx0.47 in existing WSL, then requested a fresh sign-in. That sign-in instruction is withdrawn. On2026-10-09 the existing Windows launcher recovered an empty failed daemon by preserving state and using a temporary same-user Interactive/Limited launch. Image listing succeeded. windows-restored-preflight.json passed actual immutable-template VM installation, actor containment and paired artifact immutability; cleanup removed, actor_executed=false. Existing Windows openai service-name metadata remains configured; no credential was copied or reset. The newly started Linux root daemon was stopped; no WSL distro or prior task runtime was deleted."
@@ -53,7 +67,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Complete #3850 and #3851 as independent prerequisite PRs from current master; finish existing PR #3848 for #3846; stack #3847 on #3850 and #3849 on accepted prerequisite contracts. Reuse this checkout, preserve existing user work and all first failed reader observations. Finish finite installed behavior and required validation per issue before ready status; leave independent review externally initiated.",
+  "next_action": "Commit and freeze #3849's current policy/context correction, run the five finite ordinary executor cases with real sealed nonlocal dispatch and typed return/integration, then finish its PR evidence/readiness and the final batch audit.",
   "owner_level": "lane",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3849"
@@ -65,16 +79,15 @@
     "remaining": "Finish the faithful first actor baseline and finite installed exercise on one frozen correction head: required positive non-local with both executors feasible, required legitimate local, required unresolved restriction without unauthorized implementation, advisory and quiet local-preferred controls. Record actual target/effective local policy/activity, source/config revisions, eligibility, native calls, implementation timing, dispatch/typed return, responsible admission/integration/proof, failures and limits. Consume accepted #3850/#3851 controls. Resolve broad public proof-source closure for that claim, complete required source reconciliation and CI, and leave independent review externally initiated. No statistical reliability or cost claim."
   },
   "references": [
-    "https://github.com/rickardvh/agentic-workspace/issues/3846",
-    "https://github.com/rickardvh/agentic-workspace/issues/3847",
     "https://github.com/rickardvh/agentic-workspace/pull/3848",
-    "https://github.com/rickardvh/agentic-workspace/issues/3849",
-    "https://github.com/rickardvh/agentic-workspace/issues/3850",
-    "https://github.com/rickardvh/agentic-workspace/issues/3851",
+    "https://github.com/rickardvh/agentic-workspace/pull/3852",
+    "https://github.com/rickardvh/agentic-workspace/pull/3853",
+    "https://github.com/rickardvh/agentic-workspace/pull/3854",
+    "https://github.com/rickardvh/agentic-workspace/pull/3855",
     ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388"
   ],
   "relationships": {},
-  "revision": 7,
+  "revision": 8,
   "scope": {
     "negative_requirements": "Each issue has one coherent PR. No duplicate #3848 PR, no ambient plan/route state, no duplicated semantic fix, no weakening source/currentness/admission.",
     "surface": "Five-issue implementation: #3846 Planning discovery (existing PR #3848), #3847 Memory first-use and reuse, #3849 policy entry/execution, #3850 shared route carriage, #3851 explicit optional delegation."
@@ -84,18 +97,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a211ce1d67bb28556a2893d34a249d9e2976ae5d32451775b3696fec2a02f779.attempt.json",
-        "revision": "sha256:10c66e8d94d5e74044af485bc5a3d7b050a63ecb9bfc8dfeed500ae1a4f053bb",
+        "path": ".agentic-workspace/local/effects/02d50e831d8853cd18e4399c7538483784d76f403de6cf35d6eed2eb7ec32dcc.attempt.json",
+        "revision": "sha256:4e824d29cd00e37f81504aa6d4bc2887750e2ed3332dbcbf7ff53a6b51853cb4",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a211ce1d67bb28556a2893d34a249d9e2976ae5d32451775b3696fec2a02f779.result.json",
-        "revision": "sha256:05e657298c81acdae53dd414742735cc1cd4694eab022758c9f8df717c5c2e29",
+        "path": ".agentic-workspace/local/effects/02d50e831d8853cd18e4399c7538483784d76f403de6cf35d6eed2eb7ec32dcc.result.json",
+        "revision": "sha256:1eeb3dc6cbde6c24a3647a7a0e03de5948db991d0d647dd444d641d22deef4b5",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:91eae1bcef04f9462b1b4e3ce7d1fb7652b9587176c98c6cf5f576b62ee8af04",
+    "invocation_revision": "sha256:b8a541ea3e1bb241db2008787734ec3be72e7a3562145bc5bc2e92c7ae7aa361",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -103,7 +116,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:9a8e39c00dbccd66207d12f791a98e963af0fcb4f1212fb3d49caf8ddab86d14",
+        "document_revision": "sha256:20c95855949b530599e87c9f25e463cf22185f3ab115eee3691399a1baa7fa01",
         "owner_id": "work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf",
         "owner_path": ".agentic-workspace/planning/execplans/work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf.plan.json"
       }
