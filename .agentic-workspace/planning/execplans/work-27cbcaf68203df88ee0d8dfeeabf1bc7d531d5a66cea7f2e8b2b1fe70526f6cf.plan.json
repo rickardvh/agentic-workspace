@@ -1,0 +1,103 @@
+{
+  "blockers": [
+    "Accepted #3850 and #3851 source contracts not available at last observation.",
+    "Supported Sandbox backend cannot create the installed actor environment; zero actual actor sessions observed.",
+    "Required successful exact-head installed-agent policy exercise and closure evidence remain absent.",
+    "Broad public conformance is not green: declared snapshot fixture closure and one unattributed packet-equality failure need resolution for that claim."
+  ],
+  "canonical_core": {
+    "continuation_owner": "This Plan and issue3849",
+    "requested_outcome": "Entire3849 acceptance including installed behavior"
+  },
+  "continuation": {
+    "accepted": "The user requested finishing all of #3849. Work remains unfinished. The current patch makes nonbinding Assignment admission explicit, exposes effective policy mode/binding/source/scope in compact output, removes the false advisory fallback prohibition, supplies status/reason fields for task restrictions, and front-loads policy-conditioned admission in the single shipped startup/Assignment procedure. Canonical and generated payload bytes match. No #3850 routing or #3851 comparator code was changed.",
+    "actor_evidence": "A paired Linux artifact was built offline from an exact git archive of f2c03330180b00df2b1aaf44672be2a4ba79e4fc and frozen under task scratch/baseline-candidate. The ordinary activation-local baseline uses the unchanged prompt Implement worker.py so its answer is 42, without AW/delegation instructions. Both recorded attempts failed before any provider session: stale Windows Sandbox socket files first, then the recovered daemon's backend could not connect to its own unix://C:\\...\\docker.sock. Actual actor target checkout, effective policy and activity therefore remain unobserved. These are host preparation failures, not agent compliance observations. Do not replace them or score them as successful baseline evidence.",
+    "dependencies": "The accepted source contracts of #3850 and #3851 are prerequisites named by #3849. Both issues were still open with no matching PR at observation on 2026-10-09. Reobserve their current sources rather than treating this snapshot as permission or an execution queue.",
+    "final_validation": "Current source-scoped native Assignment/read-only handoff check passed all 50 cases; shared Rust library check passed 209 with 3 ignored. Exact native process artifacts are in the proof fields. The broader conformance command remains failed; no installed actor or whole-task completion is established.",
+    "handoff_probe": "An attempted compact capture-after-selection extension was tested and withdrawn. Adding input completeness changed comparative dependencies/feasibility, and native rejection correctly preserved currentness. The second run retained49passing cases and that one failure. No comparator or admission relaxation was made. Future ordinary positive exercise should use the existing preparation-before-binding contract; determine any missing presentation seam from faithful evidence. The local handoff-projection-probe.diff and failed receipt preserve the experiment, not accepted implementation.",
+    "proof_findings": "A broader owner conformance run retained158passing cases and22failures.20name missing proof-snapshot fixtures (GitHub issue instructions, example-runtime-boundary memory note, shared-semantic-authority decision). The copied dogfooding fixture lacks its SKILL entry in that snapshot. A material/quiet packet-equality failure remains unattributed. This broad command is not green. Its source/fixture closure remains with Verification/public-interface evidence and was nominated through current material in finding-ingress.json. Do not change assertions to approve the symptom or retry the unchanged environment.",
+    "publication": "No PR, independent review, merge or issue closure was performed. Repository instructions require each implementation PR to fully resolve its issue; missing actor evidence and dependencies prevent presenting this patch as ready. Implementation actors must not initiate their own independent reviewer.",
+    "resources": "Use the existing checkout on codex/3849-assignment-policy. No worktree or alternate clone was created. The temporary baseline build container was removed. sbx ls confirmed no actor sandboxes existed after the failed creations; failed cleanup receipts remain retained. Task scratch is needed for the frozen baseline, failed results and native receipt pointers. Preserve unrelated pre-existing untracked Plans and entry directories, and the protected decision-point source."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/5bad3da2e643e312f59c1ae376f2a6bd11b3dfb0bcac6517c10f23567aadcaf8.attempt.json",
+        "revision": "sha256:585a8a8a20cbb457550b118173ce45e792baf45fbafcf2459cea224a5f82082c",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/5bad3da2e643e312f59c1ae376f2a6bd11b3dfb0bcac6517c10f23567aadcaf8.result.json",
+        "revision": "sha256:534906a6b70c67d61c104813fdd7739380ff8010640899f09a3ba623d021ed65",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:f962d3151d46c005380627867c88abe70e281f42c4174bd4322bce11f64fc97a",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:bb1ad83caf96d34d5de81720afb0c03112ac94cf0178cae0f3a98a0b06ba2ca6"
+  },
+  "id": "work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf",
+  "intent": {
+    "constraints": "Consume #3850/#3851 accepted fixes separately; no comparator/cache duplication. Preserve independent review and all owner restrictions.",
+    "outcome": "Complete all #3849 criteria in one coherent PR with exact-head installed actor evidence."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Reobserve and consume accepted #3850 and #3851 contracts; restore a usable supported Sandbox backend; capture a faithful ordinary-agent baseline on the retained f2c033301 candidate, then complete the finite policy exercise on one frozen correction head. Finish any demonstrated missing boundary, required source reconciliation and CI before creating the single #3849 PR.",
+  "owner_level": "slice",
+  "parent": {
+    "issue": "https://github.com/rickardvh/agentic-workspace/issues/3849"
+  },
+  "phase": "shaping",
+  "proof": {
+    "accepted": "Current source-scoped confined native validation: 50 Assignment/read-only handoff cases passed (.agentic-workspace/local/proof-receipts/runs/native-sha256-31ad582f16419807259e0f121a61242b83802a6e011f6ec1f400626feb252c17/run.json.command.json); 209 Rust library cases passed with 3 ignored (.agentic-workspace/local/proof-receipts/runs/native-sha256-00be38a6c28e1f5e8a5089cc664246d45aeef7b419aef59288f6a4fe5121d7ec/run.json.command.json). Source/payload generation, catalogue parity, native source boundary, agent-aid validation, Rust formatting and focused Python formatting/lint passed. One MSVC linker crash preceded a successful serialized paired rebuild. Reobserve source/scope currentness before reusing these conclusions; no full broad conformance, installed behavior or issue completion claim.",
+    "failed_attempts": "First native owner run:48passed2provenance failures, corrected. Second:49passed1capture-after-binding failure, extension withdrawn. Third broader command:158passed22failures, retained with source/fixture gap. Raw effect records and exact native stdout/stderr artifacts are named in task scratch/owner-proof-1.json, owner-proof-2.json, owner-proof-3.json; no failure was overwritten.",
+    "remaining": "Finish the faithful first actor baseline and finite installed exercise on one frozen correction head: required positive non-local with both executors feasible, required legitimate local, required unresolved restriction without unauthorized implementation, advisory and quiet local-preferred controls. Record actual target/effective local policy/activity, source/config revisions, eligibility, native calls, implementation timing, dispatch/typed return, responsible admission/integration/proof, failures and limits. Consume accepted #3850/#3851 controls. Resolve broad public proof-source closure for that claim, complete required source reconciliation and CI, and leave independent review externally initiated. No statistical reliability or cost claim."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3849",
+    ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388"
+  ],
+  "relationships": {},
+  "revision": 4,
+  "scope": {
+    "surface": "Effective policy ingress, compact Assignment posture, shipped procedure and finite installed-agent execution."
+  },
+  "title": "#3849 policy-conditioned Assignment entry and execution",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/67a1cbf9fcf023b4ce41167fa2fec2075ad22d9f5f9584c0ee4066e50f41205a.attempt.json",
+        "revision": "sha256:6ac0f73c8c3e73ff84976d5bebe527f69ebe71a34d95ba3d2cffba333d6bc7b5",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/67a1cbf9fcf023b4ce41167fa2fec2075ad22d9f5f9584c0ee4066e50f41205a.result.json",
+        "revision": "sha256:4cdaff986fb38717dcb0ae163199227bb815cf362c756f0f38b6a77a8f2a6584",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:e89911e84de3c11923404210c87cd20b493da9481672ee2d686f9f2a217ebb6b",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:4f7cba961b3de1530c07a9572d8e792f0d17cf82b0bcdd1feab5c1cd44d80ef8",
+        "owner_id": "work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf",
+        "owner_path": ".agentic-workspace/planning/execplans/work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf.plan.json"
+      }
+    }
+  }
+}

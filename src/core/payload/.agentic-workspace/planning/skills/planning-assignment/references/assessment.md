@@ -12,7 +12,10 @@ answer fields and exact reference. Return `reentry` unchanged with that referenc
 and your answer through `start --input`. The owner carries source identities and
 earlier answers; you need not open task-requirements detail or inspect request
 arrays. A caller that already keeps carriage may use the same reference with it.
-When `local_continuation_allowed` is true, continue direct work. A mechanically
+Read `policy_mode`, `binding` and `affects` with local continuation. Nonbinding
+advice does not require a comparison answer before local implementation, even
+when advice remains unresolved. Keep independent restrictions visible.
+When binding admission permits local continuation, continue direct work. A mechanically
 settled choice needs no comparison answer, self-assignment record or handoff.
 Non-local or unresolved admission still follows its current recovery.
 

@@ -912,18 +912,44 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
         return Ok(None);
     }
     let assessment = &requirements["assignment"]["result"];
+    let policy = &full["configuration"]["assignment_policy"];
+    let binding = assessment["binding"] == true;
     let mut result = json!({"status":requirements["implementation_admission"]["status"],
-        "local_continuation_allowed":requirements["implementation_admission"]["local_continuation_allowed"],
-        "comparison_status":assessment["status"],
-        "determination":assessment["determination"],
-        "authority":"Current Assignment admission only; proof, review and task completion remain separate."});
+    "policy_mode":policy["assignment_policy"],"binding":binding,
+    "policy_source":{"revision":policy["source_revision"],
+        "sources":full["configuration"]["sources"].as_array().into_iter().flatten()
+                .filter(|source| source["reference"] == ".agentic-workspace/config.local.toml"
+                    || source["status"] == "current-shared-local-source")
+            .cloned().collect::<Vec<_>>()},
+    "affects":requirements["implementation_admission"]["affects"],
+    "local_continuation_allowed":requirements["implementation_admission"]["local_continuation_allowed"],
+    "comparison_status":assessment["status"],
+    "determination":assessment["determination"],
+    "authority":if binding {
+        "Current Assignment admission for the listed actions; proof, review and task completion remain separate."
+    } else {
+        "Nonbinding Assignment advice; local continuation has no Assignment gate. Independent restrictions, result admission, proof and completion remain separate."
+    }});
     let (kind, question, answer) = if requirements["status"] != "resolved" {
         result["target_scope_questions"] = requirements["target_scope_questions"].clone();
         result["source_work"] = requirements["source_work"].clone();
+        let target_scope: serde_json::Map<String, Value> = requirements["target_scope_questions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|question| question["target"].as_str())
+            .map(|target| {
+                (
+                    target.to_owned(),
+                    json!({"status":"<applies, not-applicable or unresolved>",
+                "reason":"<why the configured restriction applies to this task>"}),
+                )
+            })
+            .collect();
         (
             "assignment/judge-task-requirements/v1",
             "What result and proof does this work require, and which configured task restrictions apply? Source identities and constraints are already supplied by the owner.",
-            json!({"role":"executor","required_result_classes":["<required result class, e.g. unapplied-patch>"],"required_proof_classes":[],"target_scope":{}}),
+            json!({"role":"executor","required_result_classes":["<required result class, e.g. unapplied-patch>"],"required_proof_classes":[],"target_scope":target_scope}),
         )
     } else if matches!(
         assessment["status"].as_str(),
@@ -958,7 +984,11 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
                 "result_classes":r["configuration"]["result_classes"],"proof_classes":r["configuration"]["proof_classes"]})).collect::<Vec<_>>());
         (
             "assignment/judge-task-requirements/v1",
-            "No currently admitted comparison can settle this work. Inspect the current requirements and capability gaps. Correct only a mis-stated requirement or unresolved task restriction; retain real requirements and use the owner's recovery when capability is missing. No local fallback is authorized.",
+            if binding {
+                "No currently admitted comparison can settle this work. Inspect the current requirements and capability gaps. Correct only a mis-stated requirement or unresolved task restriction; retain real requirements and use the owner's recovery when capability is missing. Binding Assignment does not authorize local fallback."
+            } else {
+                "The advisory comparison is unresolved. Inspect the current requirements and capability gaps if advice would help; correct only a mis-stated requirement or unresolved task restriction. Assignment imposes no local continuation gate; follow any independent restrictions."
+            },
             json!({"required_result_classes":"<the actual required classes>","required_proof_classes":"<the actual required proof classes>","target_scope":{}}),
         )
     };
