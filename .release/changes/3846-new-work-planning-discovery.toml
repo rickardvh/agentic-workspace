@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Restore early Planning discovery for new work without activating unrelated remembered plans or requiring plans for direct tasks."

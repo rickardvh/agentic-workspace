@@ -43,6 +43,7 @@ def test_remembered_plans_are_inert_until_explicit_binding(
         before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
         quiet = call(context)
         assert quiet["planning"]["status"] == "direct"
+        assert quiet["planning"]["status_scope"] == "current-owner-obligations"
         assert quiet["planning"]["incumbent_owner"] is None
         assert quiet["planning"]["selected_owner"] is None
         assert quiet["planning"]["current_owner"] is None

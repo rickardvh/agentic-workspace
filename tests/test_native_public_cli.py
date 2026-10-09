@@ -1393,6 +1393,10 @@ def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_cor
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
     subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes", "--format", "json"], check=True, capture_output=True)
     context = {"target": str(tmp_path), "task": "Validate current behaviour"}
+    initial = consume("native", shared_core_binary, native_cli, context)
+    assert initial["planning"]["status"] == "direct"
+    assert initial["planning"]["status_scope"] == "current-owner-obligations"
+    assert not any(c["entry"].get("skill_id") == "planning-work" for c in initial.get("activation", {}).get("candidates", []))
     material = [
         {
             "id": "environment",
@@ -1409,7 +1413,12 @@ def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_cor
     ]
     current = consume("native", shared_core_binary, native_cli, {**context, "material": material})
     candidates = current["activation"]["candidates"]
-    assert {"workspace-instruction-correction", "workspace-proof-selection"} <= {c["entry"]["skill_id"] for c in candidates}
+    assert {"workspace-instruction-correction", "workspace-proof-selection", "planning-work"} <= {
+        c["entry"]["skill_id"] for c in candidates
+    }
+    planning = next(c for c in candidates if c["entry"]["skill_id"] == "planning-work")
+    assert planning["entry"]["resource"] == ".agentic-workspace/planning/skills/planning-work/procedure.md"
+    assert current["planning"]["selected_owner"] is None, "procedure discovery does not select a plan"
     assert all(isinstance(c["entry"]["route"], str) for c in candidates)
     native_blockers = current["decision_packet"]["blockers"]
     request = current["activation"]["requests"][0]

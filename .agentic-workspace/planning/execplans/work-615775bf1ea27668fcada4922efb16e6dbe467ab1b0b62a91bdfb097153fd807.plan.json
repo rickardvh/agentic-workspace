@@ -1,0 +1,108 @@
+{
+  "blockers": [
+    "Live consumer runtime unavailable: sbx missing; baseline context-continuation-clean harness started zero sessions."
+  ],
+  "canonical_core": {},
+  "continuation": {
+    "accepted": [
+      "Canonical startup now judges new-work decomposition/continuity early and reaches existing Planning native create/select; sufficient existing records and simple work stay direct.",
+      "Planning procedure applicability and generated payload/index agree. Native direct status has current-owner-obligations scope and does not judge task shape.",
+      "Remembered-owner transport controls passed on native, JSON, Python and TypeScript; quiet installed activation control passed. Rust remembered-owner and independent activation controls passed.",
+      "The frozen baseline is source 61da7aca07661bc19cd45882bf5e84f0daf979c2, target x86_64-unknown-linux-gnu, archive sha256:8ac7ca7928cf2a8266643376973823af98745aa9d56fa94588b1efd3426dc9e9."
+    ],
+    "remaining": [
+      "Supported live harness first attempt failed before any actor session: sbx executable missing. No original failing agent observation or before/after discovery comparison exists. New-work, direct, sufficient-owner and unrelated missing-branch controls plus fresh continuation remain required.",
+      "Independent review and native Verification claim admission remain separate; this PR is draft and does not close the issue."
+    ]
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/b2f806ca8b81df8cef4b8c3bcece146b0f3eec6aa2354fce2068fbb6d9da0b99.attempt.json",
+        "revision": "sha256:3b13eccb1498fba11af7ed9e21e4abc77d44147c43dc087cc27a69f5073de3c9",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/b2f806ca8b81df8cef4b8c3bcece146b0f3eec6aa2354fce2068fbb6d9da0b99.result.json",
+        "revision": "sha256:72e54bd483a18ceebd92c4fe87653285b664708aea2ba7680923c8037483539f",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:8b07184221853d0625516a46931e541737441754d0f3603265ca00130b529934",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:d8e52f52f67f67345aa7a8ce8ad955dcac8ba1d30cb2461e1f7d23ae1a44a4c6"
+  },
+  "id": "work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807",
+  "intent": {
+    "outcome": "Restore early agent judgment and existing native Planning use for substantial new work while remembered unrelated owners remain inert.",
+    "source": "https://github.com/rickardvh/agentic-workspace/issues/3846"
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Finish focused creation/continuation validation, commit and freeze the installed candidate, then create a draft PR. Run the supported live comparison with all #3846 controls once Docker Sandboxes is available; do not close #3846 without it.",
+  "owner_level": "slice",
+  "parent": {},
+  "phase": "shaping",
+  "proof": {
+    "remaining": [
+      "Exact frozen candidate installed deterministic checks",
+      "Supported fresh-agent before/after comparison with all four #3846 controls and fresh continuation",
+      "Independent review and native Verification admission"
+    ]
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3846"
+  ],
+  "relationships": {},
+  "revision": 2,
+  "scope": {
+    "excluded": [
+      "ambient selection",
+      "mandatory start or plans",
+      "new controllers or state owners"
+    ],
+    "included": [
+      "canonical startup discovery",
+      "Planning procedure activation applicability",
+      "native direct-status meaning",
+      "focused controls and installed-agent evidence"
+    ]
+  },
+  "title": "Restore new-work Planning discovery (#3846)",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/60678f87ea93d2f74fe6235984bfe08330da230a0b7bbdb13b438f786be7ae5d.attempt.json",
+        "revision": "sha256:85a9724d6da7bafc0477cf93222bd005a23fd316be1cfb58b65f2996bf9122c9",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/60678f87ea93d2f74fe6235984bfe08330da230a0b7bbdb13b438f786be7ae5d.result.json",
+        "revision": "sha256:e01b068b876c4bbde5a688cdad9c66eaed94a20efa3514ed5037ee0e7f92a29a",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:de61fdb2334e9f6d772fbe93fdbd4ac9ca5abeb78856e0ceffc801d655fb508b",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:16e9bc78018d48c854e859e959827815b7d5d904923846a3bbfba4b02e36257a",
+        "owner_id": "work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807",
+        "owner_path": ".agentic-workspace/planning/execplans/work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807.plan.json"
+      }
+    }
+  }
+}

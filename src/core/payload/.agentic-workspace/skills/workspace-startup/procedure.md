@@ -4,8 +4,13 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "What is preventing the next authorised step? Choose only the help needed; clear work may continue directly.",
+  "question": "What would help the next authorised step, including decomposition or durable continuity for new work? Choose only useful help; sufficient current sources permit direct work.",
   "branches": [
+    {
+      "id": "planning",
+      "description": "New or continuing work benefits from decomposition or durable intent and dependencies beyond sufficient existing records",
+      "next": "references/ordinary.md"
+    },
     {
       "id": "ordinary",
       "description": "The next action needs current AW information or a configured command",

@@ -17,7 +17,7 @@
     },
     {
       "activation": {
-        "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
+        "applicability": "New work needs useful decomposition or durable intent, constraints and dependencies beyond sufficient existing records; changed scope, accepted progress, interruption or handoff also has continuity value.",
         "binding_owners": [
           "planning"
         ],
@@ -26,7 +26,7 @@
           "observation",
           "binding"
         ],
-        "outcome": "The needed task record is saved and verified, or no plan is needed."
+        "outcome": "Sufficient existing task meaning is reused, or native Planning custody is created/selected and verified before needed meaning is lost; direct work needs no duplicate record."
       },
       "id": "planning-work",
       "path": "planning-work/SKILL.md",
