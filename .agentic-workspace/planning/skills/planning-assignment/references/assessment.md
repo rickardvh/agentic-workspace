@@ -25,6 +25,13 @@ cost, price or competence from packet bytes.
 Read `policy_mode`, `binding` and `affects` with local continuation. Nonbinding
 advice does not require a comparison answer before local implementation, even
 when advice remains unresolved. Keep independent restrictions visible.
+Before a consequential comparison, check any source-owned `execution_posture`
+for the applicable existing task activity. When one fits this work, select that
+activity through the current semantic-route request and preserve its returned
+reentry while browsing this method. Confirm the active posture in the current
+requirements; reading a skill does not select an activity, and an unselected
+posture's preferences do not apply. This check belongs to an actual comparison,
+not passive local work, and does not prohibit an eligible local executor.
 When binding admission permits local continuation, continue direct work. A mechanically
 settled choice needs no comparison answer, self-assignment record or handoff.
 Non-local or unresolved admission still follows its current recovery.
