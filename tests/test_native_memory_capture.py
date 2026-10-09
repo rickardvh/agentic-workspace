@@ -13,6 +13,42 @@ from tests.test_native_public_cli import native_cli as native_cli
 from tests.test_shared_core import _commit_native, _native_archive
 
 
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_first_consideration_is_actionable_in_compact_without_stored_candidate(tmp_path, shared_core_binary, native_cli, surface):
+    context = {"target": str(tmp_path), "task": "Inspect a source finding", "projection": "compact"}
+    signal = {
+        "id": "first-finding",
+        "kind": "observation",
+        "summary": "The current pipeline reads the same immutable source for every row.",
+        "source": {"producer": "acting-agent", "reference": "pipeline.py", "coverage": "bounded"},
+    }
+
+    def call(**extra):
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+
+    assert "candidate_context" not in call()
+    initial = call(material=[signal])
+    detail = call(**initial["reentry"], reference=initial["detail_refs"]["/memory"])["value"]
+    request = next(r for r in detail["candidates"]["requests"] if r["arguments"]["operation"] == "consider")
+    considered = call(material=[signal], request=request)
+    first = considered["candidate_context"]
+    assert first["observations"] == []
+    assert first["finding"]["material"]["summary"] == signal["summary"]
+    assert first["next"] == first["judgment"]
+    assert first["next"]["choices"] == ["correct-current-source", "retain-advice", "no-retention", "capture"]
+    assert first["next_step"]["reference"].startswith("request:memory:")
+    # The first question's exact reference can propose its supported optional
+    # capture without a full-detail detour or fabricated stored candidate.
+    ready = call(
+        **considered["reentry"],
+        reference=first["next_step"]["reference"],
+        answer={"operation": "capture", "optional": True, "uncertainty": "Future value remains unsettled.", "paths": ["pipeline.py"]},
+    )
+    assert ready["decision_packet"]["primary_action"]["operation_id"] == "memory.update-candidates"
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    assert "candidate_context" not in call(task="Inspect unrelated documentation")
+
+
 def test_advisory_capture_keeps_decision_authority_separate(tmp_path, shared_core_binary, native_cli):
     dependency = tmp_path / "policy.md"
     dependency.write_text("Current fixture fact")

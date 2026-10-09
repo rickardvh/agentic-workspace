@@ -255,7 +255,16 @@ fn view_at(
     let mut result = json!({"status":"available","requests":[],"selected":[],"bounds":{"count":COUNT,"state_bytes":BYTES,"age_seconds":AGE,"total_attributable_bytes":2*BYTES+RESIDUE},
         "contribution":{"owner":"memory","revision":revision,"actions":[]}});
     for finding in &findings {
-        result["requests"].as_array_mut().unwrap().push(template(json!({"operation":"consider","material_revision":finding["revision"],"captured_at":clock})));
+        // A carried first consideration keeps its original observation age.
+        // Regenerating that argument at each read makes its exact compact
+        // reference stale merely because the next call crosses a clock tick.
+        // Normal request validation below still checks work and source; capture
+        // separately rejects a future or expired timestamp without renewing it.
+        let captured_at = request
+            .filter(|r| r["arguments"]["material_revision"] == finding["revision"])
+            .and_then(|r| r["arguments"]["captured_at"].as_u64())
+            .unwrap_or(clock);
+        result["requests"].as_array_mut().unwrap().push(template(json!({"operation":"consider","material_revision":finding["revision"],"captured_at":captured_at})));
     }
     result["requests"]
         .as_array_mut()
@@ -1117,6 +1126,11 @@ mod tests {
         };
         let action =
             |view: &Value| json!({"arguments":view["contribution"]["actions"][0]["arguments"]});
+        let first_material = crate::native_material::view(&f.0, &work, &[input(0)]).unwrap();
+        let first = resolve(&first_material, None, clock)["requests"][0].clone();
+        let next_tick = resolve(&first_material, Some(&first), clock + 1);
+        assert_eq!(next_tick["requests"][0], first);
+        assert_eq!(next_tick["finding"]["material"]["id"], "discovery-0");
         let capture = |n, t| {
             let material = crate::native_material::view(&f.0, &work, &[input(n)]).unwrap();
             let mut request = resolve(&material, None, t)["requests"][0].clone();

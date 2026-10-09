@@ -2462,6 +2462,13 @@ blocking_claims = [
 ]
 notes = "Model harness and test-knowledge changes need scorer proof and inventory review before broad completion claims."
 
+[assurance.domain_proof_lanes.first_memory_disposition]
+purpose = "First compact Memory consideration and existing bounded publication controls."
+applies_to_paths = ["src/core/src/operating.rs", "tests/test_native_memory_capture.py"]
+commands = ["uv run pytest tests/test_native_memory_capture.py tests/test_native_memory_declarations.py tests/test_native_route_navigation.py -q", "cargo test --locked -p agentic-workspace-core --lib"]
+owner = "workspace-cli-runtime"
+claim_boundary = "first-compact-disposition-and-native-retention-controls-not-ordinary-agent-reuse"
+
 [assurance.domain_proof_lanes.semantic_route_carriage]
 purpose = "Current task selection survives read-only navigation, with scoped advice and execution preferences intact."
 applies_to_paths = ["src/core/src/semantic_routes.rs", "src/core/src/native_public.rs", "tests/test_native_route_navigation.py"]
