@@ -142,7 +142,27 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     assert observed["task_requirements"]["implementation_admission"]["status"] == "returned-unadmitted"
     judged = observed["task_requirements"]["assignment"]["result_admission"]["requests"][0]
     judged[-1]["arguments"].update(answer="use-result", reason="The returned delta satisfies the bounded assignment.")
-    admitted = call(judged)
+    if surface in {"native", "json"} and not planning_owned:
+        ordinary = call(reentry, projection="compact")
+        returned = ordinary["assignment_context"]["returned_result"]
+        assert returned["status"] == "judgment-required" and returned["result_use_allowed"] is False
+        assert returned["material_reference"].startswith("detail:task_requirements:")
+        step = ordinary["assignment_context"]["next_step"]
+        selected = consume(
+            surface,
+            shared_core_binary,
+            native_cli,
+            {
+                **ordinary["reentry"],
+                "reference": step["reference"],
+                "answer": {"answer": "use-result", "reason": "The exact observed delta satisfies this bounded assignment."},
+                "projection": "compact",
+            },
+        )
+        assert selected["assignment_context"]["returned_result"]["result_use_allowed"] is True
+        admitted = consume(surface, shared_core_binary, native_cli, {**selected["reentry"], "projection": "full"})
+    else:
+        admitted = call(judged)
     assert admitted["task_requirements"]["implementation_admission"]["status"] == "returned-admitted"
     assert admitted["task_requirements"]["implementation_admission"]["historical_compliance"] == "owner-admitted-result"
     assert admitted["planning"]["adoption_requests"] == []
@@ -185,7 +205,19 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         assert main.read_bytes() == preserved
         assert not (tmp_path / ".agentic-workspace/local/patch-integrations").exists()
         main.write_bytes(ordinary)
-    ready = call(request)
+    if surface in {"native", "json"} and not planning_owned:
+        ordinary = call(judged, projection="compact")
+        assert ordinary["assignment_context"]["returned_result"]["integration_status"] == "proposal-ready"
+        step = ordinary["assignment_context"]["next_step"]
+        assert step["answer_shape"] == {}
+        ready = consume(
+            surface,
+            shared_core_binary,
+            native_cli,
+            {**ordinary["reentry"], "reference": step["reference"], "answer": {}, "projection": "full"},
+        )
+    else:
+        ready = call(request)
     integrate = ready["decision_packet"]["primary_action"]
     assert integrate is not None, json.dumps(ready["decision_packet"], indent=2)
     assert integrate["operation_id"] == "assignment.integrate-patch"

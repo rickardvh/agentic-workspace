@@ -968,6 +968,49 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
             });
         }
     }
+    let admission = &requirements["assignment"]["result_admission"];
+    let integration = &requirements["patch_integration"];
+    if admission["status"].is_string() && admission["status"] != "not-ready" {
+        result["returned_result"] = json!({
+            "status":admission["status"],"result_use_allowed":admission["result_use_allowed"],
+            "summary":admission["returned"]["summary"],
+            "changed_paths":admission["returned"]["changed_paths"],
+            "stop_conditions_hit":admission["returned"]["stop_conditions_hit"],
+            "integration_status":integration["status"],
+            "authority":"Current return and integration facts only; worker summary is untrusted. Result admission, implementation, proof and completion remain separate."
+        });
+        if let Some(detail) = entries(full, context)?
+            .iter()
+            .find(|entry| entry["selector"] == "/task_requirements")
+        {
+            result["returned_result"]["material_reference"] = detail["reference"].clone();
+        }
+        let stage = if admission["status"] == "judgment-required" {
+            admission["requests"][0].as_array().and_then(|r| r.last()).map(|request| (
+                request,
+                "Judge the actual returned material against this bounded outcome. Inspect the current return detail when needed; a successful process or seal is not admission.",
+                request["arguments"].clone(),
+            ))
+        } else if integration["status"] == "proposal-ready" {
+            integration["requests"][0].as_array().and_then(|r| r.last()).map(|request| (
+                request,
+                "Select the owner's current integration proposal for this admitted delta. This prepares its exact action; do not apply the worker patch through a host editor.",
+                json!({}),
+            ))
+        } else {
+            None
+        };
+        if let Some((next, question, shape)) = stage
+            && let Some(request) = request_entries(full, context)?
+                .iter()
+                .find(|r| r["envelope"] == *next)
+        {
+            result["selected"] = json!({"id":assessment["selected"]["id"],"target":assessment["selected"]["target"]});
+            result["next_step"] = json!({"reference":request["reference"],"question":question,"answer_shape":shape,
+                "use":"Use this current reentry, exact reference and semantic answer. Preserve executed-result custody; do not extract a replacement request from a bundle. Then invoke only the owner's offered action with its work context."});
+            return Ok(Some(result));
+        }
+    }
     let (kind, question, answer) = if requirements["status"] != "resolved" {
         result["target_scope_questions"] = requirements["target_scope_questions"].clone();
         result["source_work"] = requirements["source_work"].clone();
