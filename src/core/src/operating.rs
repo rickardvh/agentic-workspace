@@ -912,18 +912,125 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
         return Ok(None);
     }
     let assessment = &requirements["assignment"]["result"];
+    let policy = &full["configuration"]["assignment_policy"];
+    let binding = assessment["binding"] == true;
     let mut result = json!({"status":requirements["implementation_admission"]["status"],
-        "local_continuation_allowed":requirements["implementation_admission"]["local_continuation_allowed"],
-        "comparison_status":assessment["status"],
-        "determination":assessment["determination"],
-        "authority":"Current Assignment admission only; proof, review and task completion remain separate."});
+    "policy_mode":policy["assignment_policy"],"binding":binding,
+    "policy_source":{"revision":policy["source_revision"],
+        "sources":full["configuration"]["sources"].as_array().into_iter().flatten()
+                .filter(|source| source["reference"] == ".agentic-workspace/config.local.toml"
+                    || source["status"] == "current-shared-local-source")
+            .cloned().collect::<Vec<_>>()},
+    "affects":requirements["implementation_admission"]["affects"],
+    "local_continuation_allowed":requirements["implementation_admission"]["local_continuation_allowed"],
+    "comparison_status":assessment["status"],
+    "determination":assessment["determination"],
+    "authority":if binding {
+        "Current Assignment admission for the listed actions; proof, review and task completion remain separate."
+    } else {
+        "Nonbinding Assignment advice; local continuation has no Assignment gate. Independent restrictions, result admission, proof and completion remain separate."
+    }});
+    if requirements["status"] == "resolved" && requirements["handoff_inputs"].is_object() {
+        let inputs = &requirements["handoff_inputs"];
+        let source_work = &requirements["source_work"];
+        result["handoff_preparation"] = json!({
+            "status":inputs["status"], "gaps":inputs["gaps"],
+            "observed_inputs":inputs["inputs"],
+            "input_refs":inputs["judgment"]["input_refs"],
+            "mutation_paths":inputs["judgment"]["mutation_paths"],
+            "source_work":if source_work.is_object() {
+                json!({"status":source_work["status"],"producer":source_work["producer"],
+                    "work":source_work["work"],"definition":source_work["definition"],"gaps":source_work["gaps"]})
+            } else { Value::Null },
+            "planning_definition":if source_work.is_object(){"source-shaped"}else{"not-declared"},
+            "sealed_handoff_status":requirements["handoff"]["status"],
+            "prompt_owner":"sealed-packet-and-worker-entry",
+            "prompt_authoring_required":false,
+            "authority":"Preparation facts only. A saved plan is not a prepared worker packet. Compare the bounded child's marginal preparation and verification/integration work; these facts grant no dispatch or return admission."
+        });
+        let requests = request_entries(full, context)?;
+        // Prerequisite bundles also retain the earlier submitted input answer.
+        // Select the owner's current continuation, not the first same-kind
+        // envelope encountered in another bundle (which may predate capture).
+        let next_request = if inputs["status"] != "ready" {
+            inputs["requests"][0].as_array().and_then(|r| r.last())
+        } else {
+            requirements["handoff"]["requests"][0]
+                .as_array()
+                .and_then(|r| r.last())
+        };
+        if let Some(request) =
+            next_request.and_then(|next| requests.iter().find(|r| r["envelope"] == *next))
+        {
+            result["handoff_preparation"]["next_step"] = json!({
+                "reference":request["reference"],"answer_shape":request["envelope"]["arguments"],
+                "use":"Use current reentry and this exact reference. First observe the bounded input set with complete false, then judge the current observed set with complete true and a reason. Reuse source-shaped defaults when sufficient. Changed preparation revalidates the comparison; an old selected answer is not reusable authority. Once ready, submit the returned export reference without composing a replacement prompt."
+            });
+        }
+    }
+    let admission = &requirements["assignment"]["result_admission"];
+    let integration = &requirements["patch_integration"];
+    if admission["status"].is_string() && admission["status"] != "not-ready" {
+        result["returned_result"] = json!({
+            "status":admission["status"],"result_use_allowed":admission["result_use_allowed"],
+            "summary":admission["returned"]["summary"],
+            "changed_paths":admission["returned"]["changed_paths"],
+            "stop_conditions_hit":admission["returned"]["stop_conditions_hit"],
+            "integration_status":integration["status"],
+            "authority":"Current return and integration facts only; worker summary is untrusted. Result admission, implementation, proof and completion remain separate."
+        });
+        if let Some(detail) = entries(full, context)?
+            .iter()
+            .find(|entry| entry["selector"] == "/task_requirements")
+        {
+            result["returned_result"]["material_reference"] = detail["reference"].clone();
+        }
+        let stage = if admission["status"] == "judgment-required" {
+            admission["requests"][0].as_array().and_then(|r| r.last()).map(|request| (
+                request,
+                "Judge the actual returned material against this bounded outcome. Inspect the current return detail when needed; a successful process or seal is not admission.",
+                request["arguments"].clone(),
+            ))
+        } else if integration["status"] == "proposal-ready" {
+            integration["requests"][0].as_array().and_then(|r| r.last()).map(|request| (
+                request,
+                "Select the owner's current integration proposal for this admitted delta. This prepares its exact action; do not apply the worker patch through a host editor.",
+                json!({}),
+            ))
+        } else {
+            None
+        };
+        if let Some((next, question, shape)) = stage
+            && let Some(request) = request_entries(full, context)?
+                .iter()
+                .find(|r| r["envelope"] == *next)
+        {
+            result["selected"] = json!({"id":assessment["selected"]["id"],"target":assessment["selected"]["target"]});
+            result["next_step"] = json!({"reference":request["reference"],"question":question,"answer_shape":shape,
+                "use":"Use this current reentry, exact reference and semantic answer. Preserve executed-result custody; do not extract a replacement request from a bundle. Then invoke only the owner's offered action with its work context."});
+            return Ok(Some(result));
+        }
+    }
     let (kind, question, answer) = if requirements["status"] != "resolved" {
         result["target_scope_questions"] = requirements["target_scope_questions"].clone();
         result["source_work"] = requirements["source_work"].clone();
+        let target_scope: serde_json::Map<String, Value> = requirements["target_scope_questions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|question| question["target"].as_str())
+            .map(|target| {
+                (
+                    target.to_owned(),
+                    json!({"status":"<applies, not-applicable or unresolved>",
+                "reason":"<why the configured restriction applies to this task>"}),
+                )
+            })
+            .collect();
         (
             "assignment/judge-task-requirements/v1",
             "What result and proof does this work require, and which configured task restrictions apply? Source identities and constraints are already supplied by the owner.",
-            json!({"role":"executor","required_result_classes":["<required result class, e.g. unapplied-patch>"],"required_proof_classes":[],"target_scope":{}}),
+            json!({"role":"executor","required_result_classes":["<required result class, e.g. unapplied-patch>"],"required_proof_classes":[],"target_scope":target_scope}),
         )
     } else if matches!(
         assessment["status"].as_str(),
@@ -958,7 +1065,11 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
                 "result_classes":r["configuration"]["result_classes"],"proof_classes":r["configuration"]["proof_classes"]})).collect::<Vec<_>>());
         (
             "assignment/judge-task-requirements/v1",
-            "No currently admitted comparison can settle this work. Inspect the current requirements and capability gaps. Correct only a mis-stated requirement or unresolved task restriction; retain real requirements and use the owner's recovery when capability is missing. No local fallback is authorized.",
+            if binding {
+                "No currently admitted comparison can settle this work. Inspect the current requirements and capability gaps. Correct only a mis-stated requirement or unresolved task restriction; retain real requirements and use the owner's recovery when capability is missing. Binding Assignment does not authorize local fallback."
+            } else {
+                "The advisory comparison is unresolved. Inspect the current requirements and capability gaps if advice would help; correct only a mis-stated requirement or unresolved task restriction. Assignment imposes no local continuation gate; follow any independent restrictions."
+            },
             json!({"required_result_classes":"<the actual required classes>","required_proof_classes":"<the actual required proof classes>","target_scope":{}}),
         )
     };
@@ -1956,7 +2067,7 @@ mod tests {
     }
 
     #[test]
-    fn carried_route_selection_replaces_completed_discovery() {
+    fn carried_route_selection_coexists_with_navigation() {
         let root = temp_root("route-carriage");
         std::fs::create_dir_all(root.join("tools/skills/checks")).unwrap();
         std::fs::write(root.join("tools/skills/REGISTRY.json"),
@@ -1988,8 +2099,16 @@ mod tests {
                 .iter()
                 .filter(|r| r["owner"] == "semantic-routes")
                 .count(),
-            1
+            2
         );
+        let browse = start(json!({"request":selected["carriage"],"reference":"owner:request:semantic-routes:semantic-routes/discover/v1"})).unwrap();
+        let navigated = start(json!({"request":selected["carriage"],"reference":browse["reference"],"answer":{"parent":"unrelated"},"projection":"carried"})).unwrap();
+        assert_eq!(
+            navigated["view"]["decision_packet"]["semantic_task_routes"],
+            selected["view"]["decision_packet"]["semantic_task_routes"]
+        );
+        let detail = start(json!({"request":navigated["carriage"],"reference":navigated["view"]["detail_refs"]["/semantic_routes"]})).unwrap();
+        assert_eq!(detail["value"]["discovery"]["parent"], "unrelated");
         assert!(!root.join(".agentic-workspace/local").exists());
         std::fs::remove_dir_all(root).unwrap();
     }

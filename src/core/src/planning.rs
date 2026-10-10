@@ -293,12 +293,17 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     let target = std::fs::canonicalize(&input.target).map_err(error)?;
     let origin = crate::native_planning_create::inspect_origin(&target, &source.path, &body)?;
     let update = crate::native_planning_update::inspect(&target, &source.path, &body)?;
-    if origin.is_some() || crate::native_planning_create::portable_observation(&source.path, &body)?
-    {
+    // Validate both envelopes against the original source bytes. An update's
+    // recorded material includes creation provenance; removing it first would
+    // invalidate an otherwise genuine transported create-then-update record.
+    let created = origin.is_some()
+        || crate::native_planning_create::portable_observation(&source.path, &body)?;
+    let updated = update.is_some()
+        || crate::native_planning_update::portable_observation(&source.path, &body)?;
+    if created {
         body.as_object_mut().unwrap().remove("creation_provenance");
     }
-    if update.is_some() || crate::native_planning_update::portable_observation(&source.path, &body)?
-    {
+    if updated {
         body.as_object_mut()
             .unwrap()
             .remove(crate::native_planning_update::PROVENANCE);

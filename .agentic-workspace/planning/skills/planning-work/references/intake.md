@@ -14,6 +14,13 @@ references in the owner-returned fields, not an invented Markdown record shape.
 A local selection is only a resume hint. Unrelated work needs no relation answer
 or Planning mutation; distinct planned work may create its own owner directly.
 
+For new work, decide this before execution depends on unrecorded scope or
+dependencies, rather than postponing it to a pause. When sufficient records
+already carry the needed meaning, use their exact pointers. Otherwise follow
+[structure](structure.md) for useful decomposition and
+[continuity](continuity.md) for the existing native creation and verification
+path. No incumbent owner or activation packet is a prerequisite to choosing it.
+
 ```agentic-owner-reference
 {"kind":"request","owner":"planning","id":"planning/select-owner/v1"}
 ```

@@ -1,0 +1,111 @@
+{
+  "blockers": [],
+  "canonical_core": {},
+  "continuation": {
+    "accepted": [
+      "Windows Sandbox startup is restored through the existing same-user launcher; real installed-agent sessions now run and disposable VMs were removed.",
+      "Frozen master baseline 61da7aca completed validation and deferred export without a Plan. Its fresh continuation completed from files; no continuation failure is claimed for that baseline.",
+      "Frozen candidate 7fbfac2c independently read Planning guidance, created the native owner before implementation, and updated the actual Plan with validation/export contracts, progress, blocker and next action.",
+      "The fresh candidate reader recovered that actual objective early and completed export, but native reselection/update failed: invalid portable Planning update observation. The original source digest matched; reconciliation validated the update after removing creation provenance.",
+      "Reconciliation now validates both original provenance envelopes before stripping either. A four-interface create-then-update-to-fresh-custody regression passes and altered portable source still fails closed.",
+      "The focused public suite passes94 cases; Rust passes208 with3 preexisting ignored. The first public run passed90 and hit the unchanged28KB full-detail ceiling in4 cases. A shorter, precise bound-owner-obligations scope label preserves the original limit; no ceiling was relaxed."
+    ],
+    "remaining": [
+      "Freeze the corrected source, repeat ordinary new-work discovery and fresh continuation, and run sufficient-existing-source plus trivial/unrelated/missing-owner controls.",
+      "Update draft PR3848 with current evidence, then external independent review and required Verification admission remain separate."
+    ]
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/b2f806ca8b81df8cef4b8c3bcece146b0f3eec6aa2354fce2068fbb6d9da0b99.attempt.json",
+        "revision": "sha256:3b13eccb1498fba11af7ed9e21e4abc77d44147c43dc087cc27a69f5073de3c9",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/b2f806ca8b81df8cef4b8c3bcece146b0f3eec6aa2354fce2068fbb6d9da0b99.result.json",
+        "revision": "sha256:72e54bd483a18ceebd92c4fe87653285b664708aea2ba7680923c8037483539f",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:8b07184221853d0625516a46931e541737441754d0f3603265ca00130b529934",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:d8e52f52f67f67345aa7a8ce8ad955dcac8ba1d30cb2461e1f7d23ae1a44a4c6"
+  },
+  "id": "work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807",
+  "intent": {
+    "outcome": "Restore early agent judgment and existing native Planning use for substantial new work while remembered unrelated owners remain inert.",
+    "source": "https://github.com/rickardvh/agentic-workspace/issues/3846"
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Commit and freeze the corrected Planning source; run the finite ordinary discovery/continuation and quiet controls, then update PR3848 readiness using actual results.",
+  "owner_level": "slice",
+  "parent": {},
+  "phase": "shaping",
+  "proof": {
+    "remaining": [
+      "Exact-head public verification",
+      "Corrected ordinary installed-agent continuation and quiet controls",
+      "External independent review and required admission"
+    ]
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3846",
+    "https://github.com/rickardvh/agentic-workspace/pull/3848",
+    ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388/3846-planning-baseline.json",
+    ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388/3846-planning-corrected.json"
+  ],
+  "relationships": {},
+  "revision": 3,
+  "scope": {
+    "excluded": [
+      "ambient selection",
+      "mandatory start or plans",
+      "new controllers or state owners"
+    ],
+    "included": [
+      "canonical startup discovery",
+      "Planning procedure activation applicability",
+      "native direct-status meaning",
+      "focused controls and installed-agent evidence"
+    ]
+  },
+  "title": "Restore new-work Planning discovery (#3846)",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4891374d292444c817a46c57f8dd5a80d660484e4e7e0918dbbd3e19feaa9102.attempt.json",
+        "revision": "sha256:7eedc6e1931544aed54859d8ae2c722b14b3dd82b867123a7474d9d8258fadd4",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4891374d292444c817a46c57f8dd5a80d660484e4e7e0918dbbd3e19feaa9102.result.json",
+        "revision": "sha256:cdb49b92d1dadc9290334f4cb468744b33a1a3fc35ac5a34644541b146f4b429",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:e4fe511889eab4b837dd916072e7be1b6854a45f31ab66011071ca4bd2ce46c3",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:3a3e6d433b99962b6953dc5fcb571d5d8da12ba6e787d825e1f15c3cd9ce0cbb",
+        "owner_id": "work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807",
+        "owner_path": ".agentic-workspace/planning/execplans/work-615775bf1ea27668fcada4922efb16e6dbe467ab1b0b62a91bdfb097153fd807.plan.json"
+      }
+    }
+  }
+}

@@ -4,11 +4,11 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Does this task continue a saved plan, need smaller steps, or need progress saved for later?",
+  "question": "Would this new or continuing task benefit from decomposition or durable continuity, and do existing records already suffice?",
   "branches": [
     {
       "id": "intake",
-      "description": "Decide whether the current task belongs to the selected plan",
+      "description": "Reuse sufficient current records, explicitly relate an existing plan, or choose native creation for new work",
       "next": "references/intake.md"
     },
     {
@@ -28,8 +28,8 @@
       "observation",
       "binding"
     ],
-    "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
-    "outcome": "The needed task record is saved and verified, or no plan is needed.",
+    "applicability": "New work needs useful decomposition or durable intent, constraints and dependencies beyond sufficient existing records; changed scope, accepted progress, interruption or handoff also has continuity value.",
+    "outcome": "Sufficient existing task meaning is reused, or native Planning custody is created/selected and verified before needed meaning is lost; direct work needs no duplicate record.",
     "binding_owners": [
       "planning"
     ]

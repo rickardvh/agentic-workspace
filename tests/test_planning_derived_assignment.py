@@ -17,6 +17,7 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
     worker = tmp_path / "worker.py"
     worker.write_text(
         "import json,sys\np=json.load(sys.stdin)\n"
+        "from pathlib import Path\nPath('worker-ran.txt').write_text('dispatched')\n"
         "assert p['worker_context']['inputs']['source_work']['producer']=='planning'\n"
         "print(json.dumps({**p['return_contract']['required_identity'],"
         "'kind':'agentic-workspace/delegated-return/v1','result_delivery':'unapplied-patch',"
@@ -26,7 +27,6 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
     config.write_text(
         "[safety]\nsafe_to_auto_run_commands=true\n[delegation]\n"
         'assignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="automatic"\n'
-        'required_execution_guarantees=["bounded-analysis"]\n'
         '[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
         '[delegation_targets.worker]\nexecution_guarantees=["bounded-analysis"]\n'
         'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]\n"
@@ -34,10 +34,28 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
     dependency = tmp_path / "accepted.txt"
     dependency.write_text("Accepted prerequisite.\n")
     revision = "sha256:" + hashlib.sha256(dependency.read_bytes()).hexdigest()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        '[execution_posture."repo/child-analysis"]\npreferred_execution_guarantees=["bounded-analysis"]\n'
+    )
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"skills": [{"id": "child-analysis", "semantic_routes": ["repo/child-analysis"]}]}))
 
     contexts = {}
 
     def call(task, request=None, invocation=None):
+        retained = contexts.get(task, {})
+        if invocation is not None:
+            retained = {key: value for key, value in retained.items() if key != "request"}
+        if request is not None:
+            supplied = request if isinstance(request, list) else [request]
+            peer_routes = [
+                r
+                for r in contexts.get(task, {}).get("request", [])
+                if r["owner"] == "semantic-routes"
+                and not any(s["owner"] == r["owner"] and s["request_kind"] == r["request_kind"] for s in supplied)
+            ]
+            request = [*peer_routes, *[r for r in supplied if r not in peer_routes]]
         return consume(
             "native",
             shared_core_binary,
@@ -46,7 +64,7 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
                 "target": str(tmp_path),
                 "task": task,
                 "changed": [],
-                **contexts.get(task, {}),
+                **retained,
                 **({"request": request} if request is not None else {}),
                 **({"invocation": invocation} if invocation is not None else {}),
             },
@@ -54,7 +72,53 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
 
     def act(task, view, operation):
         action = next(a for a in view["decision_packet"]["ready_actions"] if a["operation_id"] == operation)
-        return call(task, invocation=action)
+        result = call(task, invocation=action)
+        if result.get("continuation_status") == "current":
+            contexts[task] = result["continuation"]["context"]
+        return result
+
+    parent_task = "Coordinate and integrate two independently shaped child analyses"
+    parent_material = material()
+    parent_material.update(
+        title=parent_task,
+        owner_level="lane",
+        intent={"outcome": parent_task},
+        blockers=[],
+        scope={
+            "included": ["Coordinate the two bounded child outcomes and integrate their results"],
+            "excluded": ["Reauthor accepted child context"],
+        },
+        canonical_core={"children": ["Analyse child 1", "Analyse child 2"], "parent_work": "Coupled coordination and integration"},
+        continuation={"frontier": "The child definitions reuse accepted.txt; the parent coordinates their results."},
+        proof={"remaining": ["Keep each child's accepted sources and return custody distinct."]},
+    )
+    parent_creation = call(parent_task)["planning"]["creation_requests"][0]
+    parent_creation["arguments"]["material"] = parent_material
+    parent_created = act(parent_task, call(parent_task, parent_creation), "planning.create")
+    contexts[parent_task] = parent_created["continuation"]["context"]
+    parent_id = parent_created["value"]["owner_id"]
+    requirements = call(parent_task)["task_requirements"]["requests"][0]
+    requirements["arguments"]["required_result_classes"] = ["read-only"]
+    parent_choice = call(parent_task, requirements)["task_requirements"]["assignment"]["requests"][0]
+    parent_choice[-1]["arguments"].update(
+        alternative="local:internal",
+        reason="Keep coupled parent coordination and integration local; compare the already shaped independent children separately.",
+    )
+    parent_admitted = call(parent_task, parent_choice)
+    assert parent_admitted["task_requirements"]["implementation_admission"]["status"] == "admitted-local"
+    parent_compact = consume(
+        "native",
+        shared_core_binary,
+        native_cli,
+        {
+            **contexts[parent_task],
+            "task": parent_task,
+            "request": parent_choice,
+            "projection": "compact",
+        },
+    )
+    assert parent_compact["assignment_context"]["handoff_preparation"]["planning_definition"] == "not-declared"
+    assert not (tmp_path / "worker-ran.txt").exists()
 
     children = []
     for number in (1, 2):
@@ -65,7 +129,13 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
             owner_level="slice",
             intent={"outcome": task},
             blockers=[],
-            parent={"lane": "shared-parent"},
+            parent={"lane": parent_id},
+            scope={
+                "included": ["Inspect the accepted prerequisite for this child"],
+                "excluded": ["Mutate files or grant proof/completion authority"],
+            },
+            proof={"remaining": ["Return bounded source observations for this child."]},
+            continuation={"frontier": task},
             relationships={"dependencies": {"refs": ["accepted.txt"]}},
             assignment_inputs={
                 "result_class": "read-only",
@@ -83,6 +153,10 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
         selection = call(task)["planning"]["selection_requests"][0]
         selection["arguments"]["owner_ref"] = reference
         ready = call(task, selection)
+        route = next(r for r in ready["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+        route["arguments"].update(posture="selected", routes=["repo/child-analysis"])
+        contexts[task]["request"] = [selection, route]
+        ready = call(task)
         assert ready["task_requirements"]["source_work"]["status"] == "ready"
         if number == 1:
             dependency.write_text("Changed prerequisite.\n")
@@ -96,15 +170,60 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
         assert inputs[-1]["arguments"]["input_refs"] == ["accepted.txt"]
         inputs[-1]["arguments"]["complete"] = True
         offered = call(task, [selection, *inputs])
-        choice = next(
-            r
-            for r in offered["task_requirements"]["execution_configurations"]["requests"]
-            if r[-1]["arguments"]["candidate"] == "worker:cli"
+        assert offered["task_requirements"]["result"]["execution_posture"]["preferred_execution_guarantees"] == ["bounded-analysis"]
+        compact = consume(
+            "native",
+            shared_core_binary,
+            native_cli,
+            {
+                **contexts[task],
+                "task": task,
+                "request": [selection, route, *inputs],
+                "projection": "compact",
+            },
         )
-        assigned = call(task, [selection, *choice])
-        assert assigned["task_requirements"]["assignment"]["result"]["judgment"] is None
-        export = assigned["task_requirements"]["handoff"]["requests"][0]
-        exported = call(task, export)
+        preparation = compact["assignment_context"]["handoff_preparation"]
+        assert preparation["source_work"]["producer"] == "planning"
+        assert preparation["input_refs"] == ["accepted.txt"]
+        assert preparation["observed_inputs"] == [{"reference": "accepted.txt", "revision": revision}]
+        assert preparation["status"] == "ready" and preparation["prompt_authoring_required"] is False
+        assert not (tmp_path / "worker-ran.txt").exists()
+        comparison = offered["task_requirements"]["assignment"]["requests"][0]
+        comparison[-1]["arguments"].update(
+            alternative="worker:cli",
+            reason="The independent child reuses its accepted captured source; bounded-analysis preference favors this eligible worker while parent coordination stays local.",
+        )
+        assigned = call(task, comparison)
+        assert assigned["task_requirements"]["assignment"]["result"]["judgment"] is not None
+        assert assigned["task_requirements"]["handoff"]["status"] == "export-ready", {
+            "assignment_status": assigned["task_requirements"]["assignment"]["result"]["status"],
+            "selected": assigned["task_requirements"]["assignment"]["result"]["selected"],
+            "inputs_status": assigned["task_requirements"]["handoff_inputs"]["status"],
+            "input_gaps": assigned["task_requirements"]["handoff_inputs"]["gaps"],
+        }
+        ordinary = consume(
+            "native",
+            shared_core_binary,
+            native_cli,
+            {
+                **contexts[task],
+                "task": task,
+                "request": comparison,
+                "projection": "compact",
+            },
+        )
+        export = ordinary["assignment_context"]["handoff_preparation"]["next_step"]
+        exported = consume(
+            "native",
+            shared_core_binary,
+            native_cli,
+            {
+                **ordinary["reentry"],
+                "reference": export["reference"],
+                "answer": {},
+                "projection": "full",
+            },
+        )
         act(task, exported, "planning.update")
         children.append((task, reference))
 
@@ -136,5 +255,5 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
         act(task, accepted, "planning.update")
         body = json.loads((tmp_path / reference).read_bytes())
         assert body["continuation"]["frontier"] == task
-        assert body["parent"] == {"lane": "shared-parent"}
+        assert body["parent"] == {"lane": parent_id}
     assert len({json.dumps(v, sort_keys=True) for v in pending.values()}) == 2

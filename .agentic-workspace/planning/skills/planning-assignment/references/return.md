@@ -5,6 +5,12 @@ Read current Assignment/delegation state and exact returned material. Worker cla
 are untrusted; the native owner checks identity, scope, baseline, source and transport.
 Supply only the requested semantic return judgment, never infer admission from a
 successful process or matching packet seal.
+Follow `assignment_context.next_step` for return judgment and the admitted patch's
+current integration proposal. Preserve the effect's current continuation/reentry;
+the executed-result custody is required. Answer the exact reference with semantic
+fields, or an empty answer when selecting the supplied proposal. Do not replace
+carried requests with an isolated judgment envelope from a detail bundle. Invoke
+the resulting exact integration action, then perform the initiating host's proof.
 
 ```agentic-owner-reference
 {"kind":"request","owner":"assignment","id":"assignment/judge-return/v1"}

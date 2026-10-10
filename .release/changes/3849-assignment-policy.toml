@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose effective Assignment policy and nonbinding advice clearly, show task restriction answer fields, and require current executor admission under strict policy."

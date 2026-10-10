@@ -15,6 +15,8 @@ For an assigned orchestrator, preserve intent, decomposition, admission, integra
 proof interpretation and closeout custody. Execute only an authorized current exact
 dispatch/transport action. Do not reopen binding target choice because of cost,
 availability or convenience. Only an admitted structured transition can change it.
+Invoke with the returned target, task, changed scope and unchanged action as
+`invocation`; omit `reentry.request`, since the action already binds those sources.
 Manual-only and unavailable transport are honest states, not failed automatic work.
 
 For a selected slice with `assignment_inputs`, reuse the source-derived work and
@@ -28,6 +30,11 @@ For work without that source definition, supply the bounded frontier through the
 current handoff-input request. Capture relied-upon procedure and evidence sources
 and judge completeness from what the owner actually captured. A summary is neither
 parent chat nor fresh authority. No separate handoff registry is needed.
+For an unapplied patch, the existing `changed` work scope declares its allowed
+paths before any edit. Include intended mutation paths there before capturing
+their baselines; the capture answer cannot expand that scope. If export rejects
+an out-of-scope baseline, preserve any execution custody and resolve the corrected
+task/path scope freshly. Reuse no work-bound answers from the old scope.
 
 ```agentic-owner-reference
 {"kind":"action","owner":"delegation","id":"delegation.dispatch"}
