@@ -37,6 +37,13 @@ reentry while browsing this method. Confirm the active posture in the current
 requirements; reading a skill does not select an activity, and an unselected
 posture's preferences do not apply. This check belongs to an actual comparison,
 not passive local work, and does not prohibit an eligible local executor.
+Compare the outcome the receiver can actually execute. A snapshot worker returning
+an unapplied patch cannot also perform the parent's repository commands. Reuse an
+existing bounded Planning definition, or shape the needed child there before
+comparison; keep integration and repository proof with the initiating host.
+Judge captured instructions for that role and its access, including any referenced
+material it needs. Do not declare the parent's whole conversation or entry workflow
+complete worker context merely because its file names were captured.
 When binding admission permits local continuation, continue direct work. A mechanically
 settled choice needs no comparison answer, self-assignment record or handoff.
 Non-local or unresolved admission still follows its current recovery.
