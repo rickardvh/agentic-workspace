@@ -1397,7 +1397,7 @@ owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.explicit_local_opportunity]
 purpose = "Explicit nonlocal Assignment selection under a quiet local-preferred default."
-applies_to_paths = ["src/core/src/assignment.rs", "tests/test_native_execution_configurations.py"]
+applies_to_paths = ["src/core/src/assignment.rs", "src/core/src/native_execution.rs", "tests/test_native_execution_configurations.py"]
 commands = ["uv run pytest tests/test_native_execution_configurations.py tests/test_native_assignment_judgment.py tests/test_native_assignment_policy.py -q"]
 owner = "workspace-cli-runtime"
 claim_boundary = "current-native-comparison-and-public-choice-without-worker-execution"

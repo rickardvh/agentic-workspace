@@ -283,9 +283,51 @@ def test_internal_binding_requires_current_host_facts_before_local_comparison(tm
     source.write_text(bound.replace('assignment_policy="required-best-fit"', 'assignment_policy="local-preferred"'))
     passive = call()["task_requirements"]
     assert passive["status"] == "not-applicable" and "execution_configurations" not in passive
+    assert not (tmp_path / "probe-called.txt").exists()
     opportunity = passive["opportunity_request"]
     opportunity["arguments"]["required_result_classes"] = ["read-only"]
-    assert call(opportunity)["task_requirements"]["execution_configurations"]
+    active = call(opportunity)["task_requirements"]
+    row = next(
+        r
+        for r in active["execution_configurations"]["configurations"]["candidates"]
+        if r["configuration"]["id"] == "worker:native:codex-app-server/v1"
+    )
+    assert (tmp_path / "probe-called.txt").read_text() == "observed"
+    assert row["eligible"] and row["configuration"]["constructible"]
+    assert row["configuration"]["execution"]["host_capability"]["status"] == "available"
+    inputs = active["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(input_refs=["a.txt"], complete=False, reason="The exact independent inspection subject.")
+    inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(complete=True, reason="The captured source completely scopes this inspection.")
+    comparison = call(inputs)["task_requirements"]["assignment"]["requests"][0]
+    comparison[-1]["arguments"].update(
+        alternative="worker:native:codex-app-server/v1", reason="Use the currently available native worker for this independent read."
+    )
+    delegated = call(comparison)["task_requirements"]
+    assert delegated["assignment"]["result"]["selected"]["target"] == "worker"
+    assert delegated["assignment"]["result"]["status"] == "assigned-nonlocal-handoff-required"
+    assert delegated["assignment"]["result"]["binding"] is False
+    assert delegated["handoff"]["status"] == "export-ready"
+
+    # Explicit opportunity does not turn an absent host fact into eligibility.
+    for state in ("unavailable", "unknown"):
+        state_path.write_text(state)
+        opportunity = call()["task_requirements"]["opportunity_request"]
+        opportunity["arguments"]["required_result_classes"] = ["read-only"]
+        rows = call(opportunity)["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+        row = next(r for r in rows if r["configuration"]["id"] == "worker:native:codex-app-server/v1")
+        assert row["eligible"] is False and row["configuration"]["constructible"] is False
+        assert row["configuration"]["execution"]["host_capability"]["status"] == state
+
+    state_path.write_text("available")
+    (tmp_path / "probe-called.txt").unlink()
+    source.write_text(source.read_text().replace("safe_to_auto_run_commands=true", "safe_to_auto_run_commands=false"))
+    opportunity = call()["task_requirements"]["opportunity_request"]
+    opportunity["arguments"]["required_result_classes"] = ["read-only"]
+    rows = call(opportunity)["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+    row = next(r for r in rows if r["configuration"]["id"] == "worker:native:codex-app-server/v1")
+    assert row["eligible"] is False
+    assert row["configuration"]["execution"]["host_capability"]["status"] == "unknown"
     assert not (tmp_path / "probe-called.txt").exists()
     source.write_text(bound.replace("safe_to_auto_run_commands=true", "safe_to_auto_run_commands=false"))
     requirements()
