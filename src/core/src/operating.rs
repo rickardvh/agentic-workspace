@@ -794,6 +794,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         .is_some_and(|s| !s.is_empty())
         || candidates["publication_request"].is_object()
         || candidates["completion_prepared"] == true
+        || candidates["finding"].is_object()
     {
         let mut budget = 16384usize;
         let observations = candidates["selected"].as_array().into_iter().flatten().map(|row| {
@@ -804,6 +805,28 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         result["candidate_context"] = json!({"observations":observations,
             "reference":result["detail_refs"]["/memory"],"next":"Compare scopes and current sources. Use the returned next_step only when justified; defer or deliberate discard may be sufficient. Publication and candidate subtraction remain separate effects.",
             "authority":"Unconfirmed local evidence for consideration; no current-state, policy or task-custody authority."});
+        if candidates["finding"].is_object() {
+            result["candidate_context"]["finding"] = candidates["finding"].clone();
+            result["candidate_context"]["judgment"] = candidates["next"].clone();
+            result["candidate_context"]["next"] = candidates["next"].clone();
+            if let Some(request) = candidates["requests"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|r| {
+                    r["arguments"]["operation"] == "consider"
+                        && r["arguments"]["material_revision"] == candidates["finding"]["revision"]
+                })
+            {
+                let selector = format!("request:memory:{}", digest(request)?);
+                result["candidate_context"]["next_step"] = json!({
+                    "operation":"consider",
+                    "reference":reference(context, &selector, request)?,
+                    "answer_shape":request["arguments"],
+                    "use":"Choose the finding's current disposition. Correct a stronger source under its existing authority, use the existing advisory publisher for supported advice, or deliberately retain nothing. For optional uncertain material only, answer this observation reference with operation capture, optional true, uncertainty and deliberate paths or semantic_routes. Consideration itself grants no write or publication authority."
+                });
+            }
+        }
         if candidates["completion_prepared"] == true {
             if let Some(action) = entries(full, context)?.into_iter().find(|entry| {
                 action_selector(entry["selector"].as_str().unwrap())
