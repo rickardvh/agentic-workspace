@@ -41,6 +41,10 @@ Compare the outcome the receiver can actually execute. A snapshot worker returni
 an unapplied patch cannot also perform the parent's repository commands. Reuse an
 existing bounded Planning definition, or shape the needed child there before
 comparison; keep integration and repository proof with the initiating host.
+When relying on a related Plan's typed definition, select that owner through the
+current Planning selection request and confirm `planning_definition: source-shaped`
+in current `handoff_preparation`. Reading the Plan alone does not bind its child
+scope; `not-declared` still describes direct task context, not that saved definition.
 Judge captured instructions for that role and its access, including any referenced
 material it needs. Do not declare the parent's whole conversation or entry workflow
 complete worker context merely because its file names were captured.
