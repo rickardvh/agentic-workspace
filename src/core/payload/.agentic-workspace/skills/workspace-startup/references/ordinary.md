@@ -8,6 +8,11 @@ a protected write may proceed needs the current result for that write.
 Use native resolution when current owner state can affect the work or a dependent
 action or claim. If current static sources suffice without a dynamic dependency,
 work directly. Context entry requires that judgment, not an unconditional call.
+Planning's `direct` status reports absence of a current owner obligation. It does
+not judge whether new work benefits from a plan. Make that judgment from the task
+and available continuity sources through
+[Planning work](../../../planning/skills/planning-work/SKILL.md); no selected
+owner is required to discover Planning or use its native creation request.
 Reuse a current observation; resolve again when relevant dependencies change or
 required current facts are unavailable. Use the configured invocation: local `workspace.cli_invoke`, then shared
 `workspace.cli_invoke`, otherwise `agentic-workspace`. Pass the actual task to

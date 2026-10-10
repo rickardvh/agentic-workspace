@@ -1,12 +1,26 @@
 ---
 name: planning-assignment
-description: Decide whether a bounded task benefits from delegation, or follow an existing assignment and its return requirements.
+description: Obtain executor admission under required policy, consider advisory or optional delegation, or follow an assignment and its return.
 ---
 
-# Choose delegation or follow an existing assignment
+# Choose an executor under current policy
 
-Use when a bounded outcome presents a concrete local/delegate choice, or current
-Assignment asks for assessment or continuation. Ordinary local work needs no visit.
+Use the target checkout's current effective policy, established through
+[startup](../../../skills/workspace-startup/SKILL.md), to decide when to enter:
+
+- `required-best-fit`: obtain or reuse current executor admission **before
+  implementation**, including host edits. Answer the current Assignment question
+  until an executor is admitted. Local is a legitimate result, not an exemption
+  from unresolved admission. Missing capability or transport keeps the affected
+  implementation blocked; continue unrelated authorised work.
+- `best-fit-advisory`: consult the current eligible options when comparison
+  helps. Advice is nonbinding; unresolved advice cannot prohibit local work.
+- `local-preferred`: ordinary local work needs no visit. Enter for a concrete
+  bounded delegation opportunity or a current source requirement.
+
+The compact `assignment_context` names the effective policy, binding status,
+source, affected actions and local continuation. Follow its exact `next_step` when
+judgment is needed. Independent restrictions still apply in every mode.
 Assignment records the selected worker, scope and permitted next action. Once its
 result binds work to a worker, that assignment controls who may implement the
 slice; a transport failure does not assign it back to you.
@@ -15,9 +29,10 @@ coordination, proof, repair and integration cost. Judge the outcome's coupling a
 needed capabilities; keywords, size, model/provider price or a classifier do not
 decide it. Unknown/defer is honest when the evidence is insufficient.
 
-A local or unresolved choice creates no Assignment or Planning state merely to
+A local or advisory unresolved choice creates no Assignment or Planning state merely to
 record consideration. A delegate choice proposes assessment, not a target or
-permission. Existing binding policy still applies; Assignment owns eligibility,
+permission. Required admission cannot be deferred by an optional suitability
+judgment. Assignment owns eligibility,
 comparison admission and binding. Once bound, follow current custody without
 reopening the strategic choice.
 

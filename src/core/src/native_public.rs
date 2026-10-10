@@ -1738,7 +1738,7 @@ fn resolve_selected(
     delegation.as_object_mut().unwrap().remove("contribution");
     requirements["delegation"] = delegation;
     requirements["handoff"] = handoff;
-    if requirements["assignment"]["result"]["binding"] == true {
+    if requirements["assignment"]["result"].is_object() {
         requirements["implementation_admission"] =
             crate::native_assignment::implementation_admission(
                 &requirements,

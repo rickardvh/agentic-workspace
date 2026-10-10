@@ -1395,6 +1395,27 @@ escalation = [
 claim_boundary = "shared-kernel-contract-proof-is-not-owner-lifecycle-completion-or-independent-acceptance"
 owner = "workspace-cli-runtime"
 
+[assurance.domain_proof_lanes.policy_consequential_entry]
+purpose = "Compact policy posture and child-specific reuse of current Planning-derived handoff inputs."
+applies_to_paths = ["src/core/src/lib.rs", "src/core/src/operating.rs", "src/core/src/native_assignment.rs", "tests/test_planning_derived_assignment.py"]
+commands = ["uv run pytest tests/test_native_assignment_judgment.py tests/test_native_assignment_policy.py tests/test_planning_derived_assignment.py tests/test_manual_assignment_continuation.py tests/test_native_readonly_handoff.py -q", "uv run pytest tests/test_shared_core.py::test_action_activity_dependency_uses_current_independent_readonly_contract -q", "uv run pytest tests/test_native_delegation_lifecycle.py::test_patch_return_preserves_concurrent_work_and_replays[False-native] -q", "uv run pytest tests/test_native_delegation_lifecycle.py::test_patch_return_preserves_concurrent_work_and_replays[False-json] -q", "cargo test --locked -p agentic-workspace-core --lib"]
+owner = "workspace-cli-runtime"
+claim_boundary = "native-policy-and-bounded-context-controls-not-live-ordinary-executor-compliance"
+
+[assurance.domain_proof_lanes.explicit_local_opportunity]
+purpose = "Explicit nonlocal Assignment selection under a quiet local-preferred default."
+applies_to_paths = ["src/core/src/assignment.rs", "src/core/src/native_execution.rs", "tests/test_native_execution_configurations.py"]
+commands = ["uv run pytest tests/test_native_execution_configurations.py tests/test_native_assignment_judgment.py tests/test_native_assignment_policy.py -q"]
+owner = "workspace-cli-runtime"
+claim_boundary = "current-native-comparison-and-public-choice-without-worker-execution"
+
+[assurance.domain_proof_lanes.new_planning_continuation]
+purpose = "Native new-work custody, portable create-then-update continuation and quiet remembered-owner controls."
+applies_to_paths = ["src/core/src/planning.rs", "tests/test_native_planning_create.py"]
+commands = ["uv run pytest tests/test_native_planning_create.py tests/test_native_former_routes.py -q", "cargo test --locked -p agentic-workspace-core --lib"]
+owner = "planning"
+claim_boundary = "native-custody-and-public-continuation-not-ordinary-agent-discovery"
+
 [assurance.domain_proof_lanes.native_public_owners]
 purpose = "Native transport and source-owning Planning/Verification ingress through four independent consumers."
 applies_to_paths = [

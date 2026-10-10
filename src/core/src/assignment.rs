@@ -690,11 +690,6 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
     // and task requirements above remain hard admission boundaries.
     let local = selected["configuration"]["transport"] == "internal"
         && selected["target"] == input["policy"]["current_profile"]["name"];
-    if !judgment.is_null() && input["policy"]["assignment_policy"] == "local-preferred" && !local {
-        return Err(CoreError::new(
-            "assignment comparison cannot override current local-preferred policy",
-        ));
-    }
     let status = if selected.is_null() {
         "assessment-required"
     } else if !ready || selected["status"] == "unresolved-target" {
@@ -719,6 +714,32 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
 #[cfg(test)]
 mod policy_determination_tests {
     use super::*;
+
+    #[test]
+    fn local_default_permits_only_explicit_current_nonlocal_choice() {
+        let candidate = |id: &str, tags: Value, transport: &str| json!({"eligible":true,"configuration":{"id":id,"target":id,"transport":transport,"execution_guarantees":tags}});
+        let mut input = json!({"work":{"id":"bounded"},"policy":{"binding":false,"enforceable":true,"assignment_policy":"local-preferred","current_profile":{"name":"local"}},
+            "requirements":{"status":"resolved","execution_posture":{"preferred_execution_guarantees":["cost.bounded"]}},
+            "execution":{"gaps":[],"configurations":{"candidates":[candidate("local",json!([]),"internal"),candidate("worker",json!(["cost.bounded"]),"cli")]}},"judgment":null});
+        let local = comparative_assessment(input.clone()).unwrap();
+        assert_eq!(local["selected"]["target"], "local");
+        assert_eq!(local["status"], "assigned-current-target");
+        input["judgment"] = json!({"revision":local["revision"],"alternative":"worker","reason":"A bounded independent inspection benefits from this eligible worker.","uncertainties":[]});
+        let explicit = comparative_assessment(input.clone()).unwrap();
+        assert_eq!(explicit["status"], "assigned-nonlocal-handoff-required");
+        assert_eq!(explicit["binding"], false);
+        input["judgment"]["alternative"] = json!("unknown");
+        assert!(comparative_assessment(input.clone()).is_err());
+        input["judgment"] = Value::Null;
+        input["execution"]["configurations"]["candidates"][0]["eligible"] = json!(false);
+        let no_local = comparative_assessment(input.clone()).unwrap();
+        assert_eq!(no_local["status"], "assessment-required");
+        assert!(no_local["selected"].is_null());
+        input["execution"]["configurations"]["candidates"][1]["eligible"] = json!(false);
+        let unavailable = comparative_assessment(input.clone()).unwrap();
+        input["judgment"] = json!({"revision":unavailable["revision"],"alternative":"worker","reason":"Requested worker.","uncertainties":[]});
+        assert!(comparative_assessment(input).is_err());
+    }
 
     #[test]
     fn standing_preferences_settle_only_feasible_unambiguous_work() {

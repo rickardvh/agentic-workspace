@@ -4,11 +4,11 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Has a worker already been selected? Follow that assignment; otherwise decide whether local work or delegation is useful.",
+  "question": "What does current executor policy require? Follow an existing assignment; resolve required admission before implementation, or consider advisory/optional delegation when useful.",
   "branches": [
     {
       "id": "local",
-      "description": "Current capability is sufficient and delegation adds no justified benefit",
+      "description": "Local is currently admitted, or nonbinding policy permits direct work without a useful delegation opportunity",
       "next": "references/local.md"
     },
     {
@@ -18,7 +18,7 @@
     },
     {
       "id": "assessment",
-      "description": "The result asks for missing task requirements or worker comparison",
+      "description": "Required executor admission is unresolved, or current advice needs task requirements or worker comparison",
       "next": "references/assessment.md"
     },
     {
@@ -47,8 +47,8 @@
       "need",
       "binding"
     ],
-    "applicability": "A concrete pre-binding local/delegate choice needs judgment, or current binding Assignment/dispatch/handoff needs exact continuation. Unrelated ordinary local work does not need this method.",
-    "outcome": "A quiet local or unknown/defer choice, current Assignment assessment for a delegate proposal, or exact binding continuation with truthful owner gaps.",
+    "applicability": "Required-best-fit needs current executor admission before affected implementation; advisory policy needs a useful comparison; local-preferred has a concrete delegation opportunity; or an existing Assignment needs continuation. Passive local-preferred work stays direct.",
+    "outcome": "Current admitted local execution or exact non-local dispatch/return under required policy; nonbinding advice or quiet direct work under permissive policy; scoped unresolved restrictions when admission is missing.",
     "binding_owners": [
       "assignment",
       "delegation"

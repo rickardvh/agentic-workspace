@@ -6,10 +6,51 @@ description: Start or resume repository work; decide whether current AW facts or
 # Start ordinary work
 
 Read the task and applicable repository instructions whenever work starts or
-resumes. Then decide what information the next action needs:
+resumes. Establish any executor requirement before choosing direct implementation.
+
+Before implementation, establish the executor policy in the **target checkout**.
+Read its `.agentic-workspace/config.local.toml`; if it selects
+`workspace.shared_config_path`, read that source too, with local values taking
+precedence. With no declaration, the policy defaults to `local-preferred`.
+Reuse these facts while their sources remain current. An earlier setup report,
+parent checkout or available editor cannot establish this checkout's policy.
+If a configured source is unavailable or invalid, use native `start` to obtain
+its current restriction and recovery instead of assuming the default.
+
+- `local-preferred`: ordinary local work may continue directly. Consider
+  Assignment only for a concrete bounded delegation opportunity or another
+  current source requirement; no routine comparison or native call is needed.
+- `best-fit-advisory`: use current Assignment advice when an executor comparison
+  can help. Advice supplies no implementation prohibition; independent
+  restrictions still apply.
+- `required-best-fit`: before the affected implementation, use native `start`
+  to obtain or reuse a current admitted executor decision. Follow
+  `assignment_context.next_step` and the
+  [Assignment procedure](../../planning/skills/planning-assignment/SKILL.md).
+  `admitted-local` permits direct work; a selected worker follows its exact
+  dispatch and return. Unresolved admission keeps that implementation blocked,
+  including edits through host editor/shell tools. Reading and unrelated
+  authorised work can continue. Admission does not attest earlier external edits.
+
+Use the configured invocation in [ordinary use](references/ordinary.md): local
+`workspace.cli_invoke`, then the repository's `.agentic-workspace/config.toml`
+value, otherwise `agentic-workspace`. A missing PATH command does not make that
+configured invocation unavailable.
+
+On entry to new work, judge whether decomposition or durable continuity would
+materially improve execution: preserving the intended outcome, constraints,
+dependencies or unfinished follow-through before that meaning is lost. Reuse an
+adequate issue, repository record or explicitly related owner when it already
+carries that meaning. When it does not, follow
+[Planning work](../../planning/skills/planning-work/SKILL.md) now and use its
+existing native create/select path. Do not wait for handoff to make the first
+Planning judgment. Task shape is agent judgment; no keyword, size or duration
+threshold determines it. Unrelated remembered plans remain inert.
+
+Then decide what other information the next action needs:
 
 - If the supplied text and current sources suffice, do the work directly. A new
-  session or context loss alone does not require a command.
+  session or context loss alone does not require a command or duplicate plan.
 - If an edit, test, completion claim or recovery depends on missing or changed
   permission, setup, state or evidence, use native `start` to obtain those facts.
   [Ordinary use](references/ordinary.md) explains the configured command.

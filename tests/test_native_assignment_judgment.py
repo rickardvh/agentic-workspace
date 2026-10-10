@@ -12,6 +12,57 @@ from tests.test_native_public_cli import native_cli as native_cli
 BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
 
 
+@pytest.mark.parametrize("policy", ["best-fit-advisory", "required-best-fit"])
+def test_compact_policy_posture_preserves_assignment_scope(tmp_path, shared_core_binary, native_cli, policy):
+    """An unresolved recommendation is not a binding implementation gate."""
+    import hashlib
+
+    from tests.test_native_execution_configurations import fixture
+
+    source, _, context = fixture(tmp_path)
+    source.write_text(
+        source.read_text()
+        .replace("required-best-fit", policy)
+        .replace("[delegation_targets.worker]\n", '[delegation_targets.worker]\nforbidden_task_classes=["mixed"]\n')
+    )
+    (tmp_path / ".agentic-workspace/config.toml").write_text("[assurance]\nstrict_closeout=true\n")
+    binding = policy == "required-best-fit"
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, {**value, "projection": "compact"})
+
+    def answer(view, fields):
+        return call({**view["reentry"], "reference": view["assignment_context"]["next_step"]["reference"], "answer": fields})
+
+    initial = call(context)
+    assert set(initial["assignment_context"]["next_step"]["answer_shape"]["target_scope"]["worker"]) == {"status", "reason"}
+    scope = {"worker": {"status": "not-applicable", "reason": "This fixture asks for a bounded source inspection, not mixed work."}}
+    offered = answer(initial, {"required_result_classes": ["unapplied-patch"], "target_scope": scope})
+    unavailable = answer(
+        initial, {"required_result_classes": ["unapplied-patch"], "required_proof_classes": ["independent-evidence"], "target_scope": scope}
+    )
+    for view in [initial, offered, unavailable]:
+        posture = view["assignment_context"]
+        assert posture["policy_mode"] == policy and posture["binding"] is binding
+        assert posture["local_continuation_allowed"] is (not binding)
+        assert posture["status"] == ("assessment-required" if binding else "not-required")
+        assert ("effect:implementation" in posture["affects"]) is binding
+        assert posture["policy_source"]["revision"]
+        assert posture["policy_source"]["sources"] == [
+            {
+                "reference": ".agentic-workspace/config.local.toml",
+                "revision": "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest(),
+                "status": "current",
+            }
+        ]
+        assert posture["next_step"]["reference"]
+        blockers = view["decision_packet"]["blockers"]
+        assert any(b["owner"] == "assignment" and "effect:implementation" in b["affects"] for b in blockers) is binding
+        assert any(b["owner"] == "verification" and "claim:complete" in b["affects"] for b in blockers)
+    assert unavailable["assignment_context"]["ineligible_configurations"]
+    assert not (tmp_path / "marker.txt").exists()
+
+
 def test_verification_transitions_keep_execution_judgment_and_recover_changed_obligation(tmp_path, shared_core_binary, native_cli):
     """Closeout choices do not invalidate unrelated executor capabilities."""
     from tests.test_native_execution_configurations import fixture
@@ -137,6 +188,29 @@ def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core
     nonlocal_result = answer(offered, {"alternative": "worker:cli", "reason": "Use the eligible worker for this independent read."})
     assert nonlocal_result["assignment_context"]["local_continuation_allowed"] is False
     assert any("effect:implementation" in b["affects"] for b in nonlocal_result["decision_packet"]["blockers"])
+
+    # A direct task has no source-shaped defaults. Capture changes the issued
+    # input source; an older answer still appears in comparison prerequisites.
+    # The compact next step must name the current capture, without inspecting
+    # or rewriting immutable request identities.
+    def prepare(view, fields):
+        step = view["assignment_context"]["handoff_preparation"]["next_step"]
+        return call({**view["reentry"], "reference": step["reference"], "answer": fields})
+
+    # Prepare before explicit comparison: changing preparation correctly
+    # invalidates an older comparative judgment.
+    captured = prepare(offered, {"input_refs": ["a.txt"], "complete": False, "reason": "Observe the exact bounded inspection source."})
+    prepared = prepare(captured, {"complete": True, "reason": "The observed source fully describes this independent read."})
+    assert prepared["assignment_context"]["handoff_preparation"]["status"] == "ready"
+    delegated = answer(
+        prepared, {"alternative": "worker:cli", "reason": "The prepared bounded read reuses captured context with this eligible worker."}
+    )
+    assert delegated["assignment_context"]["handoff_preparation"]["sealed_handoff_status"] == "export-ready"
+    assert not (tmp_path / "marker.txt").exists()
+    (tmp_path / "a.txt").write_text("Changed after capture")
+    with pytest.raises(AssertionError, match="changed|stale"):
+        prepare(captured, {"complete": True, "reason": "An old observation cannot authorize changed input."})
+    (tmp_path / "a.txt").write_text("current")
     with pytest.raises(AssertionError, match="stale|changed|unknown"):
         call(
             {

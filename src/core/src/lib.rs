@@ -947,9 +947,25 @@ fn normalize_contribution(
             }
             let mut keys = BTreeSet::new();
             for request in &action.source_requests {
-                let mut context =
-                    json!({"current_work":intent["current_work"], "public_request":request});
-                normalize_public_request(&mut context, capabilities)?;
+                if request["owner"] == "semantic-routes" {
+                    // Activity has its existing independent read-only contract,
+                    // not the effect owners' composed contract. Revalidate its
+                    // exact request against the current work and catalogue;
+                    // activity supplies applicability only, never effect rights.
+                    let (route, _) = crate::semantic_routes::resolve(json!({
+                        "current_work":intent["current_work"],
+                        "source":intent["semantic_route_source"],"request":request
+                    }))?;
+                    if route["status"] != "current" {
+                        return Err(CoreError::new(
+                            "source activity request is stale for current work or catalogue",
+                        ));
+                    }
+                } else {
+                    let mut context =
+                        json!({"current_work":intent["current_work"], "public_request":request});
+                    normalize_public_request(&mut context, capabilities)?;
+                }
                 if !keys.insert((
                     request["owner"].clone().to_string(),
                     request["request_kind"].clone().to_string(),

@@ -348,11 +348,11 @@ pub(crate) fn view(
                     .is_some_and(|v| v.iter().any(|i| i == "off"));
             let host =
                 transport["kind"] == "native" && transport["adapter"] == "codex-app-server/v1";
+            // Passive local-preferred entry never reaches resolved requirements.
+            // A current opportunity can observe the host under the same authority
+            // and safety ceiling as other active executor comparisons.
             let capability_observation = if host {
-                if authority
-                    && profile_safe
-                    && source_policy["assignment_policy"] != "local-preferred"
-                    && local["safety"]["safe_to_auto_run_commands"] == true
+                if authority && profile_safe && local["safety"]["safe_to_auto_run_commands"] == true
                 {
                     if let Some(observed) = &observed {
                         let key = digest(&json!([transport, observed]))?;

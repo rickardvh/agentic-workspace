@@ -18,7 +18,10 @@ pub(crate) fn implementation_admission(
 ) -> Result<Value, CoreError> {
     let assignment = &requirements["assignment"]["result"];
     if assignment["binding"] != true {
-        return Ok(json!({"status":"not-required","historical_compliance":"not-established"}));
+        return Ok(json!({"status":"not-required","binding":false,
+            "local_continuation_allowed":true,"affects":[],
+            "historical_compliance":"not-established",
+            "boundary":"Assignment advice does not prohibit local continuation. Independent restrictions and result admission remain applicable; this does not attest earlier external implementation."}));
     }
     let result = &requirements["assignment"]["result_admission"];
     let materialized = requirements["result"]["requirements"]["required_result_classes"]
@@ -36,7 +39,8 @@ pub(crate) fn implementation_admission(
     } else {
         "assessment-required"
     };
-    let admission = json!({"status":status,"assignment_identity":assignment["assignment_identity"],
+    let admission = json!({"status":status,"binding":true,"affects":IMPLEMENTATION_SCOPES,
+        "assignment_identity":assignment["assignment_identity"],
         "local_continuation_allowed":assignment["local_assignment_satisfied"] == true && !observed,
         "result_use_allowed":result["result_use_allowed"] == true,
         "historical_compliance":if result["result_use_allowed"] == true {"owner-admitted-result"} else {"not-established"},
@@ -267,6 +271,29 @@ pub(crate) fn view(
 #[cfg(test)]
 mod admission_tests {
     use super::*;
+
+    #[test]
+    fn nonbinding_comparison_does_not_create_implementation_restriction() {
+        for status in [
+            "assessment-required",
+            "no-fit",
+            "assigned-current-target",
+            "assigned-nonlocal-handoff-required",
+        ] {
+            let requirements = json!({"assignment":{"result":{"binding":false,"status":status}}});
+            let mut contribution = json!({"owner":"assignment","revision":"current","blockers":[]});
+            let admission = implementation_admission(&requirements, &mut contribution).unwrap();
+            assert_eq!(admission["status"], "not-required");
+            assert_eq!(admission["binding"], false);
+            assert_eq!(admission["local_continuation_allowed"], true);
+            assert_eq!(admission["affects"], json!([]));
+            assert_eq!(admission["historical_compliance"], "not-established");
+            assert_eq!(
+                contribution,
+                json!({"owner":"assignment","revision":"current","blockers":[]})
+            );
+        }
+    }
 
     #[test]
     fn later_local_assignment_cannot_admit_materialized_or_observed_work() {

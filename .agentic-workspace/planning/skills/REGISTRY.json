@@ -17,7 +17,7 @@
     },
     {
       "activation": {
-        "applicability": "Changed scope, accepted progress, interruption or handoff has continuity value beyond this turn.",
+        "applicability": "New work needs useful decomposition or durable intent, constraints and dependencies beyond sufficient existing records; changed scope, accepted progress, interruption or handoff also has continuity value.",
         "binding_owners": [
           "planning"
         ],
@@ -26,7 +26,7 @@
           "observation",
           "binding"
         ],
-        "outcome": "The needed task record is saved and verified, or no plan is needed."
+        "outcome": "Sufficient existing task meaning is reused, or native Planning custody is created/selected and verified before needed meaning is lost; direct work needs no duplicate record."
       },
       "id": "planning-work",
       "path": "planning-work/SKILL.md",
@@ -37,7 +37,7 @@
     },
     {
       "activation": {
-        "applicability": "A concrete pre-binding local/delegate choice needs judgment, or current binding Assignment/dispatch/handoff needs exact continuation. Unrelated ordinary local work does not need this method.",
+        "applicability": "Required-best-fit needs current executor admission before affected implementation; advisory policy needs a useful comparison; local-preferred has a concrete delegation opportunity; or an existing Assignment needs continuation. Passive local-preferred work stays direct.",
         "binding_owners": [
           "assignment",
           "delegation"
@@ -46,7 +46,7 @@
           "need",
           "binding"
         ],
-        "outcome": "A quiet local or unknown/defer choice, current Assignment assessment for a delegate proposal, or exact binding continuation with truthful owner gaps."
+        "outcome": "Current admitted local execution or exact non-local dispatch/return under required policy; nonbinding advice or quiet direct work under permissive policy; scoped unresolved restrictions when admission is missing."
       },
       "id": "planning-assignment",
       "path": "planning-assignment/SKILL.md",

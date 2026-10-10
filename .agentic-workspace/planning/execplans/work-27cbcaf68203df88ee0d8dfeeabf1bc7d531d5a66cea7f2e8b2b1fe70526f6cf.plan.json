@@ -1,0 +1,138 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "continuation_owner": "This Plan and issue3849",
+    "requested_outcome": "Entire3849 acceptance including installed behavior"
+  },
+  "continuation": {
+    "accepted": [
+      "All five implementation PRs exist: #3846â†’PR3848, #3847â†’PR3854, #3849â†’draft PR3855, #3850â†’PR3852, #3851â†’PR3853. #3848 is a PR, not a sixth issue.",
+      "Stack: masterâ†’3852(route)â†’3853(optional delegation)â†’3848(Planning)â†’3855(required/advisory Assignment). Memory PR3854 branches from3852. No self-review or merge has been performed.",
+      "Windows Sandboxes works through the existing same-user launcher; saved machine-local guidance is current. Existing sign-ins were preserved; contained real consumer VMs were removed.",
+      "Planning baseline61da7aca created no Plan but completed direct code and later continuation. Final candidate3d94c9ee independently created/updated a Plan before implementation; its fresh reader used the actual Plan and completed export. Sufficient-source and trivial/unrelated/missing-owner controls created no new Plan.",
+      "Planning's first receiving actor exposed portable create+update validation after creation provenance had been removed. Both original envelopes are now validated first. Four-interface custody/drift controls pass. Pre-stack94 public and208 Rust cases passed; final stack93 public cases passed with one retained unrelated signal11 failure.",
+      "Memory fb0b2a479 exposes first compact consideration and preserves its timestamp across clock ticks. Exact-head32 public cases and208 Rust cases passed. The substantive unprompted GPT6.1-Sol actor nominated the hardcoded/repeated-read finding, corrected the strongest pipeline source, and retained no duplicate note. A fresh consumer used exactly that result, with1 source read instead of32. Changed-data, absent-source and quiet one-off controls passed. Earlier narrow failed/no-retention observations remain retained.",
+      "#3850's44 public controls and208 Rust cases passed. #3851's explicit opt-in progression passes on all four surfaces; published pre-stack49 public and209 Rust passed. Its stacked run passed48 with one unrelated native signal11. All first failures remain retained.",
+      "#3849's source-shaped context control now keeps parent coordination local, compares independently shaped children with local still eligible, reuses accepted captured inputs, dispatches mock child contracts and retains distinct return custody. The compact policy and independent-activity positive/drift tests pass:4 focused cases. Rust library suite passes209 with3 preexisting ignored.",
+      "The context control exposed a real action-source seam: independently bound semantic activity requests were being validated against the composed effect contract. They now revalidate through their own current read-only owner, preserving work/catalogue/header checks and no effect authority. No issued revision is rewritten.",
+      "Earlier #3849 broader run:61passed, one test progression/source-request failure subsequently corrected, and2 unrelated signal11 terminations. Intermittent native process termination also occurred in other isolated runs; cause remains unresolved. Static frame inspection did not justify a stack-size workaround. No broad green claim is made.",
+      "Hosted CI for ready PRs fails before isolated tests when Docker Hub rate-limits unauthenticated ubuntu:24.04 pulls. One retry reproduced the unchanged blocker. Semver/security pass where observed; no green CI, independent acceptance or merge readiness is claimed.",
+      "Frozen 7b controls: valid local admission, genuine unresolved required block, advisory nonbinding, and quiet local all behaved correctly. The proposed worker chose valid local with inactive posture; it is retained and not counted as positive delegation.",
+      "Frozen 2e9b8dfcb selected the applicable activity and admitted nonlocal with local still feasible, but failed twice at captured-input completeness without dispatch or implementation. The compact view selected an older same-kind prerequisite instead of the handoff owner current observed request. Current source selects the exact owner continuation; unchanged source guards remain. Focused regression extends existing compact owner progression with direct capture and changed-source rejection. Its initial test mistakenly changed preparation after explicit comparison; that valid stale-comparison failure is retained and the test now prepares first.",
+      "66f961f28 fixes compact capture continuation: five focused cases passed and209 Rust passed with3 preexisting ignored. Broader64 run passed61 and had3 signal11 terminations in different existing/progression calls, with no assertion semantics failure; retained without a blanket green claim.",
+      "66f required-local, unresolved, advisory and quiet ordinary cases all behaved correctly. Nonlocal captured/exported/dispatched, but the fixture process bridge failed before the model: observer PATH omits observed /usr/local/share/npm-global/bin/codex. Fixture now uses its actual executable/certificate settings,45s provider bound within60s observer call bound, and stage diagnostics. No product transport/currentness guard changed.",
+      "The next nonlocal actor admitted the worker but omitted worker.py from existing changed allowed-path scope and correctly stopped at export. Shipped assessment/binding now explicitly declare intended patch paths before requirements/comparison/capture; capture does not widen scope, and correction requires fresh work-bound resolution.",
+      "Required parent-lane operational-affordance exercise on66f ran one genuine session and failed preparation retained-plan-missing-or-invalid. Planning and scratch effects committed, actor preserved pending source files, but controller fresh empty-scope observation did not validate the selected Plan. A rejected invocation carried extra request/context rather than exactly the action; this caller-shape error recovered. Full finding remains failed; no parent-lane live satisfaction or broader completion is claimed.",
+      "4496646c6 final focused5 cases passed.53ead4454 is a native owner-produced failed parent current-evidence assessment; it supplies no parent-lane satisfaction. Native binaries on449 and53 were byte-identical.53 local/unresolved/advisory/quiet controls passed; positive stopped at dispatch because invocation incorrectly copied reentry.request alongside action.884 shipped owner/binding guides now explicitly omit that field; unchanged action already carries source requests.",
+      "449 corrected proxy host genuinely ran GPT5.6Sol worker in5.258s with code0, but its typed return failed native admission; no local replacement occurred. Raw process data remain in3849-scoped-proxy-host-nonlocal.json; original model material was not retained there, so no exact invalid-field cause is claimed. Host now repeats the exact native return rule in output-schema patch description and retains material/typed return for diagnosis; it never rewrites the patch or substitutes42.",
+      "884 valid local/unresolved/advisory/quiet all passed. Positive genuinely dispatched GPT5.6Sol in8.214s and wrapped a typed return, but worker returned honest stop conditions: captured AGENTS referenced absent startup, and whole-task check exceeded its patch-only command authority. No patch/local replacement; actual material is retained in3849-884-nonlocal.json.",
+      "b0aed1383 ships comparison guidance for the outcome within receiver authority, reusing/shaping existing child Planning intent and leaving integration/proof at the initiating host. Positive fixture now creates an actual related native code-only Plan with valid assignment_inputs before the actor; README links that intent source. No Assignment answer, activity choice or dispatch is injected. The real CLI worker runs in an empty separate temporary directory, using only the sealed snapshot, stock entry/return, exact native rule in schema and unchanged source guards.",
+      "b0 planned-child fixture genuinely ran GPT5.6Sol in2.638s and produced a canonical nonempty valid patch, but the initiator replaced current reentry requests with an isolated return-judgment envelope and lost executed-result custody. No admission/integration occurred despite actor wording; worker.py stayed0. This remains failed evidence.",
+      "Current operating.rs exposes actual returned_result status/summary/paths/stop conditions and lazy material reference, plus exact current return-judgment or integration-proposal next_step. Owner requests remain unchanged; empty integration answer selects the existing proposal before its exact action. Shipped return guide preserves execution custody and forbids replacing a carried bundle.",
+      "Extended existing patch lifecycle test exercises compact admission→proposal→integration and keeps old drift/conflict/forgery/replay checks. JSON whole case passed. First native case passed new compact stages and integration then signal11 at replay; second fresh native case signal11 at dispatch. The initial commentary misattributed the first location; corrected. Both failures remain retained, with unresolved cause and no native-suite green claim."
+    ],
+    "actor_evidence": "A paired Linux artifact was built offline from an exact git archive of f2c03330180b00df2b1aaf44672be2a4ba79e4fc and frozen under task scratch/baseline-candidate. The ordinary activation-local baseline uses the unchanged prompt Implement worker.py so its answer is 42, without AW/delegation instructions. Both recorded attempts failed before any provider session: stale Windows Sandbox socket files first, then the recovered daemon's backend could not connect to its own unix://C:\\...\\docker.sock. Actual actor target checkout, effective policy and activity therefore remain unobserved. These are host preparation failures, not agent compliance observations. Do not replace them or score them as successful baseline evidence.",
+    "batch_authorization": "User explicitly authorized all #3846-3851 issues in separate PRs, stacked as necessary. #3848 is the existing draft PR for #3846. Implement #3850/#3851 prerequisites independently, consume them in dependent leaves, and finish existing #3848 instead of duplicating it.",
+    "dependencies": "The accepted source contracts of #3850 and #3851 are prerequisites named by #3849. Both issues were still open with no matching PR at observation on 2026-10-09. Reobserve their current sources rather than treating this snapshot as permission or an execution queue.",
+    "final_validation": "Current source-scoped native Assignment/read-only handoff check passed all 50 cases; shared Rust library check passed 209 with 3 ignored. Exact native process artifacts are in the proof fields. The broader conformance command remains failed; no installed actor or whole-task completion is established.",
+    "handoff_probe": "An attempted compact capture-after-selection extension was tested and withdrawn. Adding input completeness changed comparative dependencies/feasibility, and native rejection correctly preserved currentness. The second run retained49passing cases and that one failure. No comparator or admission relaxation was made. Future ordinary positive exercise should use the existing preparation-before-binding contract; determine any missing presentation seam from faithful evidence. The local handoff-projection-probe.diff and failed receipt preserve the experiment, not accepted implementation.",
+    "proof_findings": "A broader owner conformance run retained158passing cases and22failures.20name missing proof-snapshot fixtures (GitHub issue instructions, example-runtime-boundary memory note, shared-semantic-authority decision). The copied dogfooding fixture lacks its SKILL entry in that snapshot. A material/quiet packet-equality failure remains unattributed. This broad command is not green. Its source/fixture closure remains with Verification/public-interface evidence and was nominated through current material in finding-ingress.json. Do not change assertions to approve the symptom or retry the unchanged environment.",
+    "publication": "No PR, independent review, merge or issue closure was performed. Repository instructions require each implementation PR to fully resolve its issue; missing actor evidence and dependencies prevent presenting this patch as ready. Implementation actors must not initiate their own independent reviewer.",
+    "real_baseline": "After restored Windows launcher, first genuine f2c033301 activation-local actor session completed and VM cleanup removed. Raw baseline-required-local-restored-windows.json retains its artifact-only passed result, but policy compliance failed: actor read required-best-fit in exact guest local config, invoked unavailable bare agentic-workspace (exit127), read unavailable guidance and implemented worker.py locally without any protected native product call. Actual configured repository CLI remained available in shared config; actor did not follow precedence. No native admission was obtained. Preserve this first behavioral failure and metadata limits; tighten the harness to record effective policy/activity and admission rather than grading final file alone.",
+    "remaining": [
+      "#3849 exact frozen ordinary cases: positive nonlocal with two feasible executors, legitimate local admission, unresolved required blocker without implementation, advisory nonbinding, and quiet local/default.",
+      "Observe actual sealed process worker execution, stock worker-entry/return wrapping, native result admission/integration and fixture proof before marking PR3855 ready.",
+      "Rerun the focused new-code checks on the committed #3849 head; preserve any failures. Finish PR bodies with exact identities and material limits.",
+      "Final check of all attached PRs, scopes, stack, semver labels and retained resources. Independent review and accepted CI remain external requirements."
+    ],
+    "resources": "Use the existing checkout on codex/3849-assignment-policy. No worktree or alternate clone was created. The temporary baseline build container was removed. sbx ls confirmed no actor sandboxes existed after the failed creations; failed cleanup receipts remain retained. Task scratch is needed for the frozen baseline, failed results and native receipt pointers. Preserve unrelated pre-existing untracked Plans and entry directories, and the protected decision-point source.",
+    "sandbox_next": "Before further Sandbox calls, read and use the saved local launcher. Its healthy branch was verified. It needs -RecoverEmptyDaemon only for an inventory-confirmed empty failed daemon and preserves old state. The launcher hit one JSON parser error because an update banner followed daemon-status JSON, but its launch had succeeded; independent status/template checks and full preflight verified the result. No broad kernel/MSIX causal claim. Persisted machine-local instructions/sandbox-runtime.md through native instructions.write and verified its exact source/applicability and fresh ordinary startup delivery.",
+    "sandbox_recovery": "User correction exposed that the successful Windows path had already been established in #3810. Today the daemon was stopped before the first attempt; direct agent-tree startup repeated the known AF_UNIX failure. Why it had stopped is not established. The agent overlooked Start-WorkspaceSandboxDaemon.ps1 and unnecessarily installed Linux sbx0.47 in existing WSL, then requested a fresh sign-in. That sign-in instruction is withdrawn. On2026-10-09 the existing Windows launcher recovered an empty failed daemon by preserving state and using a temporary same-user Interactive/Limited launch. Image listing succeeded. windows-restored-preflight.json passed actual immutable-template VM installation, actor containment and paired artifact immutability; cleanup removed, actor_executed=false. Existing Windows openai service-name metadata remains configured; no credential was copied or reset. The newly started Linux root daemon was stopped; no WSL distro or prior task runtime was deleted."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/5bad3da2e643e312f59c1ae376f2a6bd11b3dfb0bcac6517c10f23567aadcaf8.attempt.json",
+        "revision": "sha256:585a8a8a20cbb457550b118173ce45e792baf45fbafcf2459cea224a5f82082c",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/5bad3da2e643e312f59c1ae376f2a6bd11b3dfb0bcac6517c10f23567aadcaf8.result.json",
+        "revision": "sha256:534906a6b70c67d61c104813fdd7739380ff8010640899f09a3ba623d021ed65",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:f962d3151d46c005380627867c88abe70e281f42c4174bd4322bce11f64fc97a",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:bb1ad83caf96d34d5de81720afb0c03112ac94cf0178cae0f3a98a0b06ba2ca6"
+  },
+  "id": "work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf",
+  "intent": {
+    "constraints": "Consume #3850/#3851 accepted fixes separately; no comparator/cache duplication. Preserve independent review and all owner restrictions.",
+    "outcome": "Complete all #3849 criteria in one coherent PR with exact-head installed actor evidence."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Commit/freeze compact return judgment and integration proposal steps. Run positive planned-child ordinary actor to actual admission/integration/trusted check, then all four other exact-head controls. Rewrite PR3855 completion audit only after that succeeds, preserve failures, and complete final five-PR audit.",
+  "owner_level": "lane",
+  "parent": {
+    "issue": "https://github.com/rickardvh/agentic-workspace/issues/3849"
+  },
+  "phase": "shaping",
+  "proof": {
+    "accepted": "Current source-scoped confined native validation: 50 Assignment/read-only handoff cases passed (.agentic-workspace/local/proof-receipts/runs/native-sha256-31ad582f16419807259e0f121a61242b83802a6e011f6ec1f400626feb252c17/run.json.command.json); 209 Rust library cases passed with 3 ignored (.agentic-workspace/local/proof-receipts/runs/native-sha256-00be38a6c28e1f5e8a5089cc664246d45aeef7b419aef59288f6a4fe5121d7ec/run.json.command.json). Source/payload generation, catalogue parity, native source boundary, agent-aid validation, Rust formatting and focused Python formatting/lint passed. One MSVC linker crash preceded a successful serialized paired rebuild. Reobserve source/scope currentness before reusing these conclusions; no full broad conformance, installed behavior or issue completion claim.",
+    "failed_attempts": "First native owner run:48passed2provenance failures, corrected. Second:49passed1capture-after-binding failure, extension withdrawn. Third broader command:158passed22failures, retained with source/fixture gap. Raw effect records and exact native stdout/stderr artifacts are named in task scratch/owner-proof-1.json, owner-proof-2.json, owner-proof-3.json; no failure was overwritten.",
+    "remaining": "Finish the faithful first actor baseline and finite installed exercise on one frozen correction head: required positive non-local with both executors feasible, required legitimate local, required unresolved restriction without unauthorized implementation, advisory and quiet local-preferred controls. Record actual target/effective local policy/activity, source/config revisions, eligibility, native calls, implementation timing, dispatch/typed return, responsible admission/integration/proof, failures and limits. Consume accepted #3850/#3851 controls. Resolve broad public proof-source closure for that claim, complete required source reconciliation and CI, and leave independent review externally initiated. No statistical reliability or cost claim."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/pull/3848",
+    "https://github.com/rickardvh/agentic-workspace/pull/3852",
+    "https://github.com/rickardvh/agentic-workspace/pull/3853",
+    "https://github.com/rickardvh/agentic-workspace/pull/3854",
+    "https://github.com/rickardvh/agentic-workspace/pull/3855",
+    ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388"
+  ],
+  "relationships": {},
+  "revision": 11,
+  "scope": {
+    "negative_requirements": "Each issue has one coherent PR. No duplicate #3848 PR, no ambient plan/route state, no duplicated semantic fix, no weakening source/currentness/admission.",
+    "surface": "Five-issue implementation: #3846 Planning discovery (existing PR #3848), #3847 Memory first-use and reuse, #3849 policy entry/execution, #3850 shared route carriage, #3851 explicit optional delegation."
+  },
+  "title": "#3849 policy-conditioned Assignment entry and execution",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/3a53b9efb8107e26d6308c7884f8cc39ffe9743826edaeb83f09a040ad013fc9.attempt.json",
+        "revision": "sha256:ad46fa6001d1eb9a085e0e36d374709de19b1d74a6c868108f0912d001acdb58",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/3a53b9efb8107e26d6308c7884f8cc39ffe9743826edaeb83f09a040ad013fc9.result.json",
+        "revision": "sha256:b7fbed71e7ee023fff6a40776f928ae7fbaa4dcccd218263327ddb9cf6a6b2a9",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:9edd765bfd900c5562b9d643eb1d665a7a0c6d64c54ea263685e15a801ba8913",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:09519c096513a75d05ffc4479331c479e5af8f76e10e00ff77bf1a413e1d52c4",
+        "owner_id": "work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf",
+        "owner_path": ".agentic-workspace/planning/execplans/work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf.plan.json"
+      }
+    }
+  }
+}
