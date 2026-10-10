@@ -18,7 +18,11 @@
       "Earlier #3849 broader run:61passed, one test progression/source-request failure subsequently corrected, and2 unrelated signal11 terminations. Intermittent native process termination also occurred in other isolated runs; cause remains unresolved. Static frame inspection did not justify a stack-size workaround. No broad green claim is made.",
       "Hosted CI for ready PRs fails before isolated tests when Docker Hub rate-limits unauthenticated ubuntu:24.04 pulls. One retry reproduced the unchanged blocker. Semver/security pass where observed; no green CI, independent acceptance or merge readiness is claimed.",
       "Frozen 7b controls: valid local admission, genuine unresolved required block, advisory nonbinding, and quiet local all behaved correctly. The proposed worker chose valid local with inactive posture; it is retained and not counted as positive delegation.",
-      "Frozen 2e9b8dfcb selected the applicable activity and admitted nonlocal with local still feasible, but failed twice at captured-input completeness without dispatch or implementation. The compact view selected an older same-kind prerequisite instead of the handoff owner current observed request. Current source selects the exact owner continuation; unchanged source guards remain. Focused regression extends existing compact owner progression with direct capture and changed-source rejection. Its initial test mistakenly changed preparation after explicit comparison; that valid stale-comparison failure is retained and the test now prepares first."
+      "Frozen 2e9b8dfcb selected the applicable activity and admitted nonlocal with local still feasible, but failed twice at captured-input completeness without dispatch or implementation. The compact view selected an older same-kind prerequisite instead of the handoff owner current observed request. Current source selects the exact owner continuation; unchanged source guards remain. Focused regression extends existing compact owner progression with direct capture and changed-source rejection. Its initial test mistakenly changed preparation after explicit comparison; that valid stale-comparison failure is retained and the test now prepares first.",
+      "66f961f28 fixes compact capture continuation: five focused cases passed and209 Rust passed with3 preexisting ignored. Broader64 run passed61 and had3 signal11 terminations in different existing/progression calls, with no assertion semantics failure; retained without a blanket green claim.",
+      "66f required-local, unresolved, advisory and quiet ordinary cases all behaved correctly. Nonlocal captured/exported/dispatched, but the fixture process bridge failed before the model: observer PATH omits observed /usr/local/share/npm-global/bin/codex. Fixture now uses its actual executable/certificate settings,45s provider bound within60s observer call bound, and stage diagnostics. No product transport/currentness guard changed.",
+      "The next nonlocal actor admitted the worker but omitted worker.py from existing changed allowed-path scope and correctly stopped at export. Shipped assessment/binding now explicitly declare intended patch paths before requirements/comparison/capture; capture does not widen scope, and correction requires fresh work-bound resolution.",
+      "Required parent-lane operational-affordance exercise on66f ran one genuine session and failed preparation retained-plan-missing-or-invalid. Planning and scratch effects committed, actor preserved pending source files, but controller fresh empty-scope observation did not validate the selected Plan. A rejected invocation carried extra request/context rather than exactly the action; this caller-shape error recovered. Full finding remains failed; no parent-lane live satisfaction or broader completion is claimed."
     ],
     "actor_evidence": "A paired Linux artifact was built offline from an exact git archive of f2c03330180b00df2b1aaf44672be2a4ba79e4fc and frozen under task scratch/baseline-candidate. The ordinary activation-local baseline uses the unchanged prompt Implement worker.py so its answer is 42, without AW/delegation instructions. Both recorded attempts failed before any provider session: stale Windows Sandbox socket files first, then the recovered daemon's backend could not connect to its own unix://C:\\...\\docker.sock. Actual actor target checkout, effective policy and activity therefore remain unobserved. These are host preparation failures, not agent compliance observations. Do not replace them or score them as successful baseline evidence.",
     "batch_authorization": "User explicitly authorized all #3846-3851 issues in separate PRs, stacked as necessary. #3848 is the existing draft PR for #3846. Implement #3850/#3851 prerequisites independently, consume them in dependent leaves, and finish existing #3848 instead of duplicating it.",
@@ -69,7 +73,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Validate the current compact capture continuation, commit/freeze it, then run all five ordinary Assignment controls against that immutable commit. Finish PR3855 and final batch audit only after real sealed worker return/admission/integration is observed.",
+  "next_action": "Freeze the scoped handoff guidance and run the final five ordinary Assignment cases on one immutable head, using the observed Codex path/certificate settings in the contained live process transport. Verify actual typed return/admission/integration and fixture check; then finish PR3855 and audit all five PRs.",
   "owner_level": "lane",
   "parent": {
     "issue": "https://github.com/rickardvh/agentic-workspace/issues/3849"
@@ -89,7 +93,7 @@
     ".agentic-workspace/local/scratch/ce148a1c975d8d80fec264721bb0d35dc1ad4c3c47a747d669f4e9b4372b6388"
   ],
   "relationships": {},
-  "revision": 9,
+  "revision": 10,
   "scope": {
     "negative_requirements": "Each issue has one coherent PR. No duplicate #3848 PR, no ambient plan/route state, no duplicated semantic fix, no weakening source/currentness/admission.",
     "surface": "Five-issue implementation: #3846 Planning discovery (existing PR #3848), #3847 Memory first-use and reuse, #3849 policy entry/execution, #3850 shared route carriage, #3851 explicit optional delegation."
@@ -99,18 +103,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f8e6b2cb17dfea7d856cff226aef742225ee25f97d8d44b588dc07f8067acd8a.attempt.json",
-        "revision": "sha256:069f0c0327e11e8f31621f7a92c8c57d051e77cc58f11959262f39ba63605e79",
+        "path": ".agentic-workspace/local/effects/f69064dea2e551deb783db9d5dd1b1c5642873562f16840c60e21a0451df8260.attempt.json",
+        "revision": "sha256:8cbf10ef5421bfd449828f6125c8cda3f6404286234e23bed9ab2c5191610cd8",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f8e6b2cb17dfea7d856cff226aef742225ee25f97d8d44b588dc07f8067acd8a.result.json",
-        "revision": "sha256:53e2bde2a16e1ea9cca7f2b967231a879ebc26989c09f3c8607ff16b5ea1aec6",
+        "path": ".agentic-workspace/local/effects/f69064dea2e551deb783db9d5dd1b1c5642873562f16840c60e21a0451df8260.result.json",
+        "revision": "sha256:2b95c7d6d2c259c184b529d01c6f52623053ea4980c74f76f81186958f0e80b4",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:dbaa6ac293ee4cf8b34797598f4d8f83dfcce4a8b70ed3308582fd5bd0870c09",
+    "invocation_revision": "sha256:08ccf5cc4f3434be9766fad6b3cfb2fa14074918516b9c603b5f5b6725683ff2",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -118,7 +122,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:8b88d69867cfabb9b48d8fd0fcc610b98e15712e041f80d8f9edb211f42d9b29",
+        "document_revision": "sha256:cfbd4a0996e553481a3b14be721c20708f30d143a152d129db4580d7cdd439c0",
         "owner_id": "work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf",
         "owner_path": ".agentic-workspace/planning/execplans/work-27cbcaf68203df88ee0d8dfeeabf1bc7d531d5a66cea7f2e8b2b1fe70526f6cf.plan.json"
       }

@@ -12,6 +12,11 @@ answer fields and exact reference. Return `reentry` unchanged with that referenc
 and your answer through `start --input`. The owner carries source identities and
 earlier answers; you need not open task-requirements detail or inspect request
 arrays. A caller that already keeps carriage may use the same reference with it.
+For a patch handoff, establish the intended allowed paths in the existing
+`changed` work scope before requirements/comparison and input capture, even when
+implementation has not begun. Captured `mutation_paths` must fit that scope;
+capturing a file does not expand it. A scope correction needs fresh resolution
+with the actual task and paths, then current activity and owner answers.
 `handoff_preparation` shows current input observation/completeness, source-shaped
 defaults and its exact next reference. A shaped child may reuse accepted inputs;
 compare its marginal preparation, verification and integration costs rather than
