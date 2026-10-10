@@ -15,6 +15,8 @@ For an assigned orchestrator, preserve intent, decomposition, admission, integra
 proof interpretation and closeout custody. Execute only an authorized current exact
 dispatch/transport action. Do not reopen binding target choice because of cost,
 availability or convenience. Only an admitted structured transition can change it.
+Invoke with the returned target, task, changed scope and unchanged action as
+`invocation`; omit `reentry.request`, since the action already binds those sources.
 Manual-only and unavailable transport are honest states, not failed automatic work.
 
 For a selected slice with `assignment_inputs`, reuse the source-derived work and

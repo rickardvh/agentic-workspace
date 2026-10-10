@@ -24,6 +24,9 @@ when several independent actions are ready. A complete invocation input contains
 `target`, `task`, `changed` and that unchanged action as `invocation`; include
 `changed: []` for an empty scope. An action alone cannot reconstruct its work
 context. Use the repository's configured invocation through native `invoke`.
+Do not copy `reentry.request` into that invocation input: the unchanged action
+already carries its owner dependencies. Reentry plus `invocation` is not this
+input shape; select only the work context and the action.
 Preserve the whole effect result and owner-specific next requests. Follow a
 current continuation directly; another startup call solely for ceremony adds no
 authority. Native checks carry receipts and still require semantic sufficiency.
