@@ -949,22 +949,19 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
             "authority":"Preparation facts only. A saved plan is not a prepared worker packet. Compare the bounded child's marginal preparation and verification/integration work; these facts grant no dispatch or return admission."
         });
         let requests = request_entries(full, context)?;
-        let wanted = if inputs["status"] != "ready" {
-            [
-                "assignment/judge-readonly-inputs/v1",
-                "assignment/judge-patch-inputs/v1",
-            ]
+        // Prerequisite bundles also retain the earlier submitted input answer.
+        // Select the owner's current continuation, not the first same-kind
+        // envelope encountered in another bundle (which may predate capture).
+        let next_request = if inputs["status"] != "ready" {
+            inputs["requests"][0].as_array().and_then(|r| r.last())
         } else {
-            [
-                "assignment/export-readonly/v1",
-                "assignment/export-patch/v1",
-            ]
+            requirements["handoff"]["requests"][0]
+                .as_array()
+                .and_then(|r| r.last())
         };
-        if let Some(request) = requests.iter().find(|r| {
-            wanted
-                .iter()
-                .any(|kind| r["envelope"]["request_kind"] == *kind)
-        }) {
+        if let Some(request) =
+            next_request.and_then(|next| requests.iter().find(|r| r["envelope"] == *next))
+        {
             result["handoff_preparation"]["next_step"] = json!({
                 "reference":request["reference"],"answer_shape":request["envelope"]["arguments"],
                 "use":"Use current reentry and this exact reference. First observe the bounded input set with complete false, then judge the current observed set with complete true and a reason. Reuse source-shaped defaults when sufficient. Changed preparation revalidates the comparison; an old selected answer is not reusable authority. Once ready, submit the returned export reference without composing a replacement prompt."

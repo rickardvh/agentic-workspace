@@ -188,6 +188,29 @@ def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core
     nonlocal_result = answer(offered, {"alternative": "worker:cli", "reason": "Use the eligible worker for this independent read."})
     assert nonlocal_result["assignment_context"]["local_continuation_allowed"] is False
     assert any("effect:implementation" in b["affects"] for b in nonlocal_result["decision_packet"]["blockers"])
+
+    # A direct task has no source-shaped defaults. Capture changes the issued
+    # input source; an older answer still appears in comparison prerequisites.
+    # The compact next step must name the current capture, without inspecting
+    # or rewriting immutable request identities.
+    def prepare(view, fields):
+        step = view["assignment_context"]["handoff_preparation"]["next_step"]
+        return call({**view["reentry"], "reference": step["reference"], "answer": fields})
+
+    # Prepare before explicit comparison: changing preparation correctly
+    # invalidates an older comparative judgment.
+    captured = prepare(offered, {"input_refs": ["a.txt"], "complete": False, "reason": "Observe the exact bounded inspection source."})
+    prepared = prepare(captured, {"complete": True, "reason": "The observed source fully describes this independent read."})
+    assert prepared["assignment_context"]["handoff_preparation"]["status"] == "ready"
+    delegated = answer(
+        prepared, {"alternative": "worker:cli", "reason": "The prepared bounded read reuses captured context with this eligible worker."}
+    )
+    assert delegated["assignment_context"]["handoff_preparation"]["sealed_handoff_status"] == "export-ready"
+    assert not (tmp_path / "marker.txt").exists()
+    (tmp_path / "a.txt").write_text("Changed after capture")
+    with pytest.raises(AssertionError, match="changed|stale"):
+        prepare(captured, {"complete": True, "reason": "An old observation cannot authorize changed input."})
+    (tmp_path / "a.txt").write_text("current")
     with pytest.raises(AssertionError, match="stale|changed|unknown"):
         call(
             {
