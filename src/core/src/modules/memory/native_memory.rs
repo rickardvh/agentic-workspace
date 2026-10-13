@@ -652,16 +652,13 @@ pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result
         };
         Some(
             json!({"resource":reference,"source":source,"authority_effect":"procedure-only",
-            "purpose":"Before the next dependent design, edit, check or claim, compare this selected advice with governing sources and other already-relevant facts. Use this method to choose one permitted source-directed action; after a verified correction, reconsider affected advice through its current owner. No repository audit is required."}),
+            "purpose":"Use sound, relevant advice directly in the original task. Read this method only when already-relevant facts expose a concrete conflict or useful correction, or a verified change may invalidate advice. Selection or a missing currentness baseline alone requires no method read, extra call, disposition or record."}),
         )
     } else {
         None
     };
     for note in view["selected_notes"].as_array().into_iter().flatten() {
         let mut item = json!({"source":note["source"],"currentness":note["currentness"],"authority_effect":"advisory-only","delivery_is_disposition":false});
-        if let Some(procedure) = &procedure {
-            item["procedure"] = procedure.clone();
-        }
         let reason = note["currentness"]["reason"].as_str().unwrap_or("");
         if !matches!(
             reason,
@@ -713,6 +710,9 @@ pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result
             ];
         }
         view["advisory_context"] = json!(context);
+        if let Some(procedure) = procedure {
+            view["advisory_procedure"] = procedure;
+        }
     }
     Ok(())
 }

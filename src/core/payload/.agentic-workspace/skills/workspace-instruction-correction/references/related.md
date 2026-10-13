@@ -7,6 +7,12 @@ outcome primary; do not run the [on-demand review](review.md) or enumerate other
 owners merely because some knowledge exists. An unrelated or no-signal task
 needs no extra call, record or reflection.
 
+Use sound, relevant advice directly in the original task. Selection alone, or a
+missing admitted currentness baseline, is not a conflict and does not require
+reading this method, reconciling advice or publishing a disposition. Continued
+usefulness needs no record. Enter the steps below only for a concrete relationship
+that changes a decision or for advice affected by a verified correction.
+
 ## Make the affected decision explicit
 
 Name the design, edit, check or claim that these facts could change. Compare their
