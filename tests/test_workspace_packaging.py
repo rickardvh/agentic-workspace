@@ -197,7 +197,11 @@ def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() ->
         "make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist "
         "PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci"
     ) in artifact_job
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in artifact_job
+    assert re.search(
+        r"^\s+(?:-\s+)?uses:\s+actions/upload-artifact@[0-9a-f]{40}(?:\s+#.*)?\s*$",
+        artifact_job,
+        re.MULTILINE,
+    )
 
 
 def test_node_binding_has_no_source_checkout_python_dependency() -> None:
