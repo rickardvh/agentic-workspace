@@ -545,19 +545,25 @@ fn relation_view(
         return Ok(view);
     }
     view["obligations"] = json!(sources.keys().collect::<Vec<_>>());
-    let unavailable = sources.iter().filter(|(_, source)| source["status"] == "unavailable")
+    let unavailable = sources.iter().filter(|(_, source)| source["status"] != "present")
         .chain(dependencies.iter().filter(|(_, source)| source["status"] != "present"))
         .map(|(path, source)| {
             let mut source = source.clone();
             if source["status"] == "absent" {
                 source["reason"] = json!("source-observation-missing");
-                source["recovery"] = json!("Restore this declared dependency and reobserve the affected relation; dependent actions remain blocked.");
+                source["recovery"] = json!("Restore this declared source and reobserve the affected relation; dependent actions remain blocked.");
             }
             (path.clone(), source)
         })
         .collect::<BTreeMap<_, _>>();
     if !unavailable.is_empty() {
-        view["status"] = json!("source-observation-required");
+        view["status"] = json!(
+            if sources.values().any(|source| source["status"] == "absent") {
+                "source-admission-required"
+            } else {
+                "source-observation-required"
+            }
+        );
         view["unavailable_sources"] = json!(unavailable);
         return Ok(view);
     }
