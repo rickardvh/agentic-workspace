@@ -99,6 +99,12 @@ managed state and report which current facts remain unknown.
 
 ## Handle findings and unfinished work
 
+When already-selected retained facts could change an imminent design, edit, proof
+or claim, use the correction method's [related findings](../workspace-instruction-correction/references/related.md)
+to assess their combined consequence and reconcile the affected advice after a
+verified source change. Reuse sufficient current evidence; this does not require
+a separate review, an extra `start` call or discovery of unrelated findings.
+
 When a source/test finding, correction, unmet prerequisite or useful improvement
 could change what happens next, include it in the `material` input to `start`
 before losing it or taking the dependent action. See

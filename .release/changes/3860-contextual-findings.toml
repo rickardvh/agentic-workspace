@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Use already-relevant retained findings at ordinary action boundaries and reconsider affected advice after verified source corrections."

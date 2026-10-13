@@ -1,5 +1,11 @@
 ## Corrections and retention
 
+For retained facts already relevant to an imminent action or claim, use
+[related findings](../../workspace-instruction-correction/references/related.md).
+After their controlling source changes, reassess affected advice even when its
+declared dependencies still match: byte currentness alone cannot show that a
+workaround remains useful. Preserve independent facts and proof requirements.
+
 Use this path when a correction, source conflict, environment fact or conclusion
 could change current work or prevent future rediscovery. Handle it even without
 a request to remember it. Include its content and
