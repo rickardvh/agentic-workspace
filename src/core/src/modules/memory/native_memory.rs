@@ -641,7 +641,8 @@ pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result
         .as_array()
         .is_some_and(|notes| !notes.is_empty())
     {
-        let reference = ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md";
+        let reference =
+            ".agentic-workspace/skills/workspace-instruction-correction/references/related.md";
         let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
         let source = match decision_source::read(&root, reference) {
             Ok(bytes) => {

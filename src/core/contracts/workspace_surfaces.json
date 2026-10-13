@@ -93,7 +93,8 @@
     ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md",
     ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/review.md",
-    ".agentic-workspace/skills/workspace-instruction-correction/references/related.md"
+    ".agentic-workspace/skills/workspace-instruction-correction/references/related.md",
+    ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md"
   ],
   "surfaces": [
     {
@@ -1318,6 +1319,20 @@
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-instruction-correction/references/related.md"
       }
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md"
+      },
+      "owner": "memory"
     }
   ],
   "identity": ".agentic-workspace/adoption.json",
@@ -1488,7 +1503,8 @@
       ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md",
       ".agentic-workspace/skills/workspace-instruction-authoring/references/publish.md",
       ".agentic-workspace/skills/workspace-instruction-correction/references/review.md",
-      ".agentic-workspace/skills/workspace-instruction-correction/references/related.md"
+      ".agentic-workspace/skills/workspace-instruction-correction/references/related.md",
+      ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md"
     ],
     "source_only_inputs": [
       ".agentic-workspace/OWNERSHIP.toml",

@@ -72,7 +72,7 @@ def test_selected_advice_is_delivered_and_large_detail_is_procedure_carried(tmp_
     from tests.test_native_proof_procedure import install, procedure
 
     install(tmp_path)
-    method_ref = ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md"
+    method_ref = ".agentic-workspace/skills/workspace-instruction-correction/references/related.md"
     method_path = tmp_path / method_ref
     method_path.parent.mkdir(parents=True, exist_ok=True)
     method_path.write_bytes((ROOT / method_ref).read_bytes())
