@@ -1,6 +1,7 @@
 //! Exact, passive evaluation of an existing aid bundle; never a discovery registry.
 use crate::{CoreError, decision_source::hash};
 use cap_std::{ambient_authority, fs::Dir};
+use saphyr::{LoadableYamlNode, Yaml};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::Path};
 
@@ -122,7 +123,10 @@ pub(crate) fn detail(
             ));
         }
         // Preserve YAML key types: JSON conversion can coerce numeric map keys.
-        let metadata: serde_yaml_ng::Value = serde_yaml_ng::from_str(front.0).map_err(error)?;
+        let documents = Yaml::load_from_str(front.0).map_err(error)?;
+        let [metadata] = documents.as_slice() else {
+            return Err(error("candidate frontmatter requires one YAML document"));
+        };
         if metadata["name"].as_str() != Some(id)
             || !metadata["description"]
                 .as_str()
@@ -133,11 +137,14 @@ pub(crate) fn detail(
             ));
         }
         for field in ["license", "allowed-tools"] {
-            if metadata.get(field).is_some_and(|v| !v.is_string()) {
+            if metadata
+                .as_mapping_get(field)
+                .is_some_and(|v| !v.is_string())
+            {
                 return Err(error(format!("candidate {field} must be a string")));
             }
         }
-        if metadata.get("compatibility").is_some_and(|v| {
+        if metadata.as_mapping_get("compatibility").is_some_and(|v| {
             !v.as_str()
                 .is_some_and(|s| (1..=500).contains(&s.chars().count()))
         }) {
@@ -145,7 +152,7 @@ pub(crate) fn detail(
                 "candidate compatibility must be a string of 1-500 characters",
             ));
         }
-        if metadata.get("metadata").is_some_and(|v| {
+        if metadata.as_mapping_get("metadata").is_some_and(|v| {
             !v.as_mapping()
                 .is_some_and(|m| m.iter().all(|(k, v)| k.is_string() && v.is_string()))
         }) {
