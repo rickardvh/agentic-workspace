@@ -1,5 +1,31 @@
 # Reserve reproducible build output
 
+For source-checkout proof in the existing checkout, reserve separate scratch
+containers **before** compiling when receipts must outlive build/cache output.
+Use `scratch-create` for the evidence task and for its distinct bounded compilation
+subtask through [the resource operation](operation.md). Record each returned
+path with its original target/task/changed context; different tasks have different
+authenticated containers. A subtask must describe the real compilation work,
+not fabricate a task identity to delete existing retained material.
+
+Place Cargo's reproducible output in the compilation container, for example
+`CARGO_HOME=<returned build path>/cargo-cache` and
+`CARGO_TARGET_DIR=<returned build path>/linux-build`. Put command results,
+failed-attempt evidence and any needed transport packets in the evidence
+container. Use `scratch-retain` with the actual continuing need on that container.
+After compilation/proof, propose `scratch-remove` for the exact compilation path
+under its original context and invoke the returned action. Whole-container removal
+owns those temporary directories; `scratch-prune` only selects bounded regular
+files and cannot remove a build directory. Confirm output cleanup and preservation
+of the evidence and its owner references before claiming separation succeeded.
+
+The native read-only Docker proof already keeps its reproducible output in its
+temporary volume and publishes receipts through Verification; use that existing
+executor when selected. Do not add another scratch copy of its build output.
+If an earlier run mixed retained evidence and build directories, preserve the
+container until its current owner resolves retention; this preparation pattern
+does not authorize moving references, sweeping directories or force deletion.
+
 Before creating an isolated checkout used for build/test work, request
 `disposable_outputs` with the exact reproducible output roots this task needs,
 for example `dist` and `tool-cache/generated`. Declare at most sixteen normalized
