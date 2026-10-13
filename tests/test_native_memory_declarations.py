@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from tests.test_native_public_cli import consume
@@ -71,6 +72,10 @@ def test_selected_advice_is_delivered_and_large_detail_is_procedure_carried(tmp_
     from tests.test_native_proof_procedure import install, procedure
 
     install(tmp_path)
+    method_ref = ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md"
+    method_path = tmp_path / method_ref
+    method_path.parent.mkdir(parents=True, exist_ok=True)
+    method_path.write_bytes((ROOT / method_ref).read_bytes())
     reference = ".agentic-workspace/memory/repo/domains/lesson.md"
     note = tmp_path / reference
     note.parent.mkdir(parents=True)
@@ -88,10 +93,25 @@ def test_selected_advice_is_delivered_and_large_detail_is_procedure_carried(tmp_
     assert compact["advisory_context"][0]["body"] == lesson
     assert compact["advisory_context"][0]["authority_effect"] == "advisory-only"
     assert not compact["advisory_context"][0]["delivery_is_disposition"]
+    method = compact["advisory_context"][0]["procedure"]
+    assert method["resource"] == method_ref
+    assert method["authority_effect"] == "procedure-only"
+    assert method["source"] == {
+        "reference": method_ref,
+        "revision": "sha256:" + hashlib.sha256(method_path.read_bytes()).hexdigest(),
+        "status": "available",
+    }
     full = call()
     assert compact["decision_packet"]["blockers"] == full["decision_packet"]["blockers"]
     assert not full["memory"]["selected_notes"][0].get("disposition")
     quiet = call(changed=["docs/help.md"], projection="compact")
+    assert "advisory_context" not in quiet
+    (tmp_path / method_ref).unlink()
+    unavailable = call(projection="compact")["advisory_context"][0]
+    assert unavailable["body"] == lesson
+    assert unavailable["procedure"]["source"]["status"] == "unavailable"
+    assert unavailable["authority_effect"] == "advisory-only"
+    (tmp_path / method_ref).write_bytes((ROOT / method_ref).read_bytes())
     for index in range(100):
         # Unrelated note bodies are never needed, even if unavailable or huge.
         with manifest.open("a") as stream:

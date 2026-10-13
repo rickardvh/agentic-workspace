@@ -635,8 +635,32 @@ pub(crate) fn public_view(
 pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result<(), CoreError> {
     let mut context = Vec::new();
     let mut budget: usize = 16 * 1024;
+    // Only already-selected advice gets a method. Discovery and semantic
+    // diagnosis remain with the consumer; optional procedure never grants effects.
+    let procedure = if view["selected_notes"]
+        .as_array()
+        .is_some_and(|notes| !notes.is_empty())
+    {
+        let reference = ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md";
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+        let source = match decision_source::read(&root, reference) {
+            Ok(bytes) => {
+                json!({"reference":reference,"revision":decision_source::hash(&bytes),"status":"available"})
+            }
+            Err(_) => json!({"reference":reference,"status":"unavailable"}),
+        };
+        Some(
+            json!({"resource":reference,"source":source,"authority_effect":"procedure-only",
+            "purpose":"Before the next dependent design, edit, check or claim, compare this selected advice with governing sources and other already-relevant facts. Use this method to choose one permitted source-directed action; after a verified correction, reconsider affected advice through its current owner. No repository audit is required."}),
+        )
+    } else {
+        None
+    };
     for note in view["selected_notes"].as_array().into_iter().flatten() {
         let mut item = json!({"source":note["source"],"currentness":note["currentness"],"authority_effect":"advisory-only","delivery_is_disposition":false});
+        if let Some(procedure) = &procedure {
+            item["procedure"] = procedure.clone();
+        }
         let reason = note["currentness"]["reason"].as_str().unwrap_or("");
         if !matches!(
             reason,
