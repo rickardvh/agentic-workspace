@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Prepare separate owned lifetimes for retained source-proof evidence and reproducible compilation output before building."
