@@ -352,10 +352,39 @@ def continue_creation(
         }
         expected = {**material["write"], "labels": sorted(material["write"]["labels"])}
         if actual != expected:
+            mismatches: dict[str, Any] = {}
+            if actual["title"] != expected["title"]:
+                mismatches["title"] = {"category": "text-difference"}
+            if actual["body"] != expected["body"]:
+                actual_body, expected_body = actual["body"], expected["body"]
+                newline_only = (
+                    isinstance(actual_body, str)
+                    and isinstance(expected_body, str)
+                    and (actual_body.replace("\r\n", "\n").replace("\r", "\n") == expected_body.replace("\r\n", "\n").replace("\r", "\n"))
+                )
+                mismatches["body"] = {
+                    "category": "newline-only" if newline_only else "content-difference",
+                    "expected_utf8_bytes": len(expected_body.encode("utf-8")),
+                    "observed_utf8_bytes": len(actual_body.encode("utf-8")) if isinstance(actual_body, str) else None,
+                    "expected_cr_count": expected_body.count("\r"),
+                    "observed_cr_count": actual_body.count("\r") if isinstance(actual_body, str) else None,
+                }
+            if actual["labels"] != expected["labels"]:
+                mismatches["labels"] = {
+                    "category": "label-set-difference",
+                    "missing_required": sorted(set(expected["labels"]) - set(actual["labels"])),
+                    "unexpected": sorted(set(actual["labels"]) - set(expected["labels"])),
+                }
             response.update(
                 status="external-result-mismatch",
                 observed_issue={"number": number, "url": expected_url},
-                recovery="Reconcile this observed object with the authorized actor; a mismatch is not permission to create again.",
+                material_acceptance="not-accepted",
+                mismatches=mismatches,
+                recovery=(
+                    "Correct the differing fields on this exact observed issue through the authorized actor, "
+                    "then reobserve using the same creation packet and issue number. "
+                    "Preserve exact UTF-8/LF body text; do not repeat creation."
+                ),
             )
             return response
         response.update(status="created", effect_outcome="committed", issue={"number": number, "url": expected_url, **actual})
