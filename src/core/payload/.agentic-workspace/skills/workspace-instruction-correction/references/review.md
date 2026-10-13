@@ -26,6 +26,13 @@ a relevant source. Do not walk archives, private runtime storage or every owner.
 This profile supplies source-reading routes, not current executable authority.
 An unavailable profile leaves directly identified sources usable with stated limits.
 
+Before turning retained text into a current recommendation, check the selected
+owner's current selection and disposition, using its declared activity cues or
+exact read request. A still-readable retired note is historical evidence; do not
+re-propose its already-admitted correction. Matching bytes alone do not establish
+active advice. If the current disposition cannot be obtained, name that uncertainty
+and the missing owner query rather than asserting that another repair is needed.
+
 Where available, consider at least two different source-owner classes whose
 evidence could change the same repository outcome. For example, compare a retained
 intent interpretation with a scoped instruction, advisory workaround or proof gap.
