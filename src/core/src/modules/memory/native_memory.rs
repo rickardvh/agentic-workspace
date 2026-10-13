@@ -635,6 +635,28 @@ pub(crate) fn public_view(
 pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result<(), CoreError> {
     let mut context = Vec::new();
     let mut budget: usize = 16 * 1024;
+    // Only already-selected advice gets a method. Discovery and semantic
+    // diagnosis remain with the consumer; optional procedure never grants effects.
+    let procedure = if view["selected_notes"]
+        .as_array()
+        .is_some_and(|notes| !notes.is_empty())
+    {
+        let reference =
+            ".agentic-workspace/skills/workspace-instruction-correction/references/related.md";
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+        let source = match decision_source::read(&root, reference) {
+            Ok(bytes) => {
+                json!({"reference":reference,"revision":decision_source::hash(&bytes),"status":"available"})
+            }
+            Err(_) => json!({"reference":reference,"status":"unavailable"}),
+        };
+        Some(
+            json!({"resource":reference,"source":source,"authority_effect":"procedure-only",
+            "purpose":"Use sound, relevant advice directly in the original task. Read this method only when already-relevant facts expose a concrete conflict or useful correction, or a verified change may invalidate advice. Selection or a missing currentness baseline alone requires no method read, extra call, disposition or record."}),
+        )
+    } else {
+        None
+    };
     for note in view["selected_notes"].as_array().into_iter().flatten() {
         let mut item = json!({"source":note["source"],"currentness":note["currentness"],"authority_effect":"advisory-only","delivery_is_disposition":false});
         let reason = note["currentness"]["reason"].as_str().unwrap_or("");
@@ -688,6 +710,9 @@ pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result
             ];
         }
         view["advisory_context"] = json!(context);
+        if let Some(procedure) = procedure {
+            view["advisory_procedure"] = procedure;
+        }
     }
     Ok(())
 }

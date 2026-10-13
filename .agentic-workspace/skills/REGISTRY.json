@@ -248,11 +248,20 @@
           "id": "workspace/instructions/correction",
           "match": "exact",
           "priority": 10
+        },
+        {
+          "id": "workspace/instructions/review",
+          "description": "Review retained source-owner knowledge on request, group supported improvement opportunities and advance a permitted source-directed result.",
+          "match": "exact",
+          "priority": 10
         }
       ],
       "stability": "contract-backed-projection",
-      "summary": "Apply a correction or useful finding to its controlling source and verify any saved change.",
-      "visibility": "routed-on-demand"
+      "summary": "Review retained repository knowledge on request, or correct a useful finding through its controlling source.",
+      "visibility": "routed-on-demand",
+      "required_resources": [
+        "memory-disposition"
+      ]
     },
     {
       "id": "workspace-dogfooding",
@@ -317,6 +326,9 @@
     },
     "instruction-writing": {
       "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md"
+    },
+    "memory-disposition": {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md"
     }
   }
 }

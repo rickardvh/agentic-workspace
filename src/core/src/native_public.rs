@@ -2024,6 +2024,7 @@ fn resolve_selected(
     let mut memory_identity = public["memory"].clone();
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
+        object.remove("advisory_procedure");
     }
     // Optional nomination templates include a capture time. Detail references
     // bind current evidence/owner state, not the wall clock of a newly generated

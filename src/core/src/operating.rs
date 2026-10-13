@@ -788,6 +788,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
     }
+    if let Some(procedure) = full["memory"].get("advisory_procedure") {
+        result["advisory_procedure"] = procedure.clone();
+    }
     let candidates = &full["memory"]["candidates"];
     if candidates["selected"]
         .as_array()
