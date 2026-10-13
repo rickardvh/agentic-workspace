@@ -148,6 +148,65 @@ def test_unavailable_source_is_scoped_and_preserves_unrelated_entry(tmp_path, sh
     quiet = consume("json", shared_core_binary, native_cli, {**context, "changed": ["other/file.txt"]})
     assert quiet["verification"]["source_reconciliation"]["status"] == "not-required"
     assert not any(row["code"] == "source-relation-observation-unavailable" for row in quiet["decision_packet"]["blockers"])
+    # A missing canonical source also blocks dependent proof with exact recovery.
+    source.rmdir()
+    missing = consume("json", shared_core_binary, native_cli, context)
+    relation = missing["verification"]["source_reconciliation"]
+    assert relation["status"] == "source-admission-required"
+    assert relation["unavailable_sources"]["docs/guide.md"]["reason"] == "source-observation-missing"
+    assert any(row["code"] == "source-relation-observation-unavailable" for row in missing["decision_packet"]["blockers"])
+    # Independent empty-index custody transfer remains executable while source
+    # proof is unavailable; a broad proof-effect blocker would prevent recovery.
+    proof = tmp_path / ".agentic-workspace/proof/receipts"
+    proof.mkdir(parents=True)
+    (proof / "index.json").write_text(json.dumps({"kind": "agentic-workspace/trusted-producer-receipt-index/v1", "receipts": {}}))
+    maintenance = consume("json", shared_core_binary, native_cli, context)["verification"]["retention"]["requests"][0]
+    maintenance["arguments"]["reason"] = "Transfer the empty fixture proof index into current publication custody; no receipt is retired."
+    ready = consume("json", shared_core_binary, native_cli, {**context, "request": maintenance})
+    action = ready["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "verification.retire-receipts"
+    assert consume("json", shared_core_binary, native_cli, {**context, "invocation": action})["status"] == "applied"
+    # An available selected relation must not hide an unavailable peer relation.
+    source.write_text("Current guide.\n")
+    (tmp_path / "docs/unavailable.md").mkdir()
+    second = tmp_path / ".agentic-workspace/instructions/second.md"
+    second.write_text("---\npaths: [src/**]\ngoverned_by: [docs/unavailable.md]\n---\nA separate governed source.\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", str(second)], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(tmp_path),
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "second source relation",
+        ],
+        check=True,
+        capture_output=True,
+    )
+    pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
+    peers = consume("json", shared_core_binary, native_cli, context)
+    relation = peers["verification"]["source_reconciliation"]
+    assert relation["status"] == "judgment-material-required"
+    assert any(row["status"] == "source-observation-required" for row in relation["relations"])
+    assert any(row["code"] == "source-relation-observation-unavailable" for row in peers["decision_packet"]["blockers"])
+    verification = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    verification.parent.mkdir()
+    verification.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols.check]\napplies_to_paths=["src/**"]\n'
+        '[proof_routes.check]\nprotocol_refs=["check"]\ncommands=["echo checked"]\n'
+    )
+    entry = consume("json", shared_core_binary, native_cli, context)
+    request = entry["verification"]["execution_requests"][0]
+    selected = consume("json", shared_core_binary, native_cli, {**context, "request": request})
+    assert selected["decision_packet"]["primary_action"] is None
+    blocker = next(row for row in selected["decision_packet"]["blockers"] if row["code"] == "source-relation-observation-unavailable")
+    assert "effect:proof-execution" in blocker["affects"]
 
 
 def test_new_instruction_source_invalidates_absent_obligation(tmp_path, shared_core_binary, native_cli):
