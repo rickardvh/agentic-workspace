@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from tests.test_native_public_cli import consume
@@ -71,6 +72,10 @@ def test_selected_advice_is_delivered_and_large_detail_is_procedure_carried(tmp_
     from tests.test_native_proof_procedure import install, procedure
 
     install(tmp_path)
+    method_ref = ".agentic-workspace/skills/workspace-instruction-correction/references/related.md"
+    method_path = tmp_path / method_ref
+    method_path.parent.mkdir(parents=True, exist_ok=True)
+    method_path.write_bytes((ROOT / method_ref).read_bytes())
     reference = ".agentic-workspace/memory/repo/domains/lesson.md"
     note = tmp_path / reference
     note.parent.mkdir(parents=True)
@@ -88,16 +93,44 @@ def test_selected_advice_is_delivered_and_large_detail_is_procedure_carried(tmp_
     assert compact["advisory_context"][0]["body"] == lesson
     assert compact["advisory_context"][0]["authority_effect"] == "advisory-only"
     assert not compact["advisory_context"][0]["delivery_is_disposition"]
+    assert "procedure" not in compact["advisory_context"][0]
+    method = compact["advisory_procedure"]
+    assert method["resource"] == method_ref
+    assert method["authority_effect"] == "procedure-only"
+    assert method["source"] == {
+        "reference": method_ref,
+        "revision": "sha256:" + hashlib.sha256(method_path.read_bytes()).hexdigest(),
+        "status": "available",
+    }
     full = call()
+    assert full["memory"]["advisory_procedure"] == method
     assert compact["decision_packet"]["blockers"] == full["decision_packet"]["blockers"]
     assert not full["memory"]["selected_notes"][0].get("disposition")
     quiet = call(changed=["docs/help.md"], projection="compact")
+    assert "advisory_context" not in quiet
+    assert "advisory_procedure" not in quiet
+    (tmp_path / method_ref).unlink()
+    unavailable = call(projection="compact")
+    assert unavailable["advisory_context"][0]["body"] == lesson
+    assert unavailable["advisory_procedure"]["source"]["status"] == "unavailable"
+    assert unavailable["advisory_context"][0]["authority_effect"] == "advisory-only"
+    (tmp_path / method_ref).write_bytes((ROOT / method_ref).read_bytes())
     for index in range(100):
         # Unrelated note bodies are never needed, even if unavailable or huge.
         with manifest.open("a") as stream:
             stream.write(f'[notes.".agentic-workspace/memory/repo/domains/other-{index}.md"]\nroutes_from=["other/**"]\n')
     assert call(changed=["docs/help.md"], projection="compact") == quiet
     assert call(projection="compact")["advisory_context"] == compact["advisory_context"]
+    second_ref = ".agentic-workspace/memory/repo/domains/safety.md"
+    (tmp_path / second_ref).write_text("Preserve independent safety checks during publication repair.")
+    with manifest.open("a") as stream:
+        stream.write(f'[notes."{second_ref}"]\nroutes_from=["src/**"]\nsemantic_routes=["sample/recovery"]\n')
+    multiple = call(projection="compact")
+    assert len(multiple["advisory_context"]) == 2
+    assert all("procedure" not in item for item in multiple["advisory_context"])
+    assert multiple["advisory_procedure"] == method
+    assert call()["memory"]["advisory_procedure"] == method
+    manifest.write_text(text)
     note.write_text(lesson + "\n" + "Large supporting detail. " * 300)
     large = call(projection="compact")
     assert "body" not in large["advisory_context"][0]

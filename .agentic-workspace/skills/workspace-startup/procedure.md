@@ -7,6 +7,11 @@
   "question": "What would help the next authorised step, including decomposition or durable continuity for new work? Choose only useful help; sufficient current sources permit direct work.",
   "branches": [
     {
+      "id": "improvement-review",
+      "description": "The user asks which useful repository improvements are supported by retained knowledge",
+      "next": "../workspace-instruction-correction/references/review.md"
+    },
+    {
       "id": "planning",
       "description": "New or continuing work benefits from decomposition or durable intent and dependencies beyond sufficient existing records",
       "next": "references/ordinary.md"

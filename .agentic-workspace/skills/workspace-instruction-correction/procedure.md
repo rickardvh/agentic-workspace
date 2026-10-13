@@ -7,6 +7,16 @@
   "question": "What should change because of this correction or finding?",
   "branches": [
     {
+      "id": "related",
+      "description": "Already-relevant retained facts affect the next action or need reconsideration after a verified source correction",
+      "next": "references/related.md"
+    },
+    {
+      "id": "review",
+      "description": "Discover and synthesise retained evidence for a requested repository-improvement review",
+      "next": "references/review.md"
+    },
+    {
       "id": "destination",
       "description": "Choose the source that controls the affected behaviour",
       "next": "references/destination.md"
