@@ -172,6 +172,15 @@ def test_candidate_bundle_uses_passive_selected_procedure_currentness(tmp_path, 
         assert field in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
     _write(tmp_path / skill, "---\nname: change-note\ndescription: Valid\nmetadata: {123: value}\n---\nInstructions.\n")
     assert "metadata" in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
+    # The YAML reader, not a JSON coercion, owns quoted key types, block scalars
+    # and aliases. Keep these ordinary frontmatter forms across parser changes.
+    _write(
+        tmp_path / skill,
+        '---\nname: change-note\ndescription: >-\n  Draft a bounded\n  change note.\nlicense: &license MIT\nallowed-tools: *license\nmetadata: {"123": "value"}\n---\nInstructions.\n',
+    )
+    assert check_agent_aids.agent_aid_findings(tracked, root=tmp_path) == []
+    _write(tmp_path / skill, "---\nname: change-note\ndescription: [unterminated\n---\nInstructions.\n")
+    assert check_agent_aids.agent_aid_findings(tracked, root=tmp_path)
     _write(tmp_path / skill, "# Arbitrary prose is not a standard skill\n")
     assert "frontmatter" in check_agent_aids.agent_aid_findings(tracked, root=tmp_path)[0].message
     (tmp_path / skill).unlink()
