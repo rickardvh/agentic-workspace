@@ -100,16 +100,81 @@ fn linked(metadata: &cap_std::fs::Metadata) -> bool {
     }
 }
 
-/// Read through a confined directory, reject links/special files at every level,
-/// and hash the actual bytes later transferred. No Git command or source script
-/// runs while constructing a snapshot.
-fn snapshot(target: &Path, config: &Value) -> Result<BTreeMap<String, Vec<u8>>, CoreError> {
+struct SourceFile {
+    bytes: Vec<u8>,
+    executable: bool,
+}
+
+// Windows has no dependable checkout execute bit. Git's stage-zero regular-file
+// mode is its bounded authority; untracked inputs are conservatively non-executable.
+// Conflicted/non-regular index entries cannot silently acquire a regular mode.
+#[cfg(any(windows, test))]
+fn indexed_modes(target: &Path) -> Result<BTreeMap<String, Option<bool>>, CoreError> {
+    let mut command = Command::new("git");
+    command
+        .arg("-C")
+        .arg(target)
+        .args(["-c", "core.fsmonitor=false", "ls-files", "--stage", "-z"])
+        .env("GIT_OPTIONAL_LOCKS", "0");
+    let (status, bytes) = crate::native_verification::bounded_git_output_with_limit(
+        &mut command,
+        Duration::from_secs(5),
+        8 * 1024 * 1024,
+    )
+    .map_err(err)?;
+    if !status.success() {
+        return Err(err(
+            "proof-snapshot-index-mode-unavailable: Windows requires an observable Git index; preserve source and restore Git access",
+        ));
+    }
+    let mut modes = BTreeMap::new();
+    for entry in bytes
+        .split(|byte| *byte == 0)
+        .filter(|entry| !entry.is_empty())
+    {
+        let entry =
+            std::str::from_utf8(entry).map_err(|_| err("proof-snapshot-index-path-unsupported"))?;
+        let (header, path) = entry
+            .split_once('\t')
+            .ok_or_else(|| err("proof-snapshot-index-entry-invalid"))?;
+        let fields: Vec<_> = header.split(' ').collect();
+        if fields.len() != 3 || !relative(path) {
+            return Err(err("proof-snapshot-index-entry-invalid"));
+        }
+        let executable = match (fields[0], fields[2]) {
+            ("100644", "0") => Some(false),
+            ("100755", "0") => Some(true),
+            _ => None,
+        };
+        let prior = modes.insert(path.to_owned(), executable);
+        if prior.is_some() {
+            modes.insert(path.to_owned(), None);
+        }
+    }
+    Ok(modes)
+}
+
+/// Read confined regular sources and their executable property. No source script
+/// runs; Windows reads bounded Git index metadata without mutating the checkout.
+fn snapshot(target: &Path, config: &Value) -> Result<BTreeMap<String, SourceFile>, CoreError> {
+    #[cfg(windows)]
+    let modes = Some(indexed_modes(target)?);
+    #[cfg(not(windows))]
+    let modes = None;
+    snapshot_with_modes(target, config, modes.as_ref())
+}
+fn snapshot_with_modes(
+    target: &Path,
+    config: &Value,
+    modes: Option<&BTreeMap<String, Option<bool>>>,
+) -> Result<BTreeMap<String, SourceFile>, CoreError> {
     fn visit(
         root: &Dir,
         path: &str,
-        files: &mut BTreeMap<String, Vec<u8>>,
+        files: &mut BTreeMap<String, SourceFile>,
         total: &mut usize,
         visited: &mut usize,
+        modes: Option<&BTreeMap<String, Option<bool>>>,
     ) -> Result<(), CoreError> {
         if files.contains_key(path) {
             return Ok(());
@@ -133,7 +198,7 @@ fn snapshot(target: &Path, config: &Value) -> Result<BTreeMap<String, Vec<u8>>, 
                 if !relative(&child) {
                     return Err(err("proof-snapshot-path-unsupported"));
                 }
-                visit(root, &child, files, total, visited)?;
+                visit(root, &child, files, total, visited, modes)?;
             }
         } else if metadata.is_file() {
             if files.len() >= MAX_FILES || metadata.len() > (MAX_BYTES - *total) as u64 {
@@ -149,7 +214,33 @@ fn snapshot(target: &Path, config: &Value) -> Result<BTreeMap<String, Vec<u8>>, 
             if *total > MAX_BYTES {
                 return Err(err("proof-snapshot-capacity-exceeded"));
             }
-            files.insert(path.into(), bytes);
+            let executable = if let Some(modes) = modes {
+                match modes.get(path) {
+                    Some(Some(executable)) => *executable,
+                    Some(None) => {
+                        return Err(err(format!("proof-snapshot-index-mode-ambiguous:{path}")));
+                    }
+                    None => {
+                        if modes.iter().any(|(parent, mode)| {
+                            mode.is_none() && path.starts_with(&format!("{parent}/"))
+                        }) {
+                            return Err(err(format!("proof-snapshot-index-mode-ambiguous:{path}")));
+                        }
+                        false
+                    }
+                }
+            } else {
+                #[cfg(unix)]
+                {
+                    use cap_std::fs::PermissionsExt;
+                    metadata.permissions().mode() & 0o111 != 0
+                }
+                #[cfg(not(unix))]
+                {
+                    return Err(err("proof-snapshot-executable-authority-unavailable"));
+                }
+            };
+            files.insert(path.into(), SourceFile { bytes, executable });
         } else {
             return Err(err("proof-snapshot-special-file-unsupported"));
         }
@@ -176,22 +267,22 @@ fn snapshot(target: &Path, config: &Value) -> Result<BTreeMap<String, Vec<u8>>, 
             }
             parent = parent.parent().unwrap_or(Path::new(""));
         }
-        visit(&root, path, &mut files, &mut total, &mut visited)?;
+        visit(&root, path, &mut files, &mut total, &mut visited, modes)?;
     }
     Ok(files)
 }
-fn identity(files: &BTreeMap<String, Vec<u8>>) -> Result<String, CoreError> {
+fn identity(files: &BTreeMap<String, SourceFile>) -> Result<String, CoreError> {
     use sha2::{Digest, Sha256};
     let entries: BTreeMap<_, _> = files
         .iter()
-        .map(|(name, bytes)| (name, format!("{:x}", Sha256::digest(bytes))))
+        .map(|(name, file)| (name, json!({"sha256":format!("{:x}", Sha256::digest(&file.bytes)),"executable":file.executable})))
         .collect();
     digest(&json!(entries))
 }
 
 fn scratch_paths(
     config: &Value,
-    files: &BTreeMap<String, Vec<u8>>,
+    files: &BTreeMap<String, SourceFile>,
 ) -> Result<Vec<String>, CoreError> {
     let mut paths = Vec::new();
     for value in config["scratch_paths"].as_array().into_iter().flatten() {
@@ -219,7 +310,7 @@ fn scratch_paths(
 }
 
 fn source_prerequisites(
-    files: &BTreeMap<String, Vec<u8>>,
+    files: &BTreeMap<String, SourceFile>,
     subject: &Value,
 ) -> Result<(), CoreError> {
     for declaration in subject["requirements"].as_array().into_iter().flatten() {
@@ -366,6 +457,7 @@ pub(crate) fn observe(target: &Path, config: &Value, subject: &Value) -> Result<
     Ok(
         json!({"kind":KIND,"transport":crate::native_proof::binary(&docker()?)?,"image":details["Id"],"daemon":daemon["ID"],"source_revision":identity(&files)?,
         "configuration":config,"constructibility_subject":subject,"host_mounts":false,"network":"none","source_access":"read-only",
+        "source_mode_authority":if cfg!(windows) {"git-index-stage-zero; untracked inputs non-executable; ambiguous inputs blocked"} else {"checkout executable bits"},
         "temporary_storage_bytes":536870912_u64 + scratch.len() as u64 * 2147483648_u64,"max_processes":128}),
     )
 }
@@ -427,15 +519,15 @@ pub(crate) fn execute(
         tar.append_data(&mut header, path, std::io::empty())
             .map_err(err)?;
     }
-    for (path, bytes) in files {
+    for (path, file) in files {
         let mut header = tar::Header::new_gnu();
-        header.set_size(bytes.len() as u64);
-        header.set_mode(0o555);
+        header.set_size(file.bytes.len() as u64);
+        header.set_mode(if file.executable { 0o555 } else { 0o444 });
         header.set_uid(0);
         header.set_gid(0);
         header.set_mtime(0);
         header.set_cksum();
-        tar.append_data(&mut header, path, bytes.as_slice())
+        tar.append_data(&mut header, path, file.bytes.as_slice())
             .map_err(err)?;
         if tar.get_ref().len() > 160 * 1024 * 1024 - 1024 {
             return Err(err("proof-snapshot-transfer-capacity-exceeded"));
@@ -567,8 +659,19 @@ mod tests {
         std::fs::create_dir(&path).unwrap();
         std::fs::create_dir(path.join("source")).unwrap();
         std::fs::write(path.join("source/input"), "current").unwrap();
+        #[cfg(windows)]
+        {
+            assert!(
+                Command::new("git")
+                    .args(["init", "-q"])
+                    .arg(&path)
+                    .status()
+                    .unwrap()
+                    .success()
+            );
+        }
         let files = snapshot(&path, &json!({"inputs":["source"]})).unwrap();
-        assert_eq!(files["source/input"], b"current");
+        assert_eq!(files["source/input"].bytes, b"current");
         let subject = json!({"requirements":[{"source_inputs":["source/input"]}]});
         assert!(source_prerequisites(&files, &subject).is_ok());
         for missing in ["source/omitted", "../outside"] {
@@ -598,6 +701,95 @@ mod tests {
         assert!(snapshot(&path, &json!({"inputs":["link"]})).is_err());
         #[cfg(windows)]
         junction::delete(path.join("link")).unwrap();
+        std::fs::remove_dir_all(path).unwrap();
+    }
+
+    #[test]
+    fn indexed_executable_authority_is_explicit_and_binds_mode_only_changes() {
+        let path = std::env::temp_dir().join(format!(
+            "aw-proof-modes-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(path.join("source")).unwrap();
+        let git = |args: &[&str]| {
+            let result = Command::new("git")
+                .arg("-C")
+                .arg(&path)
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(
+                result.status.success(),
+                "{}",
+                String::from_utf8_lossy(&result.stderr)
+            );
+        };
+        git(&["init", "-q"]);
+        for name in ["module.py", "run.sh", "untracked"] {
+            std::fs::write(path.join("source").join(name), "same bytes").unwrap();
+        }
+        git(&["add", "source/module.py", "source/run.sh"]);
+        git(&["update-index", "--chmod=+x", "source/run.sh"]);
+        git(&["update-index", "--chmod=-x", "source/module.py"]);
+        let config = json!({"inputs":["source"]});
+        let modes = indexed_modes(&path).unwrap();
+        let first = snapshot_with_modes(&path, &config, Some(&modes)).unwrap();
+        assert!(!first["source/module.py"].executable);
+        assert!(
+            first["source/run.sh"].executable,
+            "tracked Git intent does not depend on POSIX checkout bits"
+        );
+        assert!(
+            !first["source/untracked"].executable,
+            "explicit conservative untracked policy"
+        );
+        git(&["update-index", "--chmod=-x", "source/run.sh"]);
+        let current_modes = indexed_modes(&path).unwrap();
+        let changed = snapshot_with_modes(&path, &config, Some(&current_modes)).unwrap();
+        assert_eq!(first["source/run.sh"].bytes, changed["source/run.sh"].bytes);
+        assert_ne!(identity(&first).unwrap(), identity(&changed).unwrap());
+        let hash = Command::new("git")
+            .arg("-C")
+            .arg(&path)
+            .args(["hash-object", "-w", "source/run.sh"])
+            .output()
+            .unwrap();
+        assert!(hash.status.success());
+        let hash = std::str::from_utf8(&hash.stdout).unwrap().trim();
+        git(&["update-index", "--force-remove", "source/run.sh"]);
+        let mut child = Command::new("git")
+            .arg("-C")
+            .arg(&path)
+            .args(["update-index", "--index-info"])
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        use std::io::Write;
+        writeln!(
+            child.stdin.take().unwrap(),
+            "100644 {hash} 1\tsource/run.sh"
+        )
+        .unwrap();
+        assert!(child.wait().unwrap().success());
+        let ambiguous = indexed_modes(&path).unwrap();
+        assert_eq!(ambiguous["source/run.sh"], None);
+        assert!(snapshot_with_modes(&path, &config, Some(&ambiguous)).is_err());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let ordinary = snapshot(&path, &config).unwrap();
+            std::fs::set_permissions(
+                path.join("source/run.sh"),
+                std::fs::Permissions::from_mode(0o755),
+            )
+            .unwrap();
+            let executable = snapshot(&path, &config).unwrap();
+            assert_ne!(identity(&ordinary).unwrap(), identity(&executable).unwrap());
+        }
         std::fs::remove_dir_all(path).unwrap();
     }
 }
