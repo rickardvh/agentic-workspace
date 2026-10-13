@@ -1,3 +1,26 @@
+# Advisory knowledge
+
+## Current guidance
+
+These are advisory recurrence cues. Current repository instructions and owner requests control actions; the dated record below is historical.
+
+### Failure: broad planned work bypasses active planning
+
+Judge decomposition and continuity before implementation when they would materially help. Reuse an adequate existing issue or related owner; otherwise follow workspace-startup and planning-work intake to create/select native Planning custody. A broad task or absent plan alone does not mandate a plan, summary command or todo promotion. Direct work remains available under current policy.
+
+### Failure: selected plan blocks its next owned task
+
+Explicitly relate the current task to its existing Planning owner through the returned selection/relation request. Compare its actual intended outcome and declared issue references with current work. Preserve pending closeout obligations separately; do not invent another plan or worktree to escape them. Use current native Planning requests, never retired route-decision or summary fields.
+
+### Failure: implementation agent occupies the review decision namespace
+
+An implementation actor reports fixes and readiness for independent review. It does not review or approve its own PR, post reviewer decision markers, or spawn/direct its reviewer. Follow the repository PR-custody instruction; only an externally initiated eligible reviewer owns independent review. This boundary also applies while fixing a stack.
+
+## Historical record
+
+Preserved verbatim for provenance. Its dated interfaces, Active label and example commands are historical evidence, not current instructions.
+
+```text
 # Recurring Failures
 
 ## Status
@@ -151,3 +174,11 @@ Last confirmed
 ## Last confirmed
 
 2026-04-05 during bootstrap adoption
+```
+
+
+## Future value
+
+Keep three bounded recurrence cues reachable by current Planning, Memory hygiene and review activities without making historical compensating commands govern work. Preserve original prose verbatim and the stable selected-owner fact identity. Current instructions own policy; this source supplies only advice.
+
+Material authorship is unattributed. Retention was admitted through the current owner request; this note grants no decision, policy, proof or completion authority.
