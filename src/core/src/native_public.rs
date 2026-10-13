@@ -612,13 +612,15 @@ fn resolve_selected(
                 .flatten()
                 .any(|source| source["procedure"]["resource"]["status"] == "current")
         });
-    // Declare the kernel's advisory answer schemas consistently. Discovery
-    // changes presentation, not the current contract of unrelated owners.
-    // Procedure content and requests are still delivered only when selected.
-    let procedure_contract = crate::native_procedure_answer::contract()?;
+    // Advisory answers use their own read-only declaration, like route
+    // selection. Discovery cannot change unrelated owner/effect contracts.
+    let procedure_contract = if procedure_selected {
+        crate::native_procedure_answer::contract()?
+    } else {
+        Value::Null
+    };
     let fragments = [
         &crate::native_activation::contract()?,
-        &procedure_contract,
         &config_write_contract,
         &decision_read_contract,
         &configuration["capability_contract"],
@@ -642,9 +644,12 @@ fn resolve_selected(
         crate::native_delegation::validate_dispatch_context(&work, &requests, &contract)?;
     }
     for request in &requests {
-        // Route selection has its own independently bound read-only contract and
-        // is already validated by its responsible owner above.
-        if request["owner"] != "semantic-routes" {
+        // These advisory readers validate their exact independent declarations;
+        // they cannot contribute mutation, proof or completion authority.
+        if !matches!(
+            request["owner"].as_str(),
+            Some("semantic-routes" | "procedure")
+        ) {
             // Each responsible owner validates its exact request below. Check
             // membership here without recompiling every schema for every input.
             if !contract["owners"]
@@ -671,7 +676,7 @@ fn resolve_selected(
         &work,
         routes.as_ref().unwrap_or(&Value::Null),
         request_for("procedure"),
-        &contract,
+        &procedure_contract,
     )?;
     if let Some(request) = request_for("startup-adapter") {
         startup_adapter = crate::native_startup::view(

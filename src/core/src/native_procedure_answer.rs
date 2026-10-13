@@ -75,6 +75,9 @@ pub(crate) fn view(
     let mut result = json!({"kind":"agentic-workspace/procedure-answer/v1","status":"unselected","requests":[],
         "authority_effect":"none","claim_boundary":"Supplied semantic judgment is advisory procedure input, not semantic truth, evidence, policy, permission or completion.",
         "reentry":"Carry the exact answer request for reuse. Lost or stale carriage requires reconsideration; no answer is reconstructed from branch labels."});
+    if contract.is_object() {
+        result["capability_contract"] = contract.clone();
+    }
     let mut selections = Vec::new();
     let leaf = &routes["discovery"]["detail"];
     for source in leaf["sources"].as_array().into_iter().flatten() {
