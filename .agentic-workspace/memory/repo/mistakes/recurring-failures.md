@@ -1,8 +1,29 @@
 # Advisory knowledge
 
-## Current guidance
+## Status
 
-These are advisory recurrence cues. Current repository instructions and owner requests control actions; the dated record below is historical.
+Active advisory recurrence cues. Current instructions and owner requests control actions.
+
+## Scope
+
+Planning continuity, early decomposition judgment and independent PR review.
+
+## Load when
+
+- Work may benefit from decomposition or must continue an existing Planning owner.
+- An implementation actor reports fixes or readiness for PR review.
+
+## Review when
+
+- Startup, planning-work intake, native Planning or PR-custody instructions change.
+
+## Failure signals
+
+- A broad task is treated as automatically requiring a plan, or existing issues automatically waive the need to judge decomposition.
+- An owned next task is classified as unrelated because older closeout residue remains.
+- An implementation actor exercises or directs independent reviewer authority.
+
+## Rule or lesson
 
 ### Failure: broad planned work bypasses active planning
 
@@ -16,169 +37,23 @@ Explicitly relate the current task to its existing Planning owner through the re
 
 An implementation actor reports fixes and readiness for independent review. It does not review or approve its own PR, post reviewer decision markers, or spawn/direct its reviewer. Follow the repository PR-custody instruction; only an externally initiated eligible reviewer owns independent review. This boundary also applies while fixing a stack.
 
-## Historical record
+## Verify
 
-Preserved verbatim for provenance. Its dated interfaces, Active label and example commands are historical evidence, not current instructions.
+- Read `.agentic-workspace/skills/workspace-startup/SKILL.md` and `.agentic-workspace/planning/skills/planning-work/references/intake.md`.
+- Compare selected task/owner relations with `src/core/src/modules/planning/native_planning.rs`.
+- Read `.agentic-workspace/instructions/github-pr-review.md` before any reviewer action.
 
-```text
-# Recurring Failures
+## Provenance
 
-## Status
-
-Active
-
-## Scope
-
-- Anti-trap notes for repeated or high-likelihood failure patterns that future contributors or agents could plausibly rediscover.
-
-## Applies to
-
-- Add concrete files, commands, or surfaces once the first recurring failure is known.
-
-## Load when
-
-- Debugging a regression with familiar symptoms.
-- A verified lesson from one incident looks likely to catch future work in the same way.
-
-## Review when
-
-- A recurring failure entry no longer matches the real root cause.
-- Related contracts, tools, or runtime surfaces change.
-
-## Failure signals
-
-- The same failure pattern keeps returning after unrelated changes.
-- A competent contributor could plausibly repeat the same mistake without a durable warning.
-
-## Rule or lesson
-
-- This note is anti-trap memory, not a bug tracker, issue mirror, or backlog.
-- Add an entry after repeated recurrence, or after one verified incident that clearly exposes a trap likely to recur.
-- Prefer stable lessons, verification cues, and practical fixes over incident history or triage detail.
-- Keep entries concise, symptom-driven, and operational.
-- Use one entry per recurring trap or root lesson.
-- Move one-off bugs, active debugging, and status tracking into tests, canonical docs, issues, or the planning surface instead.
-
-### Failure: broad planned work bypasses active planning
-
-Symptom
-- A broad roadmap or autopilot run implements and closes issues while `agentic-workspace summary --format json` reports no active execplan.
-
-Likely cause
-- The agent treats GitHub issues, roadmap candidates, and chat context as enough execution authority, then uses Agentic Workspace only as an after-the-fact checker.
-
-Verify
-- Run `agentic-workspace summary --format json` and inspect `execution_readiness`, `planning_record`, and `execplans.active_count` before broad work.
-
-Fix
-- Promote the selected lane into `todo.active_items` plus an execplan before implementation; for roadmap-backed no-active-plan states, the compact output should recommend `promote-before-broad-work`.
-
-Load when
-- The user asks for autopilot, planned lanes, milestone sequences, broad roadmap implementation, or issue-closing implementation work.
-
-Review when
-- Summary/report execution-readiness behavior changes, or hard commit/closeout enforcement replaces the advisory guardrail.
-
-Failure signals
-- `execution_readiness.status` is `roadmap-needs-promotion` but implementation starts anyway.
-- Closeout claims roadmap progress without checked-in planning residue.
-
-Last confirmed
-2026-04-26 during issue #322 planning-backed dogfooding guardrail work.
-
-### Failure: selected plan blocks its next owned task
-
-Symptom
-- After a task is completed externally, the still-active plan makes the next explicitly owned issue look unrelated and requests another plan, worktree, or scope inspection.
-
-Likely cause
-- Routing compares only the plan filename or stale local carry instead of the selected owner's structured refs and current task evidence.
-
-Verify
-- Inspect `planning_safety_gate.route_decision`; an issue ref declared by the selected plan should resolve to `continues-selected-owner` with no transition.
-
-Fix
-- Rebind from the selected owner and task. Preserve old closeout residue as a separate obligation; do not create a new worktree merely to escape it.
-
-Load when
-- A new task starts while the previous task's plan remains active, especially after an external PR merge.
-
-Review when
-- Planning route-decision or current-work binding semantics change.
-
-Failure signals
-- `independent-pending-scope` is returned for an issue explicitly listed in the selected plan.
-- Startup and implement disagree about `implementation_allowed`.
-
-Last confirmed
-2026-08-11 while reproducing issue #2277.
-
-### Failure: implementation agent occupies the review decision namespace
-
-Symptom
-- An agent posts a review comment or `aw-chatgpt-review` decision marker on a PR whose patch it implemented, causing the distinct reviewer to treat that head as already reviewed.
-
-Likely cause
-- The implementation agent confuses reporting remediation status with exercising independent review authority.
-
-Verify
-- Check whether the agent that implemented or pushed the PR also authored reviewer-formatted findings or a `blocked` / `merge-ready` marker for that head.
-
-Fix
-- Implementation agents report only `fixes applied` / `ready for re-review`. They do not post review comments or decision markers on their own PRs; the distinct reviewer owns those comments and decisions.
-
-Load when
-- Addressing PR feedback, publishing a corrective head, or handing work back for review in this repository.
-
-Review when
-- This repository changes its maintainer review automation or marker procedure.
-
-Failure signals
-- An implementation-side comment contains `aw-chatgpt-review`, `decision: blocked`, or `decision: merge-ready`.
-
-Last confirmed
-2026-08-27 during the grouped stacked-PR dogfood cycle for issue #2725.
-
-## Entry format
-
-### Failure: <short symptom-first label>
-
-Symptom
-- <What users or developers observe>
-
-Likely cause
-- <Most common root cause>
-
-Verify
-- <Command, file, or test to check>
-
-Fix
-- <Practical correction>
-
-Load when
-- <When to read this entry>
-
-Review when
-- <When this entry must be re-checked>
-
-Failure signals
-- <Specific signal that this entry applies>
-
-Last confirmed
-2026-04-05 during <task / investigation>
-
-## Verified against
-
-- `.agentic-workspace/memory/repo/templates/`
+The dated lessons confirmed on 2026-04-26 (#322), 2026-08-11 (#2277) and 2026-08-13 remain [verbatim in source history](https://github.com/rickardvh/agentic-workspace/blob/78e5ef6ba92e434ea144d9d508e25e7f898249f7/.agentic-workspace/memory/repo/mistakes/recurring-failures.md). They record former interfaces and rationale; their commands and the bootstrap template are historical evidence. This revision preserves all three lessons' useful intent without projecting those interfaces as current advice.
 
 ## Last confirmed
 
-2026-04-05 during bootstrap adoption
-```
+2026-10-13: compared all three current lessons against the startup, Planning intake/native owner and independent PR-custody sources; no stronger-owner promotion or factual admission is claimed.
 
 
 ## Future value
 
-Keep three bounded recurrence cues reachable by current Planning, Memory hygiene and review activities without making historical compensating commands govern work. Preserve original prose verbatim and the stable selected-owner fact identity. Current instructions own policy; this source supplies only advice.
+Replace retired interfaces with current owner guidance, preserve the ordinary recurring-failures identity, and keep verbatim dated provenance in existing Git history and retained evidence rather than enlarging active advice.
 
 Material authorship is unattributed. Retention was admitted through the current owner request; this note grants no decision, policy, proof or completion authority.

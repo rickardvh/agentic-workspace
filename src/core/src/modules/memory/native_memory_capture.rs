@@ -83,7 +83,7 @@ impl Destination {
     fn semantics(self) -> &'static str {
         match self {
             Self::Memory => SEMANTICS,
-            Self::Advisory => "memory-bounded-advisory-v1",
+            Self::Advisory => "memory-bounded-advisory-v2",
             Self::Repository => "repository-bounded-domain-decision-v2",
         }
     }
@@ -300,9 +300,13 @@ fn revision_manifest(
         .map_err(err)?;
     crate::native_memory::validate_manifest(&manifest)?;
     let old = &manifest["notes"][source];
-    if old["note_type"] != "domain" || old["native_decision"] == true {
+    if !matches!(
+        old["note_type"].as_str(),
+        Some("domain" | "recurring-failures")
+    ) || old["native_decision"] == true
+    {
         return Err(err(
-            "Only declared ordinary domain advice can be revised here",
+            "Only declared ordinary domain or recurring-failure advice can be revised here",
         ));
     }
     if old["dependencies"] != *dependencies && !reviewed {
@@ -2035,6 +2039,28 @@ mod tests {
         let source = published["value"]["source"].as_str().unwrap();
         let root = Dir::open_ambient_dir(&target, ambient_authority()).unwrap();
         let old_body = std::fs::read(target.join(source)).unwrap();
+        // Revising ordinary recurrence advice preserves its declared category;
+        // callers must not relabel it as domain advice to use the publisher.
+        let manifest_path = target.join(MANIFEST);
+        let manifest = std::fs::read_to_string(&manifest_path).unwrap();
+        std::fs::write(
+            &manifest_path,
+            manifest.replace(
+                "note_type = \"domain\"",
+                "note_type = \"recurring-failures\"",
+            ),
+        )
+        .unwrap();
+        let recurring = std::fs::read_to_string(&manifest_path).unwrap();
+        for governing in [
+            recurring.replace("\"recurring-failures\"", "\"decision\""),
+            recurring.replace("note_type =", "native_decision = true\nnote_type ="),
+        ] {
+            std::fs::write(&manifest_path, governing).unwrap();
+            assert!(revision_manifest(&root, source, &json!({}), &json!({}), true).is_err());
+            assert_eq!(std::fs::read(target.join(source)).unwrap(), old_body);
+        }
+        std::fs::write(&manifest_path, recurring).unwrap();
         let unchanged = request_for(&material, Some(source));
         assert_eq!(
             start(unchanged)["memory"]["advisory_capture"]["status"],
@@ -2092,6 +2118,12 @@ mod tests {
                 crate::native_public::invoke_checked(json!({"target":target,"task":input["task"],"invocation":recovered["decision_packet"]["primary_action"]})).unwrap();
             }
             let record = retained(&target, source).unwrap().unwrap();
+            let manifest: toml::Value =
+                toml::from_str(&std::fs::read_to_string(&manifest_path).unwrap()).unwrap();
+            assert_eq!(
+                manifest["notes"][source]["note_type"].as_str(),
+                Some("recurring-failures")
+            );
             assert!(committed(&root, &target, &record).unwrap());
             assert!(
                 !cleanup_pending(&root, &record["invocation"]["arguments"]["binding"]).unwrap()
