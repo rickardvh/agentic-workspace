@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -24,6 +25,29 @@ def config(root: Path, command: str, extra: str = "") -> Path:
     )
     (root / "a.txt").write_text("current")
     return source
+
+
+def test_large_regular_authority_reference_binds_selected_proof_and_reuse(tmp_path, shared_core_binary, native_cli):
+    command = "Write-Output verified" if os.name == "nt" else "echo verified"
+    config(tmp_path, command, 'authority_refs=["rules.md"]\n')
+    content = b"x" * 1_048_577
+    source = tmp_path / "rules.md"
+    source.write_bytes(content)
+    context = {"target": str(tmp_path), "task": "Check a large declared source", "changed": ["a.txt"]}
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})}, host_path=os.environ["PATH"])
+
+    request = call()["verification"]["execution_requests"][0]
+    selected = call({"request": request})
+    action = selected["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "proof.report"
+    assert action["arguments"]["selection"]["strategy"]["dependencies"]["rules.md"] == "sha256:" + hashlib.sha256(content).hexdigest()
+    result = call({"invocation": action})
+    assert result["value"]["process"]["status"] == "passed"
+    source.write_bytes(content[:-1] + b"y")
+    with pytest.raises(AssertionError, match="stale|changed|current"):
+        call({"invocation": action})
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

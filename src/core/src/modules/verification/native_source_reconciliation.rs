@@ -57,14 +57,24 @@ fn observe(
     if let Some(observed) = observations.borrow().get(path) {
         return Ok(observed.clone());
     }
-    let observation =
-        crate::dependency_binding::observe(root, path, crate::dependency_binding::Scheme::RawBytes);
-    let observed = match observation.status {
-        crate::dependency_binding::Currentness::Current => {
-            json!({"status":"present","revision":observation.revision})
+    let used: u64 = observations
+        .borrow()
+        .values()
+        .filter_map(|value| value["bytes"].as_u64())
+        .sum();
+    let observed = match crate::dependency_binding::observe_raw(
+        root,
+        path,
+        (128 * 1024 * 1024u64).saturating_sub(used),
+    ) {
+        Ok(Some((revision, bytes))) => {
+            json!({"status":"present","revision":revision,"bytes":bytes})
         }
-        crate::dependency_binding::Currentness::Missing => json!({"status":"absent"}),
-        _ => return Err(err(format!("source observation unavailable: {path}"))),
+        Ok(None) => json!({"status":"absent"}),
+        Err(error) => json!({"status":"unavailable","reason":error.to_string(),
+            "recovery":if error.to_string().contains("resolution-bound") {
+                "Narrow this relation's declared observation scope within the 128 MiB resolution budget, then reobserve; dependent actions remain blocked."
+            } else {"Restore a readable confined regular source within the 32 MiB identity budget, then reobserve this relation. Dependent reconciliation and proof remain blocked."}}),
     };
     observations
         .borrow_mut()
@@ -458,7 +468,13 @@ pub(crate) fn view(
     if output["status"] == "current" && outputs.iter().any(|v| v["status"] != "current") {
         output["status"] = json!("partial");
     }
-    output["relations"] = json!(outputs.iter().map(|v|json!({"relation_id":v["relation_id"],"status":v["status"],"coverage":v["coverage"],"obligations":v["obligations"]})).collect::<Vec<_>>());
+    output["relations"] = json!(outputs.iter().map(|v| {
+        let mut relation = json!({"relation_id":v["relation_id"],"status":v["status"],"coverage":v["coverage"],"obligations":v["obligations"]});
+        for field in ["reason", "unavailable_sources"] {
+            if let Some(value) = v.get(field) { relation[field] = value.clone(); }
+        }
+        relation
+    }).collect::<Vec<_>>());
     Ok(output)
 }
 
@@ -529,6 +545,22 @@ fn relation_view(
         return Ok(view);
     }
     view["obligations"] = json!(sources.keys().collect::<Vec<_>>());
+    let unavailable = sources.iter().filter(|(_, source)| source["status"] == "unavailable")
+        .chain(dependencies.iter().filter(|(_, source)| source["status"] != "present"))
+        .map(|(path, source)| {
+            let mut source = source.clone();
+            if source["status"] == "absent" {
+                source["reason"] = json!("source-observation-missing");
+                source["recovery"] = json!("Restore this declared dependency and reobserve the affected relation; dependent actions remain blocked.");
+            }
+            (path.clone(), source)
+        })
+        .collect::<BTreeMap<_, _>>();
+    if !unavailable.is_empty() {
+        view["status"] = json!("source-observation-required");
+        view["unavailable_sources"] = json!(unavailable);
+        return Ok(view);
+    }
     if declarations
         .iter()
         .any(|d| d["admission"]["status"] != "current")
@@ -540,6 +572,16 @@ fn relation_view(
     let mut postimages = BTreeMap::new();
     for path in scope {
         postimages.insert(path.clone(), observe(&root, &path, observations)?);
+    }
+    let unavailable = postimages
+        .iter()
+        .filter(|(_, source)| source["status"] == "unavailable")
+        .map(|(path, source)| (path.clone(), source.clone()))
+        .collect::<BTreeMap<_, _>>();
+    if !unavailable.is_empty() {
+        view["status"] = json!("source-observation-required");
+        view["unavailable_sources"] = json!(unavailable);
+        return Ok(view);
     }
     let binding = json!({"semantics":SEMANTICS,"relation_id":instructions["relation_id"],"declarations":declarations,
         "sources":sources,"dependencies":dependencies,"work_postimages":postimages});
@@ -952,6 +994,13 @@ fn group_view(
                 .get(&reference)
                 .or_else(|| binding["work_postimages"].get(&reference))
                 .ok_or_else(|| err("material outside current group"))?;
+            if observation["bytes"].as_u64().is_some_and(|bytes| {
+                bytes > crate::decision_source::MAX_SOURCE_BYTES as u64 - size as u64
+            }) {
+                material.push(json!({"reference":reference,"revision":observation["revision"],"bytes":observation["bytes"],
+                    "delivery":"inspect-by-reference","recovery":"Read this exact repository-relative source with ordinary file tools in the current target. Inspect its complete meaning for the requested judgment; a hash or preview is not review. Submit the existing source-judgment request; changed bytes invalidate it."}));
+                continue;
+            }
             let bytes = crate::dependency_binding::read(&root, &reference)?
                 .ok_or_else(|| err("group material disappeared"))?;
             size += bytes.len();

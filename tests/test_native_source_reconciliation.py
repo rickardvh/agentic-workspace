@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import shutil
@@ -96,6 +97,57 @@ def test_source_judgment_rejects_forged_labels_and_missing_sources(tmp_path, sha
             call({"request": forged})
     (tmp_path / "docs/guide.md").unlink()
     assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
+
+
+@pytest.mark.parametrize("reference", ["docs/guide.md", "src/feature.txt"])
+@pytest.mark.parametrize("size", [1_048_575, 1_048_577])
+def test_large_regular_sources_reconcile_by_reference_and_stale_on_byte_change(tmp_path, shared_core_binary, native_cli, reference, size):
+    context = repository(tmp_path)
+    source = tmp_path / reference
+    content = b"x" * size
+    source.write_bytes(content)
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    initial = call()
+    relation = initial["verification"]["source_reconciliation"]
+    assert relation["status"] == "judgment-material-required"
+    revision = "sha256:" + hashlib.sha256(content).hexdigest()
+    observations = {**relation["proposal"]["sources"], **relation["proposal"]["work_postimages"]}
+    assert observations[reference] == {"status": "present", "revision": revision, "bytes": size}
+    assert content.decode() not in json.dumps(initial)
+    material = call({"request": relation["material_request"]})["verification"]["source_reconciliation"]["material"]
+    delivered = next(row for row in material if row["reference"] == reference)
+    assert delivered["delivery"] == "inspect-by-reference"
+    assert delivered["revision"] == revision and "text" not in delivered
+    # Ordinary file inspection supplies semantic material; hashes never do.
+    assert source.read_bytes() == content
+    ready = call({"request": answer_for(call)})
+    action = ready["decision_packet"]["primary_action"]
+    assert call({"invocation": action})["status"] == "applied"
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
+    source.write_bytes(content[:-1] + b"y")
+    assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
+    with pytest.raises(AssertionError, match="stale|changed|current"):
+        call({"invocation": action})
+
+
+def test_unavailable_source_is_scoped_and_preserves_unrelated_entry(tmp_path, shared_core_binary, native_cli):
+    context = repository(tmp_path)
+    source = tmp_path / "docs/guide.md"
+    source.unlink()
+    source.mkdir()
+    current = consume("json", shared_core_binary, native_cli, context)
+    relation = current["verification"]["source_reconciliation"]
+    assert relation["status"] == "source-observation-required"
+    assert relation["unavailable_sources"]["docs/guide.md"]["reason"] == "source-observation-not-regular"
+    assert relation["requests"] == [] and relation["action"] is None
+    assert current["planning"]["status"] == "direct"
+    assert any(row["code"] == "source-relation-observation-unavailable" for row in current["decision_packet"]["blockers"])
+    quiet = consume("json", shared_core_binary, native_cli, {**context, "changed": ["other/file.txt"]})
+    assert quiet["verification"]["source_reconciliation"]["status"] == "not-required"
+    assert not any(row["code"] == "source-relation-observation-unavailable" for row in quiet["decision_packet"]["blockers"])
 
 
 def test_new_instruction_source_invalidates_absent_obligation(tmp_path, shared_core_binary, native_cli):

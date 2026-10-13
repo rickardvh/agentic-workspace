@@ -1365,6 +1365,14 @@ fn resolve_selected(
                         .ends_with(":source-reconciliation-required")
                 });
         }
+        if matches!(
+            reconciliation["status"].as_str(),
+            Some("source-observation-required" | "scope-observation-required")
+        ) {
+            verification["contribution"]["blockers"].as_array_mut().unwrap().push(json!({
+                "code":"source-relation-observation-unavailable","message":"An applicable source relation cannot be observed; repair its precise source/scope gap before dependent proof. Unrelated reading and implementation remain available.",
+                "affects":["effect:proof-execution","claim:complete"],"recovery":"Inspect verification.source_reconciliation and its affected relation's unavailable_sources/reason, repair that source boundary and reobserve."}));
+        }
         if reconciliation["action"].is_object() {
             verification["contribution"]["actions"]
                 .as_array_mut()
