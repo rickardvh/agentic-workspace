@@ -1,9 +1,13 @@
 ---
 name: workspace-instruction-correction
-description: Apply a correction or useful finding to the right source, and verify any change worth retaining.
+description: Review retained repository knowledge on request, or apply a correction or useful finding to its controlling source and verify the change.
 ---
 
 # Apply a correction or useful finding
+
+When the user asks what worthwhile improvements the repository's retained
+knowledge supports, begin with the [selected review](references/review.md).
+The user need not supply a finding or know the components that hold it.
 
 Use this method when a user correction, source conflict, test finding or useful
 improvement could change current work or prevent future rediscovery. Apply trusted

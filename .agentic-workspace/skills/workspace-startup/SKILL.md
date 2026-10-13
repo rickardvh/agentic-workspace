@@ -49,6 +49,10 @@ threshold determines it. Unrelated remembered plans remain inert.
 
 Then decide what other information the next action needs:
 
+- When the user asks to review what is known about the repository and find useful
+  improvements, use the existing correction method's [selected improvement
+  review](../workspace-instruction-correction/references/review.md). It discovers
+  retained evidence before choosing a finding; ordinary work does not run a review.
 - If the supplied text and current sources suffice, do the work directly. A new
   session or context loss alone does not require a command or duplicate plan.
 - If an edit, test, completion claim or recovery depends on missing or changed

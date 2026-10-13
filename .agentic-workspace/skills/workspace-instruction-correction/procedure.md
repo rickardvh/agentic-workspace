@@ -7,6 +7,11 @@
   "question": "What should change because of this correction or finding?",
   "branches": [
     {
+      "id": "review",
+      "description": "Discover and synthesise retained evidence for a requested repository-improvement review",
+      "next": "references/review.md"
+    },
+    {
       "id": "destination",
       "description": "Choose the source that controls the affected behaviour",
       "next": "references/destination.md"
