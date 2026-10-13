@@ -59,7 +59,7 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission():
     merge = jobs["merge-sufficiency"]
     assert "github.event_name == 'pull_request'" in merge["if"]
     assert "uv build" not in str(merge)
-    assert set(jobs["readiness"]["needs"]) == {"merge-sufficiency", "security"}
+    assert set(jobs["readiness"]["needs"]) == {"merge-sufficiency", "security", "proof-modes-windows"}
     assert "github.event_name == 'workflow_dispatch'" in jobs["workspace-checks"]["if"]
 
 

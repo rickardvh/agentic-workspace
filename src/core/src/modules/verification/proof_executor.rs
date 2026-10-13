@@ -738,6 +738,11 @@ mod tests {
         let config = json!({"inputs":["source"]});
         let modes = indexed_modes(&path).unwrap();
         let first = snapshot_with_modes(&path, &config, Some(&modes)).unwrap();
+        #[cfg(windows)]
+        assert_eq!(
+            identity(&snapshot(&path, &config).unwrap()).unwrap(),
+            identity(&first).unwrap()
+        );
         assert!(!first["source/module.py"].executable);
         assert!(
             first["source/run.sh"].executable,
@@ -750,6 +755,11 @@ mod tests {
         git(&["update-index", "--chmod=-x", "source/run.sh"]);
         let current_modes = indexed_modes(&path).unwrap();
         let changed = snapshot_with_modes(&path, &config, Some(&current_modes)).unwrap();
+        #[cfg(windows)]
+        assert_eq!(
+            identity(&snapshot(&path, &config).unwrap()).unwrap(),
+            identity(&changed).unwrap()
+        );
         assert_eq!(first["source/run.sh"].bytes, changed["source/run.sh"].bytes);
         assert_ne!(identity(&first).unwrap(), identity(&changed).unwrap());
         let hash = Command::new("git")
@@ -778,6 +788,8 @@ mod tests {
         let ambiguous = indexed_modes(&path).unwrap();
         assert_eq!(ambiguous["source/run.sh"], None);
         assert!(snapshot_with_modes(&path, &config, Some(&ambiguous)).is_err());
+        #[cfg(windows)]
+        assert!(snapshot(&path, &config).is_err());
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;

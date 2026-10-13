@@ -37,6 +37,7 @@ jobs:
     needs:
       - merge-sufficiency
       - security
+      - proof-modes-windows
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
@@ -45,6 +46,36 @@ jobs:
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: python src/tooling/check/check_ci_results.py
+  proof-modes-windows:
+    name: Windows proof source modes
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.expected_head_sha == github.sha) }}
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Select executable-mode owner changes
+        id: scope
+        shell: pwsh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          $selected = $true
+          if ($env:BASE_SHA) {
+            $paths = git diff --name-only $env:BASE_SHA HEAD -- src/core/src/modules/verification/proof_executor.rs Cargo.lock src/core/Cargo.toml rust-toolchain.toml
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot establish executable-mode proof scope' }
+            $selected = [bool]$paths
+          }
+          "selected=$($selected.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+      - name: Admit the repository Rust toolchain
+        if: steps.scope.outputs.selected == 'true'
+        run: rustup show active-toolchain
+      - name: Verify indexed modes and Windows snapshot confinement
+        if: steps.scope.outputs.selected == 'true'
+        run: |
+          cargo test --locked -p agentic-workspace-core proof_executor::tests::
   merge-sufficiency:
     name: Merge proof
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch'
