@@ -2027,11 +2027,14 @@ fn resolve_selected(
         "verification": digest(&verification_identity)?,
         "planning": digest(&planning_identity)?
     });
-    // Requests bind the composed contract above. Owner-local fragments remain
-    // internal composition inputs, not additional public authorities.
-    for owner in public.as_object_mut().unwrap().values_mut() {
+    // Governing requests bind the composed contract above. Their owner-local
+    // fragments remain internal. Selected advisory procedure requests instead
+    // bind their independent declaration, exposed through this lazy owner view.
+    for (name, owner) in public.as_object_mut().unwrap().iter_mut() {
         if let Some(object) = owner.as_object_mut() {
-            object.remove("capability_contract");
+            if name != "procedure" {
+                object.remove("capability_contract");
+            }
             object.remove("contribution");
         }
     }

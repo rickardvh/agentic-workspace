@@ -14,7 +14,10 @@ BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="loc
 
 def test_procedure_discovery_preserves_current_executor_answers(tmp_path, shared_core_binary, native_cli):
     """Optional procedure navigation does not revoke current owner admission."""
+    from jsonschema import Draft202012Validator
     from tests.repo_procedure_fixture import install_method
+
+    from aw_maintainer.native_conformance import prepare_request
 
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
@@ -45,6 +48,39 @@ def test_procedure_discovery_preserves_current_executor_answers(tmp_path, shared
     assert after["capability_contract"] == before["capability_contract"]
     assert after["procedure"]["requests"]
     assert after["procedure"]["authority_effect"] == "none"
+    # A compact client can discover the selected advisory declaration without
+    # adding it to the governing contract or reconstructing private schemas.
+    assert "/procedure" not in admitted["detail_refs"]
+    procedure = call({**current["reentry"], "reference": current["detail_refs"]["/procedure"]})["value"]
+    contract = procedure["capability_contract"]
+    assert contract == after["procedure"]["capability_contract"]
+    assert [owner["owner"] for owner in contract["owners"]] == ["procedure"]
+    assert all(owner["owner"] != "procedure" for owner in after["capability_contract"]["owners"])
+    declarations = {r["kind"]: r for r in contract["owners"][0]["requests"]}
+    assert set(declarations) == {"procedure/select/v1", "procedure/answer/v1"}
+
+    def prepare(request):
+        declaration = declarations[request["request_kind"]]
+        assert declaration["result_kind"] == procedure["kind"]
+        Draft202012Validator(declaration["input_schema"]).validate(request["arguments"])
+        prepared = prepare_request(request, after["current_work"], contract)
+        assert prepared["request"] == request
+        return prepared["request"]
+
+    selection = prepare(procedure["requests"][0])
+    selected = call({**current["reentry"], "request": [*current["reentry"]["request"], selection]})
+    question = call({**selected["reentry"], "reference": selected["detail_refs"]["/procedure"]})["value"]
+    response = question["requests"][0]
+    response["arguments"]["answer"] = {"disposition": "answered", "branches": ["scope"]}
+    # Reentry retains one current procedure request; its answer replaces select.
+    answered = call(
+        {**selected["reentry"], "request": [*[r for r in selected["reentry"]["request"] if r["owner"] != "procedure"], prepare(response)]}
+    )
+    final = call({**answered["reentry"], "projection": "full"})
+    assert final["procedure"]["status"] == "current"
+    assert final["procedure"]["capability_contract"] == contract
+    assert final["capability_contract"] == before["capability_contract"]
+    assert answered["assignment_context"]["local_continuation_allowed"]
     assert not (tmp_path / ".agentic-workspace/local").exists()
     wrong_task = {**current["reentry"], "task": "Different source outcome"}
     with pytest.raises(AssertionError):
