@@ -12,6 +12,48 @@ from tests.test_native_public_cli import native_cli as native_cli
 BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
 
 
+def test_procedure_discovery_preserves_current_executor_answers(tmp_path, shared_core_binary, native_cli):
+    """Optional procedure navigation does not revoke current owner admission."""
+    from tests.repo_procedure_fixture import install_method
+
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(BASE)
+    install_method(tmp_path, "pr-review-recheck", "host/review")
+    context = {"target": str(tmp_path), "task": "Inspect a bounded source change", "changed": [], "projection": "compact"}
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, {**context, **value}, host_path=os.environ["PATH"])
+
+    def answer(view, fields):
+        return call({**view["reentry"], "reference": view["assignment_context"]["next_step"]["reference"], "answer": fields})
+
+    first = call(context)
+    offered = answer(first, {"required_result_classes": ["unapplied-patch"]})
+    admitted = offered
+    if "next_step" in offered["assignment_context"]:
+        admitted = answer(offered, {"alternative": "local:internal", "reason": "Local supports this bounded inspection without a handoff."})
+    assert admitted["assignment_context"]["local_continuation_allowed"]
+    before = call({**admitted["reentry"], "projection": "full"})
+    assert "procedure" not in before
+    detail = call({**admitted["reentry"], "reference": admitted["detail_refs"]["/semantic_routes"]})
+    discovery = next(r for r in detail["value"]["requests"] if r["request_kind"] == "semantic-routes/discover/v1")
+    discovery["arguments"]["parent"] = "host/review"
+    current = call({**admitted["reentry"], "request": [*admitted["reentry"]["request"], discovery]})
+    assert current["assignment_context"]["local_continuation_allowed"]
+    after = call({**current["reentry"], "projection": "full"})
+    assert after["capability_contract"] == before["capability_contract"]
+    assert after["procedure"]["requests"]
+    assert after["procedure"]["authority_effect"] == "none"
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    wrong_task = {**current["reentry"], "task": "Different source outcome"}
+    with pytest.raises(AssertionError):
+        call(wrong_task)
+    source.write_text(BASE.replace('transport_authority="manual"', 'transport_authority="automatic"'))
+    with pytest.raises(AssertionError):
+        call(current["reentry"])
+
+
 @pytest.mark.parametrize("policy", ["best-fit-advisory", "required-best-fit"])
 def test_compact_policy_posture_preserves_assignment_scope(tmp_path, shared_core_binary, native_cli, policy):
     """An unresolved recommendation is not a binding implementation gate."""

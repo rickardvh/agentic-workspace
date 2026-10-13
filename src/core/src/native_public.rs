@@ -612,12 +612,11 @@ fn resolve_selected(
                 .flatten()
                 .any(|source| source["procedure"]["resource"]["status"] == "current")
         });
-    let procedure_contract = if procedure_selected {
-        crate::native_procedure_answer::contract()?
-    } else {
-        Value::Null
-    };
-    let mut fragments = [
+    // Declare the kernel's advisory answer schemas consistently. Discovery
+    // changes presentation, not the current contract of unrelated owners.
+    // Procedure content and requests are still delivered only when selected.
+    let procedure_contract = crate::native_procedure_answer::contract()?;
+    let fragments = [
         &crate::native_activation::contract()?,
         &procedure_contract,
         &config_write_contract,
@@ -634,28 +633,7 @@ fn resolve_selected(
         &independent.contract,
         &resource_contract,
     ];
-    let mut contract = combined_contract(&fragments)?;
-    if executing
-        && !procedure_selected
-        && requests
-            .iter()
-            .any(|r| r["capability_revision"] != contract["revision"])
-    {
-        // Discovery exposes the advisory procedure request shapes without
-        // making that presentation context an effect dependency. A retained
-        // source request can bind the composition with those shapes present.
-        // Reconstruct only that exact composition from CURRENT declarations;
-        // never rewrite the request or accept a former owner/operation contract.
-        let retained_procedure_contract = crate::native_procedure_answer::contract()?;
-        fragments[1] = &retained_procedure_contract;
-        let retained = combined_contract(&fragments)?;
-        if requests
-            .iter()
-            .any(|r| r["capability_revision"] == retained["revision"])
-        {
-            contract = retained;
-        }
-    }
+    let contract = combined_contract(&fragments)?;
     if input
         .invocation
         .as_ref()
@@ -2409,21 +2387,8 @@ mod fresh_action_tests {
         let execution = fixture.execution(action);
         let (input, target) = input(execution.clone()).unwrap();
         let base = fixture.start(Value::Null);
-        let extra: Vec<_> = ready["capability_contract"]["owners"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|o| {
-                !base["capability_contract"]["owners"]
-                    .as_array()
-                    .unwrap()
-                    .contains(o)
-            })
-            .collect();
-        assert_eq!(
-            extra,
-            vec![&crate::native_procedure_answer::contract().unwrap()["owners"][0]]
-        );
+        assert_eq!(base["capability_contract"], ready["capability_contract"]);
+        assert!(base.get("procedure").is_none());
         for field in ["claim_authorities", "restriction_authorities"] {
             assert_eq!(
                 base["capability_contract"][field],
@@ -2432,7 +2397,7 @@ mod fresh_action_tests {
         }
         let current = resolve(&input, &target, true).unwrap();
         eprintln!(
-            "issued={} passive={} invoke={} differing-owner=procedure",
+            "issued={} passive={} invoke={}",
             ready["capability_contract"]["revision"],
             base["capability_contract"]["revision"],
             current["capability_contract"]["revision"]
