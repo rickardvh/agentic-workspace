@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve executable source intent in read-only proof snapshots and bind mode changes to proof freshness."
