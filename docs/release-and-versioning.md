@@ -64,6 +64,11 @@ promise that unequal revisions are incompatible. Validate the contract your
 integration needs and submit exact current requests/actions; discovery alone
 does not authorise an effect.
 
+Selected advisory procedure requests use `procedure.capability_contract` in the
+full result, or the compact `/procedure` detail reference, for their independent
+select/answer declarations. This selected-only schema discovery leaves the
+governing top-level capability revision unchanged and grants no authority.
+
 There is no separately supported operation-profile negotiation API or external
 fingerprint compatibility range today. #2194/#2197 motivate separating package
 identity from operation compatibility; their retired catalogues and conformance

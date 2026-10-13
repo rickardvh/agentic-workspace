@@ -127,6 +127,13 @@ its detail reference from the compact result. Request declarations carry `kind`,
 operation-version range negotiated from a package version. A revision is an opaque
 identity. Re-enter when sources change and use the exact returned requests/actions.
 
+Selected advisory procedure requests bind an independent declaration at
+`procedure.capability_contract` in the full result, also reachable through the
+compact `/procedure` detail reference. It declares both `procedure/select/v1`
+and `procedure/answer/v1`; use it to validate those returned requests. It appears
+only when a procedure is selected and does not change the governing top-level
+contract or confer effect, proof or completion authority.
+
 The exact `projection` field controls how much detail the API returns. `compact`
 keeps optional detail behind references. `full` expands it. `carried` also returns
 a context bundle that can be supplied to a later call without rebuilding the

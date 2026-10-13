@@ -12,6 +12,84 @@ from tests.test_native_public_cli import native_cli as native_cli
 BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
 
 
+def test_procedure_discovery_preserves_current_executor_answers(tmp_path, shared_core_binary, native_cli):
+    """Optional procedure navigation does not revoke current owner admission."""
+    from jsonschema import Draft202012Validator
+    from tests.repo_procedure_fixture import install_method
+
+    from aw_maintainer.native_conformance import prepare_request
+
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(BASE)
+    install_method(tmp_path, "pr-review-recheck", "host/review")
+    context = {"target": str(tmp_path), "task": "Inspect a bounded source change", "changed": [], "projection": "compact"}
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, {**context, **value}, host_path=os.environ["PATH"])
+
+    def answer(view, fields):
+        return call({**view["reentry"], "reference": view["assignment_context"]["next_step"]["reference"], "answer": fields})
+
+    first = call(context)
+    offered = answer(first, {"required_result_classes": ["unapplied-patch"]})
+    admitted = offered
+    if "next_step" in offered["assignment_context"]:
+        admitted = answer(offered, {"alternative": "local:internal", "reason": "Local supports this bounded inspection without a handoff."})
+    assert admitted["assignment_context"]["local_continuation_allowed"]
+    before = call({**admitted["reentry"], "projection": "full"})
+    assert "procedure" not in before
+    detail = call({**admitted["reentry"], "reference": admitted["detail_refs"]["/semantic_routes"]})
+    discovery = next(r for r in detail["value"]["requests"] if r["request_kind"] == "semantic-routes/discover/v1")
+    discovery["arguments"]["parent"] = "host/review"
+    current = call({**admitted["reentry"], "request": [*admitted["reentry"]["request"], discovery]})
+    assert current["assignment_context"]["local_continuation_allowed"]
+    after = call({**current["reentry"], "projection": "full"})
+    assert after["capability_contract"] == before["capability_contract"]
+    assert after["procedure"]["requests"]
+    assert after["procedure"]["authority_effect"] == "none"
+    # A compact client can discover the selected advisory declaration without
+    # adding it to the governing contract or reconstructing private schemas.
+    assert "/procedure" not in admitted["detail_refs"]
+    procedure = call({**current["reentry"], "reference": current["detail_refs"]["/procedure"]})["value"]
+    contract = procedure["capability_contract"]
+    assert contract == after["procedure"]["capability_contract"]
+    assert [owner["owner"] for owner in contract["owners"]] == ["procedure"]
+    assert all(owner["owner"] != "procedure" for owner in after["capability_contract"]["owners"])
+    declarations = {r["kind"]: r for r in contract["owners"][0]["requests"]}
+    assert set(declarations) == {"procedure/select/v1", "procedure/answer/v1"}
+
+    def prepare(request):
+        declaration = declarations[request["request_kind"]]
+        assert declaration["result_kind"] == procedure["kind"]
+        Draft202012Validator(declaration["input_schema"]).validate(request["arguments"])
+        prepared = prepare_request(request, after["current_work"], contract)
+        assert prepared["request"] == request
+        return prepared["request"]
+
+    selection = prepare(procedure["requests"][0])
+    selected = call({**current["reentry"], "request": [*current["reentry"]["request"], selection]})
+    question = call({**selected["reentry"], "reference": selected["detail_refs"]["/procedure"]})["value"]
+    response = question["requests"][0]
+    response["arguments"]["answer"] = {"disposition": "answered", "branches": ["scope"]}
+    # Reentry retains one current procedure request; its answer replaces select.
+    answered = call(
+        {**selected["reentry"], "request": [*[r for r in selected["reentry"]["request"] if r["owner"] != "procedure"], prepare(response)]}
+    )
+    final = call({**answered["reentry"], "projection": "full"})
+    assert final["procedure"]["status"] == "current"
+    assert final["procedure"]["capability_contract"] == contract
+    assert final["capability_contract"] == before["capability_contract"]
+    assert answered["assignment_context"]["local_continuation_allowed"]
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    wrong_task = {**current["reentry"], "task": "Different source outcome"}
+    with pytest.raises(AssertionError):
+        call(wrong_task)
+    source.write_text(BASE.replace('transport_authority="manual"', 'transport_authority="automatic"'))
+    with pytest.raises(AssertionError):
+        call(current["reentry"])
+
+
 @pytest.mark.parametrize("policy", ["best-fit-advisory", "required-best-fit"])
 def test_compact_policy_posture_preserves_assignment_scope(tmp_path, shared_core_binary, native_cli, policy):
     """An unresolved recommendation is not a binding implementation gate."""

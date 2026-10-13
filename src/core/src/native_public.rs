@@ -612,14 +612,15 @@ fn resolve_selected(
                 .flatten()
                 .any(|source| source["procedure"]["resource"]["status"] == "current")
         });
+    // Advisory answers use their own read-only declaration, like route
+    // selection. Discovery cannot change unrelated owner/effect contracts.
     let procedure_contract = if procedure_selected {
         crate::native_procedure_answer::contract()?
     } else {
         Value::Null
     };
-    let mut fragments = [
+    let fragments = [
         &crate::native_activation::contract()?,
-        &procedure_contract,
         &config_write_contract,
         &decision_read_contract,
         &configuration["capability_contract"],
@@ -634,28 +635,7 @@ fn resolve_selected(
         &independent.contract,
         &resource_contract,
     ];
-    let mut contract = combined_contract(&fragments)?;
-    if executing
-        && !procedure_selected
-        && requests
-            .iter()
-            .any(|r| r["capability_revision"] != contract["revision"])
-    {
-        // Discovery exposes the advisory procedure request shapes without
-        // making that presentation context an effect dependency. A retained
-        // source request can bind the composition with those shapes present.
-        // Reconstruct only that exact composition from CURRENT declarations;
-        // never rewrite the request or accept a former owner/operation contract.
-        let retained_procedure_contract = crate::native_procedure_answer::contract()?;
-        fragments[1] = &retained_procedure_contract;
-        let retained = combined_contract(&fragments)?;
-        if requests
-            .iter()
-            .any(|r| r["capability_revision"] == retained["revision"])
-        {
-            contract = retained;
-        }
-    }
+    let contract = combined_contract(&fragments)?;
     if input
         .invocation
         .as_ref()
@@ -664,9 +644,12 @@ fn resolve_selected(
         crate::native_delegation::validate_dispatch_context(&work, &requests, &contract)?;
     }
     for request in &requests {
-        // Route selection has its own independently bound read-only contract and
-        // is already validated by its responsible owner above.
-        if request["owner"] != "semantic-routes" {
+        // These advisory readers validate their exact independent declarations;
+        // they cannot contribute mutation, proof or completion authority.
+        if !matches!(
+            request["owner"].as_str(),
+            Some("semantic-routes" | "procedure")
+        ) {
             // Each responsible owner validates its exact request below. Check
             // membership here without recompiling every schema for every input.
             if !contract["owners"]
@@ -693,7 +676,7 @@ fn resolve_selected(
         &work,
         routes.as_ref().unwrap_or(&Value::Null),
         request_for("procedure"),
-        &contract,
+        &procedure_contract,
     )?;
     if let Some(request) = request_for("startup-adapter") {
         startup_adapter = crate::native_startup::view(
@@ -2044,11 +2027,14 @@ fn resolve_selected(
         "verification": digest(&verification_identity)?,
         "planning": digest(&planning_identity)?
     });
-    // Requests bind the composed contract above. Owner-local fragments remain
-    // internal composition inputs, not additional public authorities.
-    for owner in public.as_object_mut().unwrap().values_mut() {
+    // Governing requests bind the composed contract above. Their owner-local
+    // fragments remain internal. Selected advisory procedure requests instead
+    // bind their independent declaration, exposed through this lazy owner view.
+    for (name, owner) in public.as_object_mut().unwrap().iter_mut() {
         if let Some(object) = owner.as_object_mut() {
-            object.remove("capability_contract");
+            if name != "procedure" {
+                object.remove("capability_contract");
+            }
             object.remove("contribution");
         }
     }
@@ -2409,21 +2395,8 @@ mod fresh_action_tests {
         let execution = fixture.execution(action);
         let (input, target) = input(execution.clone()).unwrap();
         let base = fixture.start(Value::Null);
-        let extra: Vec<_> = ready["capability_contract"]["owners"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|o| {
-                !base["capability_contract"]["owners"]
-                    .as_array()
-                    .unwrap()
-                    .contains(o)
-            })
-            .collect();
-        assert_eq!(
-            extra,
-            vec![&crate::native_procedure_answer::contract().unwrap()["owners"][0]]
-        );
+        assert_eq!(base["capability_contract"], ready["capability_contract"]);
+        assert!(base.get("procedure").is_none());
         for field in ["claim_authorities", "restriction_authorities"] {
             assert_eq!(
                 base["capability_contract"][field],
@@ -2432,7 +2405,7 @@ mod fresh_action_tests {
         }
         let current = resolve(&input, &target, true).unwrap();
         eprintln!(
-            "issued={} passive={} invoke={} differing-owner=procedure",
+            "issued={} passive={} invoke={}",
             ready["capability_contract"]["revision"],
             base["capability_contract"]["revision"],
             current["capability_contract"]["revision"]
