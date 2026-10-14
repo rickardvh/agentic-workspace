@@ -160,6 +160,9 @@ jobs:
       - name: Verify instruction publication recovery
         timeout-minutes: 2
         run: uv run pytest tests/test_native_instruction_write.py::test_instruction_recovery_preserves_drift_and_unknown_files -v
+      - name: Verify advisory publication upgrade and recovery
+        timeout-minutes: 2
+        run: cargo test --locked -p agentic-workspace-core advisory_v1_upgrade_preserves_custody_recovers_and_revises
       - name: Verify instruction checks preserve write protections
         timeout-minutes: 2
         run: uv run pytest tests/test_native_instruction_verification.py::test_current_check_releases_claim_but_preserves_same_instruction_protection -v
