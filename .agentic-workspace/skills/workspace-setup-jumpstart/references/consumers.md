@@ -27,8 +27,8 @@ Use only the relevant branch below, reusing adequate existing state.
   A minimal declaration uses `schema_version = "agentic-workspace/verification-manifest/v1"`,
   a `[protocols.<name>]` section with relevant `applies_to_paths`, and a
   `[proof_routes.<name>]` section with `protocol_refs = ["<name>"]` and the actual
-  `commands`. Protocol `steps`, `expected_observations` and `authority_refs` can
-  retain the source rule and what the check establishes. Use the repository's
+  `commands`. Protocol `steps` and `authority_refs` can retain the source rule
+  and what the check establishes. Use the repository's
   actual execution environment; configuring a route does not establish readiness.
   Re-enter the same work through `start`, select the returned strategy/check,
   execute its exact admitted action and interpret the actual receipt. If native
