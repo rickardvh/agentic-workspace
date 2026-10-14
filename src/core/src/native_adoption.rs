@@ -119,6 +119,71 @@ fn committed(target: &Path, root: &Dir, record: &Value) -> Result<bool, CoreErro
     Ok(true)
 }
 
+/// Diagnose a fresh checkout without turning its portable inventory into custody.
+/// Only the independently trusted matching artifact can establish a new local
+/// adoption through its normal, explicitly authorised setup operation.
+fn custody_recovery(
+    target: &Path,
+    root: &Dir,
+    identity: &Option<String>,
+) -> Result<Value, CoreError> {
+    let Some(raw) = identity else {
+        return Ok(Value::Null);
+    };
+    let prior: Value = serde_json::from_str(raw).unwrap_or(Value::Null);
+    let mut gaps = Vec::new();
+    let files = prior["package_files"].as_object();
+    if prior["kind"] != "agentic-workspace/adopted-repository/v1"
+        || files.is_none_or(|files| files.is_empty())
+    {
+        gaps.push("The previous package inventory is unrecognised.".to_owned());
+    }
+    let known = crate::native_payload::paths();
+    for (path, expected) in files.into_iter().flatten() {
+        // Never follow paths asserted by an untrusted portable inventory.
+        if !known.contains(&path.as_str()) {
+            gaps.push(format!(
+                "{path}: no supported previous package source is known"
+            ));
+        } else if revision(&bytes(root, path)?) != *expected {
+            gaps.push(format!(
+                "{path}: differs from the recorded previous content"
+            ));
+        }
+    }
+    let instructions = bytes(root, "AGENTS.md")?.unwrap_or_default();
+    let expected_fence = prior["instruction_fence"].as_str().unwrap_or("");
+    if expected_fence != fence() || instructions.matches(expected_fence).count() != 1 {
+        gaps.push("The recorded instruction fence is unknown or has changed.".to_owned());
+    }
+    let provenance: Value = bytes(root, ".agentic-workspace/payload-provenance.json")?
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or(Value::Null);
+    let version = provenance["release_identity"]["version"]
+        .as_str()
+        .filter(|s| !s.is_empty());
+    if provenance["kind"] != "agentic-workspace/payload-provenance/v1"
+        || provenance["release_identity"]["package"] != "agentic-workspace"
+        || version.is_none()
+    {
+        gaps.push("The previous distribution identity is unavailable.".to_owned());
+    }
+    Ok(json!({
+        "condition":"local-adoption-custody-absent",
+        "status":if gaps.is_empty(){"prior-artifact-required"}else{"unavailable"},
+        "artifact_hint":provenance["release_identity"],
+        "artifact_hint_authority":"Discovery hint only. Authenticate the matching former distribution or source independently; these repository records cannot authenticate it or authorise replacement.",
+        "gaps":gaps,
+        "message":if gaps.is_empty(){
+            "This checkout has no local setup record. Its files match the recorded previous content, which is not overwrite permission. Obtain the matching former package from an independently trusted distribution or source. Run that package's setup preview and authorise it only if it proposes no tracked package changes; then retry setup with the selected new package. If the authentic former package cannot be established, preserve the files and report that missing prerequisite. setup --recover is only for an interrupted write."
+        }else{
+            "Safe setup reacquisition is unavailable for the reported sources. Preserve the files; establish the authentic former package and reconcile the exact differences before retrying. setup --recover cannot supply missing local history."
+        },
+        "prior_setup":{"arguments":["setup","--target",target,"--dry-run","--format","json"],"authorization":"Use the matching trusted artifact's normal setup authorization only after its preview independently accepts the existing bytes without tracked package changes."},
+        "resume":{"arguments":["setup","--target",target,"--dry-run","--format","json"],"artifact":"selected-new-package"}
+    }))
+}
+
 pub(crate) fn ownership_baseline(target: &Path) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let Some(record) = held(target, &root)? else {
@@ -505,7 +570,12 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
         blockers.push("interrupted adoption effect requires exact recover request".into());
     }
     let host_refresh = crate::native_plugin_exposure::refresh_actions(target, &json!(updates))?;
-    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"enclave":enclave,"observations":observations,"updates":updates,"host_refresh":host_refresh,"installed":installed,"ownership_baseline":crate::native_ownership::baseline(),"preserved":preserved,"blockers":blockers,
+    let recovery = if !removing && held.is_none() && !blockers.is_empty() {
+        custody_recovery(target, &root, &identity)?
+    } else {
+        Value::Null
+    };
+    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"enclave":enclave,"observations":observations,"updates":updates,"host_refresh":host_refresh,"installed":installed,"ownership_baseline":crate::native_ownership::baseline(),"preserved":preserved,"blockers":blockers,"custody_recovery":recovery,
         "identity":revision(&identity),"prior_custody":held.as_ref().map(digest).transpose()?,"pending":pending});
     Ok(state)
 }

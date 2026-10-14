@@ -52,6 +52,16 @@ Recovery may establish that the change completed, that it did not start, or that
 
 ## Updating or removing AW reports conflicting files
 
+In a fresh checkout, setup may report that the local setup record is absent.
+Its JSON result includes `custody_recovery` with the recorded former package
+identity and any source differences. Ask your agent to establish that matching
+package through a trusted distribution or source, preview its setup and authorise
+it only if it accepts the existing files without tracked package changes. Then
+preview and authorise setup with the new package. If the former package cannot
+be authenticated, preserve the files and report that prerequisite. Checked-in
+hashes cannot authorise replacement, and copying another checkout's local records
+is not a supported repair.
+
 If an installed AW-file update stopped partway through, ordinary startup may
 report the exact error `activation index stale`. Run `agentic-workspace setup --dry-run`
 to inspect the current Configuration proposal, then `setup --yes` to authorize it.
