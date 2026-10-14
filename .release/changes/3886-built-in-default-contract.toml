@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Align the declared built-in module default with existing all-three availability, preserving explicit selections and task-specific setup."

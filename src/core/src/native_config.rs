@@ -62,7 +62,8 @@ pub(crate) fn load(
     Ok(Some((value, revision)))
 }
 
-/// Explicit repo enablement gates availability, never task relevance.
+/// Omission preserves availability of all built-in owners. Explicit subsets and
+/// the empty list gate availability, never task relevance or consumer readiness.
 pub(crate) fn module_enabled(configuration: &Value, owner: &str) -> bool {
     configuration["modules"]
         .as_array()
@@ -309,6 +310,18 @@ mod tests {
     #[test]
     fn absent_empty_and_unrelated_files_remain_quiet() {
         let repo = Repo::new();
+        let omitted = view(&repo.0).unwrap();
+        assert!(omitted["modules"].is_null()); // retain the omitted/explicit distinction
+        let builtins = ["planning", "memory", "verification"];
+        assert!(builtins.iter().all(|owner| module_enabled(&omitted, owner)));
+        let schema: Value = serde_json::from_str(include_str!(
+            "../contracts/schemas/workspace_config.schema.json"
+        ))
+        .unwrap();
+        assert_eq!(
+            schema["properties"]["modules"]["properties"]["enabled"]["default"],
+            json!(builtins)
+        );
         assert!(
             view(&repo.0).unwrap()["contribution"]["blockers"]
                 .as_array()
@@ -319,11 +332,27 @@ mod tests {
         repo.write(SHARED, "[modules]\nenabled = []\n");
         repo.write(LOCAL, "");
         let result = view(&repo.0).unwrap();
+        assert!(builtins.iter().all(|owner| !module_enabled(&result, owner)));
         assert!(
             result["contribution"]["blockers"]
                 .as_array()
                 .unwrap()
                 .is_empty()
+        );
+        repo.write(SHARED, "[modules]\nenabled = ['planning', 'memory']\n");
+        let subset = view(&repo.0).unwrap();
+        assert!(module_enabled(&subset, "planning") && module_enabled(&subset, "memory"));
+        assert!(!module_enabled(&subset, "verification"));
+        repo.write(
+            SHARED,
+            "[modules]\nenabled = ['planning', 'memory', 'verification']\n",
+        );
+        let explicit = view(&repo.0).unwrap();
+        assert_eq!(explicit["modules"], json!(builtins));
+        assert!(
+            builtins
+                .iter()
+                .all(|owner| module_enabled(&explicit, owner))
         );
     }
 
