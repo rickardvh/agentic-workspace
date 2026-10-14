@@ -45,10 +45,12 @@ jobs:
       - name: Require merge proof and security
         env:
           RESULTS: ${{ toJSON(needs) }}
+          WINDOWS_MODE_SCOPE: ${{ needs.merge-sufficiency.outputs.windows-mode-scope }}
         run: python src/tooling/check/check_ci_results.py
   proof-modes-windows:
     name: Windows proof source modes
-    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.expected_head_sha == github.sha) }}
+    needs: merge-sufficiency
+    if: ${{ needs.merge-sufficiency.outputs.windows-mode-scope == 'required' }}
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -56,24 +58,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
-      - name: Select executable-mode owner changes
-        id: scope
-        shell: pwsh
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          $selected = $true
-          if ($env:BASE_SHA) {
-            $paths = git diff --name-only $env:BASE_SHA HEAD -- src/core/src/modules/verification/proof_executor.rs Cargo.lock src/core/Cargo.toml rust-toolchain.toml
-            if ($LASTEXITCODE -ne 0) { throw 'Cannot establish executable-mode proof scope' }
-            $selected = [bool]$paths
-          }
-          "selected=$($selected.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
       - name: Admit the repository Rust toolchain
-        if: steps.scope.outputs.selected == 'true'
         run: rustup show active-toolchain
       - name: Verify indexed modes and Windows snapshot confinement
-        if: steps.scope.outputs.selected == 'true'
         run: |
           cargo test --locked -p agentic-workspace-core proof_executor::tests::
   merge-sufficiency:
@@ -82,11 +69,26 @@ jobs:
       && inputs.expected_head_sha == github.sha) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      windows-mode-scope: ${{ steps.mode-scope.outputs.scope }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+      - name: Admit Windows proof scope from exact source changes
+        id: mode-scope
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, 'src/tooling')
+          from release.pr_semver_integration import proof_mode_scope
+          with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as event_file:
+              scope = proof_mode_scope(Path.cwd(), json.load(event_file), os.environ['GITHUB_EVENT_NAME'])
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write(f'scope={scope}\n')
+          PY
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
