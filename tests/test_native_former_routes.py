@@ -483,7 +483,23 @@ def test_former_selection_requires_exact_current_agent_request(
             }
         },
     }
-    assert len(json.dumps(state)) < 28_000, {key: len(json.dumps(value)) for key, value in state.items()}
+    # The runtime admission carries one absolute fixture target. Measure the
+    # same state on every platform while retaining its field and repetition cost;
+    # variable root spelling/Windows escaping is transport overhead, not state
+    # growth. Assert confinement against the actual target before substitution.
+    runtime_target = state["runtime_compatibility"]["target"]
+    assert Path(runtime_target).resolve() == tmp_path.resolve()
+    raw_state_bytes = len(json.dumps(state))
+    budget_subject = copy.deepcopy(state)
+    budget_subject["runtime_compatibility"]["target"] = "<fixture-root>"
+    state_bytes = len(json.dumps(budget_subject))
+    path_overhead = len(json.dumps(runtime_target)) - len(json.dumps("<fixture-root>"))
+    assert raw_state_bytes - state_bytes == path_overhead
+    assert state_bytes < 28_000, {
+        "raw_state_bytes": raw_state_bytes,
+        "fixture_path_overhead": path_overhead,
+        "sections": {key: len(json.dumps(value)) for key, value in budget_subject.items()},
+    }
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
     assert len(json.dumps(compact)) < 6_000
     assert "planning_retention" not in compact
