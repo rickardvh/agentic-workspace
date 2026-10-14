@@ -11,6 +11,8 @@ use std::{
     process::Command,
     time::Duration,
 };
+#[cfg(any(windows, test))]
+use std::{collections::BTreeSet, time::Instant};
 
 const MAX_BYTES: usize = 128 * 1024 * 1024;
 const MAX_FILES: usize = 20000;
@@ -105,51 +107,135 @@ struct SourceFile {
     executable: bool,
 }
 
+fn input_paths(config: &Value) -> Result<Vec<&str>, CoreError> {
+    config["inputs"]
+        .as_array()
+        .filter(|v| !v.is_empty() && v.len() <= 128)
+        .ok_or_else(|| err("proof-executor-inputs-required"))?
+        .iter()
+        .map(|input| {
+            input
+                .as_str()
+                .filter(|p| relative(p) && p.split('/').count() <= 64)
+                .ok_or_else(|| err("proof-executor-input-invalid"))
+        })
+        .collect()
+}
+
 // Windows has no dependable checkout execute bit. Git's stage-zero regular-file
 // mode is its bounded authority; untracked inputs are conservatively non-executable.
 // Conflicted/non-regular index entries cannot silently acquire a regular mode.
 #[cfg(any(windows, test))]
-fn indexed_modes(target: &Path) -> Result<BTreeMap<String, Option<bool>>, CoreError> {
-    let mut command = Command::new("git");
-    command
-        .arg("-C")
-        .arg(target)
-        .args(["-c", "core.fsmonitor=false", "ls-files", "--stage", "-z"])
-        .env("GIT_OPTIONAL_LOCKS", "0");
-    let (status, bytes) = crate::native_verification::bounded_git_output_with_limit(
-        &mut command,
-        Duration::from_secs(5),
-        8 * 1024 * 1024,
-    )
-    .map_err(err)?;
-    if !status.success() {
-        return Err(err(
-            "proof-snapshot-index-mode-unavailable: Windows requires an observable Git index; preserve source and restore Git access",
-        ));
+fn indexed_modes(
+    target: &Path,
+    config: &Value,
+) -> Result<BTreeMap<String, Option<bool>>, CoreError> {
+    let inputs = input_paths(config)?;
+    let mut queries = vec![
+        inputs
+            .iter()
+            .map(|p| format!(":(literal){p}"))
+            .collect::<Vec<_>>(),
+    ];
+    let mut ancestors: BTreeMap<usize, BTreeSet<String>> = BTreeMap::new();
+    for input in &inputs {
+        let mut parent = Path::new(input).parent();
+        while let Some(parent_path) = parent.filter(|p| !p.as_os_str().is_empty()) {
+            let path = parent_path.to_str().unwrap().replace('\\', "/");
+            if !inputs
+                .iter()
+                .any(|input| path == *input || path.starts_with(&format!("{input}/")))
+            {
+                ancestors
+                    .entry(path.split('/').count())
+                    .or_default()
+                    .insert(path.clone());
+            }
+            parent = parent_path.parent();
+        }
     }
+    // Exact ancestors can carry a gitlink or conflict above an otherwise
+    // untracked file. Query one depth at a time and exclude descendants, so
+    // observing an ancestor never imports its unrelated directory contents.
+    for paths in ancestors.values() {
+        let mut specs = Vec::new();
+        for path in paths {
+            specs.push(format!(":(literal){path}"));
+            let escaped: String = path
+                .chars()
+                .flat_map(|c| {
+                    if matches!(c, '*' | '?' | '[' | ']' | '\\') {
+                        vec!['\\', c]
+                    } else {
+                        vec![c]
+                    }
+                })
+                .collect();
+            specs.push(format!(":(exclude,glob){escaped}/**"));
+        }
+        queries.push(specs);
+    }
+    let deadline = Instant::now() + Duration::from_secs(5);
     let mut modes = BTreeMap::new();
-    for entry in bytes
-        .split(|byte| *byte == 0)
-        .filter(|entry| !entry.is_empty())
-    {
-        let entry =
-            std::str::from_utf8(entry).map_err(|_| err("proof-snapshot-index-path-unsupported"))?;
-        let (header, path) = entry
-            .split_once('\t')
-            .ok_or_else(|| err("proof-snapshot-index-entry-invalid"))?;
-        let fields: Vec<_> = header.split(' ').collect();
-        if fields.len() != 3 || !relative(path) {
-            return Err(err("proof-snapshot-index-entry-invalid"));
+    for specs in queries {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(err("proof-snapshot-index-mode-observation-timed-out"));
         }
-        let executable = match (fields[0], fields[2]) {
-            ("100644", "0") => Some(false),
-            ("100755", "0") => Some(true),
-            _ => None,
-        };
-        let prior = modes.insert(path.to_owned(), executable);
-        if prior.is_some() {
-            modes.insert(path.to_owned(), None);
+        let mut command = Command::new("git");
+        command
+            .arg("-C")
+            .arg(target)
+            .args([
+                "-c",
+                "core.fsmonitor=false",
+                "ls-files",
+                "--stage",
+                "-z",
+                "--",
+            ])
+            .args(specs)
+            .env("GIT_OPTIONAL_LOCKS", "0")
+            .env("GIT_LITERAL_PATHSPECS", "0")
+            .env("GIT_GLOB_PATHSPECS", "0")
+            .env("GIT_NOGLOB_PATHSPECS", "0")
+            .env("GIT_ICASE_PATHSPECS", "0");
+        let (status, bytes) = crate::native_verification::bounded_git_output_with_limit(
+            &mut command,
+            remaining,
+            8 * 1024 * 1024,
+        )
+        .map_err(err)?;
+        if !status.success() {
+            return Err(err(
+                "proof-snapshot-index-mode-unavailable: Windows requires an observable Git index; preserve source and restore Git access",
+            ));
         }
+        let mut observed = BTreeMap::new();
+        for entry in bytes
+            .split(|byte| *byte == 0)
+            .filter(|entry| !entry.is_empty())
+        {
+            let entry = std::str::from_utf8(entry)
+                .map_err(|_| err("proof-snapshot-index-path-unsupported"))?;
+            let (header, path) = entry
+                .split_once('\t')
+                .ok_or_else(|| err("proof-snapshot-index-entry-invalid"))?;
+            let fields: Vec<_> = header.split(' ').collect();
+            if fields.len() != 3 || !relative(path) {
+                return Err(err("proof-snapshot-index-entry-invalid"));
+            }
+            let executable = match (fields[0], fields[2]) {
+                ("100644", "0") => Some(false),
+                ("100755", "0") => Some(true),
+                _ => None,
+            };
+            let prior = observed.insert(path.to_owned(), executable);
+            if prior.is_some() {
+                observed.insert(path.to_owned(), None);
+            }
+        }
+        modes.extend(observed);
     }
     Ok(modes)
 }
@@ -158,7 +244,7 @@ fn indexed_modes(target: &Path) -> Result<BTreeMap<String, Option<bool>>, CoreEr
 /// runs; Windows reads bounded Git index metadata without mutating the checkout.
 fn snapshot(target: &Path, config: &Value) -> Result<BTreeMap<String, SourceFile>, CoreError> {
     #[cfg(windows)]
-    let modes = Some(indexed_modes(target)?);
+    let modes = Some(indexed_modes(target, config)?);
     #[cfg(not(windows))]
     let modes = None;
     snapshot_with_modes(target, config, modes.as_ref())
@@ -247,18 +333,12 @@ fn snapshot_with_modes(
         Ok(())
     }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let inputs = config["inputs"]
-        .as_array()
-        .filter(|v| !v.is_empty() && v.len() <= 128)
-        .ok_or_else(|| err("proof-executor-inputs-required"))?;
+    let inputs = input_paths(config)?;
     let mut files = BTreeMap::new();
     let mut total = 0;
     let mut visited = 0;
     for input in inputs {
-        let path = input
-            .as_str()
-            .filter(|p| relative(p))
-            .ok_or_else(|| err("proof-executor-input-invalid"))?;
+        let path = input;
         // Check ancestors as well: a confined link is still not snapshot custody.
         let mut parent = Path::new(path);
         while !parent.as_os_str().is_empty() {
@@ -736,7 +816,7 @@ mod tests {
         git(&["update-index", "--chmod=+x", "source/run.sh"]);
         git(&["update-index", "--chmod=-x", "source/module.py"]);
         let config = json!({"inputs":["source"]});
-        let modes = indexed_modes(&path).unwrap();
+        let modes = indexed_modes(&path, &config).unwrap();
         let first = snapshot_with_modes(&path, &config, Some(&modes)).unwrap();
         #[cfg(windows)]
         assert_eq!(
@@ -753,7 +833,7 @@ mod tests {
             "explicit conservative untracked policy"
         );
         git(&["update-index", "--chmod=-x", "source/run.sh"]);
-        let current_modes = indexed_modes(&path).unwrap();
+        let current_modes = indexed_modes(&path, &config).unwrap();
         let changed = snapshot_with_modes(&path, &config, Some(&current_modes)).unwrap();
         #[cfg(windows)]
         assert_eq!(
@@ -785,7 +865,7 @@ mod tests {
         )
         .unwrap();
         assert!(child.wait().unwrap().success());
-        let ambiguous = indexed_modes(&path).unwrap();
+        let ambiguous = indexed_modes(&path, &config).unwrap();
         assert_eq!(ambiguous["source/run.sh"], None);
         assert!(snapshot_with_modes(&path, &config, Some(&ambiguous)).is_err());
         #[cfg(windows)]
@@ -802,6 +882,73 @@ mod tests {
             let executable = snapshot(&path, &config).unwrap();
             assert_ne!(identity(&ordinary).unwrap(), identity(&executable).unwrap());
         }
+        // Unrelated staged paths must not consume a tiny proof's mode budget.
+        // These entries need no working-tree files, including on Windows.
+        let mut child = Command::new("git")
+            .arg("-C")
+            .arg(&path)
+            .args(["update-index", "--index-info"])
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        let prefix = format!("unrelated/{}", format!("{}/", "x".repeat(200)).repeat(16));
+        let mut input = child.stdin.take().unwrap();
+        for n in 0..2700 {
+            writeln!(input, "100644 {hash}\t{prefix}{n:04}").unwrap();
+        }
+        drop(input);
+        assert!(child.wait().unwrap().success());
+        let listing = Command::new("git")
+            .arg("-C")
+            .arg(&path)
+            .args(["ls-files", "--stage", "-z"])
+            .output()
+            .unwrap();
+        assert!(listing.status.success());
+        assert!(listing.stdout.len() > 8 * 1024 * 1024);
+        let tiny = json!({"inputs":["source/module.py"]});
+        let scoped = indexed_modes(&path, &tiny).unwrap();
+        let tiny_files = snapshot_with_modes(&path, &tiny, Some(&scoped)).unwrap();
+        assert_eq!(tiny_files.len(), 1);
+        assert!(!tiny_files["source/module.py"].executable);
+        assert_eq!(
+            scoped.len(),
+            1,
+            "unrelated index entries remain outside mode observation"
+        );
+        #[cfg(windows)]
+        assert_eq!(
+            identity(&snapshot(&path, &tiny).unwrap()).unwrap(),
+            identity(&tiny_files).unwrap()
+        );
+        git(&["update-index", "--chmod=+x", "source/module.py"]);
+        let scoped = indexed_modes(&path, &tiny).unwrap();
+        let changed = snapshot_with_modes(&path, &tiny, Some(&scoped)).unwrap();
+        assert_eq!(
+            tiny_files["source/module.py"].bytes,
+            changed["source/module.py"].bytes
+        );
+        assert_ne!(identity(&tiny_files).unwrap(), identity(&changed).unwrap());
+        #[cfg(windows)]
+        assert_eq!(
+            identity(&snapshot(&path, &tiny).unwrap()).unwrap(),
+            identity(&changed).unwrap()
+        );
+        std::fs::create_dir_all(path.join("source/分组")).unwrap();
+        std::fs::write(path.join("source/分组/input"), "untracked within gitlink").unwrap();
+        git(&[
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            &format!("160000,{hash},source/分组"),
+        ]);
+        let nested = json!({"inputs":["source/分组/input"]});
+        let nested_modes = indexed_modes(&path, &nested).unwrap();
+        assert_eq!(nested_modes["source/分组"], None);
+        assert_eq!(nested_modes.len(), 1);
+        assert!(snapshot_with_modes(&path, &nested, Some(&nested_modes)).is_err());
+        #[cfg(windows)]
+        assert!(snapshot(&path, &nested).is_err());
         std::fs::remove_dir_all(path).unwrap();
     }
 }
