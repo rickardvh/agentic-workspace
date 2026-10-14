@@ -59,8 +59,30 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission():
     merge = jobs["merge-sufficiency"]
     assert "github.event_name == 'pull_request'" in merge["if"]
     assert "uv build" not in str(merge)
-    assert set(jobs["readiness"]["needs"]) == {"merge-sufficiency", "security"}
+    assert set(jobs["readiness"]["needs"]) == {"merge-sufficiency", "security", "proof-modes-windows"}
+    assert jobs["proof-modes-windows"]["needs"] == "merge-sufficiency"
+    assert "needs.merge-sufficiency.outputs.windows-mode-scope == 'required'" in jobs["proof-modes-windows"]["if"]
     assert "github.event_name == 'workflow_dispatch'" in jobs["workspace-checks"]["if"]
+
+
+def test_ci_readiness_accepts_only_exactly_unrelated_windows_skips():
+    spec = importlib.util.spec_from_file_location("ci_results", ROOT / "src/tooling/check/check_ci_results.py")
+    assert spec and spec.loader
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    results = {"merge-sufficiency": {"result": "success"}, "security": {"result": "success"}, "proof-modes-windows": {"result": "skipped"}}
+    checker.require_success(results, windows_mode_scope="unrelated")
+    for scope in (None, "", "required", "unknown"):
+        with pytest.raises(ValueError):
+            checker.require_success(results, windows_mode_scope=scope)
+    for owner in results:
+        for failure in ("failure", "cancelled", None):
+            changed = {**results, owner: {"result": failure}}
+            with pytest.raises(ValueError):
+                checker.require_success(changed, windows_mode_scope="unrelated")
+    with pytest.raises(ValueError):
+        checker.require_success({"merge-sufficiency": {"result": "success"}}, windows_mode_scope="unrelated")
+    checker.require_success({**results, "proof-modes-windows": {"result": "success"}}, windows_mode_scope="required")
 
 
 def test_ci_supports_explicit_exact_source_validation():

@@ -53,19 +53,20 @@ disposition = { note_revision = "sha256:06332182cc9f0085b4c0d6d2bdf132ff607c8eb3
 note_type = "recurring-failures"
 canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
 task_relevance = "optional"
-semantic_routes = ["github/pr/review"]
-routes_from = ["src/agentic_workspace/workspace_runtime_*.py", ".agentic-workspace/planning/**"]
-stale_when = ["src/agentic_workspace/workspace_runtime_planning.py", "src/agentic_workspace/workspace_runtime_startup.py"]
+semantic_routes = ["planning/work/continuity", "github/pr/review", "memory/hygiene"]
+routes_from = ["src/core/src/modules/planning/**", ".agentic-workspace/planning/**", ".agentic-workspace/skills/workspace-startup/**", ".agentic-workspace/instructions/github-pr-review.md"]
+stale_when = [".agentic-workspace/skills/workspace-startup/SKILL.md", ".agentic-workspace/planning/skills/planning-work/references/intake.md", ".agentic-workspace/instructions/github-pr-review.md", "src/core/src/modules/planning/native_planning.rs"]
+dependencies = { ".agentic-workspace/instructions/github-pr-review.md" = "sha256:bce4d2f3c8db7fd051e6ea4abeda3206a9aea90146fa63da8bd52c2753132324", ".agentic-workspace/planning/skills/planning-work/references/intake.md" = "sha256:42c0b2c0519515b822e14e7ff5ecb536c36430fc9d56d370a738d7e6680d2dee", ".agentic-workspace/skills/workspace-startup/SKILL.md" = "sha256:cd7581be8d3f9fa33a364f685302d41a7d0bddec9bfb64de54aa3fa77d76579e", "SYSTEM_INTENT.md" = "sha256:7007426f9c89193b2a50f7a1fbcf650c3d2070a783fea3d0ac1c92c544e981ed", "docs/maintainer/repository-layout.md" = "sha256:4ab7112af2f1cc0bba0e237c702de2b0c1a3e55a300e0be45a50c88430aa649e", "src/core/src/modules/planning/native_planning.rs" = "sha256:5e63e35d456a4947faa3dc95e619cf919b654ef15c2693e52880a74362daca76" }
 
 [durable_facts."selected-plan-owned-next-task"]
 summary = "When current work belongs to the selected Planning owner, rebind from that owner and task; preserve older closeout residue separately instead of classifying the owned task as unrelated."
-owner = "planning-route-decision"
-evidence = [".agentic-workspace/memory/repo/mistakes/recurring-failures.md", "src/agentic_workspace/workspace_runtime_planning.py"]
+owner = "planning"
+evidence = [".agentic-workspace/memory/repo/mistakes/recurring-failures.md", ".agentic-workspace/planning/skills/planning-work/references/intake.md", "src/core/src/modules/planning/native_planning.rs"]
 authority_class = "advisory"
 note_ref = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md#failure-selected-plan-blocks-its-next-owned-task"
-promotion = "Promote when the route classifier can mechanically preserve the owner/task relation."
+promotion = "Promote only after the current Planning owner has accepted the complete selected-owner continuity lesson."
 demotion_or_expiry = "Retire after the stronger Planning owner prevents the recurrence and regression proof remains stable. After admitted promotion, retain only a stub."
-promotion_target = "planning-route-decision / issue #2566 or successor"
-promotion_trigger = "The same owner/task relation is classified independent-pending-scope after this fact was projected."
-preferred_remediation = "Make the structured Planning route classifier preserve selected-owner task relations."
+promotion_target = "Current Planning owner and planning-work intake procedure"
+promotion_trigger = "Fresh explicit owner selection still treats a task declared by that owner as unrelated after this fact was projected."
+preferred_remediation = "Repair the current Planning owner's task relation while preserving pending closeout obligations."
 elimination_target = "selected plan blocks its next owned task"

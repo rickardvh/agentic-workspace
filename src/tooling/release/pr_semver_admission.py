@@ -8,7 +8,7 @@ import tomllib
 from pathlib import Path
 
 sys.path.insert(0, "src/tooling")
-from release.pr_semver_integration import MAX_ARTIFACT_BYTES, admit_exact_tree_integration, make_admission
+from release.pr_semver_integration import MAX_ARTIFACT_BYTES, admit_exact_tree_integration, changed_paths, make_admission
 
 
 def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
@@ -50,12 +50,7 @@ def admit(*, event_path, base_ref, head_ref, admission_path, run_id, attempt):
         capture_output=True,
         text=True,
     ).stdout.strip()
-    changed = subprocess.run(
-        ["git", "diff", "--name-only", f"{base}...{pr['head']['sha']}"],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.splitlines()
+    changed = changed_paths(Path.cwd(), base, pr["head"]["sha"])
     cleanup = subprocess.run(
         ["git", "diff", "--name-status", "-M", f"{base}...{pr['head']['sha']}"],
         check=True,
