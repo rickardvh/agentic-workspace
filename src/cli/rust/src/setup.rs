@@ -59,7 +59,7 @@ fn report(state: &Value, status: &str) -> Value {
             }
         }
     }
-    json!({"status":status,"created":created,"updated":updated,"removed":removed,"preserved":state["preserved"],"conflicts":state["blockers"],"next":"Give your agent an ordinary task in this repository; AGENTS.md points to the installed startup skill."})
+    json!({"status":status,"created":created,"updated":updated,"removed":removed,"preserved":state["preserved"],"conflicts":state["blockers"],"custody_recovery":state["custody_recovery"],"next":"Give your agent an ordinary task in this repository; AGENTS.md points to the installed startup skill."})
 }
 
 fn render(value: &Value, json_output: bool) {
@@ -101,6 +101,25 @@ fn render(value: &Value, json_output: bool) {
     }
     if let Some(message) = value["continuation_message"].as_str() {
         println!("{message}");
+    }
+    if let Some(message) = value["setup_gap"].as_str() {
+        println!("{message}");
+    }
+    if let Some(message) = value["custody_recovery"]["message"].as_str() {
+        println!("{message}");
+        if let Some(version) = value["custody_recovery"]["artifact_hint"]["version"].as_str() {
+            println!("  Recorded former package version (authenticate independently): {version}");
+        }
+        for gap in value["custody_recovery"]["gaps"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            println!(
+                "  Recovery gap: {}",
+                gap.as_str().unwrap_or("unknown source")
+            );
+        }
     }
 }
 
@@ -251,6 +270,7 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
         });
     let state = decision.map_or(&owner["repository_adoption"], |d| &d["material"]);
     let mut summary = report(state, status);
+    summary["setup_gap"] = owner["migration_gap"].clone();
     if status == "already-current" {
         render(&summary, json_output);
         return Ok(());
