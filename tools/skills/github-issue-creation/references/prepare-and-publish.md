@@ -40,7 +40,11 @@
    material requires new preparation and renewed authorization. Discovery and
    preparation grant no GitHub write authority.
 5. The already-authorized host/actor sends `material.write` through its GitHub
-   transport. Preserve the packet and return an external report with its
+   transport. Prefer structured API data for title/body/labels. If `gh --body-file`
+   is used, write the body without platform newline translation, for example
+   `Path(body_path).write_bytes(packet["material"]["write"]["body"].encode("utf-8"))`.
+   Default text writers can change LF to CRLF on Windows and prevent exact
+   confirmation. Preserve the packet and return an external report with its
    `request_id`, `outcome` (`confirmed`, `rejected-before-effect`, or `uncertain`)
    and exact issue `number` when known. Rejection requires `effect_attempted:
    false` and a reason from the actor; a timeout or unsuccessful process is not
@@ -50,7 +54,12 @@
    transport, validates identity/title/body/labels against the request, and returns
    the observed issue or bounded recovery. It never creates an issue on resume.
    Missing identity, lost response, or mismatch requires transport reobservation;
-   never replay creation merely because continuation failed. Preserve actor
+   never replay creation merely because continuation failed. Keep observed
+   identity separately from material acceptance: `observed_issue` identifies the
+   existing object; `mismatches` names differing fields, and a `newline-only` body
+   difference remains unaccepted. Correct only the differing fields on that exact
+   issue through the authorized transport, then confirm the same packet/number.
+   The helper never normalizes content to accept a mismatch. Preserve actor
    evidence outside disposable carriage when recovery needs it; no local digest
    supplies GitHub exactly-once semantics or external authentication.
 7. Default continuation is none. Only when an existing current owner actually

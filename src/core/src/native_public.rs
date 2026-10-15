@@ -1365,6 +1365,34 @@ fn resolve_selected(
                         .ends_with(":source-reconciliation-required")
                 });
         }
+        let unavailable_relation = |relation: &Value| {
+            matches!(
+                relation["status"].as_str(),
+                Some("source-observation-required" | "scope-observation-required")
+            ) || relation["unavailable_sources"]
+                .as_object()
+                .is_some_and(|sources| !sources.is_empty())
+        };
+        if unavailable_relation(&reconciliation)
+            || reconciliation["relations"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(unavailable_relation)
+        {
+            let mut affects = vec!["claim:complete"];
+            if verification["execution"]["selection"].is_object()
+                || input
+                    .invocation
+                    .as_ref()
+                    .is_some_and(|invocation| invocation["operation_id"] == "proof.report")
+            {
+                affects.push("effect:proof-execution");
+            }
+            verification["contribution"]["blockers"].as_array_mut().unwrap().push(json!({
+                "code":"source-relation-observation-unavailable","message":"An applicable source relation cannot be observed; repair its precise source/scope gap before dependent proof. Unrelated reading and implementation remain available.",
+                "affects":affects,"recovery":"Inspect verification.source_reconciliation and its affected relation's unavailable_sources/reason, repair that source boundary and reobserve."}));
+        }
         if reconciliation["action"].is_object() {
             verification["contribution"]["actions"]
                 .as_array_mut()

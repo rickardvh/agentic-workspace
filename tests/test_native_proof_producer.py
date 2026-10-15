@@ -609,6 +609,81 @@ def test_native_isolated_proof_preserves_protected_source(tmp_path: Path, shared
         call({**context, "invocation": action})
 
 
+def test_native_isolated_proof_preserves_executable_intent_and_mode_freshness(tmp_path, shared_core_binary, native_cli):
+    if not shutil.which("docker"):
+        if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
+            pytest.fail("Required Docker proof executor is unavailable")
+        pytest.skip("Docker executor integration requires Docker")
+    image = subprocess.run(["docker", "image", "inspect", "ubuntu:24.04", "--format", "{{.Id}}"], capture_output=True, text=True)
+    if image.returncode:
+        if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
+            pytest.fail(image.stderr)
+        pytest.skip("Docker executor integration requires the ubuntu:24.04 fixture image")
+    context = fixture(tmp_path)
+    module = tmp_path / "src/example.py"
+    script = tmp_path / "scripts/run.sh"
+    module.parent.mkdir()
+    script.parent.mkdir()
+    module.write_bytes(b"print('ordinary module')\n")
+    script.write_bytes(b"#!/bin/sh\nexit 0\n")
+    module.chmod(0o644)
+    script.chmod(0o755)
+    command = (
+        "test $(id -u) = 10001; test ! -e /var/run/docker.sock; "
+        "test ! -x src/example.py; test -x scripts/run.sh; "
+        "if ! head -n 1 scripts/run.sh | grep -q '^#!'; then echo mode-lint-missing-shebang; exit 22; fi; echo verified"
+    )
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    text = manifest.read_text()
+    manifest.write_text(
+        text[: text.index("commands=")]
+        + "commands=["
+        + json.dumps(command)
+        + "]\n"
+        + '[execution]\nkind="docker-readonly-source-v1"\nimage='
+        + json.dumps(image.stdout.strip())
+        + '\ninputs=["a.txt","src","scripts"]\n'
+    )
+
+    def git(*args):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+
+    git("init", "-q")
+    git("add", ".")
+    git("update-index", "--chmod=+x", "scripts/run.sh")
+    git("update-index", "--chmod=-x", "src/example.py")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "mode authority")
+
+    def call(extra=None):
+        return consume("native", shared_core_binary, native_cli, {**context, **(extra or {})}, host_path=os.environ["PATH"])
+
+    request = call()["verification"]["execution_requests"][0]
+    action = call({"request": request})["decision_packet"]["primary_action"]
+    before = {path: (path.read_bytes(), path.stat().st_mode) for path in [module, script]}
+    result = call({"invocation": action})
+    assert result["value"]["process"]["status"] == "passed", result
+    assert before == {path: (path.read_bytes(), path.stat().st_mode) for path in [module, script]}
+    # A byte-identical change to the responsible mode authority invalidates the
+    # old selected action/receipt. Windows tests Git intent, never chmod on NTFS.
+    if os.name == "nt":
+        git("update-index", "--chmod=-x", "scripts/run.sh")
+    else:
+        script.chmod(0o644)
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call({"invocation": action})
+    if os.name == "nt":
+        git("update-index", "--chmod=+x", "scripts/run.sh")
+    else:
+        script.chmod(0o755)
+    # Executability remains deliberate: removing the header must cause an actual
+    # mode-sensitive command failure, not a false pass from clearing all modes.
+    script.write_bytes(b"exit 0\n")
+    fresh = call()["verification"]["execution_requests"][0]
+    bad_action = call({"request": fresh})["decision_packet"]["primary_action"]
+    failed = call({"invocation": bad_action})
+    assert failed["value"]["process"]["status"] == "failed", failed
+
+
 def test_native_missing_executor_is_a_capability_gap_not_a_human_choice(tmp_path, shared_core_binary, native_cli):
     context = fixture(tmp_path)
     manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
