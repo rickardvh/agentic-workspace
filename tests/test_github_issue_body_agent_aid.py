@@ -322,6 +322,38 @@ def test_rejection_observation_failure_and_mismatch_do_not_authorize_creation():
         observer=lambda *_: {"number": 7, "html_url": "https://github.com/owner/repo/issues/7", "title": "Different", "labels": []},
     )
     assert mismatch["status"] == "external-result-mismatch" and not mismatch["retry_creation"]
+    assert mismatch["material_acceptance"] == "not-accepted"
+    assert set(mismatch["mismatches"]) == {"title", "body", "labels"}
+    assert mismatch["mismatches"]["labels"]["missing_required"] == ["planning"]
+
+
+@pytest.mark.parametrize("body_change,category", [("crlf", "newline-only"), ("content", "content-difference")])
+def test_publication_body_mismatch_diagnoses_without_accepting_or_continuing(body_change, category):
+    request = issue_body.prepare_creation(_request(), repository="owner/repo", task="Publish shaped issue")
+    expected = request["material"]["write"]
+    body = expected["body"].replace("\n", "\r\n") if body_change == "crlf" else expected["body"] + "Changed content."
+    result = issue_body.continue_creation(
+        request,
+        {"request_id": request["request_id"], "outcome": "confirmed", "number": 7},
+        current=request,
+        observer=lambda *_: {
+            "number": 7,
+            "html_url": "https://github.com/owner/repo/issues/7",
+            "title": expected["title"],
+            "body": body,
+            "labels": [{"name": label} for label in expected["labels"]],
+        },
+        continuation=lambda _: pytest.fail("A mismatched body cannot continue"),
+    )
+    assert result["status"] == "external-result-mismatch"
+    assert result["effect_outcome"] == "unknown" and result["retry_creation"] is False
+    assert result["observed_issue"]["number"] == 7
+    assert set(result["mismatches"]) == {"body"}
+    diagnostic = result["mismatches"]["body"]
+    assert diagnostic["category"] == category
+    assert diagnostic["observed_utf8_bytes"] == len(body.encode("utf-8"))
+    assert diagnostic["observed_cr_count"] == body.count("\r")
+    assert body not in json.dumps(result)
 
 
 def test_compound_cli_resumes_after_missing_input_and_owner_failure(tmp_path, monkeypatch, capsys):

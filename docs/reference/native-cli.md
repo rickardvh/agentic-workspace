@@ -23,6 +23,15 @@ public command and option declarations come from `source_decision_contract.json`
 | `resources` | Inspect hygiene and propose or execute an admitted resource operation. |
 | `activation-index` | Check or derive a repository registry from procedure sources; `--input` supplies `registry` and `mode` (`check` or `write`). |
 
+`setup` reports `custody_recovery` when a fresh checkout lacks the local adoption
+record and replacement is blocked. `prior-artifact-required` supplies an
+untrusted former-package discovery hint and setup preview arguments;
+`unavailable` lists the source differences or missing identity. Only a matching,
+independently authenticated former artefact can reacquire local adoption through
+normal authorised setup. Its preview must propose no tracked package changes.
+Retry the selected new artefact afterwards. `--recover` remains limited to an
+interrupted existing effect. See [setup conflicts](../troubleshooting.md#updating-or-removing-aw-reports-conflicting-files).
+
 `start --target <repository> --task "<task>" --format json` reads current owner
 sources. Repeated `--changed` arguments declare changed paths. Supply a returned
 request through `--input <file>` or JSON stdin with `--input -`; a bounded array

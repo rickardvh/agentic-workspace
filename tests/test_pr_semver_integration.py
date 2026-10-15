@@ -8,6 +8,7 @@ import importlib.util
 import io
 import json
 import re
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -137,6 +138,38 @@ def stack(tmp_path, monkeypatch):
             "package": package,
         },
     )
+
+
+def test_windows_mode_admission_uses_exact_pr_and_push_changes(stack):
+    root, git, event, *_ = stack
+    assert checker.proof_mode_scope(root, event, "pull_request") == "unrelated"
+    base = event["pull_request"]["head"]["sha"]
+    owner = root / "src/core/src/modules/verification/proof_executor.rs"
+    owner.parent.mkdir(parents=True)
+    owner.write_text("mode owner changed\n")
+    git("add", ".")
+    git("commit", "-qm", "mode change")
+    head = git("rev-parse", "HEAD")
+    related = {"pull_request": {"base": {"sha": base}, "head": {"sha": head}}}
+    assert checker.proof_mode_scope(root, related, "pull_request") == "required"
+    assert checker.proof_mode_scope(root, {"before": base, "after": head}, "push") == "required"
+    git("rm", owner.relative_to(root).as_posix())
+    git("commit", "-qm", "mode owner deletion")
+    deleted = git("rev-parse", "HEAD")
+    assert checker.proof_mode_scope(root, {"before": head, "after": deleted}, "push") == "required"
+    (root / "unrelated.md").write_text("unrelated\n")
+    git("add", ".")
+    git("commit", "-qm", "unrelated change")
+    unrelated = git("rev-parse", "HEAD")
+    assert checker.proof_mode_scope(root, {"before": deleted, "after": unrelated}, "push") == "unrelated"
+    assert checker.proof_mode_scope(root, {"before": "0" * 40, "after": unrelated}, "push") == "required"
+    assert checker.proof_mode_scope(root, {}, "workflow_dispatch") == "required"
+    with pytest.raises(KeyError):
+        checker.proof_mode_scope(root, {}, "pull_request")
+    with pytest.raises(ValueError, match="exact source commits"):
+        checker.proof_mode_scope(root, {"before": "master", "after": head}, "push")
+    with pytest.raises(subprocess.CalledProcessError):
+        checker.proof_mode_scope(root, {"before": "1" * 40, "after": unrelated}, "push")
 
 
 @pytest.mark.parametrize("associations", ["empty", "missing"])

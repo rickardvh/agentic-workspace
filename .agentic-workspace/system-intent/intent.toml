@@ -5,11 +5,11 @@ governing_intents = ["Preserve only the context that is expensive to rediscover 
 anti_intents = ["Do not become a visible workflow framework the user must consciously operate.", "Do not grow a surface maze where every good idea becomes another durable file or command.", "Do not optimize one local step while making the overall loop heavier.", "Do not let package-owned and repo-owned artifacts blur into ambiguous authority.", "Do not create a skills runtime, mandatory workflow phase machine, hidden semantic classifier, or universal policy language.", "Do not treat successful validation, matched source records, or a published preview as whole-intent or stable-release acceptance.", "Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.", "Do not treat current local tooling preferences as durable package requirements without explicit justification."]
 decision_tests = ["Favor work that preserves human intent more faithfully across time.", "Favor work that makes bounded execution cheaper to start, continue, hand off, review, or finish.", "Favor work that removes, compresses, or backgrounds visible residue instead of adding new first-line surfaces.", "Favor work that sharpens ownership, preserves source-owned policy and currentness-bound interpretations, and makes important operating choices machine-consumable.", "Favor work that improves portability by reducing accidental repo-, language-, agent-, vendor-, or local-tool assumptions.", "Favor work that makes the correct action easy to construct before validation runs.", "Question work that mainly adds framework feel, narrative residue, or new visible concepts without replacing older ones.", "Question work that treats validation success alone as proof that the larger intent was satisfied.", "Question work that relies on repeated validation failures as the authoring interface for package-owned artifacts or workflows."]
 open_questions = []
-interpretation_notes = "Semantically reconciled on 2026-09-17 against every declared source, preserving the decision-value interpretation from PR #3395. SYSTEM_INTENT.md adds practical current-state sufficiency and meaningful re-anchoring: current owner facts and reachable references support continuation without requiring identical agent behavior, a global snapshot or a new belief-state store. Changed relevance requires reconsideration; delivery is not understanding; lost disposable carriage differs from missing irreplaceable evidence. README.md remains consistent with this source-owned skills-first model. Preserve architecture principles and existing ownership boundaries. This interpretation does not establish paired-history runtime proof or completion of issues #3393 or #3394. Reconciled the P1 customization navigation and facts-only module clarification on 2026-09-19: README now reaches the single ordinary-skill/instruction journey, and independently owned read-only facts can justify a module without persistent state. These changes preserve the existing skills-first, quiet, source-owned intent; no new governing goal or independent acceptance is inferred. Reconciled the documentation-style application on 2026-09-20: README uses British English, explains the general behaviour before its pagination example, and presents the existing trust boundary before adoption instructions. These editorial changes preserve the governing purpose, skills-first model, ownership, safety and support boundaries; no new capability or product direction is introduced. Reconciled the current first-contact README on 2026-09-23 for #3617: installation supplies the runtime and authorized setup supplies the enclave and pointer; provider discovery and support remain evidence-bound. The source-owned skills-first interpretation remains faithful. Bounded material and source-owned optional procedures preserve semantic agent judgment and binding owner authority. This judgment does not establish independent acceptance, real-agent success or lower total operating cost. Reviewed every declared source again on 2026-10-02 for #3772: current plain-language introductions and actionable owner requests preserve the existing quiet, skills-first, source-owned model. The retained interpretation remains faithful; source observations are refreshed without adding product goals or asserting independent review."
+interpretation_notes = "Semantically reconciled on 2026-09-17 against every declared source, preserving the decision-value interpretation from PR #3395. SYSTEM_INTENT.md adds practical current-state sufficiency and meaningful re-anchoring: current owner facts and reachable references support continuation without requiring identical agent behavior, a global snapshot or a new belief-state store. Changed relevance requires reconsideration; delivery is not understanding; lost disposable carriage differs from missing irreplaceable evidence. README.md remains consistent with this source-owned skills-first model. Preserve architecture principles and existing ownership boundaries. This interpretation does not establish paired-history runtime proof or completion of issues #3393 or #3394. Reconciled the P1 customization navigation and facts-only module clarification on 2026-09-19: README now reaches the single ordinary-skill/instruction journey, and independently owned read-only facts can justify a module without persistent state. These changes preserve the existing skills-first, quiet, source-owned intent; no new governing goal or independent acceptance is inferred. Reconciled the documentation-style application on 2026-09-20: README uses British English, explains the general behaviour before its pagination example, and presents the existing trust boundary before adoption instructions. These editorial changes preserve the governing purpose, skills-first model, ownership, safety and support boundaries; no new capability or product direction is introduced. Reconciled the current first-contact README on 2026-09-23 for #3617: installation supplies the runtime and authorized setup supplies the enclave and pointer; provider discovery and support remain evidence-bound. The source-owned skills-first interpretation remains faithful. Bounded material and source-owned optional procedures preserve semantic agent judgment and binding owner authority. This judgment does not establish independent acceptance, real-agent success or lower total operating cost. Reviewed every declared source again on 2026-10-02 for #3772: current plain-language introductions and actionable owner requests preserve the existing quiet, skills-first, source-owned model. The retained interpretation remains faithful; source observations are refreshed without adding product goals or asserting independent review. Reviewed every declared source on 2026-10-13 for #3872. README now leads with persistent, task-relevant repository context, explains saved task records, lessons and evidence, and makes optional components and small direct work explicit. These changes clarify the existing skills-first, source-owned model without changing governing purpose, semantic judgment, controlled effects, review or support boundaries. Canonical repository-layout guidance places shared domain authority in src/core and transport in src/cli; architecture scope now follows those sources and current tooling. Historical interpretation notes and every accepted principle remain preserved. Source currentness establishes this mirror only, not global task completion, independent acceptance or economic benefit."
 confidence = "high"
 needs_review = false
 preferred_source = "SYSTEM_INTENT.md"
-last_synced_at = "2026-10-02"
+last_synced_at = "2026-10-13"
 
 [[source_records]]
 path = "SYSTEM_INTENT.md"
@@ -21,9 +21,9 @@ line_count = 248
 [[source_records]]
 path = "README.md"
 present = true
-sha256 = "55920f86e2f60e013a005766e6324b3c829824666fa6394560e81ec8deaf672f"
+sha256 = "9a3ea4a3d313d6754ce73c52148df461d5bd17f469fd8af42157571192e684de"
 first_heading = "Agentic Workspace"
-line_count = 175
+line_count = 146
 
 [[architecture_principles]]
 id = "host-agnostic-agent-judgment"
@@ -69,15 +69,11 @@ affected_decisions = [
   "runtime-boundary-design"
 ]
 path_globs = [
-  "crates/agentic-workspace-core/src/**/*.rs",
-  "crates/agentic-workspace-cli/src/**/*.rs",
-  "src/agentic_workspace/workspace_runtime*.py",
-  "src/agentic_workspace/config.py",
-  "src/agentic_workspace/reporting_support.py",
-  "scripts/check/check_contract_tooling_surfaces.py",
-  "packages/memory/src/repo_memory_bootstrap/**/*.py",
-  "packages/planning/src/repo_planning_bootstrap/**/*.py",
-  "packages/verification/src/repo_verification_bootstrap/**/*.py"
+  "src/core/src/**/*.rs",
+  "src/cli/rust/src/**/*.rs",
+  "src/cli/python/agentic_workspace/**/*.py",
+  "src/cli/typescript/**/*.mjs",
+  "src/tooling/check/**/*.py"
 ]
 guardrail_refs = [
   "docs/maintainer/non-enum-keyword-routing-audit.json"

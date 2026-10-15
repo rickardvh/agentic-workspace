@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Observe large regular source identities without aborting unrelated startup, and deliver large reconciliation material by exact reference."
