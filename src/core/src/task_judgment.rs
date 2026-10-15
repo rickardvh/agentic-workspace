@@ -91,21 +91,27 @@ pub fn view(input: Value) -> Result<Value, CoreError> {
     for observation in input["observations"].as_array().unwrap() {
         let receipt = &observation["receipt"];
         let mut reasons = Vec::new();
-        if !candidate(&input, receipt) {
-            reasons.push("task-claim-mismatch-or-missing-identity");
-        }
-        if !task_bound(&input, receipt, &task_identity) {
-            reasons.push("exact-task-request-identity-mismatch");
+        // A command producer need not supply a semantic task judgment. Absence
+        // is an outstanding judgment, not a malformed native proof fingerprint.
+        if receipt["task_claim_judgment"].is_null() {
+            reasons.push("task-claim-judgment-missing");
+        } else {
+            if !candidate(&input, receipt) {
+                reasons.push("task-claim-mismatch-or-missing-identity");
+            }
+            if !task_bound(&input, receipt, &task_identity) {
+                reasons.push("exact-task-request-identity-mismatch");
+            }
+            let stored = &receipt["proof_subject"]["fingerprint"];
+            let judgment = &receipt["task_claim_judgment"]["proof_subject_fingerprint"];
+            if !fingerprint(stored) || !fingerprint(judgment) {
+                reasons.push("proof-subject-fingerprint-invalid");
+            } else if stored != judgment {
+                reasons.push("task-judgment-proof-subject-binding-mismatch");
+            }
         }
         if observation["publication_current"] != true {
             reasons.push("current-producer-publication-missing");
-        }
-        let stored = &receipt["proof_subject"]["fingerprint"];
-        let judgment = &receipt["task_claim_judgment"]["proof_subject_fingerprint"];
-        if !fingerprint(stored) || !fingerprint(judgment) {
-            reasons.push("proof-subject-fingerprint-invalid");
-        } else if stored != judgment {
-            reasons.push("task-judgment-proof-subject-binding-mismatch");
         }
         if observation["proof_sufficient"] != true {
             reasons.push("receipt-proof-insufficient");

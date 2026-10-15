@@ -17,6 +17,7 @@ pub(crate) struct Context<'a> {
     pub instructions: &'a Value,
     pub strategy: &'a Value,
     pub evidence: &'a [Value],
+    pub execution_requests: &'a [Value],
     pub source_revision: &'a str,
     pub contract: &'a Value,
 }
@@ -31,6 +32,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         instructions,
         strategy,
         evidence,
+        execution_requests,
         source_revision,
         contract,
     } = context;
@@ -94,6 +96,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
             gaps.push(format!("current-evidence-required:{}", e["reference"]));
         }
     }
+    let mut protocol_coverage = serde_json::Map::new();
     for (id, protocol) in strategy["protocols"].as_object().into_iter().flatten() {
         // A semantic reviewer grant cannot manufacture independent/maintainer evidence.
         if protocol.get("review_owner").is_some()
@@ -102,17 +105,19 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         {
             gaps.push(format!("required-review-producer:{id}"));
         }
-        let covered = evidence
+        let supporting: Vec<_> = evidence
             .iter()
             .filter(|e| e["checked_scope"]["claim"] == "selected-command-passed")
-            .any(|e| {
+            .filter(|e| {
                 let route = e["runtime_admission"]["command_coverage"]["route_id"]
                     .as_str()
                     .unwrap_or("");
                 strategy["proof_routes"][route]["protocol_refs"]
                     .as_array()
                     .is_some_and(|refs| refs.contains(&json!(id)))
-            });
+            })
+            .collect();
+        let covered = !supporting.is_empty();
         // An explicitly manual-only protocol has no command to authenticate.
         // Its semantic judgment and any separate producer requirement remain.
         let manual_only = protocol["commands"]
@@ -121,7 +126,31 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         if !covered && !manual_only {
             gaps.push(format!("protocol-evidence-required:{id}"));
         }
+        // Offer the existing source-linked route request, including its current
+        // applicability/strategy carriage. Coincident command text on a profile
+        // route supplies neither this linkage nor its protocol dependencies.
+        let next_requests: Vec<_> = execution_requests
+            .iter()
+            .filter(|request| {
+                std::iter::once(*request)
+                    .filter(|r| r.is_object())
+                    .chain(request.as_array().into_iter().flatten())
+                    .any(|r| {
+                        let route = r["arguments"]["route_id"].as_str().unwrap_or("");
+                        strategy["proof_routes"][route]["protocol_refs"]
+                            .as_array()
+                            .is_some_and(|refs| refs.contains(&json!(id)))
+                    })
+            })
+            .collect();
+        protocol_coverage.insert(id.clone(), json!({
+            "status":if manual_only {"manual-only"} else if covered {"current-command-evidence-satisfied"} else {"command-evidence-required"},
+            "evidence_refs":supporting.iter().map(|e| &e["reference"]).collect::<Vec<_>>(),
+            "next_requests":if covered || manual_only {vec![]} else {next_requests},
+            "authority":"Only current evidence from an explicitly protocol-linked route counts; profile selection and matching command text do not supply protocol authority."
+        }));
     }
+    result["protocol_coverage"] = json!(protocol_coverage);
     // Keep the cryptographic proposal once, in selected owner detail. Compile
     // only the decision-bearing material: binding bytes are not a second set of
     // instructions for the consumer. Applicable instruction text is delivered
@@ -132,8 +161,14 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         "instruction_sources":instructions["sources"].as_array().unwrap().iter()
             .filter(|r|r["applicable"]==true).map(|r|json!({"source":r["source"],
                 "binding_admission":r["binding_admission"]["status"],"requirements":r["metadata"]})).collect::<Vec<_>>(),
-        "protocol_obligations":strategy["protocols"],
-        "evidence":evidence.iter().map(|e|json!({"reference":e["reference"],"status":e["status"],
+        "protocol_obligations":strategy["protocols"],"protocol_coverage":protocol_coverage,
+        "evidence":stable_evidence.iter().map(|e|json!({"reference":e["reference"],"status":e["status"],
+            "admission_scope":e["admission_scope"],"publication_admission":e["publication_admission"],
+            "receipt_admission":e["receipt_admission"],"runtime_admission":{
+                "status":e["runtime_admission"]["status"],"strategy_coverage":e["runtime_admission"]["strategy_coverage"],
+                "environment_scope":e["runtime_admission"]["environment_scope"],"nested_tool_runtime":e["runtime_admission"]["nested_tool_runtime"],
+                "reason":e["runtime_admission"]["reason"]},
+            "task_judgment":e["task_judgment"],"limits":e["limits"],
             "claim":e["checked_scope"]["claim"],"command":e["checked_scope"]["command"],
             "route":e["runtime_admission"]["command_coverage"]["route_id"],"gaps":e["gaps"]})).collect::<Vec<_>>(),
         "gaps":gaps,"claim_limits":"Confirmation supplies this semantic judgment only. All current blockers, required evidence and independent/manual reviewer producers remain binding; it grants no review, approval or whole-task completion."});
