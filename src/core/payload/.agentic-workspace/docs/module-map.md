@@ -4,6 +4,11 @@ Use this file only when the current AW route asks for installed-capability orien
 
 Start with the configured `workspace-startup` route and current operating decision. A module should become visible because it is relevant, not because it is installed.
 
+With no `[modules]` selector, all three built-in owners are available. Explicit
+subsets and `[]` remain authoritative. Availability is separate from task
+relevance and working consumer setup: use the existing setup/domain procedure for
+an evidenced need, and leave unrelated plans, notes and proof state absent.
+
 ## Core rule
 
 Workspace resolves one current operating contract from source-owned repository context, runtime facts, repo customization, and admitted capability contributions.

@@ -63,7 +63,10 @@ Review the repository before allowing execution. See [security](security/threat-
 > what you changed and checked.
 
 A fresh session follows the installed `AGENTS.md` pointer without needing the
-setup conversation. Continue with [Everyday use](everyday-use.md). For updates,
+setup conversation. Planning, Memory and Verification are available when needed
+without selecting modules during installation. Availability does not establish
+their useful configuration; see the [default policy](package/modules.md#default-availability).
+Continue with [Everyday use](everyday-use.md). For updates,
 removal or saved data, see [Your repository and data](package/installed-surfaces.md);
 for an unsuccessful setup, see [Troubleshooting](troubleshooting.md).
 

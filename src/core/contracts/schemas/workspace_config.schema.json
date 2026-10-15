@@ -140,10 +140,11 @@
             ]
           },
           "uniqueItems": true,
-          "description": "Repo-owned enabled Agentic Workspace modules. Use [] for routing/config-only installs.",
+            "description": "Repo-owned available Agentic Workspace modules. Omitting [modules] makes Planning, Memory and Verification available; task relevance and useful setup remain separate. Explicit subsets and [] are authoritative; [] selects routing/config-only operation.",
           "default": [
             "planning",
-            "memory"
+              "memory",
+              "verification"
           ]
         }
       },
