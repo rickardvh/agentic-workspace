@@ -4,8 +4,13 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "Which requested behaviour or reported setup gap needs attention?",
+  "question": "Which task-relevant missing consumer, requested behaviour or reported setup gap needs attention?",
   "branches": [
+    {
+      "id": "consumers",
+      "description": "Relevant repository evidence requires useful setup before the task can continue",
+      "next": "references/consumers.md"
+    },
     {
       "id": "working-rules",
       "description": "Preserve an evidenced repository prerequisite before the action that needs it",

@@ -4,12 +4,125 @@ import copy
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import tomllib
 
 import pytest
 from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+@pytest.fixture(scope="module")
+def former_adoption_cli(tmp_path_factory):
+    """A frozen synthetic former payload, authenticated by its own compiled pair.
+
+    No former receipt is forged, no binary is downloaded, and the new artifact
+    never treats this fixture's portable inventory as replacement authority.
+    """
+    fixture = tmp_path_factory.mktemp("former-adoption-artifact")
+    source = fixture / "source"
+    tracked = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).decode().split("\0")
+    for name in filter(None, tracked):
+        destination = source / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, destination)
+    seed = source / "src/core/payload/.agentic-workspace/skills/workspace-startup/SKILL.md"
+    seed.write_bytes(seed.read_bytes() + b"\n<!-- Frozen former distribution payload. -->\n")
+    (source / ".agentic-workspace/skills/workspace-startup/SKILL.md").write_bytes(seed.read_bytes())
+    target = ROOT / "target/former-adoption-fixture"
+    subprocess.run(["cargo", "build", "--locked", "--workspace", "--bins", "--target-dir", str(target)], cwd=source, check=True)
+    installed = fixture / "installed"
+    installed.mkdir()
+    suffix = ".exe" if os.name == "nt" else ""
+    for name in ("agentic-workspace", "agentic-workspace-core"):
+        shutil.copy2(target / "debug" / (name + suffix), installed / (name + suffix))
+    return installed / ("agentic-workspace" + suffix)
+
+
+@pytest.mark.parametrize("change", ["unchanged", "edited", "unknown-identity", "unknown-artifact", "fence"])
+def test_fresh_clone_reacquires_only_through_authentic_former_setup(tmp_path, former_adoption_cli, native_cli, change):
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    subprocess.run(["git", "init", "-q", str(origin)], check=True)
+    config = origin / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("[workspace]\nenabled=false\n", encoding="utf-8")
+    (origin / "AGENTS.md").write_text("Keep the host instructions.\n", encoding="utf-8")
+    note = origin / ".agentic-workspace/memory/repo/domains/host.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("Host-owned knowledge.\n", encoding="utf-8")
+
+    def setup(cli, target, *args, success=True):
+        result = subprocess.run([str(cli), "setup", "--target", str(target), "--format", "json", *args], capture_output=True, text=True)
+        assert (result.returncode == 0) is success, result.stderr
+        return json.loads(result.stdout)
+
+    assert setup(former_adoption_cli, origin, "--yes")["effect_outcome"]["status"] == "committed"
+    subprocess.run(["git", "-C", str(origin), "add", "."], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(origin),
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "Former adoption",
+        ],
+        check=True,
+        capture_output=True,
+    )
+    clone = tmp_path / "clone"
+    subprocess.run(["git", "-c", "core.autocrlf=false", "clone", "-q", str(origin), str(clone)], check=True)
+    assert not (clone / ".agentic-workspace/local/effects").exists()
+    startup = clone / ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    if change == "edited":
+        startup.write_bytes(startup.read_bytes() + b"Host edit.\n")
+    elif change == "unknown-identity":
+        (clone / ".agentic-workspace/adoption.json").write_text("{}\n")
+    elif change == "unknown-artifact":
+        (clone / ".agentic-workspace/payload-provenance.json").write_text("{}\n")
+    elif change == "fence":
+        agents = clone / "AGENTS.md"
+        agents.write_text(agents.read_text().replace("Before repository work", "Changed host fence"))
+    preserved = {
+        p: (clone / p).read_bytes()
+        for p in (".agentic-workspace/config.toml", "AGENTS.md", ".agentic-workspace/memory/repo/domains/host.md")
+    }
+    before = {p: p.read_bytes() for p in clone.rglob("*") if p.is_file() and ".git" not in p.parts}
+    blocked = setup(native_cli, clone, "--dry-run", success=False)
+    recovery = blocked["custody_recovery"]
+    if change == "unknown-artifact":
+        assert recovery is None and blocked["setup_gap"]
+        assert before == {p: p.read_bytes() for p in before}
+        assert not (clone / ".agentic-workspace/local/effects").exists()
+        return
+    assert recovery["condition"] == "local-adoption-custody-absent"
+    assert recovery["status"] == ("prior-artifact-required" if change == "unchanged" else "unavailable")
+    assert before == {p: p.read_bytes() for p in before}
+    assert not (clone / ".agentic-workspace/local/effects").exists()
+    if change != "unchanged":
+        assert recovery["gaps"]
+        return
+    arguments = recovery["prior_setup"]["arguments"]
+    assert arguments[:2] == ["setup", "--target"] and arguments[3:] == ["--dry-run", "--format", "json"]
+    assert os.path.samefile(arguments[2], clone)
+    prior = setup(former_adoption_cli, clone, "--dry-run")
+    assert set(prior["created"]) <= {".agentic-workspace/local/.gitignore"}
+    assert not prior["updated"] and not prior["removed"]
+    assert setup(former_adoption_cli, clone, "--yes")["effect_outcome"]["status"] == "committed"
+    assert not subprocess.check_output(["git", "-C", str(clone), "diff", "--name-only"])
+    assert setup(native_cli, clone, "--yes")["effect_outcome"]["status"] == "committed"
+    assert setup(native_cli, clone, "--dry-run")["status"] == "already-current"
+    assert all((clone / path).read_bytes() == content for path, content in preserved.items())
+    ordinary = subprocess.run(
+        [str(native_cli), "start", "--target", str(clone), "--task", "Edit the host document"], capture_output=True, text=True, check=True
+    )
+    assert json.loads(ordinary.stdout)["status"] == "inactive"
 
 
 def test_configuration_maintenance_is_bound_and_restricts_effects(tmp_path, shared_core_binary, native_cli):

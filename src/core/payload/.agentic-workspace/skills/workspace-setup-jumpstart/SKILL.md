@@ -5,8 +5,11 @@ description: Resolve setup or configuration, preserve evidenced repository worki
 
 # Resolve the setup concern
 
-Use this method when the user asks to configure AW or `start` reports setup or
-refresh needing attention. Select a due job through the request in current
+Use this method when task-relevant repository evidence exposes useful missing
+setup, the user asks to configure AW, or `start` reports setup or refresh needing
+attention. For a missing task consumer, follow [consumer setup](references/consumers.md)
+directly; package currency and enabled modules do not settle that work.
+For a Configuration change, select a due job through the request in current
 `setup_context`. For explicit setup when ordinary entry is quiet, resolve this
 request in the same work context:
 
@@ -22,7 +25,7 @@ whether the intended consumer now works. Saved configuration bytes alone do not
 prove that result. Preserve explicit exclusions and unrelated settings, then
 return to the original task.
 
-During requested customisation, a relevant setup assessment or an explicit
+During relevant consumer setup, requested customisation, a setup assessment or an explicit
 enduring correction, also consider repository working rules evidenced by current
 instructions, scripts and user intent. Use [working rules](references/working-rules.md)
 to connect a necessary prerequisite to the action that needs it. Reuse adequate

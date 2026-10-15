@@ -15,6 +15,20 @@ audit. Unchanged reviewed setup stays quiet. For host exposure, choose the
 named skill or plugin's expose, remove or recovery request. Follow any returned
 plugin host-cache steps explicitly. Collisions and unsupported hosts remain gaps.
 
+If setup returns `custody_recovery.condition: local-adoption-custody-absent`,
+inspect its `status`, `gaps` and `artifact_hint`. A fresh checkout can contain the
+old package files without the local record required to replace them. The hint
+does not authenticate a former package. Establish its matching distribution or
+source independently through the repository's trusted installation route. Run
+that artifact with the returned `prior_setup.arguments`; authorise its normal
+setup only if the preview accepts the files without tracked package changes.
+Then use the selected new artifact with `resume.arguments`, authorise the exact
+refresh and confirm a second preview is `already-current`. Preserve disabled AW
+and local/domain state. If the former artifact is unavailable, or either preview
+finds edits, an unknown fence or changed policy, report that exact gap. Do not
+download or execute an unverified former binary, copy local records, infer
+permission from portable hashes, or use `--recover` for absent history.
+
 For assessment, answer the selected concern's question: what changed, what
 actually works, and what remains with another owner. Supply `judgment` and
 `reason`, plus `resume` naming the owner and next action for unfinished work.
