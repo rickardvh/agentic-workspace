@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve admitted native command evidence through claim confirmation, require current protocol semantics for coverage, and bound recovery separately from task judgment and runtime limits."

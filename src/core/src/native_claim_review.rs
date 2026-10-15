@@ -4,6 +4,7 @@ use crate::{CoreError, digest};
 use serde_json::{Value, json};
 use std::path::Path;
 pub(crate) const REQUEST: &str = "verification/review-claim/v1";
+const MAX_PROTOCOL_RECOVERY_BYTES: usize = 8192;
 pub(crate) fn declaration() -> Value {
     json!({"kind":REQUEST,"result_kind":"agentic-workspace/claim-review/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["reason","disposition","evidence_refs"],"properties":{"reason":{"type":"string","minLength":1,"maxLength":4096},"disposition":{"enum":["satisfied","insufficient"]},"evidence_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string"}},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]}}}})
 }
@@ -17,6 +18,7 @@ pub(crate) struct Context<'a> {
     pub instructions: &'a Value,
     pub strategy: &'a Value,
     pub evidence: &'a [Value],
+    pub execution_request: &'a dyn Fn(Value) -> Value,
     pub source_revision: &'a str,
     pub contract: &'a Value,
 }
@@ -31,6 +33,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         instructions,
         strategy,
         evidence,
+        execution_request,
         source_revision,
         contract,
     } = context;
@@ -94,6 +97,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
             gaps.push(format!("current-evidence-required:{}", e["reference"]));
         }
     }
+    let mut protocol_coverage = serde_json::Map::new();
     for (id, protocol) in strategy["protocols"].as_object().into_iter().flatten() {
         // A semantic reviewer grant cannot manufacture independent/maintainer evidence.
         if protocol.get("review_owner").is_some()
@@ -102,17 +106,22 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         {
             gaps.push(format!("required-review-producer:{id}"));
         }
-        let covered = evidence
+        let supporting: Vec<_> = evidence
             .iter()
             .filter(|e| e["checked_scope"]["claim"] == "selected-command-passed")
-            .any(|e| {
+            // Command/source/runtime reuse does not prove that the original
+            // execution covered the current route and protocol declarations.
+            .filter(|e| e["runtime_admission"]["sufficiency_currentness"] == "current")
+            .filter(|e| {
                 let route = e["runtime_admission"]["command_coverage"]["route_id"]
                     .as_str()
                     .unwrap_or("");
                 strategy["proof_routes"][route]["protocol_refs"]
                     .as_array()
                     .is_some_and(|refs| refs.contains(&json!(id)))
-            });
+            })
+            .collect();
+        let covered = !supporting.is_empty();
         // An explicitly manual-only protocol has no command to authenticate.
         // Its semantic judgment and any separate producer requirement remain.
         let manual_only = protocol["commands"]
@@ -121,7 +130,65 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         if !covered && !manual_only {
             gaps.push(format!("protocol-evidence-required:{id}"));
         }
+        protocol_coverage.insert(id.clone(), json!({
+            "status":if manual_only {"manual-only"} else if covered {"current-command-evidence-satisfied"} else {"command-evidence-required"},
+            "evidence_refs":supporting.iter().map(|e| &e["reference"]).collect::<Vec<_>>(),
+            "next_requests":[],"omitted_request_count":0,
+            "authority":"Only current evidence with unchanged route/protocol semantics from an explicitly protocol-linked route counts; profile selection and matching command text do not supply protocol authority."
+        }));
     }
+    // Recovery is one bounded candidate for the entire claim, not a second
+    // catalogue. Index current source linkage in one pass, only when uncovered
+    // protocols exist. Leave every obligation and alternative at its owner.
+    if protocol_coverage
+        .values()
+        .any(|row| row["status"] == "command-evidence-required")
+    {
+        let mut recovery_attempted = false;
+        for (route_id, route) in strategy["proof_routes"].as_object().into_iter().flatten() {
+            let uncovered: Vec<_> = route["protocol_refs"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .filter(|id| {
+                    protocol_coverage
+                        .get(*id)
+                        .is_some_and(|row| row["status"] == "command-evidence-required")
+                })
+                .collect();
+            if uncovered.is_empty() {
+                continue;
+            }
+            let Some(commands) = route["commands"].as_array() else {
+                continue;
+            };
+            for id in &uncovered {
+                let row = protocol_coverage.get_mut(*id).unwrap();
+                row["omitted_request_count"] =
+                    json!(row["omitted_request_count"].as_u64().unwrap() + commands.len() as u64);
+            }
+            if recovery_attempted {
+                continue;
+            }
+            if let Some(command) = commands.first() {
+                // Construct only the bounded offer, including the owner's
+                // current prerequisites, even when its optional catalogue was
+                // not requested by this compact claim continuation.
+                let request = execution_request(json!({"route_id":route_id,"command":command}));
+                recovery_attempted = true;
+                if serde_json::to_vec(&request)
+                    .is_ok_and(|bytes| bytes.len() <= MAX_PROTOCOL_RECOVERY_BYTES)
+                {
+                    let row = protocol_coverage.get_mut(uncovered[0]).unwrap();
+                    row["next_requests"] = json!([request]);
+                    row["omitted_request_count"] =
+                        json!(row["omitted_request_count"].as_u64().unwrap() - 1);
+                }
+            }
+        }
+    }
+    result["protocol_coverage"] = json!(protocol_coverage);
     // Keep the cryptographic proposal once, in selected owner detail. Compile
     // only the decision-bearing material: binding bytes are not a second set of
     // instructions for the consumer. Applicable instruction text is delivered
@@ -132,8 +199,18 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         "instruction_sources":instructions["sources"].as_array().unwrap().iter()
             .filter(|r|r["applicable"]==true).map(|r|json!({"source":r["source"],
                 "binding_admission":r["binding_admission"]["status"],"requirements":r["metadata"]})).collect::<Vec<_>>(),
-        "protocol_obligations":strategy["protocols"],
-        "evidence":evidence.iter().map(|e|json!({"reference":e["reference"],"status":e["status"],
+        "protocol_obligations":strategy["protocols"],"protocol_coverage":protocol_coverage,
+        "protocol_recovery_boundary":{"maximum_request_count":1,"maximum_request_bytes":MAX_PROTOCOL_RECOVERY_BYTES,
+            "alternatives_source":"/verification/execution_requests",
+            "use":"At most one source-linked candidate is offered for uncovered protocols. Use the current detail_refs /verification reference to inspect other execution_requests or an oversized candidate. Omitted choices and all protocol obligations retain their authority. Selecting or repeating a command is not itself protocol sufficiency."},
+        "evidence":stable_evidence.iter().map(|e|json!({"reference":e["reference"],"status":e["status"],
+            "admission_scope":e["admission_scope"],"publication_admission":e["publication_admission"],
+            "receipt_admission":e["receipt_admission"],"runtime_admission":{
+                "status":e["runtime_admission"]["status"],"strategy_coverage":e["runtime_admission"]["strategy_coverage"],
+                "sufficiency_currentness":e["runtime_admission"]["sufficiency_currentness"],
+                "environment_scope":e["runtime_admission"]["environment_scope"],"nested_tool_runtime":e["runtime_admission"]["nested_tool_runtime"],
+                "reason":e["runtime_admission"]["reason"]},
+            "task_judgment":e["task_judgment"],"limits":e["limits"],
             "claim":e["checked_scope"]["claim"],"command":e["checked_scope"]["command"],
             "route":e["runtime_admission"]["command_coverage"]["route_id"],"gaps":e["gaps"]})).collect::<Vec<_>>(),
         "gaps":gaps,"claim_limits":"Confirmation supplies this semantic judgment only. All current blockers, required evidence and independent/manual reviewer producers remain binding; it grants no review, approval or whole-task completion."});

@@ -562,14 +562,6 @@ fn receipt_view(
             json!({"status":"unresolved", "classifications":[{"reasons":[error.to_string()]}]})
         }
     };
-    gaps.extend(
-        judgment["classifications"][0]["reasons"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-            .map(str::to_owned),
-    );
     let subject = &receipt["proof_subject"];
     if subject["kind"] != "agentic-workspace/proof-subject/v1"
         || subject["identity_complete"] != true
@@ -596,20 +588,19 @@ fn receipt_view(
     if freshness["status"] != "reusable" {
         gaps.push("proof-runtime-compatibility-unproven".into());
         gaps.push("current-strategy-coverage-unproven".into());
-    } else {
-        gaps.push("nested-tool-runtime-unobserved".into());
     }
     let checked_scope = if publication["status"] == "admitted"
         && admission["proof_sufficient"] == true
         && admission["result_class"] == "passed"
         && freshness["status"] == "reusable"
+        && freshness["strategy_coverage"] == "selected-command-covered"
         && detail["status"] == "current"
         && subject["runtime"]["implementation"] == "native-aw-proof"
         && !gaps
             .iter()
             .any(|gap| gap.starts_with("proof-semantic-input"))
     {
-        json!({"task":task,"source_inputs":subject["source_inputs"],"claim":"selected-command-passed","completion_authority":false})
+        json!({"task":task,"source_inputs":subject["source_inputs"],"claim":"selected-command-passed","command":freshness["command_coverage"]["command"],"completion_authority":false})
     } else {
         Value::Null
     };
@@ -625,7 +616,7 @@ fn receipt_view(
     };
     let measurement_observations = crate::native_measurement::observations(&observed_detail);
     let future_value_candidate = crate::native_memory_learning::signal(&observed_detail);
-    json!({"reference":reference,"status":"unadmitted","measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
+    json!({"reference":reference,"status":if checked_scope.is_null(){"unadmitted"}else{"admitted"},"admission_scope":"selected-command","limits":["nested-tool-runtime-unobserved"],"measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
         "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }
@@ -1541,18 +1532,20 @@ pub(crate) fn view_with_applicability(
         &execution,
         &admission_contract["revision"],
     )?;
+    let execution_request = |choice: Value| {
+        let mut request = template.clone();
+        request["request_kind"] = json!("verification/execute-selected/v1");
+        request["id"] = json!("verification/execute-selected/v1");
+        request["arguments"] = choice;
+        request
+    };
     let execution_requests: Vec<Value> = execution["choices"]
         .as_array()
         .into_iter()
         .flatten()
         .filter(|_| applicability.detail || applicability.proof)
-        .map(|choice| {
-            let mut request = template.clone();
-            request["request_kind"] = json!("verification/execute-selected/v1");
-            request["id"] = json!("verification/execute-selected/v1");
-            request["arguments"] = choice.clone();
-            request
-        })
+        .cloned()
+        .map(&execution_request)
         .collect();
     let mut record_requests: Vec<Value> = execution_requests
         .iter()
@@ -1592,6 +1585,7 @@ pub(crate) fn view_with_applicability(
     };
     let execution_requests: Vec<Value> =
         execution_requests.into_iter().map(&with_context).collect();
+    let contextual_execution_request = |choice: Value| with_context(execution_request(choice));
     let record_requests: Vec<Value> = record_requests.into_iter().map(&with_context).collect();
     let visible_strategy = visible_strategy(
         &strategy,
@@ -1729,6 +1723,7 @@ pub(crate) fn view_with_applicability(
             instructions: &instruction_view,
             strategy: &strategy,
             evidence: &evidence,
+            execution_request: &contextual_execution_request,
             source_revision: &source_revision,
             contract: admission_contract,
         },
@@ -2083,7 +2078,12 @@ mod tests {
         request["arguments"]["evidence_refs"] = json!(["proof://receipts/example"]);
         let current = get(&repo, &["a.txt"], Some(request.clone()));
         let gaps = current["evidence"][0]["gaps"].as_array().unwrap();
-        assert!(gaps.contains(&json!("task-claim-mismatch-or-missing-identity")));
+        assert!(
+            current["evidence"][0]["task_judgment"]["classifications"][0]["reasons"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("task-claim-mismatch-or-missing-identity"))
+        );
         assert!(gaps.contains(&json!("publication-index-unavailable-or-invalid")));
         assert!(!gaps.contains(&json!("proof-semantic-input-stale-or-unavailable")));
         repo.write("a.txt", "two");
@@ -2184,7 +2184,7 @@ mod tests {
         );
         assert_eq!(unrelated["publication_admission"]["status"], "admitted");
         assert!(
-            unrelated["gaps"]
+            unrelated["task_judgment"]["classifications"][0]["reasons"]
                 .as_array()
                 .unwrap()
                 .contains(&json!("task-claim-mismatch-or-missing-identity"))

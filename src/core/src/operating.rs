@@ -769,8 +769,13 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             .iter()
             .map(|entry| {
                 json!({"reference":entry["reference"],
-                    "status":entry["runtime_admission"]["status"],
-                    "gaps":entry["runtime_admission"]["gaps"],
+                    "status":entry["status"],"admission_scope":entry["admission_scope"],
+                    "publication_admission":entry["publication_admission"]["status"],
+                    "receipt_admission":entry["receipt_admission"],
+                    "runtime_admission":entry["runtime_admission"]["status"],
+                    "sufficiency_currentness":entry["runtime_admission"]["sufficiency_currentness"],
+                    "task_judgment":entry["task_judgment"],
+                    "gaps":entry["gaps"],"limits":entry["limits"],
                     "freshness":entry["evidence_freshness"],
                     "checked_scope":entry["checked_scope"],
                     "proof_sufficient":entry["receipt_admission"]["proof_sufficient"]})

@@ -575,7 +575,7 @@ def test_published_passed_receipt_cannot_complete_unrelated_current_task(
     assert evidence["publication_admission"]["status"] == "admitted"
     assert evidence["receipt_admission"]["admitted"] is True
     assert evidence["status"] == "unadmitted"
-    assert "task-claim-mismatch-or-missing-identity" in evidence["gaps"]
+    assert "task-claim-mismatch-or-missing-identity" in evidence["task_judgment"]["classifications"][0]["reasons"]
     assert result["decision_packet"]["status"] != "terminal"
     (tmp_path / "a.txt").write_text("two")
     stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
