@@ -19,6 +19,12 @@ const SEMANTICS: &str = "memory-bounded-domain-decision-v2";
 const EFFECT: &str = "memory-state";
 const DEFAULT_ARCHIVE: &str = ".agentic-workspace/memory/repo/decisions";
 const MANIFEST: &str = ".agentic-workspace/memory/repo/manifest.toml";
+#[cfg(test)]
+thread_local! {
+    // The v1 issuer differs only in this recorded semantic revision for ordinary
+    // domain advice. Tests issue real requests/attempts before switching owners.
+    static ADVISORY_ISSUER: std::cell::Cell<&'static str> = const { std::cell::Cell::new("memory-bounded-advisory-v2") };
+}
 
 /// These are the two existing durable owners, not a caller-selectable registry.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -83,7 +89,16 @@ impl Destination {
     fn semantics(self) -> &'static str {
         match self {
             Self::Memory => SEMANTICS,
-            Self::Advisory => "memory-bounded-advisory-v1",
+            Self::Advisory => {
+                #[cfg(test)]
+                {
+                    ADVISORY_ISSUER.with(|version| version.get())
+                }
+                #[cfg(not(test))]
+                {
+                    "memory-bounded-advisory-v2"
+                }
+            }
             Self::Repository => "repository-bounded-domain-decision-v2",
         }
     }
@@ -300,9 +315,13 @@ fn revision_manifest(
         .map_err(err)?;
     crate::native_memory::validate_manifest(&manifest)?;
     let old = &manifest["notes"][source];
-    if old["note_type"] != "domain" || old["native_decision"] == true {
+    if !matches!(
+        old["note_type"].as_str(),
+        Some("domain" | "recurring-failures")
+    ) || old["native_decision"] == true
+    {
         return Err(err(
-            "Only declared ordinary domain advice can be revised here",
+            "Only declared ordinary domain or recurring-failure advice can be revised here",
         ));
     }
     if old["dependencies"] != *dependencies && !reviewed {
@@ -769,6 +788,8 @@ fn retained(target: &Path, source: &str) -> Result<Option<Value>, CoreError> {
         || args["target"] != target.to_str().unwrap()
         || binding["source"] != source
         || !(binding["semantics"] == destination.semantics()
+            || (destination == Destination::Advisory
+                && binding["semantics"] == "memory-bounded-advisory-v1")
             || (destination == Destination::Memory
                 && binding["semantics"] == "memory-bounded-human-decision-v1")
             || (destination == Destination::Repository
@@ -841,6 +862,47 @@ fn committed(root: &Dir, target: &Path, record: &Value) -> Result<bool, CoreErro
     let result = crate::attempt_store::read_source(target.to_str().unwrap(), &expected)?;
     let _ = raw;
     Ok(result["outcome"] == record["outcome"])
+}
+
+fn legacy_advisory(binding: &Value) -> bool {
+    binding["durable_owner"] == "advisory"
+        && binding["semantics"] == "memory-bounded-advisory-v1"
+        && Destination::Advisory.semantics() == "memory-bounded-advisory-v2"
+}
+
+fn capability_current(binding: &Value, contract: &Value) -> Result<bool, CoreError> {
+    if binding["capability_revision"].is_string()
+        && binding["capability_revision"] == contract["revision"]
+    {
+        return Ok(true);
+    }
+    if !legacy_advisory(binding) {
+        return Ok(false);
+    }
+    // Accept only the known v1 -> v2 owner revision. Reconstructing this exact
+    // old declaration keeps every other capability/schema/authority change stale.
+    let mut historical = contract.clone();
+    let Some(owner) = historical["owners"]
+        .as_array_mut()
+        .and_then(|owners| owners.iter_mut().find(|owner| owner["owner"] == "memory"))
+    else {
+        return Ok(false);
+    };
+    for name in ["memory.capture-advisory", "memory.recover-advisory"] {
+        let Some(operation) = owner["operations"]
+            .as_array_mut()
+            .and_then(|operations| operations.iter_mut().find(|op| op["id"] == name))
+        else {
+            return Ok(false);
+        };
+        if operation["semantic_revision"] != "memory-bounded-advisory-v2" {
+            return Ok(false);
+        }
+        operation["semantic_revision"] = json!("memory-bounded-advisory-v1");
+    }
+    owner["revision"] = json!(digest(&json!([owner["requests"], owner["operations"]]))?);
+    historical["revision"] = json!("pending");
+    Ok(binding["capability_revision"] == digest(&historical)?)
 }
 
 pub(crate) fn view_for(
@@ -976,10 +1038,11 @@ pub(crate) fn view_for_selected(
                         && b["work"] == *work
                         && b["scope"] == json!(scope)
                     {
-                        let retry = if read(&root, &source)?.is_none()
-                            || read(&root, &source)?.is_some_and(|bytes| {
-                                b["source_before"] == crate::native_intent::hash(&bytes)
-                            }) {
+                        let retry = if !legacy_advisory(b)
+                            && (read(&root, &source)?.is_none()
+                                || read(&root, &source)?.is_some_and(|bytes| {
+                                    b["source_before"] == crate::native_intent::hash(&bytes)
+                                })) {
                             record["invocation"]["arguments"]["request"].clone()
                         } else {
                             template(
@@ -1058,6 +1121,28 @@ pub(crate) fn view_for_selected(
                 destination,
             )?);
         if let Some(record) = retained(target, &named)?
+            && legacy_advisory(&record["invocation"]["arguments"]["binding"])
+            && !committed(&root, target, &record)?
+        {
+            // A prepared note may not yet exist in the archive. Re-entry with
+            // its existing ID discovers the held attempt; never replay its old
+            // authorization or replace it with the caller's new material.
+            let recovery = template(
+                destination.recover(),
+                json!({"source":named,"record_revision":digest(&record)?}),
+            );
+            return view_for_selected(
+                target,
+                work,
+                scope,
+                config,
+                contract,
+                (destination, context),
+                Some(&recovery),
+                selection,
+            );
+        }
+        if let Some(record) = retained(target, &named)?
             && record["invocation"]["arguments"]["request"] == *request
             && !committed(&root, target, &record)?
         {
@@ -1102,6 +1187,9 @@ pub(crate) fn view_for_selected(
         let post = record["invocation"]["arguments"]["post_revision"]
             .as_str()
             .unwrap();
+        let source_now = read(&root, source)?
+            .map(|b| json!(crate::native_intent::hash(&b)))
+            .unwrap_or(Value::Null);
         if args["record_revision"] != digest(&record)?
             || Destination::from_binding(binding)? != destination
             || binding
@@ -1110,7 +1198,7 @@ pub(crate) fn view_for_selected(
             || binding["work"] != *work
             || binding["scope"] != json!(scope)
             || binding["policy_revision"] != config["revision"]
-            || binding["capability_revision"] != contract["revision"]
+            || !capability_current(binding, contract)?
             || (binding.get("decision_authority").is_some()
                 && delegated(
                     config,
@@ -1123,7 +1211,8 @@ pub(crate) fn view_for_selected(
                 .is_none())
             || (committed(&root, target, &record)? && !cleanup_pending(&root, binding)?)
             || !manifest_current(&root, binding, true)?
-            || read(&root, source)?.is_none_or(|b| crate::native_intent::hash(&b) != post)
+            || source_now != json!(post)
+                && (destination != Destination::Advisory || source_now != binding["source_before"])
             || dependencies(
                 &root,
                 &json!(
@@ -1447,6 +1536,57 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
     }
     Ok(paths)
 }
+fn publish_source(
+    root: &Dir,
+    invocation: &Value,
+    revalidate: &mut dyn FnMut() -> Result<(), CoreError>,
+) -> Result<(), CoreError> {
+    let args = &invocation["arguments"];
+    let source = args["binding"]["source"].as_str().unwrap();
+    let bytes = material_bytes(&args["request"]["arguments"]["material"], &args["binding"])?;
+    if crate::native_intent::hash(&bytes) != args["post_revision"] {
+        return Err(err("Decision postimage changed"));
+    }
+    let temporary = format!("{source}.{}.tmp", &digest(invocation)?[7..]);
+    read(root, source)?;
+    root.create_dir_all(source.rsplit_once('/').unwrap().0)
+        .map_err(err)?;
+    read(root, source)?;
+    if let Some(existing) = read(root, &temporary)? {
+        if existing != bytes {
+            return Err(err("Unknown decision temporary preserved"));
+        }
+    } else {
+        let mut f = root
+            .open_with(&temporary, OpenOptions::new().write(true).create_new(true))
+            .map_err(err)?;
+        if args["binding"]["source_before"].is_string() {
+            f.set_permissions(root.metadata(source).map_err(err)?.permissions())
+                .map_err(err)?;
+        }
+        f.write_all(&bytes).map_err(err)?;
+        f.sync_all().map_err(err)?;
+    }
+    revalidate()?;
+    // Atomic no-clobber publication. Neither a race nor recovery can overwrite
+    // an externally created destination; the prepared source remains recoverable.
+    let existing = read(root, source)?
+        .map(|b| json!(crate::native_intent::hash(&b)))
+        .unwrap_or(Value::Null);
+    if existing == args["post_revision"] {
+        root.remove_file(&temporary).map_err(err)?;
+    } else if args["binding"]["source_before"].is_string() {
+        if existing != args["binding"]["source_before"] {
+            return Err(err("Advice changed before revision publication"));
+        }
+        root.rename(&temporary, root, source).map_err(err)?;
+    } else {
+        root.hard_link(&temporary, root, source).map_err(err)?;
+        root.remove_file(&temporary).map_err(err)?;
+    }
+    Ok(())
+}
+
 fn execute_checked(
     target: &Path,
     decision: &Value,
@@ -1492,6 +1632,9 @@ fn execute_checked(
     if invocation["operation_id"] == destination.operation(true) {
         let record = prior.ok_or_else(|| err("Decision recovery missing"))?;
         if destination == Destination::Advisory {
+            // Complete the original admitted publication, including a prepared
+            // source, under current recovery authority and its recorded custody.
+            publish_source(&root, &record["invocation"], revalidate)?;
             publish_manifest(&root, &args["binding"])?;
             let done = if committed(&root, target, &record)? {
                 crate::attempt_store::prepare_commit(
@@ -1595,38 +1738,7 @@ fn execute_checked(
         f.sync_all().map_err(err)?;
     }
     observe("prepared")?;
-    if let Some(existing) = read(&root, &temporary)? {
-        if existing != bytes {
-            return Err(err("Unknown decision temporary preserved"));
-        }
-    } else {
-        let mut f = root
-            .open_with(&temporary, OpenOptions::new().write(true).create_new(true))
-            .map_err(err)?;
-        if args["binding"]["source_before"].is_string() {
-            f.set_permissions(root.metadata(source).map_err(err)?.permissions())
-                .map_err(err)?;
-        }
-        f.write_all(&bytes).map_err(err)?;
-        f.sync_all().map_err(err)?;
-    }
-    revalidate()?;
-    // Atomic no-clobber publication. Neither a race nor recovery can overwrite
-    // an externally created destination; the prepared source remains recoverable.
-    let existing = read(&root, source)?
-        .map(|b| json!(crate::native_intent::hash(&b)))
-        .unwrap_or(Value::Null);
-    if existing == args["post_revision"] {
-        root.remove_file(&temporary).map_err(err)?;
-    } else if args["binding"]["source_before"].is_string() {
-        if existing != args["binding"]["source_before"] {
-            return Err(err("Advice changed before revision publication"));
-        }
-        root.rename(&temporary, &root, source).map_err(err)?;
-    } else {
-        root.hard_link(&temporary, &root, source).map_err(err)?;
-        root.remove_file(&temporary).map_err(err)?;
-    }
+    publish_source(&root, invocation, revalidate)?;
     observe("source-published")?;
     publish_manifest(&root, &args["binding"])?;
     observe("manifest-published")?;
@@ -1918,6 +2030,209 @@ mod tests {
     use super::*;
 
     #[test]
+    fn advisory_v1_upgrade_preserves_custody_recovers_and_revises() {
+        struct LegacyIssuer;
+        impl Drop for LegacyIssuer {
+            fn drop(&mut self) {
+                ADVISORY_ISSUER.with(|version| version.set("memory-bounded-advisory-v2"));
+            }
+        }
+        for stage in [
+            "committed",
+            "prepared",
+            "source-published",
+            "revision-prepared",
+        ] {
+            let target = std::env::temp_dir().join(format!(
+                "aw-advisory-upgrade-{stage}-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir_all(&target).unwrap();
+            std::fs::write(target.join("policy.md"), "Reuse the configured service.").unwrap();
+            let target = std::fs::canonicalize(target).unwrap();
+            let input = json!({"target":target,"task":"Keep useful service advice"});
+            let start = |request: Value| {
+                let mut input = input.clone();
+                input["request"] = request;
+                crate::native_public::start(input).unwrap()
+            };
+            let mut material = json!({"id":"fixture:upgrade","lesson":"Check the configured service before provisioning.","rationale":"Avoid redundant setup.","dependency_paths":["policy.md"],"routes_from":["src/**"]});
+            let request = |material: &Value| {
+                let mut request =
+                    start(Value::Null)["memory"]["advisory_capture"]["requests"][0].clone();
+                request["arguments"]["material"] = material.clone();
+                request
+            };
+            let ready = |request: Value| {
+                let proposal = start(request);
+                let mut answer =
+                    proposal["decision_packet"]["decision_request"]["response_request"].clone();
+                answer["arguments"]["answer"] = json!("confirm-retention");
+                start(answer)
+            };
+            ADVISORY_ISSUER.with(|version| version.set("memory-bounded-advisory-v1"));
+            let legacy_issuer = LegacyIssuer;
+            let mut offered = ready(request(&material));
+            if stage == "revision-prepared" {
+                let initial = offered["decision_packet"]["primary_action"].clone();
+                execute_checked(
+                    &target,
+                    &offered["decision_packet"],
+                    &initial,
+                    &mut || Ok(()),
+                    &mut |_| Ok(()),
+                )
+                .unwrap();
+                material["lesson"] = json!("Recheck current service policy before provisioning.");
+                let mut revision = request(&material);
+                revision["arguments"]["revise_source"] =
+                    initial["arguments"]["binding"]["source"].clone();
+                revision["arguments"]["source_revision"] =
+                    initial["arguments"]["post_revision"].clone();
+                offered = ready(revision);
+            }
+            let original = offered["decision_packet"]["primary_action"].clone();
+            let source = original["arguments"]["binding"]["source"].as_str().unwrap();
+            assert_eq!(
+                original["arguments"]["binding"]["semantics"],
+                "memory-bounded-advisory-v1"
+            );
+            let result = execute_checked(
+                &target,
+                &offered["decision_packet"],
+                &original,
+                &mut || Ok(()),
+                &mut |at| {
+                    if stage != "committed"
+                        && at
+                            == if stage == "revision-prepared" {
+                                "prepared"
+                            } else {
+                                stage
+                            }
+                    {
+                        Err(err("lost v1 publication reply"))
+                    } else {
+                        Ok(())
+                    }
+                },
+            );
+            assert_eq!(result.is_ok(), stage == "committed");
+            drop(legacy_issuer);
+
+            let root = Dir::open_ambient_dir(&target, ambient_authority()).unwrap();
+            let record = retained(&target, source).unwrap().unwrap();
+            let original_marker = read(&root, &marker(source).unwrap()).unwrap().unwrap();
+            let attempt_path = record["custody"]["attempt"]["path"].as_str().unwrap();
+            let original_attempt = read(&root, attempt_path).unwrap().unwrap();
+            assert_eq!(record["invocation"], original);
+            assert!(
+                crate::native_public::invoke_checked(
+                    json!({"target":target,"task":input["task"],"invocation":original})
+                )
+                .is_err(),
+                "never replay the old authorization after upgrading"
+            );
+            if stage != "committed" {
+                let pending_request = || {
+                    let mut current = request(&material);
+                    if stage == "revision-prepared" {
+                        current["arguments"]["revise_source"] = json!(source);
+                        current["arguments"]["source_revision"] =
+                            original["arguments"]["binding"]["source_before"].clone();
+                    }
+                    current
+                };
+                let current = if matches!(stage, "prepared" | "revision-prepared") {
+                    start(pending_request())
+                } else {
+                    start(Value::Null)
+                };
+                let recovery = current["decision_packet"]["primary_action"].clone();
+                assert_eq!(recovery["operation_id"], "memory.recover-advisory");
+                assert_eq!(
+                    recovery["arguments"]["binding"]["semantics"],
+                    "memory-bounded-advisory-v1"
+                );
+                assert!(
+                    capability_current(
+                        &record["invocation"]["arguments"]["binding"],
+                        &current["capability_contract"]
+                    )
+                    .unwrap()
+                );
+                let mut drifted = current["capability_contract"].clone();
+                drifted["restriction_authorities"][0]["affects"][0] = json!("changed-authority");
+                drifted["revision"] = json!("pending");
+                drifted["revision"] = json!(digest(&drifted).unwrap());
+                assert!(
+                    !capability_current(&record["invocation"]["arguments"]["binding"], &drifted)
+                        .unwrap()
+                );
+                std::fs::write(target.join("policy.md"), "Changed service policy.").unwrap();
+                assert!(
+                    crate::native_public::invoke_checked(
+                        json!({"target":target,"task":input["task"],"invocation":recovery})
+                    )
+                    .is_err()
+                );
+                assert_eq!(
+                    read(&root, &marker(source).unwrap()).unwrap().unwrap(),
+                    original_marker
+                );
+                std::fs::write(target.join("policy.md"), "Reuse the configured service.").unwrap();
+                let fresh = if matches!(stage, "prepared" | "revision-prepared") {
+                    start(pending_request())
+                } else {
+                    start(Value::Null)
+                };
+                let recovered = crate::native_public::invoke_checked(json!({"target":target,"task":input["task"],"invocation":fresh["decision_packet"]["primary_action"]})).unwrap();
+                assert_eq!(recovered["effect_outcome"]["status"], "committed");
+            }
+            assert_eq!(
+                read(&root, &marker(source).unwrap()).unwrap().unwrap(),
+                original_marker
+            );
+            assert_eq!(
+                read(&root, attempt_path).unwrap().unwrap(),
+                original_attempt
+            );
+            let revision = original["arguments"]["post_revision"].clone();
+            assert!(confirmed_publication(&target, source, &revision).is_ok());
+            assert_eq!(
+                start(request(&material))["memory"]["advisory_capture"]["status"],
+                "unchanged"
+            );
+            let mut changed = material.clone();
+            changed["lesson"] =
+                json!("Read current policy and check the configured service before provisioning.");
+            let mut revise = request(&changed);
+            revise["arguments"]["revise_source"] = json!(source);
+            revise["arguments"]["source_revision"] = revision;
+            let revised = ready(revise);
+            assert_eq!(
+                revised["decision_packet"]["primary_action"]["arguments"]["binding"]["semantics"],
+                "memory-bounded-advisory-v2"
+            );
+            crate::native_public::invoke_checked(json!({"target":target,"task":input["task"],"invocation":revised["decision_packet"]["primary_action"]})).unwrap();
+            assert_eq!(
+                retained(&target, source).unwrap().unwrap()["invocation"]["arguments"]["binding"]["semantics"],
+                "memory-bounded-advisory-v2"
+            );
+            std::fs::write(target.join("policy.md"), "Later policy drift.").unwrap();
+            let current_revision = json!(crate::native_intent::hash(
+                &std::fs::read(target.join(source)).unwrap()
+            ));
+            assert!(confirmed_publication(&target, source, &current_revision).is_err());
+            std::fs::remove_dir_all(target).unwrap();
+        }
+    }
+
+    #[test]
     fn historical_human_material_keeps_its_provenance() {
         let material = json!({"id":"fixture:history","decision":"Keep the boundary",
             "consequence":"Preserve scope", "rationale":"A durable fixture choice",
@@ -2035,6 +2350,28 @@ mod tests {
         let source = published["value"]["source"].as_str().unwrap();
         let root = Dir::open_ambient_dir(&target, ambient_authority()).unwrap();
         let old_body = std::fs::read(target.join(source)).unwrap();
+        // Revising ordinary recurrence advice preserves its declared category;
+        // callers must not relabel it as domain advice to use the publisher.
+        let manifest_path = target.join(MANIFEST);
+        let manifest = std::fs::read_to_string(&manifest_path).unwrap();
+        std::fs::write(
+            &manifest_path,
+            manifest.replace(
+                "note_type = \"domain\"",
+                "note_type = \"recurring-failures\"",
+            ),
+        )
+        .unwrap();
+        let recurring = std::fs::read_to_string(&manifest_path).unwrap();
+        for governing in [
+            recurring.replace("\"recurring-failures\"", "\"decision\""),
+            recurring.replace("note_type =", "native_decision = true\nnote_type ="),
+        ] {
+            std::fs::write(&manifest_path, governing).unwrap();
+            assert!(revision_manifest(&root, source, &json!({}), &json!({}), true).is_err());
+            assert_eq!(std::fs::read(target.join(source)).unwrap(), old_body);
+        }
+        std::fs::write(&manifest_path, recurring).unwrap();
         let unchanged = request_for(&material, Some(source));
         assert_eq!(
             start(unchanged)["memory"]["advisory_capture"]["status"],
@@ -2092,6 +2429,12 @@ mod tests {
                 crate::native_public::invoke_checked(json!({"target":target,"task":input["task"],"invocation":recovered["decision_packet"]["primary_action"]})).unwrap();
             }
             let record = retained(&target, source).unwrap().unwrap();
+            let manifest: toml::Value =
+                toml::from_str(&std::fs::read_to_string(&manifest_path).unwrap()).unwrap();
+            assert_eq!(
+                manifest["notes"][source]["note_type"].as_str(),
+                Some("recurring-failures")
+            );
             assert!(committed(&root, &target, &record).unwrap());
             assert!(
                 !cleanup_pending(&root, &record["invocation"]["arguments"]["binding"]).unwrap()

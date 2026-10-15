@@ -23,6 +23,17 @@ ADMISSION_WORKFLOWS = (WORKFLOW, ".github/workflows/ci.yml")
 ADMISSION_KIND = "agentic-workspace/pr-semver-admission/v1"
 ADMISSION_FILE = "semver-admission.json"
 MAX_ARTIFACT_BYTES = 1024 * 1024
+WINDOWS_MODE_INPUTS = {
+    "src/core/src/modules/verification/proof_executor.rs",
+    "src/core/src/modules/verification/native_verification.rs",
+    "Cargo.toml",
+    "Cargo.lock",
+    "src/core/Cargo.toml",
+    "rust-toolchain.toml",
+    ".github/workflows/ci.yml",
+    "src/tooling/release/pr_semver_integration.py",
+    "src/tooling/check/check_ci_results.py",
+}
 
 
 def github(endpoint: str) -> Any:
@@ -35,6 +46,41 @@ def github_bytes(endpoint: str) -> bytes:
 
 def git(root: Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, encoding="utf-8", timeout=30).stdout.strip()
+
+
+def changed_paths(root: Path, base: str, head: str) -> list[str]:
+    """The exact source diff shared by semver and the bounded Windows owner gate."""
+    return [
+        path
+        for path in subprocess.run(
+            ["git", "diff", "--name-only", "-z", f"{base}...{head}"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            encoding="utf-8",
+            timeout=30,
+        ).stdout.split("\0")
+        if path
+    ]
+
+
+def proof_mode_scope(root: Path, event: dict, event_name: str) -> str:
+    """Admit Windows allocation from exact PR/push changes, or explicit replay."""
+    if event_name == "workflow_dispatch":
+        return "required"
+    if event_name == "pull_request":
+        base, head = event["pull_request"]["base"]["sha"], event["pull_request"]["head"]["sha"]
+    elif event_name == "push":
+        base, head = event["before"], event["after"]
+    else:
+        raise ValueError("Unsupported Windows proof scope event")
+    if not all(re.fullmatch(r"[0-9a-f]{40}", value) for value in (base, head)) or head == "0" * 40:
+        raise ValueError("Windows proof scope requires exact source commits")
+    if not ancestor(root, head, git(root, "rev-parse", "HEAD")):
+        raise ValueError("Windows proof scope head is absent from the checked-out source")
+    if base == "0" * 40:
+        return "required"
+    return "required" if WINDOWS_MODE_INPUTS.intersection(changed_paths(root, base, head)) else "unrelated"
 
 
 def ancestor(root: Path, commit: str, descendant: str) -> bool:
