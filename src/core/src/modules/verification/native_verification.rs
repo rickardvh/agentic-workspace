@@ -1532,18 +1532,20 @@ pub(crate) fn view_with_applicability(
         &execution,
         &admission_contract["revision"],
     )?;
+    let execution_request = |choice: Value| {
+        let mut request = template.clone();
+        request["request_kind"] = json!("verification/execute-selected/v1");
+        request["id"] = json!("verification/execute-selected/v1");
+        request["arguments"] = choice;
+        request
+    };
     let execution_requests: Vec<Value> = execution["choices"]
         .as_array()
         .into_iter()
         .flatten()
         .filter(|_| applicability.detail || applicability.proof)
-        .map(|choice| {
-            let mut request = template.clone();
-            request["request_kind"] = json!("verification/execute-selected/v1");
-            request["id"] = json!("verification/execute-selected/v1");
-            request["arguments"] = choice.clone();
-            request
-        })
+        .cloned()
+        .map(&execution_request)
         .collect();
     let mut record_requests: Vec<Value> = execution_requests
         .iter()
@@ -1583,6 +1585,7 @@ pub(crate) fn view_with_applicability(
     };
     let execution_requests: Vec<Value> =
         execution_requests.into_iter().map(&with_context).collect();
+    let contextual_execution_request = |choice: Value| with_context(execution_request(choice));
     let record_requests: Vec<Value> = record_requests.into_iter().map(&with_context).collect();
     let visible_strategy = visible_strategy(
         &strategy,
@@ -1720,7 +1723,7 @@ pub(crate) fn view_with_applicability(
             instructions: &instruction_view,
             strategy: &strategy,
             evidence: &evidence,
-            execution_requests: &execution_requests,
+            execution_request: &contextual_execution_request,
             source_revision: &source_revision,
             contract: admission_contract,
         },

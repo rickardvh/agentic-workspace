@@ -773,6 +773,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                     "publication_admission":entry["publication_admission"]["status"],
                     "receipt_admission":entry["receipt_admission"],
                     "runtime_admission":entry["runtime_admission"]["status"],
+                    "sufficiency_currentness":entry["runtime_admission"]["sufficiency_currentness"],
                     "task_judgment":entry["task_judgment"],
                     "gaps":entry["gaps"],"limits":entry["limits"],
                     "freshness":entry["evidence_freshness"],

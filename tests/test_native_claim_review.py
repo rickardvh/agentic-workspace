@@ -91,6 +91,7 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     assert evidence["gaps"] == []
     assert evidence["limits"] == ["nested-tool-runtime-unobserved"]
     assert decision["material"]["protocol_coverage"]["check"]["status"] == "current-command-evidence-satisfied"
+    assert proposed["verification"]["evidence"][0]["runtime_admission"]["sufficiency_currentness"] == "current"
     answer = decision["response_request"]
     answer["arguments"]["answer"] = "confirm"
     reentry = [answer]
@@ -119,6 +120,43 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
         assert {"effect:implementation", "claim:complete", "claim:pr-complete"} <= set(blocker["affects"])
         # No current transport claims it can produce already-materialized work.
         assert reviewed["task_requirements"]["assignment"]["requests"] == []
+    if not binding_assignment:
+        # Reusable command evidence must not acquire an amended protocol's
+        # semantics. A fresh judgment over the carried receipt still needs
+        # current protocol evidence; the original command is never replayed.
+        manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+        original = manifest.read_bytes()
+        manifest.write_bytes(original.replace(b"[protocols.check]", b'[protocols.check]\nsteps=["Inspect the amended requirement"]'))
+        request = call()["verification"]["claim_review"]["request"]
+        request["arguments"].update(
+            disposition="satisfied",
+            reason="Reuse only the original command observation against the revised requirements.",
+            evidence_refs=answer["arguments"]["evidence_refs"],
+        )
+        revised = call(request=request)
+        claim = revised["verification"]["claim_review"]
+        evidence = revised["verification"]["evidence"][0]
+        assert evidence["status"] == "admitted"
+        assert evidence["checked_scope"]["claim"] == "selected-command-passed"
+        assert evidence["runtime_admission"]["status"] == "reusable"
+        assert evidence["runtime_admission"]["strategy_coverage"] == "selected-command-covered"
+        assert evidence["runtime_admission"]["sufficiency_currentness"] == "changed"
+        assert claim["protocol_coverage"]["check"]["status"] == "command-evidence-required"
+        assert claim["protocol_coverage"]["check"]["next_requests"]
+        recovery = claim["protocol_coverage"]["check"]["next_requests"][0]
+        selected = call(request=recovery)["decision_packet"]["primary_action"]
+        assert selected["arguments"]["selection"]["strategy"]["protocols"]["check"]["steps"] == ["Inspect the amended requirement"]
+        # The compiled public decision carries the exact owner confirmation.
+        confirmation = next(
+            d for d in revised["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review"
+        )["response_request"]
+        confirmation["arguments"]["answer"] = "confirm"
+        final = call(request=confirmation)["verification"]["claim_review"]
+        assert final["status"] == "insufficient"
+        assert final["gaps"] == ["protocol-evidence-required:check"]
+        manifest.write_bytes(original)
+        assert call(request=reentry)["verification"]["claim_review"]["status"] == "current"
+        assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     (tmp_path / "a.txt").write_text("Changed resulting work")
     with pytest.raises(AssertionError, match="stale"):
         call(request=reentry)
@@ -250,6 +288,75 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
         call(forged)
     assert call(final_input)["verification"]["evidence"][0]["status"] == "admitted"
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+
+
+def test_protocol_recovery_bounds_presentation_without_hiding_source_alternatives(tmp_path, shared_core_binary, native_cli):
+    (tmp_path / "a.txt").write_text("current source")
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    protocol_ids = [f"check_{i:02}" for i in range(8)]
+    manifest.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        + "".join(
+            f'[protocols.{name}]\napplies_to_paths=["a.txt"]\ncommands='
+            + json.dumps([f"echo {name}-choice-{choice:02}" for choice in range(80)])
+            + "\n"
+            for name in protocol_ids
+        )
+    )
+    context = {"target": str(tmp_path), "task": "Judge current protocol coverage with many source alternatives", "changed": ["a.txt"]}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    initial = call()
+    request = initial["verification"]["claim_review"]["request"]
+    request["arguments"].update(disposition="satisfied", reason="Inspect all current source obligations before any execution.")
+    proposed = call(request=request)
+    claim = proposed["verification"]["claim_review"]
+    coverage = claim["protocol_coverage"]
+    offered = [request for row in coverage.values() for request in row["next_requests"]]
+    assert len(offered) == 1
+    assert len(json.dumps(offered).encode()) < 8192
+    assert set(coverage) == set(protocol_ids)
+    assert all(row["status"] == "command-evidence-required" for row in coverage.values())
+    assert sum(row["omitted_request_count"] for row in coverage.values()) == 639
+    assert len(proposed["verification"]["execution_requests"]) == 640
+    decision = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")
+    assert decision["material"]["gaps"] == [f"protocol-evidence-required:{name}" for name in protocol_ids]
+    compact = call(request=request, projection="compact")
+    compact_decision = next(
+        d
+        for d in [compact["decision_packet"]["decision_request"], *compact["decision_packet"]["pending_consequences"]["decisions"]]
+        if d and d["id"] == "verification-claim-review"
+    )
+    assert compact_decision["material"]["protocol_coverage"] == coverage
+    detail = consume(
+        "native",
+        shared_core_binary,
+        native_cli,
+        {**compact["reentry"], "reference": compact["detail_refs"]["/verification"]},
+        host_path=os.environ["PATH"],
+    )
+    assert len(detail["value"]["execution_requests"]) == 640
+    assert call(request=offered[0])["decision_packet"]["primary_action"]["operation_id"] == "proof.report"
+    # The bounded offer is a candidate, not the sole authorised choice. The last
+    # omitted source alternative remains selectable under unchanged authority.
+    last = proposed["verification"]["execution_requests"][-1]
+    selected = call(request=last)["decision_packet"]["primary_action"]
+    assert selected["arguments"]["selection"]["choice"] == {"route_id": "protocol:check_07", "command": "echo check_07-choice-79"}
+    # An oversized first candidate is left at the owner, rather than expanding
+    # the semantic answer or constructing a replacement catalogue to find one.
+    manifest.write_text(manifest.read_text().replace(json.dumps("echo check_00-choice-00"), json.dumps("echo " + "x" * 8100)))
+    enlarged = call()
+    request = enlarged["verification"]["claim_review"]["request"]
+    request["arguments"].update(disposition="satisfied", reason="Keep oversized recovery at its current source owner.")
+    bounded = call(request=request)["verification"]
+    coverage = bounded["claim_review"]["protocol_coverage"]
+    assert all(row["next_requests"] == [] for row in coverage.values())
+    assert sum(row["omitted_request_count"] for row in coverage.values()) == 640
+    assert len(bounded["execution_requests"]) == 640
+    assert not (tmp_path / ".agentic-workspace/local/proof-receipts").exists()
 
 
 def test_claim_review_keeps_planning_subject_and_unfinished_work(tmp_path, shared_core_binary, native_cli):
