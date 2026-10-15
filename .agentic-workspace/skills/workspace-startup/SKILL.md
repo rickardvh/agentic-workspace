@@ -49,6 +49,15 @@ threshold determines it. Unrelated remembered plans remain inert.
 
 Then decide what other information the next action needs:
 
+- If the repository sources needed for this task expose a useful missing setup
+  connection, complete it through [consumer setup](../workspace-setup-jumpstart/references/consumers.md)
+  before the dependent action. For example, documented checking rules may have
+  no usable selected proof route, or a source-backed lesson may need selective
+  future recall. This applies after basic configuration and relevant updates,
+  even when package setup says `already-current` or modules are `owner-managed`.
+  Infer authorised choices from those sources; do not wait for a setup request.
+  Missing files alone imply no work. Reuse current consumers and settled
+  deferrals; unrelated small work needs no setup pass or extra command.
 - When the user asks to review what is known about the repository and find useful
   improvements, use the existing correction method's [selected improvement
   review](../workspace-instruction-correction/references/review.md). It discovers

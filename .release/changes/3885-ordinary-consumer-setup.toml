@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Complete task-relevant consumer setup from repository evidence during ordinary agent work, verifying actual behaviour and preserving quiet unrelated use."
