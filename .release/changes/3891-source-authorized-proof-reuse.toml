@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reuse source-authorized proof through claim closeout while retaining unproved instruction checks and distinct external authority."

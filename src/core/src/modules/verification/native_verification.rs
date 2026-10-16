@@ -1613,7 +1613,7 @@ pub(crate) fn view_with_applicability(
             gaps.push("current-task-strategy-requires-owner-judgment".into());
         }
     }
-    let packet = (applicable && applicability.detail).then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
+    let mut packet = (applicable && applicability.detail).then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
         "task_identity":current_work,"task_claim_identity":direct_subject,"work_ref":work_ref,"work_revision":work_revision,"planning_subject":planning_subject,
         "acceptance_source":{"source":"current-task","requested_outcome":task},
         "strategy":visible_strategy,"strategy_revision":strategy_revision,
@@ -1650,17 +1650,12 @@ pub(crate) fn view_with_applicability(
         .into_iter()
         .flatten()
     {
-        let route = format!("profile:{}", obligation["profile_id"].as_str().unwrap());
+        let profile = obligation["profile_id"].as_str().unwrap();
         let mut missing = Vec::new();
         let mut references = std::collections::BTreeSet::new();
         for command in obligation["required_commands"].as_array().unwrap() {
             let supporting = evidence.iter().find(|item| {
-                item["publication_admission"]["status"] == "admitted"
-                    && item["receipt_admission"]["proof_sufficient"] == true
-                    && item["evidence_freshness"] == "reusable"
-                    && item["detail"]["status"] == "current"
-                    && item["runtime_admission"]["command_coverage"]["route_id"] == route
-                    && item["runtime_admission"]["command_coverage"]["command"] == *command
+                crate::native_proof::covers_profile(item, &strategy, profile, command)
             });
             if let Some(item) = supporting {
                 references.insert(item["reference"].as_str().unwrap());
@@ -1729,33 +1724,84 @@ pub(crate) fn view_with_applicability(
         },
         claim_review_request.as_ref(),
     )?;
-    if claim_review["status"] == "current"
-        && gaps.iter().all(|gap| {
-            matches!(
+    if claim_review["status"] == "current" {
+        gaps.retain(|gap| {
+            !matches!(
                 gap.as_str(),
                 "current-task-claim-judgment-not-admitted"
                     | "current-task-strategy-requires-owner-judgment"
                     | "domain-lane-strategy-sufficiency-unresolved"
             )
-        })
-    {
-        blockers.as_array_mut().unwrap().retain(|b| {
-            b["code"] != "verification-evidence-unresolved"
-                && b["code"] != "strict-closeout-judgment-required"
         });
+        blockers.as_array_mut().unwrap().retain(|b| {
+            b["code"] != "strict-closeout-judgment-required"
+                && (b["code"] != "verification-evidence-unresolved" || !gaps.is_empty())
+        });
+    }
+    if let Some(packet) = &mut packet {
+        packet["known_uncertainty"] = json!(gaps);
     }
     let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row| {
         let source = &row["source_requirement"];
-        let mut missing = vec!["required-evidence-not-admitted"];
+        let profile = source["proof_profile"].as_str();
+        let labels = source["required_evidence"].as_array();
+        let mut missing = Vec::new();
+        let mut references = std::collections::BTreeSet::new();
+        // A profile declares command obligations. Other evidence labels and
+        // producer requirements retain their own authority; passing commands
+        // cannot attest arbitrary prose, a reviewer or source reconciliation.
+        if labels.is_some_and(|labels| !labels.is_empty())
+            || (profile.is_none() && source.get("measurement").is_none())
+        {
+            missing.push("required-evidence-not-admitted");
+        }
+        if let Some(profile) = profile {
+            let declared = &strategy["proof_routes"][format!("profile:{profile}")];
+            if let Some(commands) = declared["required_commands"].as_array() {
+                for command in commands {
+                    if let Some(item) = evidence.iter().find(|item| crate::native_proof::covers_assurance(item, &strategy, row["id"].as_str().unwrap(), profile, command)) {
+                        references.insert(item["reference"].as_str().unwrap());
+                    } else if !missing.contains(&"profile-command-evidence-not-admitted") {
+                        missing.push("profile-command-evidence-not-admitted");
+                    }
+                }
+            } else {
+                missing.push("proof-profile-source-unavailable");
+            }
+            if claim_review["status"] != "current" {
+                missing.push("current-task-claim-judgment-not-admitted");
+            }
+        }
         let measurement = &measurement_admissions[row["id"].as_str().unwrap()];
         if source.get("measurement").is_some() {
             if measurement["status"] != "current-measurement-satisfied" { missing.push("measurement-owner-result-unavailable"); }
-            else if source["required_evidence"].as_array().is_some_and(|labels| labels.iter().all(|label| *label == source["measurement"]["evidence_label"])) { missing.retain(|gap| *gap != "required-evidence-not-admitted"); }
+            else if labels.is_none_or(|labels| labels.iter().all(|label| *label == source["measurement"]["evidence_label"])) { missing.retain(|gap| *gap != "required-evidence-not-admitted"); }
         }
         if source.get("review_owner").is_some() { missing.push("required-reviewer-result-not-admitted"); }
         if source.get("source_intent_ref").is_some() { missing.push("source-intent-reconciliation-not-admitted"); }
-        json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":source,"measurement_admission":measurement,"missing_admissions":missing,"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})
+        let external = missing.iter().any(|gap| matches!(*gap,
+            "required-evidence-not-admitted" | "required-reviewer-result-not-admitted" | "source-intent-reconciliation-not-admitted"));
+        let recovery = external.then(|| json!({"status":"owner-resolution-unavailable",
+            "required_owner":source["review_owner"],"evidence_owner":source["evidence_owner"],"detail_route":source["detail_route"],
+            "reason":"Obtain the distinct source-declared producer result. This command and semantic-claim path supplies no admission for the remaining evidence, reviewer or source-owner authority; a confirmation cannot waive it."}));
+        json!({"requirement_id":row["id"],"status":if missing.is_empty(){"current-evidence-satisfied"}else{"owner-evidence-not-admitted"},"source_requirement":source,"measurement_admission":measurement,"evidence_refs":references,"missing_admissions":missing,"recovery":recovery,"rule":"Only source-linked current command evidence covers profile commands; semantic confirmation and distinct evidence/measurement/reviewer/source-owner authority remain separate."})
     }).collect();
+    for row in &assurance_gaps {
+        if row["status"] == "current-evidence-satisfied" {
+            let code = format!(
+                "assurance:{}:applicable",
+                row["requirement_id"].as_str().unwrap()
+            );
+            blockers
+                .as_array_mut()
+                .unwrap()
+                .retain(|blocker| blocker["code"] != code);
+        }
+    }
+    let assurance_gaps: Vec<_> = assurance_gaps
+        .into_iter()
+        .filter(|row| row["status"] != "current-evidence-satisfied")
+        .collect();
     let sole = sole_required_choice(
         &strategy,
         &strategy_control,
@@ -1815,8 +1861,22 @@ pub(crate) fn view_with_applicability(
             blocker["recovery"] = json!(format!("public-request:{kind}"));
         }
     }
+    let status = if claim_review["status"] == "current"
+        && gaps.is_empty()
+        && assurance_gaps.is_empty()
+        && instruction_checks
+            .iter()
+            .all(|check| check["status"] == "current")
+        && blockers.as_array().unwrap().is_empty()
+    {
+        "current"
+    } else if applicable || !assurance_gaps.is_empty() {
+        "unresolved"
+    } else {
+        "not-applicable"
+    };
     Ok(
-        json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
+        json!({"kind":"agentic-workspace/native-verification-view/v1","status":status,
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
         "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",

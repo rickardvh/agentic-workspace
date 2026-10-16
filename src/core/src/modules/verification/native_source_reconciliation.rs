@@ -107,7 +107,11 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
         if !directory.is_empty() {
             crate::decision_source::relative(&directory)?;
             // Check every prefix without opening a directory as a file.
-            native_planning::read(root, &format!("{directory}/.aw-scope-confinement"))?;
+            crate::dependency_binding::observe_raw(
+                root,
+                &format!("{directory}/.aw-scope-confinement"),
+                crate::dependency_binding::MAX_OBSERVATION_BYTES,
+            )?;
         }
         let entries = match root.read_dir(if directory.is_empty() {
             "."

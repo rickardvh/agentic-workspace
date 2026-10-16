@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:facf0c0c4d14ceb4ee438cec2611047b6249a00a3e211be2c455e6a5dddf3c23",
+  "managed_revision": "sha256:2d6a928173c3e73c421603f7ef44ed0637aa5ef853d23188bf3265c07165fd4e",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -34,6 +34,7 @@
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/consumers.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
