@@ -51,6 +51,40 @@ def test_claim_result_scope_is_distinct_from_instruction_applicability(tmp_path,
     assert call(request=answer)["verification"]["claim_review"]["status"] == "current"
 
 
+def test_confirmed_claim_does_not_admit_unexecuted_instruction_check(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_instruction_write import instruction, repo
+
+    repo(tmp_path)
+    (tmp_path / "result.txt").write_text("bounded result")
+    context = {"target": str(tmp_path), "task": "Judge the bounded result", "changed": ["result.txt"]}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    _, _, action = instruction(
+        call,
+        ".agentic-workspace/instructions/check.md",
+        "---\npaths: [result.txt]\nchecks:\n  - run: echo executed > instruction-ran.txt\n---\nCheck the result.\n",
+    )
+    call(invocation=action)
+    initial = call()["verification"]
+    assert initial["instruction_checks"][0]["status"] == "evidence-required"
+    assert initial["execution_requests"]
+    request = initial["claim_review"]["request"]
+    request["arguments"].update(disposition="satisfied", reason="Reviewed the result; the instruction command remains unexecuted.")
+    proposed = call(request=request)
+    confirmation = next(
+        d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review"
+    )["response_request"]
+    confirmation["arguments"]["answer"] = "confirm"
+    confirmed = call(request=confirmation)["verification"]
+    assert confirmed["claim_review"]["status"] == "current"
+    assert confirmed["instruction_checks"][0]["status"] == "evidence-required"
+    assert confirmed["evidence"] == []
+    assert confirmed["status"] == "unresolved"
+    assert not (tmp_path / "instruction-ran.txt").exists()
+
+
 @pytest.mark.parametrize("binding_assignment", [False, True])
 def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path, shared_core_binary, native_cli, binding_assignment):
     from tests.test_native_proof_producer import fixture

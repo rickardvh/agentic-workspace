@@ -1864,6 +1864,9 @@ pub(crate) fn view_with_applicability(
     let status = if claim_review["status"] == "current"
         && gaps.is_empty()
         && assurance_gaps.is_empty()
+        && instruction_checks
+            .iter()
+            .all(|check| check["status"] == "current")
         && blockers.as_array().unwrap().is_empty()
     {
         "current"
