@@ -139,18 +139,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         }
         let supporting: Vec<_> = evidence
             .iter()
-            .filter(|e| e["checked_scope"]["claim"] == "selected-command-passed")
-            // Command/source/runtime reuse does not prove that the original
-            // execution covered the current route and protocol declarations.
-            .filter(|e| e["runtime_admission"]["sufficiency_currentness"] == "current")
-            .filter(|e| {
-                let route = e["runtime_admission"]["command_coverage"]["route_id"]
-                    .as_str()
-                    .unwrap_or("");
-                strategy["proof_routes"][route]["protocol_refs"]
-                    .as_array()
-                    .is_some_and(|refs| refs.contains(&json!(id)))
-            })
+            .filter(|e| crate::native_proof::covers_protocol(e, strategy, id))
             .collect();
         let covered = !supporting.is_empty();
         // An explicitly manual-only protocol has no command to authenticate.

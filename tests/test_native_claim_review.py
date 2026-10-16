@@ -198,16 +198,22 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
         call(request=reentry)
 
 
-def test_profile_proof_claim_continuation_separates_command_admission_and_protocol_authority(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("route", ["profile:synthetic_required", "synthetic_linked", "domain:synthetic_unlinked"])
+def test_profile_proof_claim_continuation_separates_command_admission_and_protocol_authority(
+    tmp_path, shared_core_binary, native_cli, route
+):
     """Join public invocation, automatic receipt carriage and final confirmation.
 
-    A profile's matching command does not acquire the other route's protocol
-    authority. Existing linked-route coverage above supplies the positive case.
+    Explicit links reuse one execution across its declared requirements. A
+    profile-only or unlinked command cannot acquire another protocol's authority.
     """
+    linked = route == "synthetic_linked"
+    unlinked = route == "domain:synthetic_unlinked"
     (tmp_path / "sample.txt").write_bytes(b"ok")
     aw = tmp_path / ".agentic-workspace"
     (aw / "verification").mkdir(parents=True)
-    (aw / "config.toml").write_text('[modules]\nenabled=["verification"]\n')
+    if not linked:
+        (aw / "config.toml").write_text('[modules]\nenabled=["verification"]\n')
     command = (
         'Add-Content count.txt executed; if ((Get-Content -Raw sample.txt) -ne "ok") { exit 1 }'
         if os.name == "nt"
@@ -222,8 +228,28 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
         f"required_commands=[{json.dumps(command)}]\n"
         '[assurance.requirements.synthetic_closeout]\nlevel="medium"\n'
         'force="required-before-closeout"\napplies_to_paths=["sample.txt"]\nproof_profile="synthetic_required"\n'
+        + (
+            f'[proof_routes.synthetic_linked]\nprotocol_refs=["synthetic_check"]\n'
+            f'assurance_requirement_refs=["synthetic_closeout"]\ncommands=[{json.dumps(command)}]\n'
+            if linked
+            else ""
+        )
+        + (
+            f'[assurance.domain_proof_lanes.synthetic_unlinked]\npurpose="Unlinked matching command"\n'
+            f'applies_to_paths=["sample.txt"]\ncommands=[{json.dumps(command)}]\n'
+            if unlinked
+            else ""
+        )
     )
     context = {"target": str(tmp_path), "task": "Validate the synthetic sample and judge the bounded patch", "changed": ["sample.txt"]}
+    if linked:
+        # Aggregate #3895 case: preserve the real binary/large changed scope
+        # while one source-linked execution covers profile and assurance.
+        (tmp_path / "sample.png").write_bytes(
+            base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=")
+        )
+        (tmp_path / "report.json").write_text(json.dumps({"results": "x" * 700_000}))
+        context["changed"] += ["sample.png", "report.json"]
 
     def call(value):
         result = subprocess.run(
@@ -240,7 +266,7 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
         return any(r.get("arguments", {}).get("route_id") == route for r in (request if isinstance(request, list) else [request]))
 
     initial = call(context)
-    execute = next(r for r in initial["verification"]["execution_requests"] if requests_for(r, "profile:synthetic_required"))
+    execute = next(r for r in initial["verification"]["execution_requests"] if requests_for(r, route))
     action = call({**context, "request": execute})["decision_packet"]["primary_action"]
     proof = call({**context, "invocation": action, "projection": "compact"})
     assert proof["effect_outcome"]["status"] == "committed"
@@ -276,28 +302,64 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
     assert material["evidence"][0]["status"] == "admitted"
     assert material["evidence"][0]["claim"] == "selected-command-passed"
     assert material["evidence"][0]["gaps"] == []
-    assert material["gaps"] == ["protocol-evidence-required:synthetic_check"]
-    assert proposed["verification"]["strategy_control"]["obligations"][0]["status"] == "current-command-evidence-satisfied"
+    assert material["gaps"] == ([] if linked else ["protocol-evidence-required:synthetic_check"])
+    assert proposed["verification"]["strategy_control"]["obligations"][0]["missing_commands"] == ([command] if unlinked else [])
     coverage = material["protocol_coverage"]["synthetic_check"]
-    assert coverage["status"] == "command-evidence-required"
-    assert coverage["evidence_refs"] == []
-    assert coverage["next_requests"]
+    assert coverage["status"] == ("current-command-evidence-satisfied" if linked else "command-evidence-required")
+    assert bool(coverage["evidence_refs"]) is linked
+    assert bool(coverage["next_requests"]) is not linked
     assert all(requests_for(r, "protocol:synthetic_check") for r in coverage["next_requests"])
     # The supplied route is executable through the existing selection interface.
     # Do not execute it: identical text supplies no protocol equivalence, and
     # the original committed command must never be rerun for bookkeeping.
-    protocol_action = call({**context, "request": coverage["next_requests"][0]})["decision_packet"]["primary_action"]
-    assert protocol_action["operation_id"] == "proof.report"
-    assert protocol_action["arguments"]["selection"]["strategy"]["route_id"] == "protocol:synthetic_check"
+    if not linked:
+        protocol_action = call({**context, "request": coverage["next_requests"][0]})["decision_packet"]["primary_action"]
+        assert protocol_action["operation_id"] == "proof.report"
+        assert protocol_action["arguments"]["selection"]["strategy"]["route_id"] == "protocol:synthetic_check"
     confirmation = decision["response_request"]
     confirmation["arguments"]["answer"] = "confirm"
     final_input = {**continuation["context"], "request": confirmation}
     confirmed = call(final_input)
-    assert any(b["code"] == "configuration-assessment-required" for b in confirmed["decision_packet"]["blockers"])
+    if not linked:
+        assert any(b["code"] == "configuration-assessment-required" for b in confirmed["decision_packet"]["blockers"])
     final = confirmed["verification"]
-    assert final["claim_review"]["status"] == "insufficient"
-    assert final["claim_review"]["gaps"] == ["protocol-evidence-required:synthetic_check"]
-    assert final["strategy_control"]["obligations"][0]["missing_commands"] == []
+    assert final["claim_review"]["status"] == ("current" if linked else "insufficient")
+    assert final["claim_review"]["gaps"] == ([] if linked else ["protocol-evidence-required:synthetic_check"])
+    assert final["strategy_control"]["obligations"][0]["missing_commands"] == ([command] if unlinked else [])
+    if linked:
+        assert final["status"] == "current", final
+        assert final["assurance_owner_gaps"] == []
+        assert final["evidence_gaps"] == []
+        assert confirmed["decision_packet"]["blockers"] == []
+        assert final["strategy_control"]["obligations"][0]["evidence_refs"] == [proof["value"]["publication"]["reference"]]
+        # A distinct source-required reviewer remains a real blocker even
+        # though the command and the agent's semantic judgment are current.
+        original = manifest.read_bytes()
+        manifest.write_bytes(
+            original.replace(
+                b'proof_profile="synthetic_required"',
+                b'proof_profile="synthetic_required"\nreview_owner="independent-maintainer"',
+            )
+        )
+        request = call(context)["verification"]["claim_review"]["request"]
+        request["arguments"].update(
+            disposition="satisfied",
+            reason="The result and command are checked; independent reviewer authority remains outstanding.",
+            evidence_refs=confirmation["arguments"]["evidence_refs"],
+        )
+        extra = call({**context, "request": request})
+        choice = next(d for d in extra["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")[
+            "response_request"
+        ]
+        choice["arguments"]["answer"] = "confirm"
+        pending = call({**context, "request": choice})
+        assert pending["verification"]["claim_review"]["status"] == "current"
+        assert pending["verification"]["strategy_control"]["obligations"][0]["missing_commands"] == []
+        assert pending["verification"]["assurance_owner_gaps"][0]["missing_admissions"] == ["required-reviewer-result-not-admitted"]
+        assert pending["verification"]["assurance_owner_gaps"][0]["recovery"]["status"] == "owner-resolution-unavailable"
+        assert pending["verification"]["assurance_owner_gaps"][0]["recovery"]["required_owner"] == "independent-maintainer"
+        assert any(b["code"] == "assurance:synthetic_closeout:applicable" for b in pending["decision_packet"]["blockers"])
+        manifest.write_bytes(original)
 
     # Source drift invalidates the proposal; changed manifest strategy is refused
     # at the earlier request-currentness layer. Neither path reruns proof.
@@ -316,6 +378,17 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
     assert stale["claim_review"]["status"] == "not-requested"
     assert "verification-request-stale" in stale["evidence_gaps"]
     assert stale["strategy_control"]["obligations"][0]["missing_commands"] == [command, "echo additional"]
+    if linked:
+        # The prior confirmation is stale, but adding a separate command must
+        # not discard current evidence for the unchanged source-linked command.
+        fresh = call(context)["verification"]["claim_review"]["request"]
+        fresh["arguments"].update(
+            disposition="insufficient",
+            reason="The added command remains unproved; reuse only the existing command observation.",
+            evidence_refs=confirmation["arguments"]["evidence_refs"],
+        )
+        expanded = call({**context, "request": fresh})["verification"]
+        assert expanded["strategy_control"]["obligations"][0]["missing_commands"] == ["echo additional"]
     manifest.write_bytes(original)
     assert call(final_input)["verification"]["evidence"][0]["status"] == "admitted"
     forged = json.loads(json.dumps(final_input))

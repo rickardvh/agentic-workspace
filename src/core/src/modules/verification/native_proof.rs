@@ -16,6 +16,73 @@ use std::{
 
 const RUNS: &str = ".agentic-workspace/local/proof-receipts/runs";
 const REVISION: &str = "native-selected-proof-v1";
+
+// Consume only the owner's already-admitted command observation. Coverage also
+// needs unchanged source semantics and an explicit current requirement link.
+fn current_coverage<'a>(evidence: &'a Value, strategy: &'a Value) -> Option<(&'a str, &'a Value)> {
+    if evidence["checked_scope"]["claim"] != "selected-command-passed" {
+        return None;
+    }
+    let choice = &evidence["runtime_admission"]["command_coverage"];
+    let id = choice["route_id"].as_str()?;
+    let command = &choice["command"];
+    command.as_str()?;
+    let route = &strategy["proof_routes"][id];
+    (evidence["checked_scope"]["command"] == *command
+        && route["commands"].as_array()?.contains(command))
+    .then_some((id, command))
+}
+
+pub(crate) fn covers_protocol(evidence: &Value, strategy: &Value, id: &str) -> bool {
+    evidence["runtime_admission"]["sufficiency_currentness"] == "current"
+        && current_coverage(evidence, strategy).is_some_and(|(route, _)| {
+            strategy["protocols"][id].is_object()
+                && strategy["proof_routes"][route]["protocol_refs"]
+                    .as_array()
+                    .is_some_and(|refs| refs.contains(&json!(id)))
+        })
+}
+
+pub(crate) fn covers_profile(
+    evidence: &Value,
+    strategy: &Value,
+    id: &str,
+    command: &Value,
+) -> bool {
+    current_coverage(evidence, strategy).is_some_and(|(route, observed)| {
+        observed == command
+            && strategy["proof_routes"][format!("profile:{id}")].is_object()
+            && (route == format!("profile:{id}")
+                || strategy["proof_routes"][route]["protocol_refs"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .any(|protocol| {
+                        covers_protocol(evidence, strategy, protocol)
+                            && strategy["protocols"][protocol]["proof_profiles"]
+                                .as_array()
+                                .is_some_and(|refs| refs.contains(&json!(id)))
+                    }))
+    })
+}
+
+pub(crate) fn covers_assurance(
+    evidence: &Value,
+    strategy: &Value,
+    requirement: &str,
+    profile: &str,
+    command: &Value,
+) -> bool {
+    covers_profile(evidence, strategy, profile, command)
+        && current_coverage(evidence, strategy).is_some_and(|(route, _)| {
+            route == format!("profile:{profile}")
+                || strategy["proof_routes"][route]["assurance_requirement_refs"]
+                    .as_array()
+                    .is_some_and(|refs| refs.contains(&json!(requirement)))
+        })
+}
+
 fn err(e: impl std::fmt::Display) -> CoreError {
     CoreError::new(e.to_string())
 }

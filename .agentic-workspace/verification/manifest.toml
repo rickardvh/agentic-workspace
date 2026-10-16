@@ -1,8 +1,8 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
 [protocols.claim_source_binding]
-applies_to_paths = ["src/core/src/native_claim_review.rs", "src/core/src/modules/verification/native_source_reconciliation.rs", "tests/test_native_claim_review.py"]
-steps = ["Bind actual result bytes through public claim reentry and preserve stale-answer, source-confinement and resource limits."]
+applies_to_paths = ["src/core/src/native_claim_review.rs", "src/core/src/modules/verification/native_source_reconciliation.rs", "src/core/src/modules/verification/native_proof.rs", "src/core/src/modules/verification/native_verification.rs", "tests/test_native_claim_review.py"]
+steps = ["Bind actual result bytes through public claim reentry and preserve stale-answer, source-confinement and resource limits.", "Reuse only source-linked current command coverage across profile, protocol and assurance obligations while preserving semantic judgment and independent authority."]
 authority_refs = ["docs/maintainer/testing-strategy.md", "tests/test_native_claim_review.py"]
 
 [proof_routes.claim_source_binding]
@@ -10,6 +10,7 @@ protocol_refs = ["claim_source_binding"]
 commands = [
   "cargo test --locked -p agentic-workspace-core --lib native_claim_review::source_tests",
   "uv run pytest tests/test_native_claim_review.py tests/test_native_source_reconciliation.py::test_linked_scope_cannot_supply_currentness -q",
+  "uv run pytest tests/test_native_verification_strategy.py tests/test_native_measurement.py tests/test_native_proof_producer.py::test_strategy_requirements_reuse_current_observations -q",
 ]
 
 [assurance.requirements.aw_live_affordance_dogfooding]
