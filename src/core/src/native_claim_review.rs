@@ -5,9 +5,51 @@ use serde_json::{Value, json};
 use std::path::Path;
 pub(crate) const REQUEST: &str = "verification/review-claim/v1";
 const MAX_PROTOCOL_RECOVERY_BYTES: usize = 8192;
+const MAX_POSTIMAGE_BYTES: u64 = 128 * 1024 * 1024;
+
+fn postimages(
+    target: &Path,
+    changed: &[String],
+) -> Result<serde_json::Map<String, Value>, CoreError> {
+    let failure = |source: &str, error: CoreError| {
+        CoreError::new(format!(
+            "Verification claim source {source}: {error}; restore a confined, stable regular source \
+             within the 32 MiB per-file and 128 MiB claim identity budgets, then resubmit the \
+             current Verification claim. No claim confirmation was admitted."
+        ))
+    };
+    let root = cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
+        .map_err(|e| failure("target", CoreError::new(e.to_string())))?;
+    let paths = crate::native_source_reconciliation::scope_files(&root, changed)
+        .map_err(|e| failure("scope (at most 4096 discovered entries)", e))?;
+    if paths.len() > 4096 {
+        return Err(failure(
+            "scope",
+            CoreError::new("claim scope exceeds 4096 source identities"),
+        ));
+    }
+    let mut sources = serde_json::Map::new();
+    let mut remaining = MAX_POSTIMAGE_BYTES;
+    for path in paths {
+        let observed = crate::dependency_binding::observe_raw(&root, &path, remaining)
+            .map_err(|e| failure(&path, e))?;
+        let revision = if let Some((revision, bytes)) = observed {
+            remaining -= bytes;
+            json!(revision)
+        } else {
+            // An absent result is a deliberate deletion postimage. Unreadable,
+            // linked or over-budget sources return an error rather than null.
+            Value::Null
+        };
+        sources.insert(path, revision);
+    }
+    Ok(sources)
+}
+
 pub(crate) fn declaration() -> Value {
     json!({"kind":REQUEST,"result_kind":"agentic-workspace/claim-review/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["reason","disposition","evidence_refs"],"properties":{"reason":{"type":"string","minLength":1,"maxLength":4096},"disposition":{"enum":["satisfied","insufficient"]},"evidence_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string"}},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]}}}})
 }
+
 pub(crate) struct Context<'a> {
     pub target: &'a Path,
     pub task: &'a str,
@@ -61,18 +103,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     // where a rule governs, not additional results of this claim. The applicable
     // instruction sources remain independently bound below, alongside the subject,
     // policy and evidence; reconciliation owns discovery of their other consumers.
-    let root = cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
-        .map_err(|e| CoreError::new(e.to_string()))?;
-    let paths = crate::native_source_reconciliation::scope_files(&root, changed)?;
-    let mut sources = serde_json::Map::new();
-    for path in paths {
-        sources.insert(
-            path.clone(),
-            crate::native_planning::read(&root, &path)?
-                .map(|b| json!(crate::decision_source::hash(&b)))
-                .unwrap_or(Value::Null),
-        );
-    }
+    let sources = postimages(target, changed)?;
     let mut stable_evidence = evidence.to_vec();
     for e in &mut stable_evidence {
         if let Some(f) = e["runtime_admission"].as_object_mut() {
@@ -246,4 +277,66 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     result["authority_basis"]=delegated.unwrap_or_else(||json!({"kind":"exact-bounded-domain-answer","request_revision":digest(request).unwrap(),"identity_authentication":"not-claimed"}));
     result["claim"] = json!({"work":work,"subject":subject,"judgment":args["disposition"],"binding_revision":digest(&binding)?});
     Ok(result)
+}
+
+#[cfg(test)]
+mod source_tests {
+    use super::*;
+
+    #[test]
+    fn claim_postimages_preserve_bytes_membership_and_source_limits() {
+        let temp = std::env::temp_dir().join(format!(
+            "aw-claim-sources-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(temp.join("results")).unwrap();
+        let bytes = [0xff, 0xfe, 0, b'\r', b'\n'];
+        std::fs::write(temp.join("results/binary"), bytes).unwrap();
+        let scope = vec!["results/*".into(), "deleted".into()];
+        let first = postimages(&temp, &scope).unwrap();
+        assert_eq!(
+            first["results/binary"],
+            crate::dependency_binding::revision(
+                &bytes,
+                crate::dependency_binding::Scheme::RawBytes
+            )
+            .unwrap()
+        );
+        assert_eq!(first["deleted"], Value::Null);
+        std::fs::write(temp.join("results/new"), "new member").unwrap();
+        assert_ne!(postimages(&temp, &scope).unwrap(), first);
+        let excess: Vec<_> = (0..4097).map(|i| format!("absent-{i}")).collect();
+        assert!(
+            postimages(&temp, &excess)
+                .unwrap_err()
+                .to_string()
+                .contains("4096")
+        );
+        std::fs::File::create(temp.join("oversized"))
+            .unwrap()
+            .set_len(crate::dependency_binding::MAX_OBSERVATION_BYTES + 1)
+            .unwrap();
+        for path in ["oversized", "results", "../escape"] {
+            let error = postimages(&temp, &[path.into()]).unwrap_err().to_string();
+            assert!(error.contains("Verification claim source"));
+            assert!(error.contains("resubmit the current Verification claim"));
+            assert!(!error.contains("Planning"));
+        }
+        #[cfg(unix)]
+        std::os::unix::fs::symlink("results", temp.join("linked")).unwrap();
+        #[cfg(windows)]
+        junction::create(temp.join("results"), temp.join("linked")).unwrap();
+        for path in ["linked/binary", "linked/*"] {
+            let error = postimages(&temp, &[path.into()]).unwrap_err().to_string();
+            assert!(error.contains("Verification claim source"));
+            assert!(error.contains("linked"));
+        }
+        #[cfg(windows)]
+        junction::delete(temp.join("linked")).unwrap();
+        std::fs::remove_dir_all(temp).unwrap();
+    }
 }

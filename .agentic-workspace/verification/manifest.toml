@@ -1,5 +1,17 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[protocols.claim_source_binding]
+applies_to_paths = ["src/core/src/native_claim_review.rs", "src/core/src/modules/verification/native_source_reconciliation.rs", "tests/test_native_claim_review.py"]
+steps = ["Bind actual result bytes through public claim reentry and preserve stale-answer, source-confinement and resource limits."]
+authority_refs = ["docs/maintainer/testing-strategy.md", "tests/test_native_claim_review.py"]
+
+[proof_routes.claim_source_binding]
+protocol_refs = ["claim_source_binding"]
+commands = [
+  "cargo test --locked -p agentic-workspace-core --lib native_claim_review::source_tests",
+  "uv run pytest tests/test_native_claim_review.py tests/test_native_source_reconciliation.py::test_linked_scope_cannot_supply_currentness -q",
+]
+
 [assurance.requirements.aw_live_affordance_dogfooding]
 level = "medium"
 force = "required-before-closeout"
@@ -86,6 +98,7 @@ inputs = [
   ".agentic-workspace/memory/skills/REGISTRY.json",
   ".agentic-workspace/memory/skills/memory-capture/procedure.md",
   ".agentic-workspace/memory/skills/memory-hygiene/procedure.md",
+  ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md",
   ".agentic-workspace/plugins/agentic-workspace-entry/.claude-plugin/plugin.json",
   ".agentic-workspace/plugins/agentic-workspace-entry/plugin.json",
   ".agentic-workspace/plugins/agentic-workspace-entry/skills/agentic-workspace-entry/SKILL.md",

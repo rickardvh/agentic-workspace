@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import subprocess
@@ -54,6 +56,14 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     from tests.test_native_proof_producer import fixture
 
     context = fixture(tmp_path)
+    # Result identity is byte-based even with Planning enabled and no selected
+    # plan. Keep one public proof execution for this mixed source set.
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[modules]\nenabled=["planning","verification"]\n')
+    binary = tmp_path / "sample.png"
+    binary.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII="))
+    report = tmp_path / "report.json"
+    report.write_text(json.dumps({"results": "x" * 700_000}))
+    context["changed"] += ["sample.png", "report.json"]
     if binding_assignment:
         (tmp_path / ".agentic-workspace/config.local.toml").write_text(
             '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\n'
@@ -61,7 +71,7 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
         )
 
     def call(**extra):
-        return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     execute = call()["verification"]["execution_requests"][0]
     proof = call(invocation=call(request=execute)["decision_packet"]["primary_action"], projection="compact")
@@ -69,12 +79,18 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     continuation = proof["continuation"]["result"]
     step = continuation["verification_context"]["next_step"]
     assert continuation["verification_context"]["evidence"][0]["proof_sufficient"] is True
-    discovered = consume("json", shared_core_binary, native_cli, {**proof["continuation"]["context"], "reference": step["reference"]})
+    discovered = consume(
+        "native",
+        shared_core_binary,
+        native_cli,
+        {**proof["continuation"]["context"], "reference": step["reference"]},
+        host_path=os.environ["PATH"],
+    )
     request = discovered["value"]
     assert request["arguments"]["evidence_refs"] == [proof["value"]["publication"]["reference"]]
     assert request["arguments"]["disposition"] == "insufficient"
     proposed = consume(
-        "json",
+        "native",
         shared_core_binary,
         native_cli,
         {
@@ -82,8 +98,22 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
             "reference": step["reference"],
             "answer": {"disposition": "satisfied", "reason": "Checked the complete requested behavior and current command evidence."},
         },
+        host_path=os.environ["PATH"],
     )
     decision = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")
+    postimages = proposed["verification"]["claim_review"]["proposal"]["binding"]["postimages"]
+    for path in (binary, report):
+        assert postimages[path.name] == "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    # The full request must reach the same proposal as compact claim reentry,
+    # carrying the existing receipt rather than executing the check again.
+    full_request = call()["verification"]["claim_review"]["request"]
+    full_request["arguments"].update(
+        disposition="satisfied",
+        reason="Checked the complete requested behavior and current command evidence.",
+        evidence_refs=decision["response_request"]["arguments"]["evidence_refs"],
+    )
+    full = call(request=full_request)
+    assert full["verification"]["claim_review"]["proposal"] == proposed["verification"]["claim_review"]["proposal"]
     evidence = decision["material"]["evidence"][0]
     assert evidence["status"] == "admitted"
     assert evidence["admission_scope"] == "selected-command"
@@ -104,6 +134,12 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
         reentry.append(external)
     reviewed = call(request=reentry)
     assert reviewed["verification"]["claim_review"]["status"] == "current", reviewed["verification"]["claim_review"]
+    for source in (binary, report):
+        original = source.read_bytes()
+        source.write_bytes(original + b"\n")
+        with pytest.raises(AssertionError, match="stale"):
+            call(request=reentry)
+        source.write_bytes(original)
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     assert not any(b["code"] == "verification-evidence-unresolved" for b in reviewed["decision_packet"]["blockers"])
     if binding_assignment:
