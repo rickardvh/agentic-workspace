@@ -572,10 +572,8 @@ fn receipt_view(
         for input in inputs {
             let current = input["path"]
                 .as_str()
-                .and_then(|path| read(root, path).ok().flatten());
-            if current.as_ref().map(|bytes| sha(bytes))
-                != input["sha256"].as_str().map(str::to_owned)
-            {
+                .and_then(|path| crate::proof_subject::source_input(root, path).ok());
+            if current.as_ref() != Some(input) {
                 gaps.push("proof-semantic-input-stale-or-unavailable".into());
                 break;
             }

@@ -9,6 +9,17 @@ authority_refs = ["docs/maintainer/testing-strategy.md", "tests/test_native_proo
 protocol_refs = ["executor_declaration_recovery"]
 commands = ["uv run pytest tests/test_native_proof_producer.py::test_native_proof_cannot_bypass_current_source_protection tests/test_native_proof_producer.py::test_native_missing_executor_is_a_capability_gap_not_a_human_choice -q"]
 
+[protocols.deleted_proof_inputs]
+applies_to_paths = ["src/core/src/proof_subject.rs", "src/core/src/dependency_binding.rs", "src/core/src/modules/verification/repository_proof.rs"]
+steps = ["Preserve present hashes and safely observed deletion identity through selected native receipt admission, source transitions and repository promotion."]
+authority_refs = ["docs/maintainer/testing-strategy.md", "tests/test_native_proof_producer.py"]
+
+[proof_routes.deleted_proof_inputs]
+protocol_refs = ["deleted_proof_inputs"]
+commands = [
+  "cargo test --locked -p agentic-workspace-core --lib proof_subject::tests && cargo test --locked -p agentic-workspace-core --lib dependency_binding::tests && uv run pytest tests/test_native_proof_producer.py::test_deleted_scope_proof_is_admitted_without_semantic_claim tests/test_native_proof_producer.py::test_local_proof_promotion_and_owner_disposition_preserve_execution tests/test_native_proof_producer.py::test_native_proof_source_change_during_execution_cannot_publish_current_evidence -q",
+]
+
 [protocols.claim_source_binding]
 applies_to_paths = ["src/core/src/native_claim_review.rs", "src/core/src/modules/verification/native_source_reconciliation.rs", "src/core/src/modules/verification/native_proof.rs", "src/core/src/modules/verification/native_verification.rs", "tests/test_native_claim_review.py"]
 steps = ["Bind actual result bytes through public claim reentry and preserve stale-answer, source-confinement and resource limits.", "Reuse only source-linked current command coverage across profile, protocol and assurance obligations while preserving semantic judgment and independent authority."]

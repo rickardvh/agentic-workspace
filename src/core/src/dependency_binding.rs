@@ -16,7 +16,16 @@ pub(crate) fn observe_raw(
     reference: &str,
     budget: u64,
 ) -> Result<Option<(String, u64)>, CoreError> {
-    let limit = MAX_OBSERVATION_BYTES.min(budget);
+    observe_raw_with_limit(root, reference, MAX_OBSERVATION_BYTES.min(budget))
+}
+
+// Proof subjects retain their existing streaming size policy; small-source
+// owners use observe_raw's separate per-file/resolution budgets above.
+pub(crate) fn observe_raw_with_limit(
+    root: &Dir,
+    reference: &str,
+    limit: u64,
+) -> Result<Option<(String, u64)>, CoreError> {
     let over_budget = || {
         CoreError::new(if limit < MAX_OBSERVATION_BYTES {
             "source-observation-exceeds-128-mib-resolution-bound"
@@ -28,7 +37,8 @@ pub(crate) fn observe_raw(
     let check = || -> Result<Option<cap_std::fs::Metadata>, CoreError> {
         let mut prefix = std::path::PathBuf::new();
         let mut last = None;
-        for part in reference.split('/') {
+        let mut parts = reference.split('/').peekable();
+        while let Some(part) = parts.next() {
             prefix.push(part);
             let metadata = match root.symlink_metadata(&prefix) {
                 Ok(metadata) => metadata,
@@ -45,11 +55,17 @@ pub(crate) fn observe_raw(
             if linked {
                 return Err(CoreError::new("source-observation-linked"));
             }
+            if parts.peek().is_some() && !metadata.is_dir() {
+                return Err(CoreError::new("source-observation-not-directory"));
+            }
             last = Some(metadata);
         }
         Ok(last)
     };
     let Some(before) = check()? else {
+        if check()?.is_some() {
+            return Err(CoreError::new("source-observation-changed-during-read"));
+        }
         return Ok(None);
     };
     if !before.is_file() {

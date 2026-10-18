@@ -146,8 +146,55 @@ def test_native_proof_preserves_existing_index_and_rejects_command_injection(
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
 
 
+def test_deleted_scope_proof_is_admitted_without_semantic_claim(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+    deleted = tmp_path / "obsolete.txt"
+    deleted.write_text("obsolete test")
+    deleted.unlink()
+    context["changed"] = ["obsolete.txt"]
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.write_text(manifest.read_text().replace('applies_to_paths=["a.txt"]', 'applies_to_paths=["obsolete.txt"]'))
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    execute = call()["verification"]["execution_requests"][0]
+    action = call(request=execute)["decision_packet"]["primary_action"]
+    proof = call(invocation=action, projection="compact")
+    assert proof["value"]["source_current"] is True
+    assert proof["value"]["proof_subject"]["identity_complete"] is True
+    assert proof["value"]["proof_subject"]["source_inputs"] == [{"path": "obsolete.txt", "state": "absent"}]
+    assert proof["value"]["proof_subject"]["unavailable_inputs"] == []
+    immediate = proof["continuation"]["result"]["verification_context"]
+    evidence = immediate["evidence"][0]
+    assert evidence["status"] == "admitted"
+    assert evidence["receipt_admission"]["proof_sufficient"] is True
+    assert evidence["freshness"] == "reusable"
+    assert evidence["checked_scope"]["claim"] == "selected-command-passed"
+    assert evidence["checked_scope"]["completion_authority"] is False
+    assert evidence["task_judgment"]["current_judgment_count"] == 0
+    assert immediate["next_step"]
+    request = call()["verification"]["requests"][0]
+    request["arguments"]["evidence_refs"] = [proof["value"]["publication"]["reference"]]
+    deleted.write_text("recreated")
+    stale = call(request=request)["verification"]["evidence"][0]
+    assert stale["status"] == "unadmitted"
+    assert "proof-semantic-input-stale-or-unavailable" in stale["gaps"]
+    deleted.unlink()
+    assert call(request=request)["verification"]["evidence"][0]["status"] == "admitted"
+    deleted.mkdir()
+    blocked = call(request=execute)
+    assert blocked["verification"]["execution"]["reason"] == "proof-subject-incomplete"
+    assert blocked["decision_packet"]["primary_action"] is None
+    deleted.rmdir()
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+
+
 def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path, shared_core_binary, native_cli):
     context = fixture(tmp_path)
+    # Promotion's exact fingerprint reconstruction must retain mixed source
+    # postimages, including in a receiving checkout without local custody.
+    context["changed"].append("obsolete.txt")
 
     def call(value):
         return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
