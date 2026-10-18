@@ -414,7 +414,7 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             repo.write("unreadable", "private");
             let path = repo.0.join("unreadable");
-            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0)).unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o0)).unwrap();
             if std::fs::read(&path).is_err() {
                 assert_eq!(
                     build_scope(&["unreadable".into()])["identity_complete"],
