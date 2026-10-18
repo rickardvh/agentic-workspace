@@ -427,6 +427,10 @@ def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, sh
     instruction.parent.mkdir(parents=True)
     instruction.write_text("---\npaths: [count.txt]\nprotect: [count.txt]\n---\nPreserve this source.\n")
     pin_instructions(tmp_path)
+    # An image override is not an executor declaration and must not cause a
+    # Docker probe or enable the host command under source protection.
+    local = tmp_path / ".agentic-workspace/config.local.toml"
+    local.write_text('[proof_execution]\nimage="sha256:' + "0" * 64 + '"\n')
 
     def call(value: dict) -> dict:
         return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
@@ -434,6 +438,37 @@ def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, sh
     request = call(context)["verification"]["execution_requests"][0]
     blocked = call({**context, "request": request})
     assert any(item["code"].endswith(":proof-execution-scope-unresolved") for item in blocked["decision_packet"]["blockers"])
+    execution = blocked["verification"]["execution"]
+    assert execution["status"] == "blocked"
+    assert execution["reason"] == "proof-execution-scope-unresolved"
+    recovery = execution["recovery"]
+    assert recovery["cause"] == "missing-executor-declaration"
+    assert recovery["runtime_checks"] == "not-performed"
+    assert recovery["human_answer_allowed"] is False
+    assert recovery["configuration"] == {
+        "reference": ".agentic-workspace/verification/manifest.toml",
+        "section": "execution",
+        "kind": "docker-readonly-source-v1",
+        "required_fields": ["kind", "inputs"],
+    }
+    assert recovery["next_action"] == {"kind": "configure-executor", "reselect_request": "verification/execute-selected/v1"}
+    composed = next(b for b in blocked["decision_packet"]["blockers"] if b["code"] == "verification:proof-execution-scope-unresolved")
+    assert composed["owner"] == "verification"
+    assert composed["recovery"] == recovery["detail"]
+    assert blocked["decision_packet"]["primary_action"] is None
+    assert not (tmp_path / "count.txt").exists()
+    assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+    # After the explicit bounded declaration, ordinary executor validation is
+    # reached. The deliberately unavailable pin is a distinct runtime gap.
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.write_text(manifest.read_text() + '[execution]\nkind="docker-readonly-source-v1"\ninputs=["a.txt"]\n')
+    request = call(context)["verification"]["execution_requests"][0]
+    configured = call({**context, "request": request})
+    execution = configured["verification"]["execution"]
+    assert execution["reason"] == "proof-execution-capability-unavailable"
+    assert execution["recovery"].get("cause") != "missing-executor-declaration"
+    assert execution["recovery"]["diagnostic"]
+    assert configured["decision_packet"]["primary_action"] is None
     assert not (tmp_path / "count.txt").exists()
     assert not (tmp_path / ".agentic-workspace/local/effects").exists()
 

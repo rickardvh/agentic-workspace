@@ -17,6 +17,14 @@ use std::{collections::BTreeSet, time::Instant};
 const MAX_BYTES: usize = 128 * 1024 * 1024;
 const MAX_FILES: usize = 20000;
 pub(crate) const KIND: &str = "docker-readonly-source-v1";
+pub(crate) fn missing_declaration_recovery() -> Value {
+    json!({"kind":"capability-gap","cause":"missing-executor-declaration","human_answer_allowed":false,
+        "runtime_checks":"not-performed",
+        "configuration":{"reference":".agentic-workspace/verification/manifest.toml","section":"execution",
+            "kind":KIND,"required_fields":["kind","inputs"]},
+        "next_action":{"kind":"configure-executor","reselect_request":"verification/execute-selected/v1"},
+        "detail":"Declare [execution] in .agentic-workspace/verification/manifest.toml with kind = \"docker-readonly-source-v1\" and explicit bounded inputs for the selected command, then configure an immutable image and reselect verification/execute-selected/v1. Local [proof_execution].image only overrides an already declared executor; it does not enable one. Docker/runtime checks were not performed. Source protection remains enforced; human approval cannot supply the execution boundary."})
+}
 pub(crate) fn configuration(target: &Path) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let mut schema: Value =

@@ -1,5 +1,14 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[protocols.executor_declaration_recovery]
+applies_to_paths = ["src/core/src/modules/verification/proof_executor.rs", "src/core/src/native_instructions.rs", "tests/test_native_proof_producer.py"]
+steps = ["Distinguish a missing protected-proof executor declaration from configured executor unavailability without granting proof execution."]
+authority_refs = ["docs/maintainer/testing-strategy.md", "tests/test_native_proof_producer.py"]
+
+[proof_routes.executor_declaration_recovery]
+protocol_refs = ["executor_declaration_recovery"]
+commands = ["uv run pytest tests/test_native_proof_producer.py::test_native_proof_cannot_bypass_current_source_protection tests/test_native_proof_producer.py::test_native_missing_executor_is_a_capability_gap_not_a_human_choice -q"]
+
 [protocols.claim_source_binding]
 applies_to_paths = ["src/core/src/native_claim_review.rs", "src/core/src/modules/verification/native_source_reconciliation.rs", "src/core/src/modules/verification/native_proof.rs", "src/core/src/modules/verification/native_verification.rs", "tests/test_native_claim_review.py"]
 steps = ["Bind actual result bytes through public claim reentry and preserve stale-answer, source-confinement and resource limits.", "Reuse only source-linked current command coverage across profile, protocol and assurance obligations while preserving semantic judgment and independent authority."]
