@@ -1,14 +1,5 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
-[protocols.unix_proof_fixture_lint]
-applies_to_paths = ["src/core/src/proof_subject.rs"]
-steps = ["Check Unix-gated proof-subject fixtures with Clippy and their existing state/currentness tests."]
-authority_refs = ["docs/maintainer/testing-strategy.md", ".github/workflows/ci.yml"]
-
-[proof_routes.unix_proof_fixture_lint]
-protocol_refs = ["unix_proof_fixture_lint"]
-commands = ["cargo clippy --locked --workspace --all-targets -- -D warnings && cargo test --locked -p agentic-workspace-core --lib proof_subject::tests"]
-
 [protocols.non_aw_continuation]
 applies_to_paths = ["SYSTEM_INTENT.md", ".agentic-workspace/skills/workspace-startup/SKILL.md", ".agentic-workspace/skills/workspace-startup/references/constraints.md", ".agentic-workspace/skills/workspace-startup/references/unavailable.md", "src/core/src/operating.rs", "tests/test_native_workspace_disabled.py"]
 steps = ["Keep independently authorized direct work available while preserving native restrictions, effect custody, malformed-runtime boundaries and unrelated facilities."]
