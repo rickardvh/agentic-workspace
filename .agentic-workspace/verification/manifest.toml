@@ -1,5 +1,14 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[protocols.non_aw_continuation]
+applies_to_paths = ["SYSTEM_INTENT.md", ".agentic-workspace/skills/workspace-startup/SKILL.md", ".agentic-workspace/skills/workspace-startup/references/constraints.md", ".agentic-workspace/skills/workspace-startup/references/unavailable.md", "src/core/src/operating.rs", "tests/test_native_workspace_disabled.py"]
+steps = ["Keep independently authorized direct work available while preserving native restrictions, effect custody, malformed-runtime boundaries and unrelated facilities."]
+authority_refs = ["docs/maintainer/testing-strategy.md", "tests/test_native_workspace_disabled.py"]
+
+[proof_routes.non_aw_continuation]
+protocol_refs = ["non_aw_continuation"]
+commands = ["cargo test --locked -p agentic-workspace-core --lib operating::tests::resource_effect_survives_unavailable_continuation_without_a_current_step && uv run pytest tests/test_native_workspace_disabled.py tests/test_native_proof_producer.py::test_native_proof_cannot_bypass_current_source_protection tests/test_native_proof_producer.py::test_native_missing_executor_is_a_capability_gap_not_a_human_choice -q"]
+
 [protocols.executor_declaration_recovery]
 applies_to_paths = ["src/core/src/modules/verification/proof_executor.rs", "src/core/src/native_instructions.rs", "tests/test_native_proof_producer.py"]
 steps = ["Distinguish a missing protected-proof executor declaration from configured executor unavailability without granting proof execution."]

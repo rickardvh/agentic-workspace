@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Explain accountable continuation outside AW under independent task authority while preserving native admission, custody and external restrictions."

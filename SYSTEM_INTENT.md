@@ -162,6 +162,24 @@ Keep package-owned artifacts under `.agentic-workspace/` as far as reasonably po
 
 AW should remain plausibly removable. Removing executable integration does not abandon durable state that survives it: custody must remain readable and actionable, or be explicitly transferred or retired by its authority, until deliberate removal is complete.
 
+AW must not be the final obstacle to otherwise authorized repository work. It may
+refuse its own operation, source mutation, evidence admission or completion claim.
+That refusal supplies no repository-wide prohibition or permission. An actor
+independently authorized by the user, repository and host may choose ordinary
+tools outside AW for the affected task, while keeping AW's refusal and every
+applicable external restriction intact. Prefer a cheap supported AW recovery when
+useful; do not require an endless retry, a fictitious AW waiver or global opt-out.
+
+Record the acting person or agent, blocked AW action and reason, affected task and
+scope, independently authorized alternative, and remaining AW evidence/ownership
+or claim gap in the existing task, PR, issue, commit or handoff. If no record is
+accessible, state the same short exception visibly to the user. Recording the
+departure must not require a working AW runtime or an AW-admitted write. Keep
+unrelated AW facilities available. On reentry, observe actual current sources and
+outstanding requirements; external work is not authenticated AW custody. Never
+forge a receipt, backfill an AW effect, replay an uncertain write or treat the
+exception as independent approval or completion authority.
+
 ### 8. Work under partial compliance and mixed agents
 
 AW cannot depend on perfect obedience, hidden reasoning, one vendor, or a universal integration standard.

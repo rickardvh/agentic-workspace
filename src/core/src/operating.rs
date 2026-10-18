@@ -712,6 +712,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":context,
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    if let Some(continuation) = full.get("non_aw_continuation") {
+        result["non_aw_continuation"] = continuation.clone();
+    }
     if let Some(assignment) = assignment_question(full, context)? {
         result["assignment_context"] = assignment;
     }
@@ -1855,6 +1858,33 @@ fn operate_current(
     }
 }
 
+// Presentation only: point to the existing restriction, never reinterpret its
+// authority or mint an owner recovery, executable action or bypass permission.
+fn describe_non_aw_continuation(view: &mut Value) {
+    let source = if view["decision_packet"]["blockers"]
+        .as_array()
+        .is_some_and(|blockers| !blockers.is_empty())
+    {
+        "/decision_packet/blockers"
+    } else if view["status"] == "blocked" {
+        "/"
+    } else if matches!(
+        view["continuation"]["status"].as_str(),
+        Some("unavailable" | "reentry-required")
+    ) {
+        "/continuation"
+    } else {
+        return;
+    };
+    view["non_aw_continuation"] = json!({
+        "restriction_source":source,"authority":"independent-user-repository-host-only",
+        "aw_admitted":false,"record_requires_aw":false,
+        "choice":"Prefer a cheap supported AW recovery. Otherwise an independently authorized actor may use ordinary tools for this task outside AW, keeping the named AW operations/claims and all external restrictions intact. This is not an AW recovery or permission; unrelated AW facilities remain available.",
+        "exception_note":{"where":"Existing task, PR, issue, commit or handoff; user-visible context if storage is unavailable. Keep it concise; omit secrets, full logs and personal machine paths.",
+            "fields":["actor-and-blocked-aw-action-reason","task-scope","independent-authority-and-alternative","aw-admissions-not-established"]},
+        "on_reentry":"Reobserve actual changed sources and outstanding requirements. External work is not native custody or admitted proof. Preserve confirmed and uncertain effects; never backfill an AW effect, forge a receipt, replay an uncertain write or infer independent approval or completion."});
+}
+
 fn project_invocation(
     mut result: Value,
     projection: &Value,
@@ -1924,6 +1954,7 @@ fn project_invocation(
             "Use the committed path; reobserve through continuation.reentry before any lifecycle proposal. Do not repeat creation."
         );
     }
+    describe_non_aw_continuation(&mut result);
     result
 }
 
@@ -1932,6 +1963,7 @@ pub(crate) fn project_start(
     value: Value,
     projection: &Value,
 ) -> Result<Value, CoreError> {
+    describe_non_aw_continuation(&mut full);
     let context = normalize_context(value.clone())?;
     let mut nominations = Vec::new();
     for source in full["semantic_routes"]["discovery"]["detail"]["sources"]
@@ -2046,10 +2078,17 @@ mod tests {
             assert_eq!(result["continuation"]["retry_effect"], false);
             for status in ["rejected-before-effect", "uncertain"] {
                 let failure = json!({"effect_outcome":{"status":status},"continuation":{"status":"unavailable"}});
+                let mut projected = project_invocation(failure.clone(), &json!(projection), None);
+                assert_eq!(projected["non_aw_continuation"]["aw_admitted"], false);
                 assert_eq!(
-                    project_invocation(failure.clone(), &json!(projection), None),
-                    failure
+                    projected["non_aw_continuation"]["restriction_source"],
+                    "/continuation"
                 );
+                projected
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("non_aw_continuation");
+                assert_eq!(projected, failure);
             }
         }
     }

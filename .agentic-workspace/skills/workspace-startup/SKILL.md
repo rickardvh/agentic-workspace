@@ -6,7 +6,15 @@ description: Start or resume repository work; decide whether current AW facts or
 # Start ordinary work
 
 Read the task and applicable repository instructions whenever work starts or
-resumes. Establish any executor requirement before choosing direct implementation.
+resumes. Establish any executor requirement before choosing AW-admitted implementation.
+
+If AW cannot supply an operation or admission, distinguish that AW limit from an
+actual user, repository or host prohibition. Otherwise authorized work can
+continue with ordinary tools through [non-AW continuation](references/constraints.md#continue-outside-aw).
+This action-scoped choice needs no AW approval and does not disable unrelated
+facilities. Keep the AW operation or claim blocked and record the departure;
+separate source, host, reviewer and custody requirements remain binding. If AW
+cannot run, use the same rule through the [static unavailable path](references/unavailable.md).
 
 Before implementation, establish the executor policy in the **target checkout**.
 Read its `.agentic-workspace/config.local.toml`; if it selects
@@ -14,8 +22,9 @@ Read its `.agentic-workspace/config.local.toml`; if it selects
 precedence. With no declaration, the policy defaults to `local-preferred`.
 Reuse these facts while their sources remain current. An earlier setup report,
 parent checkout or available editor cannot establish this checkout's policy.
-If a configured source is unavailable or invalid, use native `start` to obtain
-its current restriction and recovery instead of assuming the default.
+If a configured source is unavailable or invalid, use native `start` when usable
+to obtain its current restriction and recovery instead of assuming the default.
+An unusable runtime does not prevent independently authorized non-AW work.
 
 - `local-preferred`: ordinary local work may continue directly. Consider
   Assignment only for a concrete bounded delegation opportunity or another
@@ -27,10 +36,12 @@ its current restriction and recovery instead of assuming the default.
   to obtain or reuse a current admitted executor decision. Follow
   `assignment_context.next_step` and the
   [Assignment procedure](../../planning/skills/planning-assignment/SKILL.md).
-  `admitted-local` permits direct work; a selected worker follows its exact
-  dispatch and return. Unresolved admission keeps that implementation blocked,
-  including edits through host editor/shell tools. Reading and unrelated
-  authorised work can continue. Admission does not attest earlier external edits.
+  `admitted-local` permits direct work through AW; a selected worker follows its
+  exact dispatch and return. Unresolved admission keeps AW-admitted implementation
+  blocked, including any claim that host editor/shell edits had that admission.
+  For an independently permitted alternative, use non-AW continuation above.
+  A separate user, repository or host executor requirement still binds.
+  Admission does not attest earlier external edits.
 
 Use the configured invocation in [ordinary use](references/ordinary.md): local
 `workspace.cli_invoke`, then the repository's `.agentic-workspace/config.toml`
@@ -81,9 +92,9 @@ supplies no repository permissions and waives no repository requirements. Explic
 AW setup, diagnostics and recovery remain available through their existing paths.
 
 If `start` reports a restriction, read its `affects` field and the supplied request
-for resolving it. Keep that action blocked until the responsible component returns
-a result that allows it; continue authorised work outside that scope. Having a
-shell or editor does not remove a restriction. See
+for resolving it. Keep that AW operation or claim blocked until its component
+admits it. A separately authorized non-AW method may still achieve the task;
+having a shell or editor alone supplies no such authority. See
 [restricted actions](references/constraints.md) when the result needs interpretation.
 
 A restriction is not a request for human approval. Relay the owner's complete
@@ -91,12 +102,15 @@ human decision context only when its returned resolution requires a bounded
 human answer and its `human_eligibility` names a current Verification requirement
 for human judgment or an explicitly configured human task owner. Routine domain
 decisions belong to the acting agent under the current task authority.
+An independently required user, repository or host approval follows its own
+authority; it does not need an AW request to exist.
 For `owner-recovery-required`, follow the supplied recovery. For
 `current-owner-route`, follow the matching consequence route and complete any
 bounded owner selection; a route does not resolve the restriction. For
 `owner-resolution-unavailable`, explain the missing fact or capability and that
-no supported resolution is currently supplied. Preserve the affected block and
-continue unrelated work; do not invent a recovery or ask the user to waive it.
+no supported AW recovery is currently supplied. Preserve that AW block; choose a
+separately authorized non-AW continuation when useful. Do not invent a recovery or
+ask the user to waive a missing capability.
 
 AW calls the component responsible for a rule, record or operation its **owner**.
 For changes to managed state, use that component's exact returned request/action
