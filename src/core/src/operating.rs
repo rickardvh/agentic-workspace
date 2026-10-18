@@ -1850,8 +1850,9 @@ fn operate_current(
     // Resolve owner identities and their projected references from the same
     // canonical work context, including when the caller used a relative path.
     let value = normalize_context(value)?;
-    let full = native_public::start_selected(value.clone(), &resolution(&projection, detail))?;
+    let mut full = native_public::start_selected(value.clone(), &resolution(&projection, detail))?;
     if projection == "full" && detail.is_some() {
+        describe_non_aw_continuation(&mut full);
         Ok(full)
     } else {
         project_start(full, value, &projection)
@@ -1879,10 +1880,11 @@ fn describe_non_aw_continuation(view: &mut Value) {
     view["non_aw_continuation"] = json!({
         "restriction_source":source,"authority":"independent-user-repository-host-only",
         "aw_admitted":false,"record_requires_aw":false,
-        "choice":"Prefer a cheap supported AW recovery. Otherwise an independently authorized actor may use ordinary tools for this task outside AW, keeping the named AW operations/claims and all external restrictions intact. This is not an AW recovery or permission; unrelated AW facilities remain available.",
-        "exception_note":{"where":"Existing task, PR, issue, commit or handoff; user-visible context if storage is unavailable. Keep it concise; omit secrets, full logs and personal machine paths.",
+        "procedure":".agentic-workspace/skills/workspace-startup/references/constraints.md#continue-outside-aw",
+        "choice":"Use cheap AW recovery or independently authorized ordinary tools. Preserve the named AW and external restrictions; unrelated AW facilities remain available.",
+        "exception_note":{"where":"Existing task, PR, issue, commit or handoff; user-visible fallback. Omit secrets, full logs and personal paths.",
             "fields":["actor-and-blocked-aw-action-reason","task-scope","independent-authority-and-alternative","aw-admissions-not-established"]},
-        "on_reentry":"Reobserve actual changed sources and outstanding requirements. External work is not native custody or admitted proof. Preserve confirmed and uncertain effects; never backfill an AW effect, forge a receipt, replay an uncertain write or infer independent approval or completion."});
+        "on_reentry":"Reobserve changed sources and outstanding requirements. Direct work supplies no AW custody/proof, approval or completion; never backfill effects/receipts or replay uncertain writes."});
 }
 
 fn project_invocation(
@@ -2133,6 +2135,26 @@ mod tests {
             "reference":selected
         }));
         assert!(stale.is_err());
+
+        // The internal full + selected-owner path returns raw owner detail;
+        // it must still carry the same advisory without granting admission.
+        std::fs::create_dir_all(root.join(".agentic-workspace")).unwrap();
+        std::fs::write(
+            root.join(".agentic-workspace/config.local.toml"),
+            "not valid TOML [",
+        )
+        .unwrap();
+        let mut blocked = context;
+        blocked["projection"] = json!("full");
+        let ordinary = start(blocked.clone()).unwrap();
+        let detailed = operate_selected(blocked, false, Some(Some("verification"))).unwrap();
+        assert_eq!(ordinary["status"], "blocked");
+        assert_eq!(detailed["status"], ordinary["status"]);
+        assert_eq!(
+            detailed["non_aw_continuation"],
+            ordinary["non_aw_continuation"]
+        );
+        assert_eq!(detailed["non_aw_continuation"]["aw_admitted"], false);
         std::fs::remove_dir_all(root).unwrap();
     }
 

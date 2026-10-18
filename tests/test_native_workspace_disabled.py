@@ -97,6 +97,12 @@ def test_non_aw_work_preserves_blocked_proof_and_unrelated_facilities(tmp_path, 
     compact = call(request=execute, projection="compact")
     assert compact["non_aw_continuation"] == outside
     assert compact["decision_packet"]["blockers"] == blocked["decision_packet"]["blockers"]
+    # Public detail is an exact owner reference, not a second start option.
+    # It remains a read of that owner, with the same proof restrictions.
+    detail = call(request=execute, projection="full", reference=compact["detail_refs"]["/verification"])
+    assert detail["authority"] == "detail-only"
+    assert detail["currentness"] == "reobserved"
+    assert detail["value"] == blocked["verification"]
 
     # The permitted alternative uses ordinary tools, not proof.report. Its
     # record lives with this task and acquires no native receipt or custody.
