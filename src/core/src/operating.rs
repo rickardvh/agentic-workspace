@@ -712,6 +712,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":context,
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    if let Some(continuation) = full.get("non_aw_continuation") {
+        result["non_aw_continuation"] = continuation.clone();
+    }
     if let Some(assignment) = assignment_question(full, context)? {
         result["assignment_context"] = assignment;
     }
@@ -1847,12 +1850,41 @@ fn operate_current(
     // Resolve owner identities and their projected references from the same
     // canonical work context, including when the caller used a relative path.
     let value = normalize_context(value)?;
-    let full = native_public::start_selected(value.clone(), &resolution(&projection, detail))?;
+    let mut full = native_public::start_selected(value.clone(), &resolution(&projection, detail))?;
     if projection == "full" && detail.is_some() {
+        describe_non_aw_continuation(&mut full);
         Ok(full)
     } else {
         project_start(full, value, &projection)
     }
+}
+
+// Presentation only: point to the existing restriction, never reinterpret its
+// authority or mint an owner recovery, executable action or bypass permission.
+fn describe_non_aw_continuation(view: &mut Value) {
+    let source = if view["decision_packet"]["blockers"]
+        .as_array()
+        .is_some_and(|blockers| !blockers.is_empty())
+    {
+        "/decision_packet/blockers"
+    } else if view["status"] == "blocked" {
+        "/"
+    } else if matches!(
+        view["continuation"]["status"].as_str(),
+        Some("unavailable" | "reentry-required")
+    ) {
+        "/continuation"
+    } else {
+        return;
+    };
+    view["non_aw_continuation"] = json!({
+        "restriction_source":source,"authority":"independent-user-repository-host-only",
+        "aw_admitted":false,"record_requires_aw":false,
+        "procedure":".agentic-workspace/skills/workspace-startup/references/constraints.md#continue-outside-aw",
+        "choice":"Use cheap AW recovery or independently authorized ordinary tools. Preserve the named AW and external restrictions; unrelated AW facilities remain available.",
+        "exception_note":{"where":"Existing task, PR, issue, commit or handoff; user-visible fallback. Omit secrets, full logs and personal paths.",
+            "fields":["actor-and-blocked-aw-action-reason","task-scope","independent-authority-and-alternative","aw-admissions-not-established"]},
+        "on_reentry":"Reobserve changed sources and outstanding requirements. Direct work supplies no AW custody/proof, approval or completion; never backfill effects/receipts or replay uncertain writes."});
 }
 
 fn project_invocation(
@@ -1924,6 +1956,7 @@ fn project_invocation(
             "Use the committed path; reobserve through continuation.reentry before any lifecycle proposal. Do not repeat creation."
         );
     }
+    describe_non_aw_continuation(&mut result);
     result
 }
 
@@ -1932,6 +1965,7 @@ pub(crate) fn project_start(
     value: Value,
     projection: &Value,
 ) -> Result<Value, CoreError> {
+    describe_non_aw_continuation(&mut full);
     let context = normalize_context(value.clone())?;
     let mut nominations = Vec::new();
     for source in full["semantic_routes"]["discovery"]["detail"]["sources"]
@@ -2046,10 +2080,17 @@ mod tests {
             assert_eq!(result["continuation"]["retry_effect"], false);
             for status in ["rejected-before-effect", "uncertain"] {
                 let failure = json!({"effect_outcome":{"status":status},"continuation":{"status":"unavailable"}});
+                let mut projected = project_invocation(failure.clone(), &json!(projection), None);
+                assert_eq!(projected["non_aw_continuation"]["aw_admitted"], false);
                 assert_eq!(
-                    project_invocation(failure.clone(), &json!(projection), None),
-                    failure
+                    projected["non_aw_continuation"]["restriction_source"],
+                    "/continuation"
                 );
+                projected
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("non_aw_continuation");
+                assert_eq!(projected, failure);
             }
         }
     }
@@ -2094,6 +2135,26 @@ mod tests {
             "reference":selected
         }));
         assert!(stale.is_err());
+
+        // The internal full + selected-owner path returns raw owner detail;
+        // it must still carry the same advisory without granting admission.
+        std::fs::create_dir_all(root.join(".agentic-workspace")).unwrap();
+        std::fs::write(
+            root.join(".agentic-workspace/config.local.toml"),
+            "not valid TOML [",
+        )
+        .unwrap();
+        let mut blocked = context;
+        blocked["projection"] = json!("full");
+        let ordinary = start(blocked.clone()).unwrap();
+        let detailed = operate_selected(blocked, false, Some(Some("verification"))).unwrap();
+        assert_eq!(ordinary["status"], "blocked");
+        assert_eq!(detailed["status"], ordinary["status"]);
+        assert_eq!(
+            detailed["non_aw_continuation"],
+            ordinary["non_aw_continuation"]
+        );
+        assert_eq!(detailed["non_aw_continuation"]["aw_admitted"], false);
         std::fs::remove_dir_all(root).unwrap();
     }
 

@@ -407,8 +407,15 @@ pub fn restrict_pending(
                     && action["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]["kind"]
                         != crate::proof_executor::KIND
                 {
-                    additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"proof-execution-scope-unresolved",
-                        "An enforced execution boundary is unavailable. Human approval cannot supply this capability.",vec!["effect:proof-execution".into()]));
+                    let recovery = crate::proof_executor::missing_declaration_recovery();
+                    let mut blocked = blocker(
+                        source["source"]["reference"].as_str().unwrap(),
+                        "proof-execution-scope-unresolved",
+                        recovery["detail"].as_str().unwrap(),
+                        vec!["effect:proof-execution".into()],
+                    );
+                    blocked["recovery"] = recovery["detail"].clone();
+                    additions.push(blocked);
                 }
             }
         }

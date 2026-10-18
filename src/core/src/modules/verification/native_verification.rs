@@ -572,10 +572,8 @@ fn receipt_view(
         for input in inputs {
             let current = input["path"]
                 .as_str()
-                .and_then(|path| read(root, path).ok().flatten());
-            if current.as_ref().map(|bytes| sha(bytes))
-                != input["sha256"].as_str().map(str::to_owned)
-            {
+                .and_then(|path| crate::proof_subject::source_input(root, path).ok());
+            if current.as_ref() != Some(input) {
                 gaps.push("proof-semantic-input-stale-or-unavailable".into());
                 break;
             }
@@ -1512,8 +1510,7 @@ pub(crate) fn view_with_applicability(
     {
         execution["status"] = json!("blocked");
         execution["reason"] = json!("proof-execution-scope-unresolved");
-        execution["recovery"] = json!({"kind":"capability-gap","human_answer_allowed":false,
-            "detail":"Configure an available enforced proof executor. Human permission cannot bound an unrestricted shell."});
+        execution["recovery"] = crate::proof_executor::missing_declaration_recovery();
     }
     if execution["status"] == "selected" {
         evidence_refs.sort();
@@ -1630,7 +1627,7 @@ pub(crate) fn view_with_applicability(
     if execution["status"] == "blocked" && execution["recovery"]["kind"] == "capability-gap" {
         blockers.as_array_mut().unwrap().push(
             json!({"code":format!("verification:{}",execution["reason"].as_str().unwrap()),
-            "message":"The configured proof executor is unavailable.",
+            "message":execution["recovery"]["detail"],
             "recovery":execution["recovery"]["detail"],"affects":["effect:proof-execution"]}),
         );
     }

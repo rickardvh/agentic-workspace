@@ -347,6 +347,15 @@ pub(crate) fn select_mode(
         }
     };
     let mut subject = proof_subject::build(target, changed, command, None, None, &[], &observed)?;
+    if report.is_none() && subject["identity_complete"] != true {
+        return Ok(
+            json!({"status":"blocked","reason":"proof-subject-incomplete","choices":available,
+            "gaps":["proof-subject-incomplete"],
+            "recovery":{"kind":"capability-gap","human_answer_allowed":false,
+                "inputs":subject["unavailable_inputs"],
+                "detail":"The selected change scope has no complete confined source identity. Supply a nonempty declared scope with safely observable present or absent postimages, repair any named unsafe or unreadable inputs, then reselect proof. No command was launched."}}),
+        );
+    }
     let mut promotion = Value::Null;
     if let Some(request) = choice.get("promotion") {
         let reference = request["evidence_ref"].as_str().unwrap_or("");

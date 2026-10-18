@@ -146,8 +146,55 @@ def test_native_proof_preserves_existing_index_and_rejects_command_injection(
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
 
 
+def test_deleted_scope_proof_is_admitted_without_semantic_claim(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+    deleted = tmp_path / "obsolete.txt"
+    deleted.write_text("obsolete test")
+    deleted.unlink()
+    context["changed"] = ["obsolete.txt"]
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.write_text(manifest.read_text().replace('applies_to_paths=["a.txt"]', 'applies_to_paths=["obsolete.txt"]'))
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    execute = call()["verification"]["execution_requests"][0]
+    action = call(request=execute)["decision_packet"]["primary_action"]
+    proof = call(invocation=action, projection="compact")
+    assert proof["value"]["source_current"] is True
+    assert proof["value"]["proof_subject"]["identity_complete"] is True
+    assert proof["value"]["proof_subject"]["source_inputs"] == [{"path": "obsolete.txt", "state": "absent"}]
+    assert proof["value"]["proof_subject"]["unavailable_inputs"] == []
+    immediate = proof["continuation"]["result"]["verification_context"]
+    evidence = immediate["evidence"][0]
+    assert evidence["status"] == "admitted"
+    assert evidence["receipt_admission"]["proof_sufficient"] is True
+    assert evidence["freshness"] == "reusable"
+    assert evidence["checked_scope"]["claim"] == "selected-command-passed"
+    assert evidence["checked_scope"]["completion_authority"] is False
+    assert evidence["task_judgment"]["current_judgment_count"] == 0
+    assert immediate["next_step"]
+    request = call()["verification"]["requests"][0]
+    request["arguments"]["evidence_refs"] = [proof["value"]["publication"]["reference"]]
+    deleted.write_text("recreated")
+    stale = call(request=request)["verification"]["evidence"][0]
+    assert stale["status"] == "unadmitted"
+    assert "proof-semantic-input-stale-or-unavailable" in stale["gaps"]
+    deleted.unlink()
+    assert call(request=request)["verification"]["evidence"][0]["status"] == "admitted"
+    deleted.mkdir()
+    blocked = call(request=execute)
+    assert blocked["verification"]["execution"]["reason"] == "proof-subject-incomplete"
+    assert blocked["decision_packet"]["primary_action"] is None
+    deleted.rmdir()
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+
+
 def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path, shared_core_binary, native_cli):
     context = fixture(tmp_path)
+    # Promotion's exact fingerprint reconstruction must retain mixed source
+    # postimages, including in a receiving checkout without local custody.
+    context["changed"].append("obsolete.txt")
 
     def call(value):
         return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
@@ -427,6 +474,10 @@ def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, sh
     instruction.parent.mkdir(parents=True)
     instruction.write_text("---\npaths: [count.txt]\nprotect: [count.txt]\n---\nPreserve this source.\n")
     pin_instructions(tmp_path)
+    # An image override is not an executor declaration and must not cause a
+    # Docker probe or enable the host command under source protection.
+    local = tmp_path / ".agentic-workspace/config.local.toml"
+    local.write_text('[proof_execution]\nimage="sha256:' + "0" * 64 + '"\n')
 
     def call(value: dict) -> dict:
         return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
@@ -434,6 +485,37 @@ def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, sh
     request = call(context)["verification"]["execution_requests"][0]
     blocked = call({**context, "request": request})
     assert any(item["code"].endswith(":proof-execution-scope-unresolved") for item in blocked["decision_packet"]["blockers"])
+    execution = blocked["verification"]["execution"]
+    assert execution["status"] == "blocked"
+    assert execution["reason"] == "proof-execution-scope-unresolved"
+    recovery = execution["recovery"]
+    assert recovery["cause"] == "missing-executor-declaration"
+    assert recovery["runtime_checks"] == "not-performed"
+    assert recovery["human_answer_allowed"] is False
+    assert recovery["configuration"] == {
+        "reference": ".agentic-workspace/verification/manifest.toml",
+        "section": "execution",
+        "kind": "docker-readonly-source-v1",
+        "required_fields": ["kind", "inputs"],
+    }
+    assert recovery["next_action"] == {"kind": "configure-executor", "reselect_request": "verification/execute-selected/v1"}
+    composed = next(b for b in blocked["decision_packet"]["blockers"] if b["code"] == "verification:proof-execution-scope-unresolved")
+    assert composed["owner"] == "verification"
+    assert composed["recovery"] == recovery["detail"]
+    assert blocked["decision_packet"]["primary_action"] is None
+    assert not (tmp_path / "count.txt").exists()
+    assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+    # After the explicit bounded declaration, ordinary executor validation is
+    # reached. The deliberately unavailable pin is a distinct runtime gap.
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.write_text(manifest.read_text() + '[execution]\nkind="docker-readonly-source-v1"\ninputs=["a.txt"]\n')
+    request = call(context)["verification"]["execution_requests"][0]
+    configured = call({**context, "request": request})
+    execution = configured["verification"]["execution"]
+    assert execution["reason"] == "proof-execution-capability-unavailable"
+    assert execution["recovery"].get("cause") != "missing-executor-declaration"
+    assert execution["recovery"]["diagnostic"]
+    assert configured["decision_packet"]["primary_action"] is None
     assert not (tmp_path / "count.txt").exists()
     assert not (tmp_path / ".agentic-workspace/local/effects").exists()
 

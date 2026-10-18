@@ -4,7 +4,7 @@ use crate::CoreError;
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::{collections::BTreeSet, io::Read, path::Path};
+use std::{collections::BTreeSet, path::Path};
 
 const KIND: &str = "agentic-workspace/proof-subject/v1";
 const PREFIXES: [&str; 3] = [
@@ -43,40 +43,15 @@ pub fn dependency_role(path: &str, explicit: &[String]) -> Value {
         "reason":if output {"proof-owned-publication-output"} else {"declared-proof-subject-input"}})
 }
 
-fn file_digest(root: Option<&Dir>, path: &str) -> Option<String> {
-    let root = root?;
-    if path.is_empty()
-        || path.contains(':')
-        || path.split('/').any(|p| matches!(p, "" | "." | ".."))
-    {
-        return None;
-    }
-    let mut prefix = std::path::PathBuf::new();
-    for part in path.split('/') {
-        prefix.push(part);
-        let metadata = root.symlink_metadata(&prefix).ok()?;
-        #[cfg(windows)]
-        let linked = {
-            use cap_std::fs::MetadataExt;
-            metadata.file_attributes() & 0x400 != 0
-        };
-        #[cfg(not(windows))]
-        let linked = metadata.is_symlink();
-        if linked {
-            return None;
-        }
-    }
-    let mut file = root.open(path).ok()?;
-    let mut hash = Sha256::new();
-    let mut buffer = [0_u8; 65536];
-    loop {
-        let count = file.read(&mut buffer).ok()?;
-        if count == 0 {
-            break;
-        }
-        hash.update(&buffer[..count]);
-    }
-    Some(format!("{:x}", hash.finalize()))
+/// Present rows retain their historical shape/hash. Absence is an explicit
+/// confined observation, never an interpretation of an arbitrary I/O failure.
+pub(crate) fn source_input(root: &Dir, path: &str) -> Result<Value, CoreError> {
+    Ok(
+        match crate::dependency_binding::observe_raw_with_limit(root, path, u64::MAX - 1)? {
+            Some((hash, _)) => json!({"path":path,"sha256":hash.strip_prefix("sha256:").unwrap()}),
+            None => json!({"path":path,"state":"absent"}),
+        },
+    )
 }
 
 pub(crate) fn compact_json(value: &Value) -> Result<String, CoreError> {
@@ -167,8 +142,8 @@ pub fn build(
     let mut sources = vec![];
     let mut unavailable = vec![];
     for path in &semantic {
-        match file_digest(root.as_ref(), path) {
-            Some(hash) => sources.push(json!({"path":path,"sha256":hash})),
+        match root.as_ref().and_then(|root| source_input(root, path).ok()) {
+            Some(input) => sources.push(input),
             None => unavailable.push(path.clone()),
         }
     }
@@ -353,10 +328,23 @@ mod tests {
             request["target"] = json!(repo.0);
             request["runtime"] = vector["runtime"].clone();
             let actual = view(request).unwrap();
-            assert_eq!(actual, vector["expected"]);
+            if vector["expected"]["unavailable_inputs"]
+                .as_array()
+                .is_some_and(|inputs| !inputs.is_empty())
+            {
+                // The old incomplete observation remains untrusted. Only a
+                // fresh subject can establish the explicit absent postimage.
+                assert_eq!(actual["identity_complete"], true);
+                assert_eq!(
+                    actual["source_inputs"],
+                    json!([{"path":"missing","state":"absent"}])
+                );
+            } else {
+                assert_eq!(actual, vector["expected"]);
+            }
             assert_eq!(
                 compare(&vector["expected"], &actual, "check")["status"],
-                if actual["identity_complete"] == true {
+                if vector["expected"]["identity_complete"] == true {
                     "reusable"
                 } else {
                     "unverifiable"
@@ -364,6 +352,79 @@ mod tests {
             );
         }
     }
+    #[test]
+    fn deletion_identity_preserves_scope_and_rejects_unobservable_sources() {
+        let repo = Repo::new();
+        repo.write("kept", "one");
+        let runtime = json!({"implementation":"test-host"});
+        let scope = vec!["kept".into(), "removed/deep/file".into()];
+        let build_scope =
+            |paths: &[String]| build(&repo.0, paths, "check", None, None, &[], &runtime).unwrap();
+        let first = build_scope(&scope);
+        assert_eq!(first["identity_complete"], true);
+        assert_eq!(first["unavailable_inputs"], json!([]));
+        assert_eq!(
+            first["source_inputs"][1],
+            json!({"path":"removed/deep/file","state":"absent"})
+        );
+        let absent = build_scope(&scope[1..]);
+        assert_eq!(absent["identity_complete"], true);
+        assert_eq!(
+            compare(&absent, &build_scope(&scope[1..]), "check")["status"],
+            "reusable"
+        );
+        assert_eq!(build_scope(&[])["identity_complete"], false);
+        repo.write("removed/deep/file", "recreated");
+        assert_eq!(
+            compare(&first, &build_scope(&scope), "check")["status"],
+            "stale"
+        );
+        std::fs::remove_file(repo.0.join("removed/deep/file")).unwrap();
+        assert_eq!(
+            compare(&first, &build_scope(&scope), "check")["status"],
+            "reusable"
+        );
+        std::fs::remove_file(repo.0.join("kept")).unwrap();
+        assert_eq!(
+            compare(&first, &build_scope(&scope), "check")["status"],
+            "stale"
+        );
+        repo.write("kept", "changed bytes");
+        assert_eq!(
+            compare(&first, &build_scope(&scope), "check")["status"],
+            "stale"
+        );
+        for path in ["kept/child", "removed", "../escape"] {
+            let current = build_scope(&[path.into()]);
+            assert_eq!(current["identity_complete"], false, "{path}");
+            assert_eq!(current["unavailable_inputs"], json!([path]));
+        }
+        #[cfg(unix)]
+        std::os::unix::fs::symlink("removed", repo.0.join("linked")).unwrap();
+        #[cfg(windows)]
+        junction::create(repo.0.join("removed"), repo.0.join("linked")).unwrap();
+        assert_eq!(
+            build_scope(&["linked/absent".into()])["identity_complete"],
+            false
+        );
+        #[cfg(windows)]
+        junction::delete(repo.0.join("linked")).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            repo.write("unreadable", "private");
+            let path = repo.0.join("unreadable");
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0)).unwrap();
+            if std::fs::read(&path).is_err() {
+                assert_eq!(
+                    build_scope(&["unreadable".into()])["identity_complete"],
+                    false
+                );
+            }
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+    }
+
     #[test]
     fn outside_paths_do_not_become_semantic_inputs() {
         let repo = Repo::new();
