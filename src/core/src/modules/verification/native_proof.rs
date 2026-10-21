@@ -445,6 +445,13 @@ pub(crate) fn freshness(
     // runtime strategy_revision participates in the old fingerprint, so retain
     // that field only while rebuilding the observation, never as current policy.
     let previous = &committed["invocation"]["arguments"]["selection"];
+    if !repository
+        && committed["outcome"]["value"]["source_current"] != true
+        && previous["proof_subject"]["runtime"]["executor"]["kind"] != crate::proof_executor::KIND
+    {
+        return Ok(json!({"status":"unproven","strategy_coverage":"unproven",
+            "reason":"live-execution-subject-at-return-not-established"}));
+    }
     if previous["work"]["id"]
         .as_str()
         .is_some_and(|id| !id.starts_with("direct-task:") && !id.is_empty())
@@ -718,7 +725,10 @@ pub(crate) fn committed_publication(
                 receipt["receipt_id"].as_str().unwrap_or("")
             )
             && committed["outcome"]["value"]["publication"]["reference"]
-                != local_reference(receipt)?)
+                != local_reference(receipt)?
+            && committed["outcome"]["value"]["observation"]["reference"]
+                != local_reference(receipt)?
+            && committed["outcome"]["value"]["receipt"] != *receipt)
     {
         return Ok(None);
     }
@@ -765,11 +775,26 @@ pub(crate) fn local_receipt(target: &Path, reference: &str) -> Result<Value, Cor
     if local_reference(&receipt)? != reference
         || crate::native_verification::publication_identity(&receipt)? != receipt["receipt_id"]
         || committed_publication(target, &receipt)?.is_none()
-        || committed["outcome"]["value"]["source_current"] != true
     {
         return Err(err("local proof custody or content mismatch"));
     }
     Ok(receipt)
+}
+
+/// Observe only the command's declared subject/runtime after execution. New
+/// invocation admission is a different question and cannot erase this result.
+fn returned_subject(target: &Path, invocation: &Value) -> Result<Value, CoreError> {
+    let selection = &invocation["arguments"]["selection"];
+    let previous = &selection["proof_subject"];
+    let mut observed = runtime(target, &selection["strategy"])?;
+    observed["strategy_revision"] = previous["runtime"]["strategy_revision"].clone();
+    let changed: Vec<String> =
+        serde_json::from_value(invocation["arguments"]["changed"].clone()).map_err(err)?;
+    let command = selection["choice"]["command"]
+        .as_str()
+        .ok_or_else(|| err("missing observed command"))?;
+    let current = proof_subject::build(target, &changed, command, None, None, &[], &observed)?;
+    Ok(proof_subject::compare(previous, &current, command))
 }
 
 /// Preserve a legacy execution in its existing run carrier before retiring its
@@ -923,16 +948,41 @@ pub(crate) fn execute(
         .collect();
     result.as_object_mut().unwrap().remove("output");
     result["artifact"] = json!({"path":detail_path,"sha256":sha(&detail_bytes),"streams":streams});
-    // Currentness is checked after execution; a process that edits its own
-    // subject cannot publish a current proof merely because it exited zero.
-    let still_current = revalidate().is_ok();
-    let seconds = std::time::SystemTime::now()
+    let invocation_admission = revalidate();
+    let subject_comparison = if manual {
+        Ok(json!({"status":"unproven"}))
+    } else {
+        returned_subject(target, invocation)
+    };
+    let still_current = subject_comparison
+        .as_ref()
+        .is_ok_and(|value| value["status"] == "reusable");
+    let assessment = json!({"subject":subject_comparison.as_ref().ok(),
+        "subject_observation_failure":subject_comparison.as_ref().err().map(ToString::to_string),
+        "invocation_admission_failure":invocation_admission.as_ref().err().map(ToString::to_string)});
+    let assessment_path = format!("{path}.assessment.json");
+    let assessment_bytes = create(&root, &assessment_path, &assessment)?;
+    let admission_current = invocation_admission.is_ok();
+    let reason = if !still_current {
+        if subject_comparison.is_err() {
+            "proof-subject-observation-unavailable"
+        } else {
+            "proof-subject-changed-or-unproven"
+        }
+    } else if !admission_current {
+        "completed-invocation-no-longer-admitted"
+    } else {
+        "current"
+    };
+    let recorded = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map_err(err)?
-        .as_secs();
-    let timestamp = chrono::DateTime::<chrono::Utc>::from_timestamp(seconds as i64, 0)
-        .ok_or_else(|| err("clock unavailable"))?
-        .to_rfc3339();
+        .map_err(err)?;
+    let timestamp = chrono::DateTime::<chrono::Utc>::from_timestamp(
+        recorded.as_secs() as i64,
+        recorded.subsec_nanos(),
+    )
+    .ok_or_else(|| err("clock unavailable"))?
+    .to_rfc3339();
     let mut receipt = json!({"kind":"agentic-workspace/proof-receipt/v1","command":command,"changed_paths":invocation["arguments"]["changed"],
         "result":if result["status"]=="passed" {"passed"}else{"failed"},"recorded_at":timestamp,"proof_subject":selection["proof_subject"],
         "producer_class":"aw-proof","authority":"aw-proof","execution":result,"execution_artifact":result["artifact"]});
@@ -941,17 +991,23 @@ pub(crate) fn execute(
     receipt["publication_id"] = json!(id);
     receipt["revision"] = json!(timestamp);
     receipt["source_ref"] = json!(path);
+    let observation_reference = local_reference(&receipt)?;
     let publication =
-        json!({"status":"unpublished","reason":"proof-source-changed-during-execution"});
+        json!({"status":"unpublished","reason":reason,"reference":observation_reference});
     let value = json!({"kind":"agentic-workspace/proof-execution-result/v1","process":result,"publication":publication,
         "proof_subject":selection["proof_subject"],"strategy":selection["strategy"],"source_current":still_current,
+        "observation":{"status":"recorded","reference":observation_reference,
+            "subject_guarantee":if result["execution_kind"] == crate::proof_executor::KIND {"immutable-readonly-snapshot"} else if manual {"external-report-unproven"} else {"live-checkout-launch-and-return-only"}},
+        "current_use":{"subject":if still_current {"matching-return-observation"} else {"stale-or-unproven"},"strategy":"assessed-by-current-evidence-consumer"},
+        "invocation_admission":{"status":if admission_current {"current"} else {"unavailable"},"scope":"new-invocation-only"},
+        "assessment_artifact":{"path":assessment_path,"sha256":sha(&assessment_bytes)},
         "claim_boundary":{"completion_claim_allowed":false,"task_judgment":"not-produced","independent_review":"not-produced"},
         "producer_admission":if manual {"unproven-interoperability-observation"}else{"retained-native-execution"},
         "strategy_coverage":selection["strategy"]["strategy_coverage"],
         "environment_scope":selection["proof_subject"]["runtime"]["environment_scope"],"nested_tool_runtime":selection["proof_subject"]["runtime"]["nested_tool_runtime"]});
     let mut outcome = json!({"status":"applied","effects":["proof-execution"],"value":value});
     outcome["value"]["receipt"] = receipt.clone();
-    if still_current {
+    if still_current && admission_current {
         outcome["value"]["publication"] = json!({"status":"local","reference":local_reference(&receipt)?,"scope":"current-checkout","repository_reference":format!("proof://receipts/{id}")});
     }
     let committed = crate::attempt_store::commit(

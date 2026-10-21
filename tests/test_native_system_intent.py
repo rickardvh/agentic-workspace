@@ -104,6 +104,11 @@ def test_existing_interpretation_uncertainty_is_preserved(
     gap = "retained-interpretation-review-unresolved" if condition == "unreviewed" else "retained-interpretation-invalid-or-unavailable"
     assert gap in result["system_intent"]["gaps"]
     assert result["decision_packet"]["blockers"]
+    assert all(
+        b["affects"] == ["attestation:system-intent"] and b["basis"]["kind"] == "attestation-limit"
+        for b in result["decision_packet"]["blockers"]
+        if b["owner"] == "system-intent"
+    )
     assert mirror.read_text(encoding="utf-8") == text
     request = result["system_intent"]["requests"][0]
     read = consume(surface, shared_core_binary, native_cli, {**context, "request": request})

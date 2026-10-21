@@ -86,12 +86,8 @@ def test_non_aw_work_preserves_blocked_proof_and_unrelated_facilities(tmp_path, 
     assert outside["authority"] == "independent-user-repository-host-only"
     assert outside["aw_admitted"] is False
     assert outside["record_requires_aw"] is False
-    assert outside["exception_note"]["fields"] == [
-        "actor-and-blocked-aw-action-reason",
-        "task-scope",
-        "independent-authority-and-alternative",
-        "aw-admissions-not-established",
-    ]
+    assert "exception_note" not in outside
+    assert outside["disclosure"]
     assert blocked["verification"]["execution"]["status"] == "blocked"
     assert blocked["decision_packet"]["primary_action"] is None
     compact = call(request=execute, projection="compact")

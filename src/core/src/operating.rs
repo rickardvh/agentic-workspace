@@ -772,6 +772,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             .iter()
             .map(|entry| {
                 json!({"reference":entry["reference"],
+                    "observation":entry["observation"],
                     "status":entry["status"],"admission_scope":entry["admission_scope"],
                     "publication_admission":entry["publication_admission"]["status"],
                     "receipt_admission":entry["receipt_admission"],
@@ -792,6 +793,14 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 "question":"Does the current evidence support the requested result? Judge sufficiency and give the reason; Verification carries the selected evidence into the bounded claim proposal.",
                 "answer_shape":{"disposition":"<satisfied or insufficient>","reason":"<judgment against the requested result and current evidence>"},
                 "use":"Use current reentry with this exact reference and only the semantic answer. Inspect the resulting bounded claim question before confirming; evidence presence and a passed command alone do not grant completion."}});
+        if verification["claim_judgment_required"] != true {
+            let optional = result["verification_context"]
+                .as_object_mut()
+                .unwrap()
+                .remove("next_step")
+                .unwrap();
+            result["verification_context"]["optional_judgment"] = optional;
+        }
     }
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
@@ -1864,8 +1873,17 @@ fn operate_current(
 fn describe_non_aw_continuation(view: &mut Value) {
     let source = if view["decision_packet"]["blockers"]
         .as_array()
-        .is_some_and(|blockers| !blockers.is_empty())
-    {
+        .is_some_and(|blockers| {
+            blockers.iter().any(|b| {
+                b["affects"].as_array().is_some_and(|scopes| {
+                    scopes.iter().any(|scope| {
+                        !scope
+                            .as_str()
+                            .is_some_and(|s| s.starts_with("attestation:"))
+                    })
+                })
+            })
+        }) {
         "/decision_packet/blockers"
     } else if view["status"] == "blocked" {
         "/"
@@ -1882,8 +1900,8 @@ fn describe_non_aw_continuation(view: &mut Value) {
         "aw_admitted":false,"record_requires_aw":false,
         "procedure":".agentic-workspace/skills/workspace-startup/references/constraints.md#continue-outside-aw",
         "choice":"Use cheap AW recovery or independently authorized ordinary tools. Preserve the named AW and external restrictions; unrelated AW facilities remain available.",
-        "exception_note":{"where":"Existing task, PR, issue, commit or handoff; user-visible fallback. Omit secrets, full logs and personal paths.",
-            "fields":["actor-and-blocked-aw-action-reason","task-scope","independent-authority-and-alternative","aw-admissions-not-established"]},
+        "disclosure":{"when":"Disclose a material native evidence/custody limitation once in existing task or PR evidence. Ordinary completion needs no exception form, new file or final AW acknowledgment.",
+            "exceptional_departure":"If an authorized alternative affects custody or authority, identify the blocked native operation, alternative and remaining native gap."},
         "on_reentry":"Reobserve changed sources and outstanding requirements. Direct work supplies no AW custody/proof, approval or completion; never backfill effects/receipts or replay uncertain writes."});
 }
 
@@ -2660,7 +2678,8 @@ mod tests {
             "authority":{"scope":"exact"},"source_requests":[],"expected_dependency_revision":"revision"});
         let peer = json!({"operation_id":"peer.recover","effects":["peer-effect"],"recovery":"exact-path"});
         let question = json!({"id":"peer-judgment","question":"Which current source?","material":{"sources":["a","b"]}});
-        let blockers = json!([{"code":"review-required","owner":"missing-reviewer","affects":["claim:complete"],"recovery":"independent-review"},
+        let blockers = json!([{"code":"review-required","owner":"missing-reviewer","affects":["claim:complete"],"recovery":"independent-review",
+                "basis":crate::restriction_basis("task-requirement",&json!("current-source"),"review-policy",&json!({"independent_required":true}))},
             {"code":"foreign-write-forbidden","owner":"independent-source","affects":["effect:foreign-write"]},
             {"code":"publication-required","owner":"action-owner","affects":["claim:published"]}]);
         let full = json!({"capability_contract":{"large_optional_schema":"detail"},

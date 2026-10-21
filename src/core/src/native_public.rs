@@ -977,20 +977,26 @@ fn resolve_selected(
         .flat_map(|views| views.values())
         .any(|view| view["status"] == "configuration-required")
     {
-        let repairing = config_write["contribution"]["actions"]
-            .as_array()
+        let mut blockers = Vec::new();
+        for (owner, view) in independent_views
+            .as_object()
             .into_iter()
             .flatten()
-            .any(|action| {
-                action["operation_id"] == "configuration.write"
-                    && action["arguments"]["request"]["arguments"]["key"] == "modules.independent"
-            });
-        let affects = if repairing {
-            json!(configuration_gap_scopes)
-        } else {
-            json!(["task"])
-        };
-        config_write["contribution"]["blockers"] = json!([{"code":"independent-owner-configuration-required","message":"A relevant admitted native owner requires durable settings. Follow its exact Configuration request before affected work.","affects":affects}]);
+            .filter(|(_, view)| view["status"] == "configuration-required")
+        {
+            // Unknown independent policy stays conservative in its admitted
+            // scope. Missing settings never acquire every peer's effect/claim.
+            let admission = &configuration["independent_admissions"][owner];
+            let scopes = admission["restrictions"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            let restricting = !scopes.is_empty();
+            blockers.push(json!({"code":"independent-owner-configuration-required","message":view["reason"],
+                "affects":if restricting {json!(scopes)} else {json!(["attestation:configuration"])},
+                "basis":crate::restriction_basis(if restricting {"task-requirement"} else {"attestation-limit"},&configuration["revision"],"modules.independent",admission)}));
+        }
+        config_write["contribution"]["blockers"] = json!(blockers);
     }
     let mut resources = crate::native_resource_owner::view(
         target,
@@ -1043,7 +1049,8 @@ fn resolve_selected(
     };
     if let Some(problem) = decision_source_problem {
         contributions.push(json!({"owner":"decision-continuity","revision":digest(&json!([admissions,problem]))?,
-            "settled":false,"blockers":[{"code":"receiving-decision-source-unavailable","message":problem,"affects":["task"]}]}));
+            "settled":false,"blockers":[{"code":"receiving-decision-source-unavailable","message":problem,"affects":["attestation:decision-continuity"],
+                "basis":crate::restriction_basis("attestation-limit",&json!(digest(&admissions)?),"decision-source-admissions",&admissions)}]}));
     }
     let mut planning_detail = Value::Null;
     if !planning["planning_input"].is_null() {
@@ -1098,7 +1105,7 @@ fn resolve_selected(
             .iter_mut()
             .find(|c| c["owner"] == "planning")
             .unwrap();
-        owner["blockers"] = json!([{"code":"planning-update-pending","message":"The exact native update postimage is retained but its outcome remains uncertain. Resume only the returned invocation against current authority.","affects":["task"]}]);
+        owner["blockers"] = json!([{"code":"planning-update-pending","message":"The exact native update postimage is retained but its outcome remains uncertain. Resume only the returned invocation against current authority.","affects":["effect:planning-state"]}]);
         owner["settled"] = json!(false);
     }
     if update["action"].is_object()
@@ -1323,7 +1330,8 @@ fn resolve_selected(
                 verification["contribution"]["blockers"].as_array_mut().unwrap().push(json!({
                     "code":"proof-publication-owner-resolution-required",
                     "message":"Resolve the exact Verification retention request before new proof. Legacy history is preserved and grants no current claim authority.",
-                    "affects":["effect:proof-execution","claim:complete"]
+                    "affects":["effect:proof-execution"],
+                    "basis":crate::restriction_basis("operation-guard",&json!(digest(&retention)?),"proof-publication-custody",&retention)
                 }));
             }
         }
@@ -1734,7 +1742,8 @@ fn resolve_selected(
         if !owner["blockers"].is_array() {
             owner["blockers"] = json!([]);
         }
-        owner["blockers"].as_array_mut().unwrap().push(json!({"code":"planning-continuity-unresolved","message":planning["continuity_unresolved"].to_string(),"affects":["effect:planning-state","claim:complete"]}));
+        owner["blockers"].as_array_mut().unwrap().push(json!({"code":"planning-continuity-unresolved","message":planning["continuity_unresolved"].to_string(),"affects":["effect:planning-state"],
+            "basis":crate::restriction_basis("operation-guard",&planning["source_revision"],"planning-continuity",&planning["continuity_unresolved"])}));
         owner["settled"] = json!(false);
     }
     if requirements["source_work"]["producer"] == "verification" {
@@ -1973,6 +1982,29 @@ fn resolve_selected(
                 owner["settled"] = json!(false);
             }
             decision = compile_value(owner_input)?;
+        }
+    }
+    // Native owners have already revalidated these submitted requests. Selecting
+    // their exact current question is useful only for that requested operation;
+    // an unrequested optional question remains pending in the shared compiler.
+    if decision["status"] == "direct" {
+        let selected: Vec<_> = decision["pending_consequences"]["decisions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|question| {
+                requests.iter().any(|request| {
+                    request["owner"] == question["response_request"]["owner"]
+                        && request["request_kind"] == question["response_request"]["request_kind"]
+                        && request["source_revision"]
+                            == question["response_request"]["source_revision"]
+                })
+            })
+            .cloned()
+            .collect();
+        if selected.len() == 1 {
+            decision["decision_request"] = selected[0].clone();
+            decision["status"] = json!("decision");
         }
     }
     let mut decision_sources = decision_source::public_read(

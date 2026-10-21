@@ -260,7 +260,29 @@ pub(crate) fn view(
         response["source_material"] =
             crate::operating::source_material(&json!(reference), &detail, &text, None);
     }
-    let blockers:Vec<Value>=gaps.iter().map(|gap|json!({"code":gap,"message":"Preserve existing governing sources and interpretation; current semantic custody requires owner judgment, not a source rewrite or automatic waiver.","affects":["claim:complete"]})).collect();
+    // Governing-source uncertainty remains consequential. A stale optional
+    // interpretation is only a limit on this owner's attestation of alignment.
+    let source_gaps: std::collections::BTreeSet<_> = sources
+        .iter()
+        .filter(|s| s["status"] != "present" && s["reference"] != MIRROR)
+        .map(|s| {
+            format!(
+                "governing-source-unavailable:{}",
+                s["reference"].as_str().unwrap()
+            )
+        })
+        .chain(
+            preferred
+                .filter(|p| !references.contains(p))
+                .map(|_| "preferred-source-outside-declaration".to_owned()),
+        )
+        .collect();
+    let blockers:Vec<Value>=gaps.iter().map(|gap| {
+        let governing = source_gaps.contains(gap);
+        json!({"code":gap,"message":"Preserve governing sources and retained interpretation. An unavailable governing source is unresolved policy; an unreviewed interpretation does not require a second certificate of readable sources.",
+            "affects":if governing {json!(["claim:complete"])} else {json!(["attestation:system-intent"])},
+            "basis":crate::restriction_basis(if governing {"task-requirement"} else {"attestation-limit"},&json!(revision),"system-intent-sources",&json!({"declaration":declaration,"sources":sources}))})
+    }).collect();
     let mut result = json!({"kind":"agentic-workspace/native-system-intent-view/v1","status":if sources.is_empty(){"absent"}else{"source-owned"},"revision":revision,
         "declaration":declaration,"preferred_source":preferred,"sources":sources,"interpretation":interpretation,"gaps":gaps,"requests":requests,"response":response,
         "capability_contract":contract,"contribution":{"owner":"system-intent","revision":revision,"blockers":blockers,"settled":gaps.is_empty(),"material":response},

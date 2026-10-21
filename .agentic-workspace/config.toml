@@ -25,7 +25,7 @@ decision_record_revision = "b4838e325757e523edbdccc51c27a769b8293f43"
 default_level = "medium"
 agent_may_escalate = true
 agent_may_deescalate = false
-strict_closeout = true
+strict_closeout = false
 
 [payload]
 target_release = "source-current"

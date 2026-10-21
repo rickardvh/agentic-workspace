@@ -12,7 +12,7 @@ retain one only for a distinct recurring failure that existing evidence misses.
 Do not use wording assertions to judge prose quality or agent comprehension.
 Structural checks and exact text transport can still establish their own contracts.
 
-Resolve current Verification through `start`. Read selected protocol purpose,
+Resolve missing current Verification facts through `start` when needed. Read selected protocol purpose,
 expected observations, escalation and review aids. Optional profiles remain behind
 exact detail references; omitted alternatives are not absent alternatives.
 

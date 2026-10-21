@@ -173,7 +173,8 @@ def test_deleted_scope_proof_is_admitted_without_semantic_claim(tmp_path, shared
     assert evidence["checked_scope"]["claim"] == "selected-command-passed"
     assert evidence["checked_scope"]["completion_authority"] is False
     assert evidence["task_judgment"]["current_judgment_count"] == 0
-    assert immediate["next_step"]
+    assert "next_step" not in immediate
+    assert immediate["optional_judgment"]
     request = call()["verification"]["requests"][0]
     request["arguments"]["evidence_refs"] = [proof["value"]["publication"]["reference"]]
     deleted.write_text("recreated")
@@ -461,8 +462,14 @@ def test_native_failed_or_timed_out_command_is_retained_without_retry(
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     evidence = result["continuation"]["result"]["verification"]["evidence"][0]
     assert evidence["receipt_admission"]["proof_sufficient"] is False
+    assert evidence["observation"]["status"] == ("timeout" if failure == "timeout" else "failed")
+    assert any(
+        b["code"] == "negative-evidence-relevance-unresolved" and b["affects"] == ["attestation:verification"]
+        for b in result["continuation"]["result"]["decision_packet"]["blockers"]
+    )
     claim = result["continuation"]["result"]["verification"]["claim_review"]["request"]
-    assert claim["arguments"]["evidence_refs"] == [evidence["reference"]]
+    assert claim["arguments"]["evidence_refs"] == []
+    assert claim["arguments"]["candidate_refs"] == [evidence["reference"]]
     assert claim["arguments"]["disposition"] == "insufficient"
 
 
@@ -848,6 +855,79 @@ def test_native_large_output_has_compact_sealed_detail_and_tamper_gap(tmp_path: 
     assert "native-proof-detail-unavailable-or-stale" in evidence["gaps"]
 
 
+def test_completed_observation_survives_admission_failure_and_reuses_without_replay(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path
+) -> None:
+    context = fixture(tmp_path)
+    (tmp_path / "AGENTS.md").write_text("Run the declared check for a.txt.\n")
+    (tmp_path / ".gitattributes").write_text("*.txt text\n")
+    context["changed"].append(".gitattributes")
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    command = (
+        "Add-Content AGENTS.md ''; Add-Content count.txt executed"
+        if os.name == "nt"
+        else "printf '\\n' >> AGENTS.md; echo executed >> count.txt"
+    )
+    text = manifest.read_text()
+    manifest.write_text(text[: text.index("commands=")] + "commands=[" + json.dumps(command) + "]\n")
+
+    def call(**extra):
+        # Every call starts a fresh native process; reuse has no process-local cache.
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def execute():
+        request = call()["verification"]["execution_requests"][0]
+        action = call(request=request)["decision_packet"]["primary_action"]
+        return call(invocation=action)
+
+    first = execute()
+    value = first["value"]
+    assert value["process"]["status"] == "passed"
+    assert value["source_current"] is True
+    assert value["invocation_admission"]["status"] == "unavailable"
+    assert value["publication"]["reason"] == "completed-invocation-no-longer-admitted"
+    assert value["observation"]["subject_guarantee"] == "live-checkout-launch-and-return-only"
+    original = value["observation"]["reference"]
+    assert first["continuation"]["result"]["verification"]["evidence"][0]["checked_scope"]["claim"] == "selected-command-passed"
+
+    request = call()["verification"]["requests"][0]
+    request["arguments"]["evidence_refs"] = [original]
+    recovered = call(request=request)["verification"]["evidence"][0]
+    assert recovered["observation"]["status"] == "passed"
+    assert recovered["observation"]["subject"] == value["proof_subject"]["id"]
+    assert recovered["publication_admission"]["native_publication"]["status"] == "unpublished"
+    assert recovered["evidence_freshness"] == "reusable"
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+
+    # A real input change needs a new observation. The old pass stays historical.
+    (tmp_path / "a.txt").write_text("changed proof input")
+    stale = call(request=request)["verification"]["evidence"][0]
+    assert stale["observation"]["status"] == "passed" and stale["checked_scope"] is None
+    assert stale["evidence_freshness"] != "reusable"
+    second = execute()
+    current = second["value"]["observation"]["reference"]
+    request = call()["verification"]["requests"][0]
+    request["arguments"]["evidence_refs"] = [original, current]
+    candidates = call(request=request)
+    judgment = candidates["verification"]["claim_review"]["request"]
+    assert judgment["arguments"]["evidence_refs"] == [current]
+    judgment["arguments"].update(
+        disposition="satisfied", reason="The current input has a matching native observation; the older input does not."
+    )
+    proposal = call(request=[request, judgment])
+    answer = next(d for d in proposal["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")[
+        "response_request"
+    ]
+    answer["arguments"]["answer"] = "confirm"
+    assert call(request=[request, answer])["verification"]["claim_review"]["status"] == "current"
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed", "executed"]
+
+    # Attributes are real proof inputs when declared, with no filename exemption.
+    (tmp_path / ".gitattributes").write_text("*.txt -text\n")
+    assert all(e["checked_scope"] is None for e in call(request=request)["verification"]["evidence"])
+
+
 def test_native_proof_source_change_during_execution_cannot_publish_current_evidence(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path
 ) -> None:
@@ -870,6 +950,12 @@ def test_native_proof_source_change_during_execution_cannot_publish_current_evid
     assert result["value"]["process"]["status"] == "passed"
     assert result["value"]["source_current"] is False
     assert result["value"]["publication"]["status"] == "unpublished"
+    reference = result["value"]["observation"]["reference"]
+    request = call(context)["verification"]["requests"][0]
+    request["arguments"]["evidence_refs"] = [reference]
+    historical = call({**context, "request": request})["verification"]["evidence"][0]
+    assert historical["observation"]["status"] == "passed"
+    assert historical["evidence_freshness"] != "reusable" and historical["checked_scope"] is None
     assert not (tmp_path / ".agentic-workspace/proof/receipts/index.json").exists()
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": action})

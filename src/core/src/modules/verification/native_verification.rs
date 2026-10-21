@@ -492,8 +492,16 @@ fn receipt_view(
     let Some(receipt) = receipt else {
         return json!({"reference":reference,"status":"unadmitted","gaps":["receipt-unavailable-or-invalid"]});
     };
+    let retained = local
+        .then(|| {
+            crate::native_proof::committed_publication(target, &receipt)
+                .ok()
+                .flatten()
+        })
+        .flatten();
     let publication = if local {
-        json!({"status":"admitted","reason":"exact-local-execution-custody","scope":"current-checkout","portable":false})
+        json!({"status":"admitted","reason":"exact-local-execution-custody","scope":"retained-execution","portable":false,
+            "native_publication":retained.as_ref().map(|record|&record["outcome"]["value"]["publication"])})
     } else {
         publication_admission(root, id, &receipt)
     };
@@ -614,7 +622,22 @@ fn receipt_view(
     };
     let measurement_observations = crate::native_measurement::observations(&observed_detail);
     let future_value_candidate = crate::native_memory_learning::signal(&observed_detail);
-    json!({"reference":reference,"status":if checked_scope.is_null(){"unadmitted"}else{"admitted"},"admission_scope":"selected-command","limits":["nested-tool-runtime-unobserved"],"measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
+    let guarantee = if subject["runtime"]["executor"]["kind"] == crate::proof_executor::KIND {
+        "immutable-readonly-snapshot"
+    } else if subject["runtime"]["implementation"] == "native-aw-proof" {
+        "live-checkout-launch-and-return-only"
+    } else {
+        "unproven"
+    };
+    let mut limits = vec!["nested-tool-runtime-unobserved"];
+    if guarantee == "live-checkout-launch-and-return-only" {
+        limits.push("live-tree-transient-mutation-unobserved");
+    }
+    json!({"reference":reference,"status":if checked_scope.is_null(){"unadmitted"}else{"admitted"},"admission_scope":"selected-command","limits":limits,
+        "observation":{"status":receipt["execution"]["status"],"recorded_result":receipt["result"],"recorded_at":receipt["recorded_at"],"subject":subject["id"],"command":receipt["command"],"changed_paths":receipt["changed_paths"],
+            "subject_guarantee":guarantee,"current_use":freshness["status"],"execution_artifact":receipt["execution_artifact"],
+            "assessment_artifact":retained.as_ref().map(|record|&record["outcome"]["value"]["assessment_artifact"])},
+        "measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
         "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }
@@ -1163,7 +1186,7 @@ pub(crate) fn view_with_applicability(
     let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
     let source_revision = digest(
         &json!({"instruction_sources":instruction_view["sources"].as_array().unwrap().iter().filter(|r|r["applicable"]==true && !r["metadata"]["checks"].as_array().unwrap().is_empty()).collect::<Vec<_>>(),"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
-        "proof_scope":proof_scope,"planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
+        "proof_scope":proof_scope,"strict_closeout":config["assurance"]["strict_closeout"],"planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
     )?;
     let mut protocols = serde_json::Map::new();
     let mut selector_gaps = Vec::new();
@@ -1386,13 +1409,25 @@ pub(crate) fn view_with_applicability(
                 request["arguments"]["host_result_ref"].as_str().unwrap(),
             );
         } else if request["request_kind"] == crate::native_claim_review::REQUEST {
-            evidence_refs = request["arguments"]["evidence_refs"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_owned)
-                .collect();
+            // Candidates belong to bounded work; support selection belongs to
+            // this proposed judgment. Narrowing support must not erase a known
+            // contradiction before the owner can assess it.
+            evidence_refs.extend(
+                request["arguments"]["evidence_refs"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
+            evidence_refs.extend(
+                request["arguments"]["candidate_refs"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
             claim_review_request = Some(request.clone());
         } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
             evidence_refs.extend(refs.iter().filter_map(Value::as_str).map(str::to_owned));
@@ -1425,6 +1460,13 @@ pub(crate) fn view_with_applicability(
     strategy["selection_blocked"] = strategy_control["execution_blocked"].clone();
     strategy["selected_profile_identity"] = strategy_control["selected_profiles"].clone();
     let strategy_revision = digest(&strategy)?;
+    evidence_refs.sort();
+    evidence_refs.dedup();
+    if evidence_refs.len() > 64 {
+        return Err(CoreError::new(
+            "bounded Verification work exceeds 64 candidate references; reduce the explicit work scope without discarding material observations",
+        ));
+    }
     evidence.extend(evidence_refs.iter().map(|reference| {
         receipt_view(
             &root,
@@ -1620,10 +1662,35 @@ pub(crate) fn view_with_applicability(
         "judgment_ingress":"Existing Verification receipt admission; this read-only native view does not admit returned judgments.",
         "returned_judgment_requirements":["exact claim and current work/subject","current strategy and evidence references","judgment and unresolved reasons","required producer authority and independence"]}));
     let mut blockers = if applicable {
-        json!([{"code":"verification-evidence-unresolved","message":"Current Verification obligations require admitted task-bound evidence and judgment.","affects":["claim:complete"]}])
+        json!([{"code":"verification-evidence-unresolved","message":"Verification has not attested this task's evidence and judgment. A query does not add a task acceptance requirement.","affects":["attestation:verification"],
+            "basis":crate::restriction_basis("attestation-limit",&json!(source_revision),MANIFEST,&json!({"requested":requested,"protocols":protocols}))}])
     } else {
         json!([])
     };
+    let negative_evidence = crate::native_claim_review::negative_evidence(
+        &evidence,
+        &strategy,
+        &strategy_control["obligations"],
+        &instruction_checks,
+        claim_review_request.as_ref(),
+    );
+    for row in &negative_evidence {
+        let task_failure = matches!(
+            row["status"].as_str(),
+            Some("required-failure" | "material-failure")
+        );
+        if matches!(
+            row["status"].as_str(),
+            Some("superseded" | "not-material" | "historical-or-unproven")
+        ) {
+            continue;
+        }
+        blockers.as_array_mut().unwrap().push(json!({"code":if task_failure {"current-check-failed"} else {"negative-evidence-relevance-unresolved"},
+            "message":if task_failure {"A required check or explicitly material current observation failed. Selecting other support does not discharge it; assess a current source-supported correction or supersession."} else {"A current failed observation needs domain relevance judgment. Command availability or selection alone adds no task requirement."},
+            "affects":if task_failure {json!(["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"])} else {json!(["attestation:verification"])},
+            "recovery":"public-request:verification/review-claim/v1",
+            "basis":crate::restriction_basis(if task_failure {"task-requirement"} else {"attestation-limit"}, &json!(source_revision), row["reference"].as_str().unwrap(), row)}));
+    }
     if execution["status"] == "blocked" && execution["recovery"]["kind"] == "capability-gap" {
         blockers.as_array_mut().unwrap().push(
             json!({"code":format!("verification:{}",execution["reason"].as_str().unwrap()),
@@ -1632,7 +1699,19 @@ pub(crate) fn view_with_applicability(
         );
     }
     if strict_closeout {
-        blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+        blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
+            "basis":crate::restriction_basis("task-requirement",&json!(source_revision),"effective-assurance-policy#strict_closeout",&config["assurance"])}));
+    }
+    for (id, protocol) in &protocols {
+        if protocol.get("review_owner").is_some()
+            || protocol["independent_required"] == true
+            || protocol["manual_required"] == true
+        {
+            blockers.as_array_mut().unwrap().push(json!({"code":format!("protocol-review-required:{id}"),
+                "message":"Verification has not established the separate review named by this protocol. Apply the actual source review policy and available external evidence; an owner label is not a missing task requirement or a demand for an additional AW certificate.",
+                "affects":["attestation:verification"],
+                "basis":crate::restriction_basis("attestation-limit",&json!(source_revision),&format!("{MANIFEST}#protocols.{id}"),protocol)}));
+        }
     }
     for gap in strategy_control["gaps"]
         .as_array()
@@ -1715,6 +1794,7 @@ pub(crate) fn view_with_applicability(
             instructions: &instruction_view,
             strategy: &strategy,
             evidence: &evidence,
+            negative_evidence: &negative_evidence,
             execution_request: &contextual_execution_request,
             source_revision: &source_revision,
             contract: admission_contract,
@@ -1734,6 +1814,14 @@ pub(crate) fn view_with_applicability(
             b["code"] != "strict-closeout-judgment-required"
                 && (b["code"] != "verification-evidence-unresolved" || !gaps.is_empty())
         });
+    }
+    if claim_review["status"] == "insufficient"
+        && claim_review["claim"]["judgment"] == "insufficient"
+    {
+        blockers.as_array_mut().unwrap().push(json!({"code":"task-outcome-insufficient",
+            "message":"The admitted task judgment identifies unfinished acceptance. Native bookkeeping cannot make that outcome complete.",
+            "affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
+            "basis":crate::restriction_basis("task-requirement",&json!(source_revision),"current-task-acceptance",&claim_review["claim"])}));
     }
     if let Some(packet) = &mut packet {
         packet["known_uncertainty"] = json!(gaps);
@@ -1765,9 +1853,6 @@ pub(crate) fn view_with_applicability(
             } else {
                 missing.push("proof-profile-source-unavailable");
             }
-            if claim_review["status"] != "current" {
-                missing.push("current-task-claim-judgment-not-admitted");
-            }
         }
         let measurement = &measurement_admissions[row["id"].as_str().unwrap()];
         if source.get("measurement").is_some() {
@@ -1775,7 +1860,6 @@ pub(crate) fn view_with_applicability(
             else if labels.is_none_or(|labels| labels.iter().all(|label| *label == source["measurement"]["evidence_label"])) { missing.retain(|gap| *gap != "required-evidence-not-admitted"); }
         }
         if source.get("review_owner").is_some() { missing.push("required-reviewer-result-not-admitted"); }
-        if source.get("source_intent_ref").is_some() { missing.push("source-intent-reconciliation-not-admitted"); }
         let external = missing.iter().any(|gap| matches!(*gap,
             "required-evidence-not-admitted" | "required-reviewer-result-not-admitted" | "source-intent-reconciliation-not-admitted"));
         let recovery = external.then(|| json!({"status":"owner-resolution-unavailable",
@@ -1872,14 +1956,18 @@ pub(crate) fn view_with_applicability(
     } else {
         "not-applicable"
     };
-    Ok(
-        json!({"kind":"agentic-workspace/native-verification-view/v1","status":status,
+    let mut result = json!({"kind":"agentic-workspace/native-verification-view/v1","status":status,
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
         "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
-        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
-        "authority_effect":"read-only-no-claim-grants"}),
-    )
+        "judgment_request":packet,"claim_judgment_required":strict_closeout,"contribution":{"owner":"verification","revision":source_revision,
+            "restriction_basis":crate::restriction_basis("task-requirement",&json!(source_revision),MANIFEST,&json!({"strategy":strategy_policy,"assurance":assurance,"proof_scope":proof_scope,"strict_closeout":strict_closeout})),
+            "decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
+        "authority_effect":"read-only-no-claim-grants"});
+    if !negative_evidence.is_empty() {
+        result["negative_evidence"] = json!(negative_evidence);
+    }
+    Ok(result)
 }
 
 // This is Verification policy, not a skill-side interpretation of rendered

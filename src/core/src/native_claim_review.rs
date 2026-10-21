@@ -47,7 +47,62 @@ fn postimages(
 }
 
 pub(crate) fn declaration() -> Value {
-    json!({"kind":REQUEST,"result_kind":"agentic-workspace/claim-review/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["reason","disposition","evidence_refs"],"properties":{"reason":{"type":"string","minLength":1,"maxLength":4096},"disposition":{"enum":["satisfied","insufficient"]},"evidence_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string"}},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]}}}})
+    json!({"kind":REQUEST,"result_kind":"agentic-workspace/claim-review/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["reason","disposition","evidence_refs"],"properties":{"reason":{"type":"string","minLength":1,"maxLength":4096},"disposition":{"enum":["satisfied","insufficient"]},"evidence_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string"}},"candidate_refs":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string"}},"evidence_dispositions":{"type":"object","maxProperties":64,"additionalProperties":{"type":"object","additionalProperties":false,"required":["disposition","reason"],"properties":{"disposition":{"enum":["material","not-material","superseded"]},"reason":{"type":"string","minLength":1,"maxLength":4096},"superseding_ref":{"type":"string","minLength":1}}}},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]}}}})
+}
+
+// Assess only the candidate observations explicitly carried by this bounded
+// work. No receipt-history discovery or caller-authored authenticity is added.
+pub(crate) fn negative_evidence(
+    evidence: &[Value],
+    strategy: &Value,
+    obligations: &Value,
+    instruction_checks: &[Value],
+    request: Option<&Value>,
+) -> Vec<Value> {
+    evidence.iter().filter(|e| e["receipt_admission"]["result_class"] == "failed").map(|e| {
+        let reference = &e["reference"];
+        let current = e["runtime_admission"]["status"] == "reusable"
+            && e["runtime_admission"]["strategy_coverage"] == "selected-command-covered"
+            && e["detail"]["status"] == "current";
+        let choice = &e["runtime_admission"]["command_coverage"];
+        let route_id = choice["route_id"].as_str().unwrap_or("");
+        let route = &strategy["proof_routes"][route_id];
+        let requirements: Vec<_> = obligations.as_array().into_iter().flatten().filter(|o| {
+            let profile = o["profile_id"].as_str().unwrap_or("");
+            o["required_commands"].as_array().is_some_and(|commands| commands.contains(&choice["command"]))
+                && (route_id == format!("profile:{profile}") || route["protocol_refs"].as_array().into_iter().flatten()
+                    .filter_map(Value::as_str).any(|id| strategy["protocols"][id]["proof_profiles"].as_array()
+                        .is_some_and(|profiles| profiles.contains(&json!(profile)))))
+        }).collect();
+        let required = !requirements.is_empty() || instruction_checks.iter().any(|check| {
+            check["route_id"] == choice["route_id"] && matches!(check["status"].as_str(), Some("current" | "evidence-required"))
+        });
+        let disposition = request.map(|r| &r["arguments"]["evidence_dispositions"][reference.as_str().unwrap_or("")])
+            .unwrap_or(&Value::Null);
+        // Supersession is a bound semantic judgment, supported by a current pass
+        // for this same declared command, route and subject. It never turns the
+        // old failure green or accepts unrelated proof as a replacement.
+        let recorded = |item: &Value| item["observation"]["recorded_at"].as_str()
+            .and_then(|time| chrono::DateTime::parse_from_rfc3339(time).ok());
+        let superseded = disposition["disposition"] == "superseded" && evidence.iter().any(|pass| {
+            pass["reference"] == disposition["superseding_ref"]
+                && pass["checked_scope"]["claim"] == "selected-command-passed"
+                && pass["runtime_admission"]["command_coverage"] == *choice
+                && pass["proof_subject"] == e["proof_subject"]
+                && matches!((recorded(pass), recorded(e)), (Some(p), Some(f)) if p >= f)
+        });
+        let status = if !current { "historical-or-unproven" }
+            else if superseded { "superseded" }
+            else if required { "required-failure" }
+            else if disposition["disposition"] == "material" { "material-failure" }
+            else if disposition["disposition"] == "not-material" { "not-material" }
+            else if disposition["disposition"] == "superseded" { "disposition-unproven" }
+            else { "relevance-unresolved" };
+        json!({"reference":reference,"status":status,"required":required,"source_obligations":requirements,
+            "instruction_checks":instruction_checks.iter().filter(|c| c["route_id"] == choice["route_id"]).collect::<Vec<_>>(),
+            "judgment":disposition,"observation":e["observation"],
+            "authority":"Current required-command coverage or the acting domain's exact bound relevance/supersession judgment; selection alone supplies neither."})
+    }).collect()
 }
 
 pub(crate) struct Context<'a> {
@@ -60,6 +115,7 @@ pub(crate) struct Context<'a> {
     pub instructions: &'a Value,
     pub strategy: &'a Value,
     pub evidence: &'a [Value],
+    pub negative_evidence: &'a [Value],
     pub execution_request: &'a dyn Fn(Value) -> Value,
     pub source_revision: &'a str,
     pub contract: &'a Value,
@@ -75,6 +131,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         instructions,
         strategy,
         evidence,
+        negative_evidence,
         execution_request,
         source_revision,
         contract,
@@ -90,11 +147,21 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     // and all claim/currentness checks below still apply to the semantic answer.
     let mut evidence_refs: Vec<_> = evidence
         .iter()
+        .filter(|entry| entry["checked_scope"]["claim"] == "selected-command-passed")
         .filter_map(|entry| entry["reference"].as_str())
         .collect();
     evidence_refs.sort_unstable();
     evidence_refs.dedup();
-    let template = json!({"kind":"agentic-workspace/public-request/v1","id":REQUEST,"owner":"verification","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":REQUEST,"arguments":{"reason":"Review the exact resulting work against the required evidence and outcome.","disposition":"insufficient","evidence_refs":evidence_refs}});
+    let candidate_refs: Vec<_> = evidence
+        .iter()
+        .filter_map(|entry| entry["reference"].as_str())
+        .collect();
+    let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":REQUEST,"owner":"verification","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":REQUEST,"arguments":{"reason":"Review the exact resulting work against the required evidence and outcome.","disposition":"insufficient","evidence_refs":evidence_refs}});
+    // The schema advertises optional judgments. Empty candidate/disposition
+    // carriage says nothing and need not accompany every unrelated task.
+    if !candidate_refs.is_empty() {
+        template["arguments"]["candidate_refs"] = json!(candidate_refs);
+    }
     let mut result = json!({"kind":"agentic-workspace/claim-review/v1","status":"not-requested","request":template,"decisions":[],"completion_authority":false});
     let Some(request) = request else {
         return Ok(result);
@@ -104,40 +171,60 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     // instruction sources remain independently bound below, alongside the subject,
     // policy and evidence; reconciliation owns discovery of their other consumers.
     let sources = postimages(target, changed)?;
-    let mut stable_evidence = evidence.to_vec();
+    let args = &request["arguments"];
+    let selected = |entry: &&Value| {
+        args["evidence_refs"]
+            .as_array()
+            .is_some_and(|refs| refs.contains(&entry["reference"]))
+    };
+    // Supporting selection does not discard the bounded work's known negatives.
+    // Their source requirement or explicit relevance judgment decides force.
+    let current_failure = |entry: &&Value| {
+        entry["receipt_admission"]["result_class"] == "failed"
+            && entry["runtime_admission"]["status"] == "reusable"
+            && entry["runtime_admission"]["strategy_coverage"] == "selected-command-covered"
+    };
+    let mut stable_evidence: Vec<Value> = evidence
+        .iter()
+        .filter(|entry| selected(entry) || current_failure(entry))
+        .cloned()
+        .collect();
     for e in &mut stable_evidence {
         if let Some(f) = e["runtime_admission"].as_object_mut() {
             f.remove("validation_duration_us");
         }
     }
-    let binding = json!({"work":work,"subject":subject,"postimages":sources,"source_revision":source_revision,"policy_revision":config["revision"],"instructions":instructions["sources"].as_array().unwrap().iter().filter(|r|r["applicable"]==true).collect::<Vec<_>>(),"strategy":strategy,"evidence":stable_evidence,"producer":digest(&json!(include_str!("native_claim_review.rs")))?});
-    let args = &request["arguments"];
+    let binding = json!({"work":work,"subject":subject,"postimages":sources,"source_revision":source_revision,"policy_revision":config["revision"],"instructions":instructions["sources"].as_array().unwrap().iter().filter(|r|r["applicable"]==true).collect::<Vec<_>>(),"strategy":strategy,"evidence":stable_evidence,"candidate_refs":candidate_refs,"negative_evidence":negative_evidence,"producer":digest(&json!(include_str!("native_claim_review.rs")))?});
     let proposal =
         json!({"binding":binding,"judgment":args["disposition"],"reason":args["reason"]});
     let pr = digest(&proposal)?;
     result["proposal"] = proposal;
     let mut answer = args.clone();
     answer["proposal_revision"] = json!(pr);
+    answer["candidate_refs"] = json!(candidate_refs);
     answer.as_object_mut().unwrap().remove("answer");
     let mut gaps = Vec::new();
     if args["disposition"] != "satisfied" {
         gaps.push("review-judgment-insufficient".to_owned());
     }
-    for e in evidence {
-        if e["checked_scope"]["claim"] != "selected-command-passed" {
-            gaps.push(format!("current-evidence-required:{}", e["reference"]));
+    for row in negative_evidence {
+        match row["status"].as_str() {
+            Some("required-failure" | "material-failure") => {
+                gaps.push(format!("current-failing-evidence:{}", row["reference"]))
+            }
+            Some("relevance-unresolved" | "disposition-unproven") => {
+                gaps.push(format!("failure-relevance-unresolved:{}", row["reference"]))
+            }
+            _ => (),
         }
     }
     let mut protocol_coverage = serde_json::Map::new();
     for (id, protocol) in strategy["protocols"].as_object().into_iter().flatten() {
         // A semantic reviewer grant cannot manufacture independent/maintainer evidence.
-        if protocol.get("review_owner").is_some()
-            || protocol["independent_required"] == true
-            || protocol["manual_required"] == true
-        {
+        if protocol["independent_required"] == true || protocol["manual_required"] == true {
             gaps.push(format!("required-review-producer:{id}"));
         }
-        let supporting: Vec<_> = evidence
+        let supporting: Vec<_> = stable_evidence
             .iter()
             .filter(|e| crate::native_proof::covers_protocol(e, strategy, id))
             .collect();
@@ -219,7 +306,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         "instruction_sources":instructions["sources"].as_array().unwrap().iter()
             .filter(|r|r["applicable"]==true).map(|r|json!({"source":r["source"],
                 "binding_admission":r["binding_admission"]["status"],"requirements":r["metadata"]})).collect::<Vec<_>>(),
-        "protocol_obligations":strategy["protocols"],"protocol_coverage":protocol_coverage,
+        "protocol_obligations":strategy["protocols"],"protocol_coverage":protocol_coverage,"negative_evidence":negative_evidence,
         "protocol_recovery_boundary":{"maximum_request_count":1,"maximum_request_bytes":MAX_PROTOCOL_RECOVERY_BYTES,
             "alternatives_source":"/verification/execution_requests",
             "use":"At most one source-linked candidate is offered for uncovered protocols. Use the current detail_refs /verification reference to inspect other execution_requests or an oversized candidate. Omitted choices and all protocol obligations retain their authority. Selecting or repeating a command is not itself protocol sufficiency."},
@@ -234,7 +321,8 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
             "claim":e["checked_scope"]["claim"],"command":e["checked_scope"]["command"],
             "route":e["runtime_admission"]["command_coverage"]["route_id"],"gaps":e["gaps"]})).collect::<Vec<_>>(),
         "gaps":gaps,"claim_limits":"Confirmation supplies this semantic judgment only. All current blockers, required evidence and independent/manual reviewer producers remain binding; it grants no review, approval or whole-task completion."});
-    let decisions = json!([{"id":"verification-claim-review","question":"Confirm this exact claim judgment against the resulting work and current evidence?","material":material,"response_request":{"request_kind":REQUEST,"arguments":answer},"choices":[{"id":"confirm","label":"Confirm exact claim judgment"},{"id":"defer","label":"Leave claim unresolved"}],"affects":["claim:complete"]}]);
+    let decisions = json!([{"id":"verification-claim-review","question":"Confirm this exact claim judgment against the resulting work and current evidence?","material":material,"response_request":{"request_kind":REQUEST,"arguments":answer},"choices":[{"id":"confirm","label":"Confirm exact claim judgment"},{"id":"defer","label":"Leave claim unresolved"}],"affects":["attestation:verification"],
+        "basis":crate::restriction_basis("attestation-limit",&json!(source_revision),REQUEST,&material)}]);
 
     let compiled = crate::compile_value(
         json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),

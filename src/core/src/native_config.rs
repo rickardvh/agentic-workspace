@@ -93,7 +93,9 @@ pub(crate) fn disabled_owner(
         json!([])
     } else {
         json!([{"code":"disabled-owner-source-reconciliation-required",
-        "message":"The owner is disabled but recognized sources remain. Preserve them; source presence does not establish live custody, retirement or transfer. Responsible-owner reconciliation remains unresolved.","affects":affects}])
+        "message":"The owner is disabled but recognized sources remain. Preserve them; source presence does not establish live custody, retirement or transfer.",
+        "affects":[format!("attestation:{owner}")],
+        "basis":crate::restriction_basis("attestation-limit",&json!(revision),"disabled-owner-sources",&json!(sources))}])
     };
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":owner,"revision":"disabled-source-observation/v1"}],
@@ -192,8 +194,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         .any(|key| !shared["assurance"][*key].is_null())
     {
         blockers.push(json!({"code":"verification-policy-owner-disabled",
-            "message":"Shared proof policy requires its Verification owner. Enable that owner before claiming completion.",
-            "affects":["claim:complete"]}));
+            "message":"The disabled Verification owner cannot attest the configured proof policy. Explicit strict closeout remains required when configured.",
+            "affects":if shared["assurance"]["strict_closeout"] == true {json!(["claim:complete"])} else {json!(["attestation:workspace"])},
+            "basis":crate::restriction_basis(if shared["assurance"]["strict_closeout"] == true {"task-requirement"} else {"attestation-limit"},&json!(digest(&shared)?),SHARED,&shared["assurance"])}));
     }
     let enabled = local["workspace"]["enabled"]
         .as_bool()
@@ -269,7 +272,8 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
             "decision_delegations":shared["assurance"]["decision_delegations"]},
         "safety":{"safe_to_auto_run_commands":safe,"requires_human_verification_on_pr":human_review,
             "automatic_execution_permitted":false},
-        "contribution":{"owner":"workspace","revision":revision,"blockers":blockers}}),
+        "contribution":{"owner":"workspace","revision":revision,"blockers":blockers,
+            "restriction_basis":crate::restriction_basis("task-requirement",&json!(revision),SHARED,&json!({"sources":sources,"payload":payload["policy"],"safety":local["safety"],"assignment_policy":assignment_policy}))}}),
     )
 }
 

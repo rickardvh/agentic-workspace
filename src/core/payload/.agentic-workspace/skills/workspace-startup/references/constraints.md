@@ -1,29 +1,30 @@
 # Interpret current restrictions
 
-Use this reference when a result blocks an action or completion claim. Read its
-`affects`, `message`, `owner` and revision, then the supplied request or recovery
-path. Identify what is forbidden, what remains allowed, and what fact or decision
-would remove this particular block.
+Use this reference to interpret a restriction's `basis`, exact `affects` and
+source. A real requirement stays binding until its needed fact is established.
+An AW operation guard refuses that native operation; an attestation limit or
+optional repair creates no extra task acceptance criterion. Unknown governing
+policy remains uncertainty for its dependent action. Neither a machine objection
+nor its absence replaces judgment of the actual outcome and sources.
 
 ## Continue outside AW
 
 An AW refusal constrains its own operation or claim. It does not decide whether
 the user, repository and host independently permit another way to finish the
 task. Prefer a supported exact AW recovery when cheap and useful. If it is absent,
-unusable or disproportionate, an already authorized actor may choose ordinary
+unusable or disproportionate, an already authorised actor may choose ordinary
 tools outside AW without asking for AW permission or retrying unchanged state.
 If a real repository, host or user rule forbids the alternative, preserve that
-restriction; only its authorized owner can change it. A required independent
+restriction; only its authorised owner can change it. A required independent
 review, uncertain effect custody or missing credential does not disappear.
 
-Leave a short exception in the existing task, PR, issue, commit or handoff:
-**actor + blocked AW action/reason; task/scope; independent authority and chosen
-alternative; AW evidence, ownership or claim still unestablished**. If storage is
-unavailable, state it visibly to the user. Saving this note needs no AW call,
-managed record or special format, and the note supplies no permission.
-Keep it concise; omit secrets, full logs and personal machine paths.
+Disclose a material native evidence/custody limitation once in existing task or
+PR evidence. Ordinary work needs no exception form, new file, status narration
+or final acknowledgement. An actual exceptional departure affecting authority or
+custody should identify the blocked operation, authorised alternative and
+remaining native gap. The disclosure supplies no permission.
 
-For example, an authorized agent can run a bounded read-only parser check with
+For example, an authorised agent can run a bounded read-only parser check with
 ordinary host tools when AW cannot provide isolated `proof.report`. Its task note
 states the missing executor, tested scope and direct result, while explicitly
 leaving the AW receipt and independent review unestablished. It must not launch
@@ -34,7 +35,8 @@ whole-workspace disablement is a separate last-resort choice.
 On AW reentry, submit the actual changed scope and reobserve current sources and
 requirements. Distinguish external edits/results from authenticated AW custody.
 Never fabricate a receipt, backfill an AW effect or replay an uncertain write.
-An exception does not satisfy the preserved AW restriction or authorize closure.
+Actual requirements, rather than an exception note or native record, determine
+the permitted completion stage.
 
 ## Follow an AW recovery
 
@@ -60,8 +62,8 @@ selection-required route asks you to establish that relationship before choosing
 a request. Sharing an owner alone does not make a request a recovery. Neither
 route availability nor selection resolves the restriction.
 `owner-resolution-unavailable` means no supported recovery is currently supplied.
-Keep the affected AW operation or claim blocked, report the missing resolution,
-and use the non-AW continuation above when independently authorized. Do not invent
+Leave that native operation or attestation unavailable, report the missing needed
+fact, and continue authorised ordinary work when useful. Do not invent
 a route or a permission question.
 Human assent cannot
 supply executor isolation, current evidence, source custody or independent

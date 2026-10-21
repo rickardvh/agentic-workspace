@@ -77,7 +77,11 @@ def test_advisory_capture_keeps_decision_authority_separate(tmp_path, shared_cor
     assert call(request=decline)["memory"]["advisory_capture"]["status"] == "not-retained"
     assert not (tmp_path / ".agentic-workspace/local").exists()
     assert not (tmp_path / ".agentic-workspace/memory").exists()
+    ordinary = call()
+    assert ordinary["decision_packet"]["status"] == "direct"
+    assert ordinary["decision_packet"]["decision_request"] is None
     proposed = call(request=request)
+    assert proposed["decision_packet"]["status"] == "decision"
     answer = proposed["decision_packet"]["decision_request"]["response_request"]
     answer["arguments"]["answer"] = "confirm-retention"
     ready = call(request=answer)
@@ -397,7 +401,8 @@ def test_observable_future_value_disposition_without_memory_prompt(tmp_path, sha
     carried = consume("json", shared_core_binary, native_cli, context | {"request": request, "projection": "carried"})
     resumed = consume("json", shared_core_binary, native_cli, carried["carriage"]["context"])
     assert any(
-        d["owner"] == "memory" and "claim:complete" in d["affects"] for d in resumed["decision_packet"]["pending_consequences"]["decisions"]
+        d["owner"] == "memory" and d["basis"]["kind"] == "optional-work" and d["affects"] == []
+        for d in resumed["decision_packet"]["pending_consequences"]["decisions"]
     )
     dismissed = json.loads(json.dumps(request))
     dismissed["arguments"]["disposition"] = "no-retention"

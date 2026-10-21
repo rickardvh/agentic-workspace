@@ -304,7 +304,7 @@ fail_evidence_labels = [
   "missing_verification_proof_decision",
   "test_count_only_completion_claim",
 ]
-manual_boundary = "The acting agent answers current Verification requests for the specific evidence change; an automated check does not decide sufficiency or confer completion authority."
+manual_boundary = "The acting agent explains the specific evidence decision and independent review evaluates it. A native judgment record is optional unless explicitly required by a separate source; automated success does not decide outcome sufficiency."
 
 [scenarios.repo_acceptance_policy]
 protocol_id = "repo_acceptance_policy"
@@ -2113,7 +2113,7 @@ source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#proof-executi
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-proof-runtime"
 detail_route = "uv run pytest tests/test_native_proof_producer.py::test_native_selected_command_stays_local_and_replays_without_task_claim -q"
-notes = "A green proof claim requires affected-owner coverage, one admitted execution path, current evidence, and no default tracked proof residue."
+notes = "A green proof claim requires affected-owner coverage, a source-authorized execution path with honest provenance, current evidence, and no default tracked proof residue. Native runtime/effect claims still require their exact native custody; ordinary task completion acquires no extra receipt requirement."
 
 [assurance.requirements.binding_automatic_assignment]
 level = "high"

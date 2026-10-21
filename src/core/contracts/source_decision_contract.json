@@ -24,6 +24,7 @@
       "decision:",
       "effect:",
       "claim:",
+      "attestation:",
       "outcome:"
     ],
     "action_identity_fields": [
@@ -179,6 +180,7 @@
     "execution": "invoke only the exact returned operation envelope"
   },
   "operating_projections": {
+    "proof_observation": "A committed run retains original execution, subject and output identity independently of later invocation admission/publication. observation.reference uses the existing local receipt carrier; current evidence consumption rechecks actual source/runtime/strategy coverage without replay. Assessment detail preserves post-run failure causes. Historical passes, current proof, native publication and task/reviewer judgment remain distinct; live launch/return equality supplies no immutable-snapshot guarantee.",
     "default": "compact",
     "full": "Original current owner views and capability/detail contracts.",
     "compact": "Resolve current mandatory owner contributions and exact selected envelopes; defer optional configuration fields, proof alternatives and Planning portability. No required action-detail fetch.",
@@ -198,6 +200,7 @@
     "setup_continuation": "A selected setup_context.next_step supplies a complete input plus a semantic answer shape. Its setup field carries only the selected job's semantic arguments; native Configuration rebuilds the exact current read-only selection and preserves peer answers. Setup choice references bind the work separately so lost selection yields a current job-selection recovery while changed work and intact-context source/reference drift remain rejected. Selection grants no write or readiness authority."
   },
   "capability_ownership": {
+    "restriction_basis": "Restriction capability is separate from the owner-derived reason. task-requirement retains exact source/task limits; operation-guard constrains only actions/effects; attestation-limit names only the owner's attestation; optional-work imposes no scope. Native callers cannot author these facts. Reference, source/declaration revisions and their binding remain visible without copying the policy corpus. Unclassified legacy/independent restrictions stay conservative until their owner migrates them. Binding digests check carriage integrity, not source authentication. Native owners read and admit the actual current configuration/manifest/instruction sources before emitting a basis; their public request source revisions reject stale carriage. An unrequested operation question remains pending; only an exact selected source request promotes it.",
     "domains": "exclusive among current declared owners",
     "effects": "bound to one owned domain and admitted operation",
     "claims": "exclusive authority declared separately from a module contribution",

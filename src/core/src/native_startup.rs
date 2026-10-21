@@ -34,8 +34,16 @@ pub(crate) fn deliver_required(
             initial["contribution"]["material"]["delivery_failure"] = json!({
                 "reason":failure.to_string(),
                 "recovery":"Repair or reobserve the exact configured source, then use fresh start; no delivery or satisfaction is established."});
+            let basis = crate::restriction_basis(
+                "task-requirement",
+                &initial["revision"],
+                "configured-startup-source",
+                &initial["source"],
+            );
             for blocker in initial["contribution"]["blockers"].as_array_mut().unwrap() {
                 blocker["code"] = json!("configured-startup-source-delivery-unavailable");
+                blocker["affects"] = json!(["effect:implementation", "claim:complete"]);
+                blocker["basis"] = basis.clone();
             }
             initial
         }
@@ -86,6 +94,9 @@ pub(crate) fn restrict_operations(view: &mut Value, contracts: &[&Value]) -> Res
     capability["revision"] = json!("pending");
     capability["revision"] = json!(digest(capability)?);
     for blocker in view["contribution"]["blockers"].as_array_mut().unwrap() {
+        if blocker["basis"]["kind"] == "attestation-limit" {
+            continue;
+        }
         let scopes = blocker["affects"].as_array_mut().unwrap();
         for effect in &effects {
             if !scopes.iter().any(|scope| scope == effect) {
@@ -169,11 +180,21 @@ pub(crate) fn view(
             crate::operating::source_material(&source["reference"], &detail, &text, None);
     }
     let mut blockers = vec![];
-    if reference.is_some() && response.is_null() {
+    if let Some(reference) = reference
+        && response.is_null()
+    {
         let unavailable = source["status"] != "present";
-        blockers.push(json!({"code":if unavailable{"configured-startup-source-unavailable"}else{"configured-startup-source-read-required"},"message":"Read the exact current configured startup source before affected implementation or completion judgment; preserve its contents and use source-owner repair if unavailable.","affects":if unavailable{scopes}else{vec![json!("effect:implementation"),json!("claim:complete")]}}));
+        blockers.push(json!({"code":if unavailable{"configured-startup-source-unavailable"}else{"configured-startup-source-read-required"},"message":"Read the current configured startup source when needed. Native delivery is not a second certificate of readable policy; an unavailable governing source remains unresolved.",
+            "affects":if unavailable{scopes}else{vec![json!("attestation:startup-adapter")]},
+            "basis":crate::restriction_basis(if unavailable {"task-requirement"} else {"attestation-limit"},&json!(revision),reference,&source)}));
     }
     let mut result = json!({"kind":"agentic-workspace/native-startup-adapter-view/v1","status":if reference.is_none(){"absent"}else if response.is_null(){"source-context-required"}else{"source-context-delivered"},"revision":revision,"source":source,"requests":requests,"response":response,"capability_contract":capability,"contribution":{"owner":"startup-adapter","revision":revision,"settled":blockers.is_empty(),"blockers":blockers}});
+    result["contribution"]["restriction_basis"] = crate::restriction_basis(
+        "task-requirement",
+        &json!(revision),
+        reference.unwrap_or("configured-startup-source"),
+        &source,
+    );
     if !response.is_null() {
         result["contribution"]["material"] = response;
     } else if reference.is_some() {

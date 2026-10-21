@@ -77,9 +77,12 @@ Selecting a test for this patch does not automatically put it in ordinary CI.
 Decide separately whether validation needs a durable document. Ordinary patch
 evidence belongs with focused tests and native Verification receipts, a concise
 PR or issue explanation, and ignored local raw data when reproduction needs it.
-Use the existing evidence owner for authenticated execution, currentness and
-reuse; GitHub prose supplies review context and does not replace its required
-receipts or reconciliation. Keep bulky logs, fixture controllers and diagnostic
+Use the existing evidence owner for native execution, currentness and reuse when
+needed. Ordinary observations retain their actual provenance and can support
+source-policy-permitted judgment without an extra native receipt. Explicit native
+producer/receipt and source-reconciliation requirements remain binding at their
+actual scope. GitHub prose supplies review context, never invented execution or
+independent approval. Keep bulky logs, fixture controllers and diagnostic
 exports local unless an existing owner explicitly promotes a bounded result.
 
 Before adding a checked-in report, name the future repository consumer and what

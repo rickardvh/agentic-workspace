@@ -32,6 +32,10 @@ admission. Verify that current
 Planning names the created owner; a successful write alone is not selection or
 task completion. Genuine ambiguity or unavailable admission remains an explicit
 selection gap with a bounded next request.
+That native selection gap does not require an unrelated task to remain open.
+Finish adequate permitted work when its actual requirements are met; retain only
+changed meaning whose loss would harm continuation, using an adequate existing
+task record if optional native storage is unavailable.
 
 If selection was interrupted, use current reentry and the exact owner path to
 reobserve the current creation/selection recovery; never

@@ -32,12 +32,14 @@ exact request/action and required material; follow a returned `detail_refs`
 reference only for missing useful detail. Do not request full projection merely
 to find an owner key. Use [exact owner carriage](owners.md) when a caller can keep
 structured transport outside model output; otherwise compact needs no scratch.
-Consume a current invocation continuation directly. Changed work or unavailable
-continuation requires explicit fresh resolution or the owner's recovery path.
+Consume a useful current invocation continuation directly. Resolve changed work
+or a missing continuation when the next native operation or needed fact depends
+on it; adequate completed work needs no final resolution call.
 
-Follow a surfaced setup assessment even when the task is unrelated. It supplies
-current installed guidance when repository copies are old or missing. Refresh
-changed package bytes through Configuration; assess capabilities only when due.
+Use a surfaced setup assessment when it can change this work or an applicable
+source requires it. It supplies current installed guidance when repository copies
+are old or missing. Refresh package bytes through Configuration when needed or
+explicitly required by payload policy; optional assessment is no extra deliverable.
 Unchanged deferred choices need no repeated question. Revisit them only when their
 prerequisite changes, dependent work needs them, or the human asks.
 Read each consequence's affected action or claim. An unresolved integration

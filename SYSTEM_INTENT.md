@@ -30,7 +30,7 @@ The deterministic substrate beneath that agent procedure can be viewed as **reso
 
 The existing compiled operating-decision and typed-action boundary is the implementation center of that deterministic substrate. It is a tool/projection for skills, agents, hosts, and adapters; it is not a universal model-facing procedure controller that every agent must execute step by step. The skills-first procedure and the resolve/act/reconcile substrate are complementary views over one authority, not competing workflows.
 
-Closeout is the terminal case of reconciliation: no further action remains, required evidence and authority are sufficient for the intended claim, and any future-relevant residue has an explicit owner or is deliberately absent. An individual source owner being settled or having nothing to require is only owner-local quiescence; it does not establish that the user's outcome is terminal or that a broader claim is supportable.
+Closeout concerns the requested outcome: no required task action remains, relevant evidence and applicable user/repository/host requirements support the intended claim, and useful unfinished meaning survives where needed. Optional AW bookkeeping, available repair actions and native terminality add no acceptance criteria. An individual source owner being settled or having nothing to require does not establish the user's outcome. AW remains exact about its own operations and attestations; an explicitly required native producer, protected effect or independent review remains required at its actual scope.
 
 ## Authority model
 
