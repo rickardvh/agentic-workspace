@@ -234,7 +234,8 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
             "claim":e["checked_scope"]["claim"],"command":e["checked_scope"]["command"],
             "route":e["runtime_admission"]["command_coverage"]["route_id"],"gaps":e["gaps"]})).collect::<Vec<_>>(),
         "gaps":gaps,"claim_limits":"Confirmation supplies this semantic judgment only. All current blockers, required evidence and independent/manual reviewer producers remain binding; it grants no review, approval or whole-task completion."});
-    let decisions = json!([{"id":"verification-claim-review","question":"Confirm this exact claim judgment against the resulting work and current evidence?","material":material,"response_request":{"request_kind":REQUEST,"arguments":answer},"choices":[{"id":"confirm","label":"Confirm exact claim judgment"},{"id":"defer","label":"Leave claim unresolved"}],"affects":["claim:complete"]}]);
+    let decisions = json!([{"id":"verification-claim-review","question":"Confirm this exact claim judgment against the resulting work and current evidence?","material":material,"response_request":{"request_kind":REQUEST,"arguments":answer},"choices":[{"id":"confirm","label":"Confirm exact claim judgment"},{"id":"defer","label":"Leave claim unresolved"}],"affects":["attestation:verification"],
+        "basis":crate::restriction_basis("attestation-limit",&json!(source_revision),REQUEST,&material)}]);
 
     let compiled = crate::compile_value(
         json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),

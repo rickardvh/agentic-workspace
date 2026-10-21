@@ -394,6 +394,24 @@ def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp
 
     source.write_text("[assurance]\nstrict_closeout=false\n")
     assert call()["verification"]["judgment_request"] is None
+    queried = call(request=call()["verification"]["requests"][0])
+    assert all(
+        b["basis"]["kind"] == "attestation-limit" and b["affects"] == ["attestation:verification"]
+        for b in queried["decision_packet"]["blockers"]
+        if b["owner"] == "verification"
+    )
+    negative = call()["verification"]["claim_review"]["request"]
+    negative["arguments"].update(disposition="insufficient", reason="The requested outcome still has unfinished acceptance.")
+    proposal = call(request=negative)
+    answer = next(d for d in proposal["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")[
+        "response_request"
+    ]
+    answer["arguments"]["answer"] = "confirm"
+    unfinished = call(request=answer)
+    assert any(
+        b["code"] == "task-outcome-insufficient" and b["basis"]["kind"] == "task-requirement"
+        for b in unfinished["decision_packet"]["blockers"]
+    )
     source.write_text("[assurance]\nstrict_closeout=true\n")
     before = source.read_bytes()
     current = call()

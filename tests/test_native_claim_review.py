@@ -111,7 +111,8 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     proof = call(invocation=call(request=execute)["decision_packet"]["primary_action"], projection="compact")
     assert proof["value"]["claim_boundary"]["completion_claim_allowed"] is False
     continuation = proof["continuation"]["result"]
-    step = continuation["verification_context"]["next_step"]
+    assert "next_step" not in continuation["verification_context"]
+    step = continuation["verification_context"]["optional_judgment"]
     assert continuation["verification_context"]["evidence"][0]["proof_sufficient"] is True
     discovered = consume(
         "native",
@@ -319,7 +320,7 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
     assert evidence["checked_scope"]["command"] == command
     assert evidence["gaps"] == []
     assert evidence["limits"] == ["nested-tool-runtime-unobserved"]
-    step = continuation["result"]["verification_context"]["next_step"]
+    step = continuation["result"]["verification_context"]["optional_judgment"]
     proposed = call(
         {
             **continuation["context"],
@@ -568,3 +569,5 @@ def test_claim_review_cannot_impersonate_required_reviewer(tmp_path, shared_core
     reviewed = call(request=answer)
     assert reviewed["verification"]["claim_review"]["status"] == "insufficient"
     assert "required-review-producer:review" in reviewed["verification"]["claim_review"]["gaps"]
+    required = next(b for b in reviewed["decision_packet"]["blockers"] if b["code"] == "protocol-review-required:review")
+    assert required["basis"]["kind"] == "task-requirement" and "claim:complete" in required["affects"]

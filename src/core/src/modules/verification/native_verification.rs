@@ -1620,7 +1620,8 @@ pub(crate) fn view_with_applicability(
         "judgment_ingress":"Existing Verification receipt admission; this read-only native view does not admit returned judgments.",
         "returned_judgment_requirements":["exact claim and current work/subject","current strategy and evidence references","judgment and unresolved reasons","required producer authority and independence"]}));
     let mut blockers = if applicable {
-        json!([{"code":"verification-evidence-unresolved","message":"Current Verification obligations require admitted task-bound evidence and judgment.","affects":["claim:complete"]}])
+        json!([{"code":"verification-evidence-unresolved","message":"Verification has not attested this task's evidence and judgment. A query does not add a task acceptance requirement.","affects":["attestation:verification"],
+            "basis":crate::restriction_basis("attestation-limit",&json!(source_revision),MANIFEST,&json!({"requested":requested,"protocols":protocols}))}])
     } else {
         json!([])
     };
@@ -1633,6 +1634,17 @@ pub(crate) fn view_with_applicability(
     }
     if strict_closeout {
         blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+    }
+    for (id, protocol) in &protocols {
+        if protocol.get("review_owner").is_some()
+            || protocol["independent_required"] == true
+            || protocol["manual_required"] == true
+        {
+            blockers.as_array_mut().unwrap().push(json!({"code":format!("protocol-review-required:{id}"),
+                "message":"This applicable source explicitly requires a separate reviewer/producer. Command success and the acting agent's claim cannot supply it.",
+                "affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
+                "basis":crate::restriction_basis("task-requirement",&json!(source_revision),&format!("{MANIFEST}#protocols.{id}"),protocol)}));
+        }
     }
     for gap in strategy_control["gaps"]
         .as_array()
@@ -1735,6 +1747,14 @@ pub(crate) fn view_with_applicability(
                 && (b["code"] != "verification-evidence-unresolved" || !gaps.is_empty())
         });
     }
+    if claim_review["status"] == "insufficient"
+        && claim_review["claim"]["judgment"] == "insufficient"
+    {
+        blockers.as_array_mut().unwrap().push(json!({"code":"task-outcome-insufficient",
+            "message":"The admitted task judgment identifies unfinished acceptance. Native bookkeeping cannot make that outcome complete.",
+            "affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
+            "basis":crate::restriction_basis("task-requirement",&json!(source_revision),"current-task-acceptance",&claim_review["claim"])}));
+    }
     if let Some(packet) = &mut packet {
         packet["known_uncertainty"] = json!(gaps);
     }
@@ -1775,7 +1795,6 @@ pub(crate) fn view_with_applicability(
             else if labels.is_none_or(|labels| labels.iter().all(|label| *label == source["measurement"]["evidence_label"])) { missing.retain(|gap| *gap != "required-evidence-not-admitted"); }
         }
         if source.get("review_owner").is_some() { missing.push("required-reviewer-result-not-admitted"); }
-        if source.get("source_intent_ref").is_some() { missing.push("source-intent-reconciliation-not-admitted"); }
         let external = missing.iter().any(|gap| matches!(*gap,
             "required-evidence-not-admitted" | "required-reviewer-result-not-admitted" | "source-intent-reconciliation-not-admitted"));
         let recovery = external.then(|| json!({"status":"owner-resolution-unavailable",
@@ -1877,7 +1896,9 @@ pub(crate) fn view_with_applicability(
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
         "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
-        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
+        "judgment_request":packet,"claim_judgment_required":strict_closeout,"contribution":{"owner":"verification","revision":source_revision,
+            "restriction_basis":crate::restriction_basis("task-requirement",&json!(source_revision),MANIFEST,&json!({"strategy":strategy_policy,"assurance":assurance,"proof_scope":proof_scope,"strict_closeout":strict_closeout})),
+            "decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),
     )
 }

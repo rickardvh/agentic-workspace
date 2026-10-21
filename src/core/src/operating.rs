@@ -792,6 +792,14 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 "question":"Does the current evidence support the requested result? Judge sufficiency and give the reason; Verification carries the selected evidence into the bounded claim proposal.",
                 "answer_shape":{"disposition":"<satisfied or insufficient>","reason":"<judgment against the requested result and current evidence>"},
                 "use":"Use current reentry with this exact reference and only the semantic answer. Inspect the resulting bounded claim question before confirming; evidence presence and a passed command alone do not grant completion."}});
+        if verification["claim_judgment_required"] != true {
+            let optional = result["verification_context"]
+                .as_object_mut()
+                .unwrap()
+                .remove("next_step")
+                .unwrap();
+            result["verification_context"]["optional_judgment"] = optional;
+        }
     }
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();
@@ -2660,7 +2668,8 @@ mod tests {
             "authority":{"scope":"exact"},"source_requests":[],"expected_dependency_revision":"revision"});
         let peer = json!({"operation_id":"peer.recover","effects":["peer-effect"],"recovery":"exact-path"});
         let question = json!({"id":"peer-judgment","question":"Which current source?","material":{"sources":["a","b"]}});
-        let blockers = json!([{"code":"review-required","owner":"missing-reviewer","affects":["claim:complete"],"recovery":"independent-review"},
+        let blockers = json!([{"code":"review-required","owner":"missing-reviewer","affects":["claim:complete"],"recovery":"independent-review",
+                "basis":crate::restriction_basis("task-requirement",&json!("current-source"),"review-policy",&json!({"independent_required":true}))},
             {"code":"foreign-write-forbidden","owner":"independent-source","affects":["effect:foreign-write"]},
             {"code":"publication-required","owner":"action-owner","affects":["claim:published"]}]);
         let full = json!({"capability_contract":{"large_optional_schema":"detail"},

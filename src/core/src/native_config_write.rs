@@ -927,7 +927,8 @@ pub(crate) fn view_selected(
             answer["arguments"]["proposal_revision"] = json!(proposal);
             result["status"] = json!("domain-decision-required");
             result["proposal"] = json!({"before":before_value,"after":value,"source":source,"key":key,"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"authority":"bounded-domain-answer","source_ownership":if key == PAYLOAD_KEY {"package-managed; unrelated source and local state preserved"} else {"repo-human"}});
-            result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":if key == PAYLOAD_KEY {"Authorize this exact artifact-derived package file refresh? Preserve unrelated repository and local state."} else {"Authorize this exact configuration-source edit? The source remains repo/human-owned."},"response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
+            result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":if key == PAYLOAD_KEY {"Authorize this exact artifact-derived package file refresh? Preserve unrelated repository and local state."} else {"Authorize this exact configuration-source edit? The source remains repo/human-owned."},"response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["effect:configuration-source"],
+                "basis":crate::restriction_basis("operation-guard",&result["contribution"]["revision"],EDIT,&answer["arguments"])}]);
             result["contribution"]["decisions"][0]["material"] = result["proposal"].clone();
 
             return Ok(result);

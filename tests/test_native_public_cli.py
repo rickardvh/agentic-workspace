@@ -903,6 +903,11 @@ def test_native_disabled_owner_preserves_uninterpreted_source(
     assert result[owner]["status"] == "disabled"
     assert result[owner]["sources"][0]["status"] == "present-uninterpreted"
     assert any(b["code"].endswith("disabled-owner-source-reconciliation-required") for b in result["decision_packet"]["blockers"])
+    assert all(
+        b["affects"] == [f"attestation:{owner}"] and b["basis"]["kind"] == "attestation-limit"
+        for b in result["decision_packet"]["blockers"]
+        if b["owner"] == owner
+    )
     assert result[owner]["requests"] == []
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     again = consume(surface, shared_core_binary, native_cli, context)

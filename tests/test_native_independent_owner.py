@@ -182,12 +182,12 @@ def test_independent_configuration_requirement_uses_current_configuration_owner(
     initial = call()
     required = initial["independent_owners"]["fixture-notebook"]
     assert required["status"] == "configuration-required"
-    assert initial["decision_packet"]["status"] == "blocked"
+    assert initial["decision_packet"]["status"] == "direct"
     planning = initial["planning"]["creation_requests"][0]
     planning["arguments"]["material"] = material()
     read = call(request=[required["configuration_request"], planning])
-    assert read["decision_packet"]["status"] == "blocked"
-    assert read["decision_packet"]["primary_action"] is None
+    assert read["decision_packet"]["status"] == "actionable"
+    assert read["decision_packet"]["primary_action"]["operation_id"] == "planning.create"
     selected = read["configuration_write"]["selected_choice"]
     previous = tomllib.loads(config.read_text())["modules"]["independent"]["fixture-notebook"]
     compact = selected["value"]["fixture-notebook"]
@@ -201,10 +201,10 @@ def test_independent_configuration_requirement_uses_current_configuration_owner(
     proposed = call(request=edit)
     answer = proposed["decision_packet"]["decision_request"]["response_request"]
     answer["arguments"]["answer"] = "authorize-write"
-    ready = call(request=[answer, planning])
+    ready = call(request=answer)
     action = ready["decision_packet"]["primary_action"]
     assert action["source_owner"] == "configuration"
-    assert any("effect:planning-state" in b["affects"] for b in ready["decision_packet"]["blockers"])
+    assert not any("effect:planning-state" in b["affects"] or "task" in b["affects"] for b in ready["decision_packet"]["blockers"])
     call(invocation=action)
     assert call()["independent_owners"]["fixture-notebook"]["status"] == "current"
     assert not (tmp_path / ".agentic-workspace/modules").exists()

@@ -67,7 +67,7 @@ def test_real_configuration_admits_only_the_exact_planning_effect(
         return consume(surface, shared_core_binary, native_cli, {**context, **kwargs}, host_path=os.environ["PATH"])
 
     before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    first = call()
+    first = call(request=call()["planning"]["selection_requests"][0])
     assert first["configuration"]["payload"]["status"] == "satisfied"
     assert not any("task" in b["affects"] for b in first["decision_packet"]["blockers"])
     restrictions = first["decision_packet"]["blockers"]

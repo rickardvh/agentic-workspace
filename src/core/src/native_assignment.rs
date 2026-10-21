@@ -59,6 +59,12 @@ pub(crate) fn implementation_admission(
             requirements["delegation"]["observation"]
         ]))?);
     }
+    contribution["restriction_basis"] = crate::restriction_basis(
+        "task-requirement",
+        &contribution["revision"],
+        "current-assignment-policy",
+        &requirements["assignment"],
+    );
     Ok(admission)
 }
 
@@ -264,7 +270,8 @@ pub(crate) fn view(
         blockers.push(json!({"code":if policy["enforceable"]!=true{"binding-policy-current-target-unresolved"}else if result["status"]=="assigned-nonlocal-handoff-required"{"current-nonlocal-assignment-handoff-required"}else{"current-binding-assignment-required"},"message":"Current binding assignment requires resolved comparison and exact admitted continuation; unavailable manual/provider alternatives cannot silently authorize local implementation or completion of externally produced work.","affects":IMPLEMENTATION_SCOPES}));
     }
     Ok(
-        json!({"result":result,"requests":requests,"source_revision":source,"contribution":{"owner":"assignment","revision":owner["revision"],"blockers":blockers}}),
+        json!({"result":result,"requests":requests,"source_revision":source,"contribution":{"owner":"assignment","revision":owner["revision"],"blockers":blockers,
+            "restriction_basis":crate::restriction_basis("task-requirement",&json!(source),"current-assignment-policy",policy)}}),
     )
 }
 

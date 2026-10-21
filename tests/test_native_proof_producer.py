@@ -173,7 +173,8 @@ def test_deleted_scope_proof_is_admitted_without_semantic_claim(tmp_path, shared
     assert evidence["checked_scope"]["claim"] == "selected-command-passed"
     assert evidence["checked_scope"]["completion_authority"] is False
     assert evidence["task_judgment"]["current_judgment_count"] == 0
-    assert immediate["next_step"]
+    assert "next_step" not in immediate
+    assert immediate["optional_judgment"]
     request = call()["verification"]["requests"][0]
     request["arguments"]["evidence_refs"] = [proof["value"]["publication"]["reference"]]
     deleted.write_text("recreated")

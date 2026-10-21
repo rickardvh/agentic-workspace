@@ -414,6 +414,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
         # Accepted CLI envelope transport: context assertions and unchanged
         # forwarding, with effect/currentness semantics still in the core.
         "carry_input",
+        "require_invoke_context",
         "run",
         "forward",
         "main",
@@ -440,6 +441,84 @@ def test_capability_domains_effects_and_claims_have_one_owner(shared_core_binary
     conflicting_claim["claim_authorities"].append({"claim": "complete", "owner": "workspace"})
     with pytest.raises(DecisionContractError, match="claim complete has conflicting authorities"):
         compile_source_decision([], capability_contract=conflicting_claim)
+
+
+def test_restriction_basis_separates_requirements_from_native_limits(shared_core_binary: Path) -> None:
+    contract = deepcopy(CAPABILITY_CONTRACT)
+    contract["restriction_authorities"].append(
+        {"owner": "example.external", "affects": ["task", "effect:external-state", "claim:complete"]}
+    )
+    action = {
+        "dependency_revision": "ext1",
+        "operation_id": "example.finish",
+        "arguments": {"subject": "work"},
+        "effects": ["external-state"],
+    }
+    base = {"contributions": [{"owner": "example.external", "revision": "ext1", "actions": [action]}], "capability_contract": contract}
+    allowed = _compile(base)["primary_action"]
+
+    def basis(kind: str, declaration: dict) -> dict:
+        result = {
+            "kind": kind,
+            "source_revision": "source-1",
+            "reference": "requirements/current",
+            "declaration_revision": "sha256:"
+            + hashlib.sha256(json.dumps(declaration, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+        }
+        result["binding_revision"] = (
+            "sha256:" + hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        )
+        return result
+
+    # Substantive requirements stay fixed while optional storage, unavailable
+    # attestation and unsettled state vary. Exact operation custody still binds.
+    for kind, scopes, available in [
+        ("optional-work", [], True),
+        ("attestation-limit", ["attestation:example.external"], True),
+        ("operation-guard", ["effect:external-state"], False),
+        ("task-requirement", ["task"], False),
+    ]:
+        payload = deepcopy(base)
+        payload["contributions"][0].update(
+            settled=False,
+            blockers=[
+                {
+                    "code": "unresolved",
+                    "message": "Current observation",
+                    "affects": scopes,
+                    "basis": basis(kind, {"requirement": "required reviewer"} if kind == "task-requirement" else {"operation": "publish"}),
+                }
+            ],
+        )
+        result = _compile(payload)
+        assert (result["primary_action"] == allowed) is available
+        assert result["blockers"][0]["basis"]["kind"] == kind
+        assert result["blockers"][0]["affects"] == scopes
+        # Neither a quiet compiler nor unsettled owners establish task completion.
+        assert result["status"] != "terminal"
+        if kind != "task-requirement":
+            payload["contributions"][0]["blockers"][0]["affects"] = ["claim:complete"]
+            with pytest.raises(DecisionContractError, match="basis cannot impose"):
+                _compile(payload)
+
+    legacy = deepcopy(base)
+    legacy["contributions"][0]["blockers"] = [
+        {"code": "unknown-policy", "message": "Unreadable potentially governing source", "affects": ["task"]}
+    ]
+    assert _compile(legacy)["status"] == "blocked"
+    assert _compile(legacy)["blockers"][0]["basis"]["kind"] == "unclassified"
+    legacy["contributions"][0]["blockers"][0]["basis"] = basis("task-requirement", {"failure": "relevant check failed"})
+    assert _compile(legacy)["status"] == "blocked"
+    legacy["capability_contract"]["restriction_authorities"] = []
+    with pytest.raises(DecisionContractError, match="without admitted restriction authority"):
+        _compile(legacy)
+    forged = deepcopy(base)
+    forged["contributions"][0]["blockers"] = [
+        {"code": "unresolved", "message": "Bound source", "affects": ["task"], "basis": basis("task-requirement", {"required": True})}
+    ]
+    forged["contributions"][0]["blockers"][0]["basis"]["reference"] = "different-policy"
+    with pytest.raises(DecisionContractError, match="exact declaration"):
+        _compile(forged)
 
 
 def test_public_request_is_revision_bound_typed_and_cannot_resolve_as_a_noop(shared_core_binary: Path) -> None:

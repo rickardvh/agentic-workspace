@@ -211,6 +211,7 @@ pub(crate) fn resolve_with_targets(
         .collect();
     let mut result = json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
         "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers,
+            "restriction_basis":crate::restriction_basis("task-requirement",&json!(revision),"current-instruction-sources",&json!(rows)),
             "material":if material.is_empty(){Value::Null}else{json!(material)}},
         "authority_boundary":"read supplies context; admitted reconcile/governed_by require current judgment; use suggests procedure; checks/protect and requirements retain owner authority; none grants proof or effects"});
     if let Some(reason) = discovery_gap {

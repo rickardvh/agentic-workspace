@@ -442,7 +442,8 @@ pub(crate) fn view(
                 "response_request":{"request_kind":EDIT,"arguments":answer},
                 "material":result["proposal"],
                 "choices":[{"id":"authorize-disposition","label":"Authorize this exact disposition"},{"id":"defer","label":"Defer without mutation"}],
-                "affects":["task","effect:memory-state"]}]);
+                "affects":["effect:memory-state"],
+                "basis":crate::restriction_basis("operation-guard",&result["contribution"]["revision"],EDIT,&result["proposal"])}]);
 
             return Ok(result);
         }

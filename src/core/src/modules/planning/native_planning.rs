@@ -540,8 +540,9 @@ pub(crate) fn artifact_profile(target: &Path, profile: &Value) -> Result<Value, 
     } else {
         vec![json!({
             "code":"native-artifact-durable-transfer-unresolved",
-            "message":"Preserve optional runtime artifacts. Current durable facts must reach the existing Planning owner before delegation, handoff, review or completion; file presence is not current custody and the native typed transfer/update path remains unavailable.",
-            "affects":["effect:delegation","claim:complete","claim:pr-complete"]
+            "message":"Preserve useful durable facts from these runtime artifacts before a relevant handoff. File presence alone does not establish a current task dependency or custody.",
+            "affects":[],
+            "basis":crate::restriction_basis("optional-work",&json!(digest(&sources)?),"workflow-artifact-profile",selected)
         })]
     };
     Ok(json!({"status":"current-owner-method","profile":profile,
@@ -1133,7 +1134,16 @@ fn resolve_context(
     // suitability of new work for Planning. Keep discovery agent-owned without
     // consulting remembered selectors or introducing an ambient posture decision.
     let status_scope = "bound-owner-obligations";
-    let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"status_scope":status_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
+    // Selection, migration and custody questions concern Planning operations;
+    // an unrelated task must not acquire their completion criteria.
+    for blocker in blockers.as_array_mut().unwrap() {
+        blocker["affects"] = json!(["effect:planning-state"]);
+    }
+    let mut decisions = decisions;
+    for decision in decisions.as_array_mut().unwrap() {
+        decision["affects"] = json!(["effect:planning-state"]);
+    }
+    let contribution = json!({"owner":"planning","revision":revision,"restriction_basis":crate::restriction_basis("operation-guard",&json!(revision),SELECTION,&json!({"selected":selected,"transition":transition})),"facts":{"continuation":status,"status_scope":status_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
     let mut selection_request = template.clone();
     selection_request["id"] = json!("planning/select-owner/v1");
     selection_request["request_kind"] = json!("planning/select-owner/v1");

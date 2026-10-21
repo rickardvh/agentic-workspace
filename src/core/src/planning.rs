@@ -549,7 +549,8 @@ pub(crate) fn reentry_input(value: Value) -> Result<(Value, Value), CoreError> {
     let reconciled = reconciliation(&input)?;
     let contribution = json!({"owner":"planning","revision":digest(&reconciled)?,
         "facts":{"reconciliation":reconciled,"current":false},"settled":false,
-        "blockers":[{"code":"planning-owner-reentry-required","message":"The selected Planning owner is quiescent. Preserve its subject, scope and unresolved obligations; the current owner must establish a live frontier before this task continues.","affects":["task"]}]});
+        "restriction_basis":crate::restriction_basis("operation-guard",&json!(digest(&reconciled)?),"selected-planning-owner",&reconciled),
+        "blockers":[{"code":"planning-owner-reentry-required","message":"The selected Planning owner is quiescent. Preserve its subject, scope and unresolved obligations; establish a live frontier before mutating this owner. Actual unfinished task work remains consequential.","affects":["effect:planning-state"]}]});
     Ok((
         json!({"contributions":[contribution],"intent":input.intent}),
         json!({"reconciliation":reconciled,"current":false}),

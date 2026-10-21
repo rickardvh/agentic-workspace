@@ -1033,7 +1033,8 @@ pub(crate) fn view_for_selected(
                     let b = &record["invocation"]["arguments"]["binding"];
                     let published = committed(&root, target, &record)?;
                     if published && !declaration_current(&root, b)? {
-                        view["contribution"]["blockers"] = json!([{"code":"decision-declaration-currentness-lost","message":"The exact declared decision source/scope changed; preserve source and reconcile its bounded answer.","affects":["task"]}]);
+                        view["contribution"]["blockers"] = json!([{"code":"decision-declaration-currentness-lost","message":"The exact declared decision source/scope changed; preserve source and reconcile its bounded answer.","affects":[format!("effect:{}",destination.effect())],
+                            "basis":crate::restriction_basis("operation-guard",&view["contribution"]["revision"],destination.capture(),&json!({"request":request}))}]);
                     } else if (!published || cleanup_pending(&root, b)?)
                         && b["work"] == *work
                         && b["scope"] == json!(scope)
@@ -1422,7 +1423,8 @@ pub(crate) fn view_for_selected(
         let decisions = json!([{"id":"material-decision-disposition","question":if destination == Destination::Advisory {"Retain this exact bounded advisory knowledge? It grants no governing authority."} else {"Confirm this exact decision and disposition? Publication alone grants no deciding authority."},
             "material":{"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,
                 "disposition":args["disposition"].as_str().unwrap_or("retain"),"publishes_source":args["disposition"] != "no-retention"},
-            "response_request":{"request_kind":destination.capture(),"arguments":answer},"choices":[{"id":destination.answer(),"label":if destination == Destination::Advisory {"Retain this exact advisory knowledge"} else {"Confirm this exact bounded decision"}},{"id":"defer","label":"Defer without publication"}],"affects":["task",format!("effect:{}",destination.effect())]}]);
+            "response_request":{"request_kind":destination.capture(),"arguments":answer},"choices":[{"id":destination.answer(),"label":if destination == Destination::Advisory {"Retain this exact advisory knowledge"} else {"Confirm this exact bounded decision"}},{"id":"defer","label":"Defer without publication"}],"affects":[format!("effect:{}",destination.effect())],
+            "basis":crate::restriction_basis("operation-guard",&view["contribution"]["revision"],destination.capture(),&answer)}]);
 
         if args["answer"].is_null() && !agent {
             if request["id"] != destination.capture() {

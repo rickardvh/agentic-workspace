@@ -397,7 +397,8 @@ def test_observable_future_value_disposition_without_memory_prompt(tmp_path, sha
     carried = consume("json", shared_core_binary, native_cli, context | {"request": request, "projection": "carried"})
     resumed = consume("json", shared_core_binary, native_cli, carried["carriage"]["context"])
     assert any(
-        d["owner"] == "memory" and "claim:complete" in d["affects"] for d in resumed["decision_packet"]["pending_consequences"]["decisions"]
+        d["owner"] == "memory" and d["basis"]["kind"] == "optional-work" and d["affects"] == []
+        for d in resumed["decision_packet"]["pending_consequences"]["decisions"]
     )
     dismissed = json.loads(json.dumps(request))
     dismissed["arguments"]["disposition"] = "no-retention"

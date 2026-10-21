@@ -108,7 +108,8 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     assert owner["status"] == "source-context-required"
     assert "Human-owned" not in json.dumps(owner)
     assert len(json.dumps(owner)) < 6500
-    assert {"effect:implementation", "claim:complete"} <= set(startup_blockers(result)[0]["affects"])
+    assert startup_blockers(result)[0]["affects"] == ["attestation:startup-adapter"]
+    assert startup_blockers(result)[0]["basis"]["kind"] == "attestation-limit"
     request = owner["requests"][0]
     for projection in ("compact", "carried"):
         offered = consume(surface, shared_core_binary, native_cli, {**context, "projection": projection})

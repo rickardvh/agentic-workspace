@@ -290,7 +290,8 @@ pub(crate) fn view(
             .remove("answer");
         result["status"] = json!("authorization-required");
         result["authorization_request"] = answer.clone();
-        result["contribution"]["decisions"] = json!([{"id":"skill-exposure-authorization","question":"Authorize this exact passive discovery link change? Canonical skill material and unrelated host skills are preserved.","response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this link change"}],"affects":["task","effect:configuration-source"]}]);
+        result["contribution"]["decisions"] = json!([{"id":"skill-exposure-authorization","question":"Authorize this exact passive discovery link change? Canonical skill material and unrelated host skills are preserved.","response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this link change"}],"affects":["effect:configuration-source"],
+            "basis":crate::restriction_basis("operation-guard",&result["contribution"]["revision"],EDIT,&answer["arguments"])}]);
 
         return Ok(());
     }

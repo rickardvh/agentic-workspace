@@ -106,7 +106,14 @@ const INVOCATION_KIND: &str = "agentic-workspace/operation-invocation/v1";
 const CAPABILITY_CONTRACT_KIND: &str = "agentic-workspace/capability-contract/v1";
 const PUBLIC_REQUEST_KIND: &str = "agentic-workspace/public-request/v1";
 const TASK: &str = "task";
-const CONSEQUENCE_PREFIXES: [&str; 5] = ["action:", "decision:", "effect:", "claim:", "outcome:"];
+const CONSEQUENCE_PREFIXES: [&str; 6] = [
+    "action:",
+    "decision:",
+    "effect:",
+    "claim:",
+    "outcome:",
+    "attestation:",
+];
 
 #[derive(Debug, Clone)]
 pub struct CoreError(
@@ -157,6 +164,7 @@ struct DecisionInput {
 
 #[derive(Debug, Deserialize)]
 struct ContributionInput {
+    restriction_basis: Option<RestrictionBasis>,
     #[serde(default)]
     owner: String,
     #[serde(default)]
@@ -294,6 +302,7 @@ struct ActionInput {
 
 #[derive(Debug, Deserialize)]
 struct BlockerInput {
+    basis: Option<RestrictionBasis>,
     #[serde(default)]
     code: String,
     #[serde(default)]
@@ -306,6 +315,7 @@ struct BlockerInput {
 
 #[derive(Debug, Deserialize)]
 struct BoundedDecisionInput {
+    basis: Option<RestrictionBasis>,
     #[serde(default)]
     id: String,
     #[serde(default)]
@@ -538,6 +548,7 @@ struct NormalizedAction {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedBlocker {
+    basis: RestrictionBasis,
     resolution: &'static str,
     consequence_id: String,
     code: String,
@@ -551,6 +562,7 @@ struct NormalizedBlocker {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedDecision {
+    basis: RestrictionBasis,
     resolution: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     human_context: Option<HumanDecisionContext>,
@@ -634,6 +646,105 @@ fn unique_strings(values: Vec<String>, field: &str) -> Result<Vec<String>, CoreE
         )));
     }
     Ok(values)
+}
+
+/// An owner supplies the reason for a restriction separately from its capability
+/// to restrict a scope. Public ingress never accepts these source observations.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct RestrictionBasis {
+    kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    source_revision: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    reference: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    declaration_revision: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    binding_revision: Option<String>,
+}
+
+impl RestrictionBasis {
+    fn legacy() -> Self {
+        Self {
+            kind: "unclassified".into(),
+            source_revision: None,
+            reference: None,
+            declaration_revision: None,
+            binding_revision: None,
+        }
+    }
+
+    fn validate(&self, _revision: &str) -> Result<(), CoreError> {
+        if self.kind == "unclassified" {
+            return Ok(());
+        }
+        if !matches!(
+            self.kind.as_str(),
+            "task-requirement" | "operation-guard" | "attestation-limit" | "optional-work"
+        ) {
+            return Err(CoreError::new("unknown restriction basis"));
+        }
+        if self
+            .source_revision
+            .as_deref()
+            .is_none_or(|v| v.trim().is_empty())
+            || self
+                .reference
+                .as_deref()
+                .is_none_or(|v| v.trim().is_empty())
+            || self
+                .declaration_revision
+                .as_deref()
+                .is_none_or(|v| !v.starts_with("sha256:") || v.len() != 71)
+            || self.binding_revision
+                != Some(digest(
+                    &json!({"kind":self.kind,"source_revision":self.source_revision,"reference":self.reference,"declaration_revision":self.declaration_revision}),
+                )?)
+        {
+            return Err(CoreError::new(
+                "restriction basis requires the current owner's source and exact declaration",
+            ));
+        }
+        Ok(())
+    }
+
+    fn scopes(
+        &self,
+        values: Vec<String>,
+        owner: &str,
+        field: &str,
+    ) -> Result<Vec<String>, CoreError> {
+        match self.kind.as_str() {
+            "optional-work" if values.is_empty() => Ok(values),
+            "attestation-limit" if values == [format!("attestation:{owner}")] => Ok(values),
+            "operation-guard"
+                if values
+                    .iter()
+                    .all(|v| v.starts_with("effect:") || v.starts_with("action:")) =>
+            {
+                affects(values, field)
+            }
+            "task-requirement" | "unclassified" => affects(values, field),
+            _ => Err(CoreError::new(
+                "restriction basis cannot impose these task or claim scopes",
+            )),
+        }
+    }
+}
+
+/// Bind a producer's already observed declaration; this is not a caller-facing
+/// optional flag. Missing legacy bases stay conservative in the shared compiler.
+pub(crate) fn restriction_basis(
+    kind: &str,
+    revision: &Value,
+    reference: &str,
+    declaration: &Value,
+) -> Value {
+    let mut basis = json!({"kind":kind,"source_revision":revision,"reference":reference,
+        "declaration_revision":digest(declaration).expect("JSON declaration serializes")});
+    basis["binding_revision"] = json!(digest(&basis).expect("JSON binding serializes"));
+    basis
 }
 
 fn affects(values: Vec<String>, field: &str) -> Result<Vec<String>, CoreError> {
@@ -1012,11 +1123,18 @@ fn normalize_contribution(
         }
     }
 
+    let default_basis = input
+        .restriction_basis
+        .unwrap_or_else(RestrictionBasis::legacy);
+    default_basis.validate(&revision)?;
     let mut blockers = input
         .blockers
         .into_iter()
         .enumerate()
-        .map(|(index, blocker)| normalize_blocker(blocker, &owner, &revision, index))
+        .map(|(index, mut blocker)| {
+            blocker.basis.get_or_insert_with(|| default_basis.clone());
+            normalize_blocker(blocker, &owner, &revision, index)
+        })
         .collect::<Result<Vec<_>, _>>()?;
     blockers.sort_by(|left, right| left.consequence_id.cmp(&right.consequence_id));
 
@@ -1024,12 +1142,23 @@ fn normalize_contribution(
         .decisions
         .into_iter()
         .enumerate()
-        .map(|(index, decision)| {
+        .map(|(index, mut decision)| {
+            decision.basis.get_or_insert_with(|| default_basis.clone());
             normalize_decision(decision, &owner, &revision, index, capabilities, intent)
         })
         .collect::<Result<Vec<_>, _>>()?;
     decisions.sort_by(|left, right| left.consequence_id.cmp(&right.consequence_id));
 
+    if !input.claims.blocked.is_empty()
+        && !matches!(
+            default_basis.kind.as_str(),
+            "task-requirement" | "unclassified"
+        )
+    {
+        return Err(CoreError::new(
+            "blocked claims require a task requirement basis",
+        ));
+    }
     let blocked = strings(
         input.claims.blocked,
         &format!("{owner}.claims.blocked"),
@@ -1061,6 +1190,9 @@ fn normalize_contribution(
             )
             .chain(blocked.iter().map(|claim| format!("claim:{claim}")))
         {
+            if scope == format!("attestation:{owner}") {
+                continue;
+            }
             if !contract
                 .restriction_authorities
                 .get(&owner)
@@ -1245,6 +1377,8 @@ fn normalize_blocker(
     revision: &str,
     index: usize,
 ) -> Result<NormalizedBlocker, CoreError> {
+    let basis = input.basis.unwrap_or_else(RestrictionBasis::legacy);
+    basis.validate(revision)?;
     let code = require_text(&input.code, &format!("{owner}.blockers[{index}].code"))?;
     let message = require_text(
         &input.message,
@@ -1259,10 +1393,15 @@ fn normalize_blocker(
             "{owner} blocker cannot claim owner {blocker_owner}"
         )));
     }
-    let affected = affects(input.affects, &format!("{owner}.blockers[{index}].affects"))?;
+    let affected = basis.scopes(
+        input.affects,
+        owner,
+        &format!("{owner}.blockers[{index}].affects"),
+    )?;
     let recovery = input.recovery.filter(|value| !value.trim().is_empty());
-    let identity = json!({"code": code, "message": message, "owner": blocker_owner, "revision": revision, "affects": affected, "recovery": recovery});
+    let identity = json!({"code": code, "message": message, "owner": blocker_owner, "revision": revision, "affects": affected, "recovery": recovery, "basis":basis});
     Ok(NormalizedBlocker {
+        basis,
         resolution: if recovery.is_some() {
             "owner-recovery-required"
         } else {
@@ -1292,6 +1431,8 @@ fn normalize_decision(
     capabilities: Option<&NormalizedCapabilityContract>,
     intent: &Value,
 ) -> Result<NormalizedDecision, CoreError> {
+    let basis = input.basis.unwrap_or_else(RestrictionBasis::legacy);
+    basis.validate(revision)?;
     let id = require_text(&input.id, &format!("{owner}.decisions[{index}].id"))?;
     let question = require_text(
         &input.question,
@@ -1345,8 +1486,9 @@ fn normalize_decision(
             })
         })
         .collect::<Result<Vec<_>, CoreError>>()?;
-    let affected = affects(
+    let affected = basis.scopes(
         input.affects,
+        owner,
         &format!("{owner}.decisions[{index}].affects"),
     )?;
     if input.human_context.is_some() != input.human_eligibility.is_some() {
@@ -1385,6 +1527,7 @@ fn normalize_decision(
         }
     }
     let mut identity = json!({
+        "basis":basis,
         "id": id, "owner": owner, "revision": revision, "question": question,
         "response_request": input.response_request, "response_schema": shape.input_schema, "current_work": current, "capability_revision": contract.revision, "choices": choices, "affects": affected,
     });
@@ -1405,6 +1548,7 @@ fn normalize_decision(
         "request_kind": input.response_request.request_kind, "capability_revision": contract.revision,
         "task_identity": current, "arguments": input.response_request.arguments});
     Ok(NormalizedDecision {
+        basis,
         resolution: if input.human_context.is_some() {
             "bounded-human-answer"
         } else {
@@ -2227,12 +2371,26 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
             "alternatives": available_actions.iter().map(pending_action).collect::<Vec<_>>(),
         })
     });
-    let decision_request =
-        if ready_actions.is_empty() && action_composition.is_none() && task_decisions.len() == 1 {
-            Some(serde_json::to_value(&task_decisions[0]).expect("normalized decision serializes"))
-        } else {
-            None
-        };
+    let operation_decisions: Vec<_> = decisions
+        .iter()
+        .filter(|item| item.basis.kind == "operation-guard")
+        .collect();
+    let decision_request = if ready_actions.is_empty()
+        && action_composition.is_none()
+        && task_decisions.len() == 1
+    {
+        Some(serde_json::to_value(&task_decisions[0]).expect("normalized decision serializes"))
+    } else if ready_actions.is_empty()
+        && action_composition.is_none()
+        && task_decisions.is_empty()
+        && operation_decisions.len() == 1
+    {
+        // An exact native authorization question remains convenient to
+        // answer without giving it task-wide force.
+        Some(serde_json::to_value(operation_decisions[0]).expect("normalized decision serializes"))
+    } else {
+        None
+    };
     let decision_composition = (primary_action.is_none() && action_composition.is_none() && task_decisions.len() > 1).then(|| {
         json!({
             "code": "multiple-decisions",

@@ -262,7 +262,8 @@ pub(crate) fn view(
         }
         decisions.push(json!({"id":format!("future-value:{revision}"),"question":"Does this explicit observation have future decision value? Choose the strongest owner, advisory Memory, or no retention; supply only the unresolved lesson/materiality judgment.",
             "material":{"candidate":candidate,"source_receipt":evidence["reference"],"candidate_revision":revision,"authority":"untrusted producer suggestion; not evidence of durable value or permission to retain"},
-            "response_request":{"request_kind":KIND,"arguments":template["arguments"]},"affects":["claim:complete"]}));
+            "response_request":{"request_kind":KIND,"arguments":template["arguments"]},"affects":[],
+            "basis":crate::restriction_basis("optional-work",&json!(source_revision),KIND,candidate)}));
     }
     if selected.is_some() && dispositions.is_empty() && decisions.is_empty() {
         return Err(err(
