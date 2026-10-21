@@ -552,7 +552,7 @@ def test_claim_review_cannot_impersonate_required_reviewer(tmp_path, shared_core
     manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(
-        'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols.review]\napplies_to_paths=["a.txt"]\nreview_owner="independent-maintainer"\n[proof_routes]\n'
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols.review]\napplies_to_paths=["a.txt"]\nreview_owner="independent-maintainer"\nindependent_required=true\ncommands=[]\n[proof_routes]\n'
     )
     request = call()["verification"]["claim_review"]["request"]
     request["arguments"] = {
@@ -570,4 +570,24 @@ def test_claim_review_cannot_impersonate_required_reviewer(tmp_path, shared_core
     assert reviewed["verification"]["claim_review"]["status"] == "insufficient"
     assert "required-review-producer:review" in reviewed["verification"]["claim_review"]["gaps"]
     required = next(b for b in reviewed["decision_packet"]["blockers"] if b["code"] == "protocol-review-required:review")
-    assert required["basis"]["kind"] == "task-requirement" and "claim:complete" in required["affects"]
+    assert required["basis"]["kind"] == "attestation-limit" and required["affects"] == ["attestation:verification"]
+    # Reviewer identity alone is metadata, not a second review certificate.
+    # External approval remains governed by the repository's actual review policy;
+    # the native judgment grants no independent approval, before or after review.
+    manifest.write_text(manifest.read_text().replace("independent_required=true\n", ""))
+    fresh = call()["verification"]["claim_review"]["request"]
+    fresh["arguments"].update(disposition="satisfied", reason="Command-free task inspected; independent approval is a separate stage.")
+    proposal = call(request=fresh)
+    choice = next(d for d in proposal["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")[
+        "response_request"
+    ]
+    assert (
+        "required-review-producer:review"
+        not in next(d for d in proposal["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")[
+            "material"
+        ]["gaps"]
+    )
+    choice["arguments"]["answer"] = "confirm"
+    completed = call(request=choice)
+    assert completed["verification"]["claim_review"]["status"] == "current"
+    assert all("claim:complete" not in b["affects"] for b in completed["decision_packet"]["blockers"])

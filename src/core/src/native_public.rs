@@ -1984,6 +1984,29 @@ fn resolve_selected(
             decision = compile_value(owner_input)?;
         }
     }
+    // Native owners have already revalidated these submitted requests. Selecting
+    // their exact current question is useful only for that requested operation;
+    // an unrequested optional question remains pending in the shared compiler.
+    if decision["status"] == "direct" {
+        let selected: Vec<_> = decision["pending_consequences"]["decisions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|question| {
+                requests.iter().any(|request| {
+                    request["owner"] == question["response_request"]["owner"]
+                        && request["request_kind"] == question["response_request"]["request_kind"]
+                        && request["source_revision"]
+                            == question["response_request"]["source_revision"]
+                })
+            })
+            .cloned()
+            .collect();
+        if selected.len() == 1 {
+            decision["decision_request"] = selected[0].clone();
+            decision["status"] = json!("decision");
+        }
+    }
     let mut decision_sources = decision_source::public_read(
         target,
         &decision_context,

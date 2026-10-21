@@ -675,7 +675,10 @@ impl RestrictionBasis {
         }
     }
 
-    fn validate(&self, _revision: &str) -> Result<(), CoreError> {
+    // This checks carriage integrity, not source authenticity or applicability.
+    // The trusted owner must reobserve its sources before constructing a basis;
+    // public request admission separately binds that owner's current revision.
+    fn validate(&self) -> Result<(), CoreError> {
         if self.kind == "unclassified" {
             return Ok(());
         }
@@ -1126,7 +1129,7 @@ fn normalize_contribution(
     let default_basis = input
         .restriction_basis
         .unwrap_or_else(RestrictionBasis::legacy);
-    default_basis.validate(&revision)?;
+    default_basis.validate()?;
     let mut blockers = input
         .blockers
         .into_iter()
@@ -1378,7 +1381,7 @@ fn normalize_blocker(
     index: usize,
 ) -> Result<NormalizedBlocker, CoreError> {
     let basis = input.basis.unwrap_or_else(RestrictionBasis::legacy);
-    basis.validate(revision)?;
+    basis.validate()?;
     let code = require_text(&input.code, &format!("{owner}.blockers[{index}].code"))?;
     let message = require_text(
         &input.message,
@@ -1432,7 +1435,7 @@ fn normalize_decision(
     intent: &Value,
 ) -> Result<NormalizedDecision, CoreError> {
     let basis = input.basis.unwrap_or_else(RestrictionBasis::legacy);
-    basis.validate(revision)?;
+    basis.validate()?;
     let id = require_text(&input.id, &format!("{owner}.decisions[{index}].id"))?;
     let question = require_text(
         &input.question,
@@ -2371,9 +2374,16 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
             "alternatives": available_actions.iter().map(pending_action).collect::<Vec<_>>(),
         })
     });
-    let operation_decisions: Vec<_> = decisions
+    let requested_decisions: Vec<_> = decisions
         .iter()
-        .filter(|item| item.basis.kind == "operation-guard")
+        .filter(|item| {
+            request_resolution.as_ref().is_some_and(|resolution| {
+                resolution["status"] == "decision"
+                    && resolution["consequence_ids"]
+                        .as_array()
+                        .is_some_and(|ids| ids.contains(&json!(item.consequence_id)))
+            })
+        })
         .collect();
     let decision_request = if ready_actions.is_empty()
         && action_composition.is_none()
@@ -2383,11 +2393,11 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     } else if ready_actions.is_empty()
         && action_composition.is_none()
         && task_decisions.is_empty()
-        && operation_decisions.len() == 1
+        && requested_decisions.len() == 1
     {
-        // An exact native authorization question remains convenient to
-        // answer without giving it task-wide force.
-        Some(serde_json::to_value(operation_decisions[0]).expect("normalized decision serializes"))
+        // Only an explicitly requested native operation promotes its question.
+        // An available optional write must not dominate ordinary task work.
+        Some(serde_json::to_value(requested_decisions[0]).expect("normalized decision serializes"))
     } else {
         None
     };

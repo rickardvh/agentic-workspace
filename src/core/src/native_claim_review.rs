@@ -131,10 +131,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     let mut protocol_coverage = serde_json::Map::new();
     for (id, protocol) in strategy["protocols"].as_object().into_iter().flatten() {
         // A semantic reviewer grant cannot manufacture independent/maintainer evidence.
-        if protocol.get("review_owner").is_some()
-            || protocol["independent_required"] == true
-            || protocol["manual_required"] == true
-        {
+        if protocol["independent_required"] == true || protocol["manual_required"] == true {
             gaps.push(format!("required-review-producer:{id}"));
         }
         let supporting: Vec<_> = evidence

@@ -501,6 +501,18 @@ def test_restriction_basis_separates_requirements_from_native_limits(shared_core
             with pytest.raises(DecisionContractError, match="basis cannot impose"):
                 _compile(payload)
 
+    # Use the existing bounded-answer vector so the optional question retains
+    # its exact owner request while ordinary work has no selected native effect.
+    pending = _expanded(next(item for item in VECTORS["cases"] if item["id"] == "task-decision-is-current-and-bounded")["input"])
+    pending["contributions"][0]["decisions"][0]["basis"] = basis("operation-guard", {"operation": "capture"})
+    pending["contributions"][0]["decisions"][0]["affects"] = ["effect:repository-state"]
+    next(a for a in pending["capability_contract"]["restriction_authorities"] if a["owner"] == "repository")["affects"].append(
+        "effect:repository-state"
+    )
+    ordinary = _compile(pending)
+    assert ordinary["status"] == "direct" and ordinary["decision_request"] is None
+    assert len(ordinary["pending_consequences"]["decisions"]) == 1
+
     legacy = deepcopy(base)
     legacy["contributions"][0]["blockers"] = [
         {"code": "unknown-policy", "message": "Unreadable potentially governing source", "affects": ["task"]}

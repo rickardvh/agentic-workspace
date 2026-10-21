@@ -77,7 +77,11 @@ def test_advisory_capture_keeps_decision_authority_separate(tmp_path, shared_cor
     assert call(request=decline)["memory"]["advisory_capture"]["status"] == "not-retained"
     assert not (tmp_path / ".agentic-workspace/local").exists()
     assert not (tmp_path / ".agentic-workspace/memory").exists()
+    ordinary = call()
+    assert ordinary["decision_packet"]["status"] == "direct"
+    assert ordinary["decision_packet"]["decision_request"] is None
     proposed = call(request=request)
+    assert proposed["decision_packet"]["status"] == "decision"
     answer = proposed["decision_packet"]["decision_request"]["response_request"]
     answer["arguments"]["answer"] = "confirm-retention"
     ready = call(request=answer)

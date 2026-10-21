@@ -70,11 +70,11 @@ def test_exact_native_command_evidence_discharges_only_its_profile_obligation(
             assert evidence[0]["evidence_freshness"] == "reusable"
         return result["value"]["publication"]["reference"]
 
-    def claim(refs, task=None):
+    def claim(refs, task=None, projection="full"):
         current = {**context, "task": task or context["task"]}
         request = call(current)["verification"]["requests"][0]
         request["arguments"]["evidence_refs"] = refs
-        return call({**current, "request": request})
+        return call({**current, "request": request, "projection": projection})
 
     foreign = run("domain:foreign", command)
     foreign_view = claim([foreign])
@@ -92,7 +92,28 @@ def test_exact_native_command_evidence_discharges_only_its_profile_obligation(
     assert obligation["missing_commands"] == [] and set(obligation["evidence_refs"]) == set(refs)
     blockers = {b["code"] for b in satisfied["decision_packet"]["blockers"]}
     assert "profile-proof-required:required" not in blockers
-    assert "assurance:current:applicable" in blockers and "verification-evidence-unresolved" in blockers
+    assert "assurance:current:applicable" not in blockers
+    assert "verification-evidence-unresolved" in blockers
+    assert satisfied["verification"]["assurance_owner_gaps"] == []
+    compact = claim(refs, projection="compact")
+    assert "optional_judgment" in compact["verification_context"]
+    assert "next_step" not in compact["verification_context"]
+    # A deliberately required native judgment has a separate source and step.
+    config = tmp_path / ".agentic-workspace/config.toml"
+    original_config = config.read_text()
+    config.write_text(original_config + "strict_closeout=true\n")
+    strict = claim(refs, projection="compact")
+    assert "next_step" in strict["verification_context"]
+    assert "optional_judgment" not in strict["verification_context"]
+    required = next(b for b in strict["decision_packet"]["blockers"] if b["code"] == "strict-closeout-judgment-required")
+    assert required["basis"]["reference"] == "effective-assurance-policy#strict_closeout"
+    strict_basis = required["basis"]
+    strict_request = call(context)["verification"]["requests"][0]
+    config.write_text(original_config)
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "request": strict_request})
+    restored = claim(refs)
+    assert all(b["basis"] != strict_basis for b in restored["decision_packet"]["blockers"])
     assert satisfied["decision_packet"]["claim_boundary"]["allowed"] == []
     assert satisfied["decision_packet"]["status"] != "terminal"
     changed_task = claim(refs, "A different requested outcome")

@@ -1163,7 +1163,7 @@ pub(crate) fn view_with_applicability(
     let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
     let source_revision = digest(
         &json!({"instruction_sources":instruction_view["sources"].as_array().unwrap().iter().filter(|r|r["applicable"]==true && !r["metadata"]["checks"].as_array().unwrap().is_empty()).collect::<Vec<_>>(),"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
-        "proof_scope":proof_scope,"planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
+        "proof_scope":proof_scope,"strict_closeout":config["assurance"]["strict_closeout"],"planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
     )?;
     let mut protocols = serde_json::Map::new();
     let mut selector_gaps = Vec::new();
@@ -1633,7 +1633,8 @@ pub(crate) fn view_with_applicability(
         );
     }
     if strict_closeout {
-        blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+        blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
+            "basis":crate::restriction_basis("task-requirement",&json!(source_revision),"effective-assurance-policy#strict_closeout",&config["assurance"])}));
     }
     for (id, protocol) in &protocols {
         if protocol.get("review_owner").is_some()
@@ -1641,9 +1642,9 @@ pub(crate) fn view_with_applicability(
             || protocol["manual_required"] == true
         {
             blockers.as_array_mut().unwrap().push(json!({"code":format!("protocol-review-required:{id}"),
-                "message":"This applicable source explicitly requires a separate reviewer/producer. Command success and the acting agent's claim cannot supply it.",
-                "affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
-                "basis":crate::restriction_basis("task-requirement",&json!(source_revision),&format!("{MANIFEST}#protocols.{id}"),protocol)}));
+                "message":"Verification has not established the separate review named by this protocol. Apply the actual source review policy and available external evidence; an owner label is not a missing task requirement or a demand for an additional AW certificate.",
+                "affects":["attestation:verification"],
+                "basis":crate::restriction_basis("attestation-limit",&json!(source_revision),&format!("{MANIFEST}#protocols.{id}"),protocol)}));
         }
     }
     for gap in strategy_control["gaps"]
@@ -1784,9 +1785,6 @@ pub(crate) fn view_with_applicability(
                 }
             } else {
                 missing.push("proof-profile-source-unavailable");
-            }
-            if claim_review["status"] != "current" {
-                missing.push("current-task-claim-judgment-not-admitted");
             }
         }
         let measurement = &measurement_admissions[row["id"].as_str().unwrap()];
