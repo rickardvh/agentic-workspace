@@ -25,6 +25,15 @@ bounded question before confirming. Required source reconciliation and separate
 reviewer custody keep their own scope. A source-intent pointer alone adds no
 certificate requirement. Native record availability does not decide task success.
 
+When using native claim judgment, keep known candidate observations separate from
+selected supporting references. The returned request carries `candidate_refs`
+through confirmation. Its `evidence_dispositions` accepts a reasoned materiality
+or supported supersession judgment for a failed observation. An optional command
+failure alone creates no task requirement; a genuinely contradictory result still
+matters. A required check cannot be dismissed as immaterial. A correction must
+have current source/command/subject coverage; retain the original failure. This
+is a selected evidence judgment, not another form required for ordinary tasks.
+
 Distinguish implementation complete, ready for independent review, review
 accepted, authorised to merge and released. Adequate implementation can reach its
 review stage without claiming approval or release readiness.

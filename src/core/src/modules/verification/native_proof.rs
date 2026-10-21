@@ -974,13 +974,15 @@ pub(crate) fn execute(
     } else {
         "current"
     };
-    let seconds = std::time::SystemTime::now()
+    let recorded = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map_err(err)?
-        .as_secs();
-    let timestamp = chrono::DateTime::<chrono::Utc>::from_timestamp(seconds as i64, 0)
-        .ok_or_else(|| err("clock unavailable"))?
-        .to_rfc3339();
+        .map_err(err)?;
+    let timestamp = chrono::DateTime::<chrono::Utc>::from_timestamp(
+        recorded.as_secs() as i64,
+        recorded.subsec_nanos(),
+    )
+    .ok_or_else(|| err("clock unavailable"))?
+    .to_rfc3339();
     let mut receipt = json!({"kind":"agentic-workspace/proof-receipt/v1","command":command,"changed_paths":invocation["arguments"]["changed"],
         "result":if result["status"]=="passed" {"passed"}else{"failed"},"recorded_at":timestamp,"proof_subject":selection["proof_subject"],
         "producer_class":"aw-proof","authority":"aw-proof","execution":result,"execution_artifact":result["artifact"]});

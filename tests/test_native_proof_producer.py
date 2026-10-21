@@ -463,9 +463,13 @@ def test_native_failed_or_timed_out_command_is_retained_without_retry(
     evidence = result["continuation"]["result"]["verification"]["evidence"][0]
     assert evidence["receipt_admission"]["proof_sufficient"] is False
     assert evidence["observation"]["status"] == ("timeout" if failure == "timeout" else "failed")
-    assert any(b["code"] == "current-check-failed" for b in result["continuation"]["result"]["decision_packet"]["blockers"])
+    assert any(
+        b["code"] == "negative-evidence-relevance-unresolved" and b["affects"] == ["attestation:verification"]
+        for b in result["continuation"]["result"]["decision_packet"]["blockers"]
+    )
     claim = result["continuation"]["result"]["verification"]["claim_review"]["request"]
-    assert claim["arguments"]["evidence_refs"] == [evidence["reference"]]
+    assert claim["arguments"]["evidence_refs"] == []
+    assert claim["arguments"]["candidate_refs"] == [evidence["reference"]]
     assert claim["arguments"]["disposition"] == "insufficient"
 
 

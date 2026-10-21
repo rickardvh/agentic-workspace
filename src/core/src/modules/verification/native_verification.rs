@@ -634,7 +634,7 @@ fn receipt_view(
         limits.push("live-tree-transient-mutation-unobserved");
     }
     json!({"reference":reference,"status":if checked_scope.is_null(){"unadmitted"}else{"admitted"},"admission_scope":"selected-command","limits":limits,
-        "observation":{"status":receipt["execution"]["status"],"recorded_result":receipt["result"],"subject":subject["id"],"command":receipt["command"],"changed_paths":receipt["changed_paths"],
+        "observation":{"status":receipt["execution"]["status"],"recorded_result":receipt["result"],"recorded_at":receipt["recorded_at"],"subject":subject["id"],"command":receipt["command"],"changed_paths":receipt["changed_paths"],
             "subject_guarantee":guarantee,"current_use":freshness["status"],"execution_artifact":receipt["execution_artifact"],
             "assessment_artifact":retained.as_ref().map(|record|&record["outcome"]["value"]["assessment_artifact"])},
         "measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
@@ -1409,13 +1409,25 @@ pub(crate) fn view_with_applicability(
                 request["arguments"]["host_result_ref"].as_str().unwrap(),
             );
         } else if request["request_kind"] == crate::native_claim_review::REQUEST {
-            evidence_refs = request["arguments"]["evidence_refs"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_owned)
-                .collect();
+            // Candidates belong to bounded work; support selection belongs to
+            // this proposed judgment. Narrowing support must not erase a known
+            // contradiction before the owner can assess it.
+            evidence_refs.extend(
+                request["arguments"]["evidence_refs"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
+            evidence_refs.extend(
+                request["arguments"]["candidate_refs"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
             claim_review_request = Some(request.clone());
         } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
             evidence_refs.extend(refs.iter().filter_map(Value::as_str).map(str::to_owned));
@@ -1448,6 +1460,13 @@ pub(crate) fn view_with_applicability(
     strategy["selection_blocked"] = strategy_control["execution_blocked"].clone();
     strategy["selected_profile_identity"] = strategy_control["selected_profiles"].clone();
     let strategy_revision = digest(&strategy)?;
+    evidence_refs.sort();
+    evidence_refs.dedup();
+    if evidence_refs.len() > 64 {
+        return Err(CoreError::new(
+            "bounded Verification work exceeds 64 candidate references; reduce the explicit work scope without discarding material observations",
+        ));
+    }
     evidence.extend(evidence_refs.iter().map(|reference| {
         receipt_view(
             &root,
@@ -1648,15 +1667,29 @@ pub(crate) fn view_with_applicability(
     } else {
         json!([])
     };
-    for item in evidence.iter().filter(|item| {
-        item["receipt_admission"]["result_class"] == "failed"
-            && item["runtime_admission"]["status"] == "reusable"
-            && item["runtime_admission"]["strategy_coverage"] == "selected-command-covered"
-    }) {
-        blockers.as_array_mut().unwrap().push(json!({"code":"current-check-failed",
-            "message":"A current native execution on this subject failed. Selecting another candidate does not erase that observation.",
-            "affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
-            "basis":crate::restriction_basis("task-requirement",&json!(source_revision),item["reference"].as_str().unwrap(),&item["observation"])}));
+    let negative_evidence = crate::native_claim_review::negative_evidence(
+        &evidence,
+        &strategy,
+        &strategy_control["obligations"],
+        &instruction_checks,
+        claim_review_request.as_ref(),
+    );
+    for row in &negative_evidence {
+        let task_failure = matches!(
+            row["status"].as_str(),
+            Some("required-failure" | "material-failure")
+        );
+        if matches!(
+            row["status"].as_str(),
+            Some("superseded" | "not-material" | "historical-or-unproven")
+        ) {
+            continue;
+        }
+        blockers.as_array_mut().unwrap().push(json!({"code":if task_failure {"current-check-failed"} else {"negative-evidence-relevance-unresolved"},
+            "message":if task_failure {"A required check or explicitly material current observation failed. Selecting other support does not discharge it; assess a current source-supported correction or supersession."} else {"A current failed observation needs domain relevance judgment. Command availability or selection alone adds no task requirement."},
+            "affects":if task_failure {json!(["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"])} else {json!(["attestation:verification"])},
+            "recovery":"public-request:verification/review-claim/v1",
+            "basis":crate::restriction_basis(if task_failure {"task-requirement"} else {"attestation-limit"}, &json!(source_revision), row["reference"].as_str().unwrap(), row)}));
     }
     if execution["status"] == "blocked" && execution["recovery"]["kind"] == "capability-gap" {
         blockers.as_array_mut().unwrap().push(
@@ -1761,6 +1794,7 @@ pub(crate) fn view_with_applicability(
             instructions: &instruction_view,
             strategy: &strategy,
             evidence: &evidence,
+            negative_evidence: &negative_evidence,
             execution_request: &contextual_execution_request,
             source_revision: &source_revision,
             contract: admission_contract,
@@ -1925,7 +1959,7 @@ pub(crate) fn view_with_applicability(
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":status,
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
-        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"negative_evidence":negative_evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"claim_judgment_required":strict_closeout,"contribution":{"owner":"verification","revision":source_revision,
             "restriction_basis":crate::restriction_basis("task-requirement",&json!(source_revision),MANIFEST,&json!({"strategy":strategy_policy,"assurance":assurance,"proof_scope":proof_scope,"strict_closeout":strict_closeout})),

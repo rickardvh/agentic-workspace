@@ -591,3 +591,152 @@ def test_claim_review_cannot_impersonate_required_reviewer(tmp_path, shared_core
     completed = call(request=choice)
     assert completed["verification"]["claim_review"]["status"] == "current"
     assert all("claim:complete" not in b["affects"] for b in completed["decision_packet"]["blockers"])
+
+
+def test_negative_evidence_keeps_candidates_and_source_bound_relevance(tmp_path, shared_core_binary, native_cli):
+    """A known contradiction survives narrowing; optional failure needs judgment.
+
+    The counter simulates a transient external check outcome on unchanged declared
+    source. Host execution supplies launch/return observations, not a snapshot.
+    """
+    import copy
+
+    (tmp_path / "a.txt").write_text("current source")
+    aw = tmp_path / ".agentic-workspace"
+    (aw / "verification").mkdir(parents=True)
+    (aw / "config.toml").write_text("[assurance]\nstrict_closeout=false\n")
+    command = (
+        "$n=0; if (Test-Path count.txt) {$n=[int](Get-Content count.txt)}; $n++; Set-Content count.txt $n; if ($n -eq 2) {exit 7}"
+        if os.name == "nt"
+        else 'n=0; test ! -e count.txt || n=$(cat count.txt); n=$((n+1)); echo "$n" > count.txt; test "$n" != 2'
+    )
+    (aw / "verification/manifest.toml").write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        '[protocols.check]\napplies_to_paths=["a.txt"]\nproof_profiles=["must"]\ncommands=[' + json.dumps(command) + "]\n"
+        "[assurance.proof_profiles.must]\nrequired_commands=[" + json.dumps(command) + ']\noptional_commands=["exit 9"]\n'
+        '[assurance.requirements.check]\nlevel="medium"\nforce="required-before-closeout"\napplies_to_paths=["a.txt"]\nproof_profile="must"\n'
+        '[proof_routes.check]\nprotocol_refs=["check"]\nassurance_requirement_refs=["check"]\ncommands=[' + json.dumps(command) + "]\n"
+    )
+    context = {"target": str(tmp_path), "task": "Check the declared source", "changed": ["a.txt"]}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def run(route, selected, known_refs=()):
+        offered = call()["verification"]["execution_requests"]
+        request = next(
+            r
+            for r in offered
+            if any(
+                row.get("arguments", {}).get("route_id") == route and row["arguments"]["command"] == selected
+                for row in (r if isinstance(r, list) else [r])
+            )
+        )
+        if known_refs:
+            known = call()["verification"]["requests"][0]
+            known["arguments"]["evidence_refs"] = list(known_refs)
+            request = [known, *(request if isinstance(request, list) else [request])]
+        action = call(request=request)["decision_packet"]["primary_action"]
+        result = call(invocation=action)
+        return result["value"]["observation"]["reference"]
+
+    def propose(candidates, supporting, dispositions):
+        current = call()["verification"]
+        known = current["requests"][0]
+        known["arguments"]["evidence_refs"] = candidates
+        review = current["claim_review"]["request"]
+        # This is deliberately only support: the separate known-work request
+        # carries candidates through the composed public path.
+        review["arguments"].update(
+            disposition="satisfied",
+            reason="Assess exact required proof and the stated failure relevance.",
+            evidence_refs=supporting,
+            evidence_dispositions=dispositions,
+        )
+        proposed = call(request=[known, review])
+        choice = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")
+        answer = choice["response_request"]
+        answer["arguments"]["answer"] = "confirm"
+        return proposed, answer
+
+    optional = run("profile:must", "exit 9")
+    first_pass = run("check", command)
+    unresolved, unresolved_answer = propose([optional, first_pass], [first_pass], {})
+    assert unresolved["verification"]["negative_evidence"][0]["status"] == "relevance-unresolved"
+    assert not any(b["code"] == "current-check-failed" for b in unresolved["decision_packet"]["blockers"])
+    assert call(request=unresolved_answer)["verification"]["claim_review"]["status"] == "insufficient"
+    irrelevant = {
+        optional: {
+            "disposition": "not-material",
+            "reason": "The exploratory diagnostic has no required task coverage; the declared check passed.",
+        }
+    }
+    for support in ([first_pass], [first_pass, optional]):
+        proposed, answer = propose([optional, first_pass], support, irrelevant)
+        assert proposed["verification"]["negative_evidence"][0]["status"] == "not-material"
+        confirmed = call(request=answer)
+        assert confirmed["verification"]["claim_review"]["status"] == "current"
+        assert not any(b["code"] == "current-check-failed" for b in confirmed["decision_packet"]["blockers"])
+    # An optional command can nevertheless reveal a material contradiction.
+    _, answer = propose(
+        [optional, first_pass],
+        [first_pass],
+        {optional: {"disposition": "material", "reason": "The diagnostic reveals a real contradiction in this requested outcome."}},
+    )
+    material = call(request=answer)
+    assert material["verification"]["claim_review"]["status"] == "insufficient"
+    assert any(b["code"] == "current-check-failed" for b in material["decision_packet"]["blockers"])
+
+    failure = run("check", command, [first_pass])
+    candidates = [optional, first_pass, failure]
+    for support in ([first_pass], [first_pass, failure]):
+        proposed, answer = propose(
+            candidates,
+            support,
+            {**irrelevant, failure: {"disposition": "not-material", "reason": "Attempted waiver cannot dismiss required command failure."}},
+        )
+        assert failure in answer["arguments"]["candidate_refs"]
+        required = next(row for row in proposed["verification"]["negative_evidence"] if row["reference"] == failure)
+        assert required["status"] == "required-failure" and required["source_obligations"]
+        confirmed = call(request=answer)
+        assert confirmed["verification"]["claim_review"]["status"] == "insufficient"
+        assert any(b["code"] == "current-check-failed" for b in confirmed["decision_packet"]["blockers"])
+        hidden = copy.deepcopy(answer)
+        hidden["arguments"]["candidate_refs"].remove(failure)
+        hidden["arguments"]["evidence_refs"] = [first_pass]
+        with pytest.raises(AssertionError, match="stale"):
+            call(request=hidden)
+
+    invalid, _ = propose(
+        candidates,
+        [first_pass],
+        {
+            **irrelevant,
+            failure: {
+                "disposition": "superseded",
+                "reason": "An older pass cannot establish correction after this failure.",
+                "superseding_ref": first_pass,
+            },
+        },
+    )
+    assert next(row for row in invalid["verification"]["negative_evidence"] if row["reference"] == failure)["status"] == "required-failure"
+    correction = run("check", command, candidates)
+    proposed, answer = propose(
+        [*candidates, correction],
+        [correction],
+        {
+            **irrelevant,
+            failure: {
+                "disposition": "superseded",
+                "reason": "The transient check was corrected and the same declared command now passes.",
+                "superseding_ref": correction,
+            },
+        },
+    )
+    superseded = next(row for row in proposed["verification"]["negative_evidence"] if row["reference"] == failure)
+    assert superseded["status"] == "superseded"
+    final = call(request=answer)
+    assert final["verification"]["claim_review"]["status"] == "current"
+    assert not any(b["code"] == "current-check-failed" for b in final["decision_packet"]["blockers"])
+    assert next(e for e in final["verification"]["evidence"] if e["reference"] == failure)["observation"]["status"] == "failed"
+    assert (tmp_path / "count.txt").read_text().strip() == "3"
