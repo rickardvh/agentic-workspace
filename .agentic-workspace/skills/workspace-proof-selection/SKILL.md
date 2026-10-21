@@ -5,13 +5,12 @@ description: Choose evidence for a test or completion claim, interpret failures 
 
 # Select and interpret proof
 
-Use this method before choosing validation or interpreting whether its results
-support a claim. Name the outcome being tested. For actual validation or completion,
-obtain missing current Verification requirements through `start`; explaining a
-hypothetical evidence choice from supplied facts needs no runtime call.
-Verification is the component that records required
-checks, execution receipts and claim decisions. You judge whether the evidence
-addresses the actual outcome; a passing command alone does not settle that question.
+Use this method to choose evidence for the actual outcome and its failure risks.
+Reuse adequate current observations. Obtain missing source-bound Verification
+facts through `start` when they can change the decision; a check or completion
+claim does not itself require a native acknowledgement. Verification records its
+own executions and judgments. Other evidence retains its actual provenance and
+coverage. A passing command alone does not establish the whole outcome.
 
 Use [the question](procedure.md) or the same sources directly:
 

@@ -772,6 +772,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             .iter()
             .map(|entry| {
                 json!({"reference":entry["reference"],
+                    "observation":entry["observation"],
                     "status":entry["status"],"admission_scope":entry["admission_scope"],
                     "publication_admission":entry["publication_admission"]["status"],
                     "receipt_admission":entry["receipt_admission"],
@@ -1872,8 +1873,17 @@ fn operate_current(
 fn describe_non_aw_continuation(view: &mut Value) {
     let source = if view["decision_packet"]["blockers"]
         .as_array()
-        .is_some_and(|blockers| !blockers.is_empty())
-    {
+        .is_some_and(|blockers| {
+            blockers.iter().any(|b| {
+                b["affects"].as_array().is_some_and(|scopes| {
+                    scopes.iter().any(|scope| {
+                        !scope
+                            .as_str()
+                            .is_some_and(|s| s.starts_with("attestation:"))
+                    })
+                })
+            })
+        }) {
         "/decision_packet/blockers"
     } else if view["status"] == "blocked" {
         "/"
@@ -1890,8 +1900,8 @@ fn describe_non_aw_continuation(view: &mut Value) {
         "aw_admitted":false,"record_requires_aw":false,
         "procedure":".agentic-workspace/skills/workspace-startup/references/constraints.md#continue-outside-aw",
         "choice":"Use cheap AW recovery or independently authorized ordinary tools. Preserve the named AW and external restrictions; unrelated AW facilities remain available.",
-        "exception_note":{"where":"Existing task, PR, issue, commit or handoff; user-visible fallback. Omit secrets, full logs and personal paths.",
-            "fields":["actor-and-blocked-aw-action-reason","task-scope","independent-authority-and-alternative","aw-admissions-not-established"]},
+        "disclosure":{"when":"Disclose a material native evidence/custody limitation once in existing task or PR evidence. Ordinary completion needs no exception form, new file or final AW acknowledgment.",
+            "exceptional_departure":"If an authorized alternative affects custody or authority, identify the blocked native operation, alternative and remaining native gap."},
         "on_reentry":"Reobserve changed sources and outstanding requirements. Direct work supplies no AW custody/proof, approval or completion; never backfill effects/receipts or replay uncertain writes."});
 }
 

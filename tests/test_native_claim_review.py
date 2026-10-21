@@ -154,7 +154,7 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     assert evidence["admission_scope"] == "selected-command"
     assert evidence["task_judgment"]["status"] == "task-judgment-required"
     assert evidence["gaps"] == []
-    assert evidence["limits"] == ["nested-tool-runtime-unobserved"]
+    assert evidence["limits"] == ["nested-tool-runtime-unobserved", "live-tree-transient-mutation-unobserved"]
     assert decision["material"]["protocol_coverage"]["check"]["status"] == "current-command-evidence-satisfied"
     assert proposed["verification"]["evidence"][0]["runtime_admission"]["sufficiency_currentness"] == "current"
     answer = decision["response_request"]
@@ -319,7 +319,7 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
     assert evidence["checked_scope"]["claim"] == "selected-command-passed"
     assert evidence["checked_scope"]["command"] == command
     assert evidence["gaps"] == []
-    assert evidence["limits"] == ["nested-tool-runtime-unobserved"]
+    assert evidence["limits"] == ["nested-tool-runtime-unobserved", "live-tree-transient-mutation-unobserved"]
     step = continuation["result"]["verification_context"]["optional_judgment"]
     proposed = call(
         {

@@ -492,8 +492,16 @@ fn receipt_view(
     let Some(receipt) = receipt else {
         return json!({"reference":reference,"status":"unadmitted","gaps":["receipt-unavailable-or-invalid"]});
     };
+    let retained = local
+        .then(|| {
+            crate::native_proof::committed_publication(target, &receipt)
+                .ok()
+                .flatten()
+        })
+        .flatten();
     let publication = if local {
-        json!({"status":"admitted","reason":"exact-local-execution-custody","scope":"current-checkout","portable":false})
+        json!({"status":"admitted","reason":"exact-local-execution-custody","scope":"retained-execution","portable":false,
+            "native_publication":retained.as_ref().map(|record|&record["outcome"]["value"]["publication"])})
     } else {
         publication_admission(root, id, &receipt)
     };
@@ -614,7 +622,22 @@ fn receipt_view(
     };
     let measurement_observations = crate::native_measurement::observations(&observed_detail);
     let future_value_candidate = crate::native_memory_learning::signal(&observed_detail);
-    json!({"reference":reference,"status":if checked_scope.is_null(){"unadmitted"}else{"admitted"},"admission_scope":"selected-command","limits":["nested-tool-runtime-unobserved"],"measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
+    let guarantee = if subject["runtime"]["executor"]["kind"] == crate::proof_executor::KIND {
+        "immutable-readonly-snapshot"
+    } else if subject["runtime"]["implementation"] == "native-aw-proof" {
+        "live-checkout-launch-and-return-only"
+    } else {
+        "unproven"
+    };
+    let mut limits = vec!["nested-tool-runtime-unobserved"];
+    if guarantee == "live-checkout-launch-and-return-only" {
+        limits.push("live-tree-transient-mutation-unobserved");
+    }
+    json!({"reference":reference,"status":if checked_scope.is_null(){"unadmitted"}else{"admitted"},"admission_scope":"selected-command","limits":limits,
+        "observation":{"status":receipt["execution"]["status"],"recorded_result":receipt["result"],"subject":subject["id"],"command":receipt["command"],"changed_paths":receipt["changed_paths"],
+            "subject_guarantee":guarantee,"current_use":freshness["status"],"execution_artifact":receipt["execution_artifact"],
+            "assessment_artifact":retained.as_ref().map(|record|&record["outcome"]["value"]["assessment_artifact"])},
+        "measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
         "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }
@@ -1625,6 +1648,16 @@ pub(crate) fn view_with_applicability(
     } else {
         json!([])
     };
+    for item in evidence.iter().filter(|item| {
+        item["receipt_admission"]["result_class"] == "failed"
+            && item["runtime_admission"]["status"] == "reusable"
+            && item["runtime_admission"]["strategy_coverage"] == "selected-command-covered"
+    }) {
+        blockers.as_array_mut().unwrap().push(json!({"code":"current-check-failed",
+            "message":"A current native execution on this subject failed. Selecting another candidate does not erase that observation.",
+            "affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
+            "basis":crate::restriction_basis("task-requirement",&json!(source_revision),item["reference"].as_str().unwrap(),&item["observation"])}));
+    }
     if execution["status"] == "blocked" && execution["recovery"]["kind"] == "capability-gap" {
         blockers.as_array_mut().unwrap().push(
             json!({"code":format!("verification:{}",execution["reason"].as_str().unwrap()),

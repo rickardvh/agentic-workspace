@@ -180,6 +180,7 @@
     "execution": "invoke only the exact returned operation envelope"
   },
   "operating_projections": {
+    "proof_observation": "A committed run retains original execution, subject and output identity independently of later invocation admission/publication. observation.reference uses the existing local receipt carrier; current evidence consumption rechecks actual source/runtime/strategy coverage without replay. Assessment detail preserves post-run failure causes. Historical passes, current proof, native publication and task/reviewer judgment remain distinct; live launch/return equality supplies no immutable-snapshot guarantee.",
     "default": "compact",
     "full": "Original current owner views and capability/detail contracts.",
     "compact": "Resolve current mandatory owner contributions and exact selected envelopes; defer optional configuration fields, proof alternatives and Planning portability. No required action-detail fetch.",

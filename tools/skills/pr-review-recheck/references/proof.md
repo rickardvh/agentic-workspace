@@ -66,16 +66,19 @@ proven; do not accept a stopping argument that skips binding proof. Proof of
 governance machinery is not proof that an unrelated patch applied the strategy.
 
 Judge document retention separately from proof sufficiency. Ordinary patch
-validation may be fully reviewable through its existing Verification receipts,
-focused tests and PR/issue context; do not require a new issue-specific maintainer
+validation may be fully reviewable through ordinary observations with their real
+provenance, native receipts when required, focused tests and PR/issue context;
+do not require a new issue-specific maintainer
 report merely to cite it. Raw diagnostic data remains local unless its existing
 owner promotes a bounded result. A checked-in evidence/reference page needs a
 named future repository consumer, such as a maintained contract, reusable operation
 reference or accepted design boundary across PRs. Apply the testing strategy's
 retention decision and normal documentation governance to warranted durable pages.
-PR prose does not replace authenticated evidence or required source reconciliation.
+PR prose does not invent execution or replace explicitly required authenticated
+evidence or source reconciliation. Missing optional AW publication or judgment
+adds no second acceptance criterion.
 
-Resolve current Verification at the exact subject independently of method selection.
+Resolve missing current Verification facts at the exact subject when needed.
 Select only current evidence relevant to the bounded claim; unknown applicability
 or missing evidence stays unresolved. This reference resolves the current native
 selection request, never chooses a command or supplies sufficiency:
@@ -84,6 +87,8 @@ selection request, never chooses a command or supplies sufficiency:
 {"kind":"request","owner":"verification","id":"verification/execute-selected/v1"}
 ```
 
-After execution, use the returned receipt and current claim request. A passing
-command records its observation; the reviewer still judges scope and sufficiency,
-and independent approval remains outside the optional skill.
+After execution, inspect the original observation and current-use limits. Use a
+native claim request when explicitly required or useful; ordinary completion
+needs no final AW acknowledgment. The reviewer judges actual scope, requirements
+and sufficiency. Implementation readiness, independent approval, merge authority
+and release remain separate.

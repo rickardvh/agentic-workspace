@@ -10,5 +10,7 @@ requests in caller carriage. Owners revalidate current sources and publication.
 ```
 
 Inspect the effect separately from continuation. A committed check stays committed.
-Use [receipt admission](receipt.md) only with current continuation; otherwise use
-[effect recovery](recovery.md). No automatic batch, retry or sufficiency answer.
+Use the [recorded observation](receipt.md), including its original subject and
+current-use limits. If continuation fails, use [effect recovery](recovery.md)
+when it can resolve a needed fact. Recording a known result is separate from
+permission to launch a new invocation. No automatic batch, retry or sufficiency answer.

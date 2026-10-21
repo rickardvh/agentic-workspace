@@ -90,6 +90,12 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     // and all claim/currentness checks below still apply to the semantic answer.
     let mut evidence_refs: Vec<_> = evidence
         .iter()
+        .filter(|entry| {
+            entry["checked_scope"]["claim"] == "selected-command-passed"
+                || entry["receipt_admission"]["result_class"] == "failed"
+                    && entry["runtime_admission"]["status"] == "reusable"
+                    && entry["runtime_admission"]["strategy_coverage"] == "selected-command-covered"
+        })
         .filter_map(|entry| entry["reference"].as_str())
         .collect();
     evidence_refs.sort_unstable();
@@ -104,14 +110,30 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     // instruction sources remain independently bound below, alongside the subject,
     // policy and evidence; reconciliation owns discovery of their other consumers.
     let sources = postimages(target, changed)?;
-    let mut stable_evidence = evidence.to_vec();
+    let args = &request["arguments"];
+    let selected = |entry: &&Value| {
+        args["evidence_refs"]
+            .as_array()
+            .is_some_and(|refs| refs.contains(&entry["reference"]))
+    };
+    // Source-linked coverage chooses sufficient selected evidence. A current
+    // negative on this same subject stays material even if omitted by a caller.
+    let current_failure = |entry: &&Value| {
+        entry["receipt_admission"]["result_class"] == "failed"
+            && entry["runtime_admission"]["status"] == "reusable"
+            && entry["runtime_admission"]["strategy_coverage"] == "selected-command-covered"
+    };
+    let mut stable_evidence: Vec<Value> = evidence
+        .iter()
+        .filter(|entry| selected(entry) || current_failure(entry))
+        .cloned()
+        .collect();
     for e in &mut stable_evidence {
         if let Some(f) = e["runtime_admission"].as_object_mut() {
             f.remove("validation_duration_us");
         }
     }
     let binding = json!({"work":work,"subject":subject,"postimages":sources,"source_revision":source_revision,"policy_revision":config["revision"],"instructions":instructions["sources"].as_array().unwrap().iter().filter(|r|r["applicable"]==true).collect::<Vec<_>>(),"strategy":strategy,"evidence":stable_evidence,"producer":digest(&json!(include_str!("native_claim_review.rs")))?});
-    let args = &request["arguments"];
     let proposal =
         json!({"binding":binding,"judgment":args["disposition"],"reason":args["reason"]});
     let pr = digest(&proposal)?;
@@ -123,10 +145,8 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     if args["disposition"] != "satisfied" {
         gaps.push("review-judgment-insufficient".to_owned());
     }
-    for e in evidence {
-        if e["checked_scope"]["claim"] != "selected-command-passed" {
-            gaps.push(format!("current-evidence-required:{}", e["reference"]));
-        }
+    for e in evidence.iter().filter(current_failure) {
+        gaps.push(format!("current-failing-evidence:{}", e["reference"]));
     }
     let mut protocol_coverage = serde_json::Map::new();
     for (id, protocol) in strategy["protocols"].as_object().into_iter().flatten() {
@@ -134,7 +154,7 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         if protocol["independent_required"] == true || protocol["manual_required"] == true {
             gaps.push(format!("required-review-producer:{id}"));
         }
-        let supporting: Vec<_> = evidence
+        let supporting: Vec<_> = stable_evidence
             .iter()
             .filter(|e| crate::native_proof::covers_protocol(e, strategy, id))
             .collect();

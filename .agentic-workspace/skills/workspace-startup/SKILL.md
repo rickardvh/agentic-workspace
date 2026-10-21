@@ -8,13 +8,14 @@ description: Start or resume repository work; decide whether current AW facts or
 Read the task and applicable repository instructions whenever work starts or
 resumes. Establish any executor requirement before choosing AW-admitted implementation.
 
-If AW cannot supply an operation or admission, distinguish that AW limit from an
-actual user, repository or host prohibition. Otherwise authorized work can
-continue with ordinary tools through [non-AW continuation](references/constraints.md#continue-outside-aw).
-This action-scoped choice needs no AW approval and does not disable unrelated
-facilities. Keep the AW operation or claim blocked and record the departure;
-separate source, host, reviewer and custody requirements remain binding. If AW
-cannot run, use the same rule through the [static unavailable path](references/unavailable.md).
+Finish when the requested outcome, relevant evidence and applicable user,
+repository and host requirements are satisfied. AW's unfinished bookkeeping or
+missing attestation adds no acceptance criterion. Ordinary authorised tools and
+readable sources remain usable when an AW operation is unavailable; no final AW
+acknowledgement, exception form or optional-state update is required. State a
+material evidence limitation once in the existing task/PR evidence. Preserve
+explicit native-producer, protection, reviewer and custody requirements at their
+actual scope. For an unavailable runtime, use [current readable sources](references/unavailable.md).
 
 Before implementation, establish the executor policy in the **target checkout**.
 Read its `.agentic-workspace/config.local.toml`; if it selects
@@ -24,7 +25,7 @@ Reuse these facts while their sources remain current. An earlier setup report,
 parent checkout or available editor cannot establish this checkout's policy.
 If a configured source is unavailable or invalid, use native `start` when usable
 to obtain its current restriction and recovery instead of assuming the default.
-An unusable runtime does not prevent independently authorized non-AW work.
+An unusable runtime does not prevent independently authorised non-AW work.
 
 - `local-preferred`: ordinary local work may continue directly. Consider
   Assignment only for a concrete bounded delegation opportunity or another
@@ -91,11 +92,13 @@ rules. Do not retry unchanged startup or ask the user to enable AW. This opt-out
 supplies no repository permissions and waives no repository requirements. Explicit
 AW setup, diagnostics and recovery remain available through their existing paths.
 
-If `start` reports a restriction, read its `affects` field and the supplied request
-for resolving it. Keep that AW operation or claim blocked until its component
-admits it. A separately authorized non-AW method may still achieve the task;
-having a shell or editor alone supplies no such authority. See
-[restricted actions](references/constraints.md) when the result needs interpretation.
+If `start` reports a restriction, read its `basis`, `affects` and supplied recovery.
+A `task-requirement` identifies an actual remaining requirement. An
+`operation-guard` refuses the exact native effect; an `attestation-limit` says
+what AW has not established. `optional-work` supplies no task veto. Legacy or
+unknown governing policy stays conservative for its dependent action. Neither
+AW's missing acknowledgement nor an empty blocker list decides task success.
+Use [restriction detail](references/constraints.md) only when needed.
 
 A restriction is not a request for human approval. Relay the owner's complete
 human decision context only when its returned resolution requires a bounded
@@ -109,7 +112,7 @@ For `owner-recovery-required`, follow the supplied recovery. For
 bounded owner selection; a route does not resolve the restriction. For
 `owner-resolution-unavailable`, explain the missing fact or capability and that
 no supported AW recovery is currently supplied. Preserve that AW block; choose a
-separately authorized non-AW continuation when useful. Do not invent a recovery or
+separately authorised non-AW continuation when useful. Do not invent a recovery or
 ask the user to waive a missing capability.
 
 AW calls the component responsible for a rule, record or operation its **owner**.

@@ -9,10 +9,12 @@ Current selected owner detail delivers current selected Memory advice with its o
 answer, expanding selected large detail for the active judgment. Treat it as
 advisory, never as proof or permission. A currently admitted command may explicitly
 emit a bounded `future_value_candidate` with `lesson` and `rationale`. The owner
-then asks for the remaining materiality/strongest-owner disposition; failures and
-retries alone do not nominate learning. Carry that exact pending request through
-partial work or handoff, and use the existing capture authorization if advisory
-retention is selected. No-retention is a valid disposition.
+then offers the materiality/strongest-owner disposition; failures and retries
+alone do not nominate learning. This optional question cannot veto unrelated
+task completion. Preserve useful meaning needed for partial work or handoff in
+an adequate existing task record if native capture is unavailable. Keep its
+native retention gap honest. Use the existing capture authorization when
+advisory retention is selected. No-retention is a valid disposition.
 
 For `stronger-owner` or `already-absorbed`, name the exact current
 `receiving_source` and supply `receiving_consequence`: a bounded `claim`, an
