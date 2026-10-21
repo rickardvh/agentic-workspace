@@ -156,7 +156,12 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
         .iter()
         .filter_map(|entry| entry["reference"].as_str())
         .collect();
-    let template = json!({"kind":"agentic-workspace/public-request/v1","id":REQUEST,"owner":"verification","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":REQUEST,"arguments":{"reason":"Review the exact resulting work against the required evidence and outcome.","disposition":"insufficient","evidence_refs":evidence_refs,"candidate_refs":candidate_refs,"evidence_dispositions":{}}});
+    let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":REQUEST,"owner":"verification","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":REQUEST,"arguments":{"reason":"Review the exact resulting work against the required evidence and outcome.","disposition":"insufficient","evidence_refs":evidence_refs}});
+    // The schema advertises optional judgments. Empty candidate/disposition
+    // carriage says nothing and need not accompany every unrelated task.
+    if !candidate_refs.is_empty() {
+        template["arguments"]["candidate_refs"] = json!(candidate_refs);
+    }
     let mut result = json!({"kind":"agentic-workspace/claim-review/v1","status":"not-requested","request":template,"decisions":[],"completion_authority":false});
     let Some(request) = request else {
         return Ok(result);

@@ -1956,16 +1956,18 @@ pub(crate) fn view_with_applicability(
     } else {
         "not-applicable"
     };
-    Ok(
-        json!({"kind":"agentic-workspace/native-verification-view/v1","status":status,
+    let mut result = json!({"kind":"agentic-workspace/native-verification-view/v1","status":status,
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
-        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"negative_evidence":negative_evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"claim_judgment_required":strict_closeout,"contribution":{"owner":"verification","revision":source_revision,
             "restriction_basis":crate::restriction_basis("task-requirement",&json!(source_revision),MANIFEST,&json!({"strategy":strategy_policy,"assurance":assurance,"proof_scope":proof_scope,"strict_closeout":strict_closeout})),
             "decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
-        "authority_effect":"read-only-no-claim-grants"}),
-    )
+        "authority_effect":"read-only-no-claim-grants"});
+    if !negative_evidence.is_empty() {
+        result["negative_evidence"] = json!(negative_evidence);
+    }
+    Ok(result)
 }
 
 // This is Verification policy, not a skill-side interpretation of rendered
