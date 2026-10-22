@@ -49,6 +49,59 @@ def proof_consumer(call, context, reference, task="Retain the selected proof for
     return Path(context["target"]) / result["value"]["owner_path"]
 
 
+def test_deliberate_repeat_uses_terminal_custody_and_keeps_both_observations(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    command = (
+        "Add-Content count.txt executed; if ((Get-Content count.txt).Count -eq 1) { exit 7 }"
+        if os.name == "nt"
+        else "echo executed >> count.txt; test $(wc -l < count.txt) -gt 1"
+    )
+    manifest.write_text(manifest.read_text().split("commands=")[0] + "commands=[" + json.dumps(command) + "]\n")
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    first_action = call(request=call()["verification"]["execution_requests"][0])["decision_packet"]["primary_action"]
+    first = call(invocation=first_action)["value"]
+    assert first["process"]["status"] == "failed"
+    assert call(invocation=first_action)["value"] == first
+    inspect = call()["verification"]["requests"][0]
+    inspect["arguments"]["evidence_refs"] = [first["publication"]["reference"]]
+    carried = call(request=inspect)
+    repeat = carried["verification"]["repeat_requests"][0]
+    repeat["arguments"]["repeat"]["reason"] = "Measure again to distinguish a persistent failure from the first-run failure."
+    second_action = call(request=repeat)["decision_packet"]["primary_action"]
+    assert second_action["idempotency_key"] != first_action["idempotency_key"]
+    second = call(invocation=second_action)["value"]
+    assert second["process"]["status"] == "passed"
+    assert second["publication"]["reference"] != first["publication"]["reference"]
+    assert call(invocation=second_action)["value"] == second
+    assert call(invocation=first_action)["value"] == first
+    # The rationale is not a nonce for minting more children of the same attempt.
+    repeat["arguments"]["repeat"]["reason"] = "A different reason for the same predecessor."
+    same_successor = call(request=repeat)["decision_packet"]["primary_action"]
+    assert same_successor["idempotency_key"] == second_action["idempotency_key"]
+    with pytest.raises(AssertionError, match="custody|stale|differs"):
+        call(invocation=same_successor)
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed", "executed"]
+    request = call()["verification"]["claim_review"]["request"]
+    request["arguments"].update(
+        disposition="satisfied",
+        reason="Inspect both measurements.",
+        candidate_refs=[first["publication"]["reference"], second["publication"]["reference"]],
+        evidence_refs=[second["publication"]["reference"]],
+    )
+    reviewed = call(request=request)["verification"]
+    assert {e["reference"] for e in reviewed["evidence"]} == set(request["arguments"]["candidate_refs"])
+    assert reviewed["negative_evidence"][0]["status"] in ("required-failure", "relevance-unresolved")
+    assert reviewed["claim_review"]["status"] == "bounded-domain-answer-required"
+    (tmp_path / "a.txt").write_text("changed input")
+    with pytest.raises(AssertionError, match="proof-repeat-stale"):
+        call(request=repeat)
+    assert len((tmp_path / "count.txt").read_text().splitlines()) == 2
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_native_selected_command_stays_local_and_replays_without_task_claim(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
@@ -436,6 +489,13 @@ def test_native_proof_actual_interruption_cannot_reexecute(tmp_path: Path, share
             process.wait(timeout=5)
     with pytest.raises(AssertionError, match="proof-execution-uncertain"):
         consume("native", shared_core_binary, native_cli, {**context, "invocation": invocation}, host_path=os.environ["PATH"])
+    run = next((tmp_path / ".agentic-workspace/local/proof-receipts/runs").glob("*/run.json"))
+    request["arguments"]["repeat"] = {
+        "evidence_ref": "proof://local/" + run.parent.name.removeprefix("native-sha256-"),
+        "reason": "An uncertain attempt must not be used as a terminal predecessor.",
+    }
+    with pytest.raises(AssertionError, match="custody|committed"):
+        consume("native", shared_core_binary, native_cli, {**context, "request": request}, host_path=os.environ["PATH"])
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     assert not (tmp_path / ".agentic-workspace/proof/receipts/index.json").exists()
 

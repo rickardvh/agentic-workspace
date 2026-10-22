@@ -801,6 +801,14 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 .unwrap();
             result["verification_context"]["optional_judgment"] = optional;
         }
+        if verification["repeat_requests"]
+            .as_array()
+            .is_some_and(|r| !r.is_empty())
+        {
+            result["verification_context"]["repeat_observation"] = json!({
+                "source":"/verification/repeat_requests",
+                "use":"Inspect previous evidence first. For an intentional new measurement, select a repeat_request from current Verification detail and give its reason. Reinvoke the original exact action to recover the same attempt; repeat never recovers an uncertain effect or erases a failed observation."});
+        }
     }
     if let Some(advice) = full["memory"].get("advisory_context") {
         result["advisory_context"] = advice.clone();

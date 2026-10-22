@@ -405,9 +405,55 @@ pub(crate) fn select_mode(
             }
         }
     };
+    let mut selected_choice = choice.clone();
+    selected_choice.as_object_mut().unwrap().remove("repeat");
+    let mut selection = json!({"choice":selected_choice,"task_identity":crate::direct_task::subject(task,changed)?,
+        "work":{"id":work["id"],"revision":work["revision"]},"strategy":semantic_strategy,"proof_subject":subject,"timeout_seconds":timeout,"reported_observation":report,"promotion":promotion});
+    if let Some(repeat) = choice.get("repeat") {
+        if report.is_some()
+            || choice.get("promotion").is_some()
+            || repeat["reason"]
+                .as_str()
+                .is_none_or(|r| r.trim().is_empty())
+        {
+            return Err(err(
+                "proof-repeat-invalid: give a reason for another native execution; promotion and reported observations cannot request a repeat",
+            ));
+        }
+        let reference = repeat["evidence_ref"].as_str().unwrap_or("");
+        // local_receipt requires exact committed attempt custody, including a
+        // real terminal result. An uncertain or interrupted attempt cannot pass.
+        let receipt = local_receipt(target, reference)?;
+        let committed = committed_publication(target, &receipt)?.ok_or_else(|| {
+            err("proof-repeat-terminal-custody-required: recover the exact previous attempt")
+        })?;
+        let previous = &committed["invocation"]["arguments"]["selection"];
+        if !matches!(
+            committed["outcome"]["value"]["process"]["status"].as_str(),
+            Some("passed" | "failed" | "timed-out")
+        ) || previous["choice"]["route_id"] != choice["route_id"]
+            || previous["choice"]["command"] != choice["command"]
+            || previous["task_identity"] != selection["task_identity"]
+            || previous["work"] != selection["work"]
+            || previous["strategy"] != selection["strategy"]
+            || previous["proof_subject"] != selection["proof_subject"]
+        {
+            return Err(err(
+                "proof-repeat-stale: the terminal observation does not match the current task, command, source, strategy or runtime; inspect current evidence and select current proof",
+            ));
+        }
+        // One successor per authenticated predecessor. Caller rationale is
+        // retained in source_requests, never used as an attempt-generating nonce.
+        selection["repeat_of"] = json!(reference);
+        selection["evidence_refs"] = previous["evidence_refs"].clone();
+        let refs = selection["evidence_refs"].as_array_mut().unwrap();
+        if !refs.contains(&json!(reference)) {
+            refs.push(json!(reference));
+        }
+        refs.sort_by_key(Value::to_string);
+    }
     Ok(
-        json!({"status":"selected","selection":{"choice":choice,"task_identity":crate::direct_task::subject(task,changed)?,
-        "work":{"id":work["id"],"revision":work["revision"]},"strategy":semantic_strategy,"proof_subject":subject,"timeout_seconds":timeout,"reported_observation":report,"promotion":promotion},"choices":available,
+        json!({"status":"selected","selection":selection,"choices":available,
         "gaps":gaps,"environment_boundary":"Native producer and launched shell observed; nested tool environments remain unproven."}),
     )
 }

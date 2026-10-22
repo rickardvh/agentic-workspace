@@ -300,15 +300,18 @@ fn resolve_selected(
                     .invocation
                     .as_ref()
                     .is_some_and(|i| i["operation_id"] == "proof.report")
-                    && request["owner"] == "planning"
-                    && matches!(
-                        request["request_kind"].as_str(),
-                        Some(
-                            "planning/continuation/v1"
-                                | "planning/posture/v1"
-                                | "planning/select-owner/v1"
-                        )
-                    ))
+                    && (request["owner"] == "verification"
+                        && request["request_kind"] == "verification/execute-selected/v1"
+                        && request["arguments"]["repeat"].is_object()
+                        || request["owner"] == "planning"
+                            && matches!(
+                                request["request_kind"].as_str(),
+                                Some(
+                                    "planning/continuation/v1"
+                                        | "planning/posture/v1"
+                                        | "planning/select-owner/v1"
+                                )
+                            )))
         })
     {
         return Err(CoreError::new(
@@ -2157,7 +2160,12 @@ fn verification_detail_identity(verification: &Value) -> Value {
     // currentness judgments. Optional request catalogues and presentation counts
     // do not define that state; operating separately binds the exact work context.
     if let Some(v) = identity.as_object_mut() {
-        for field in ["execution_requests", "record_requests", "judgment_request"] {
+        for field in [
+            "execution_requests",
+            "repeat_requests",
+            "record_requests",
+            "judgment_request",
+        ] {
             v.remove(field);
         }
     }

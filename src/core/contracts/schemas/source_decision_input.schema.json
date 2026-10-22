@@ -302,6 +302,16 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "repeat": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evidence_ref", "reason"],
+          "properties": {
+            "evidence_ref": {"type": "string", "pattern": "^proof://local/[a-f0-9]{64}$"},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 2048}
+          },
+          "description": "Intentionally measure again after this exact authenticated terminal observation. The predecessor determines the new attempt; the reason is not a caller nonce."
+        },
         "promotion": {
           "type": "object",
           "additionalProperties": false,
