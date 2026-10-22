@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Allow intentional new proof measurements after authenticated terminal results while preserving exact replay, uncertain-effect recovery, and prior evidence."

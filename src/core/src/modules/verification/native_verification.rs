@@ -1996,6 +1996,9 @@ pub(crate) fn view_with_applicability(
             "restriction_basis":crate::restriction_basis("task-requirement",&json!(source_revision),MANIFEST,&json!({"strategy":strategy_policy,"assurance":assurance,"proof_scope":proof_scope,"strict_closeout":strict_closeout})),
             "decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"});
+    if repeat_requests.is_empty() {
+        result.as_object_mut().unwrap().remove("repeat_requests");
+    }
     if !negative_evidence.is_empty() {
         result["negative_evidence"] = json!(negative_evidence);
     }

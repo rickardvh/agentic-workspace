@@ -532,6 +532,17 @@ def test_native_failed_or_timed_out_command_is_retained_without_retry(
     assert claim["arguments"]["candidate_refs"] == [evidence["reference"]]
     assert claim["arguments"]["disposition"] == "insufficient"
 
+    if failure == "timeout":
+        repeat = result["continuation"]["result"]["verification"]["repeat_requests"][0]
+        repeat["arguments"]["repeat"]["reason"] = "Measure the completed timeout again under the same current execution budget."
+        next_action = call({**context, "request": repeat})["decision_packet"]["primary_action"]
+        assert next_action["idempotency_key"] != action["idempotency_key"]
+        repeated = call({**context, "invocation": next_action})["value"]
+        assert repeated["process"]["status"] == "timeout"
+        assert call({**context, "invocation": next_action})["value"] == repeated
+        assert call({**context, "invocation": action})["value"] == result["value"]
+        assert (tmp_path / "count.txt").read_text().splitlines() == ["executed", "executed"]
+
 
 def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
     from tests.test_native_public_cli import pin_instructions

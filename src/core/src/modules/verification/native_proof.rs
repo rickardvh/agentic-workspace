@@ -430,7 +430,7 @@ pub(crate) fn select_mode(
         let previous = &committed["invocation"]["arguments"]["selection"];
         if !matches!(
             committed["outcome"]["value"]["process"]["status"].as_str(),
-            Some("passed" | "failed" | "timed-out")
+            Some("passed" | "failed" | "timeout")
         ) || previous["choice"]["route_id"] != choice["route_id"]
             || previous["choice"]["command"] != choice["command"]
             || previous["task_identity"] != selection["task_identity"]
