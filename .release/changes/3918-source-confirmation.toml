@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Use the same exact source-reconciliation confirmation identity in public and delegated paths, with distinct malformed-envelope and stale-proposal recovery."
