@@ -332,13 +332,30 @@ pub(crate) fn view(context: Context<'_>, request: Option<&Value>) -> Result<Valu
     let delegated = crate::native_decision_authority::delegated(config, "verification", &scope);
     if args["answer"].is_null() && delegated.is_none() {
         result["status"] = json!("bounded-domain-answer-required");
+        // Once judgment material is accepted, the next request is the compiled
+        // confirmation, including its candidate set and answer identity. Keeping
+        // the material template here invites callers to reconstruct that envelope.
+        result["confirmation_request"] = exact;
         result["decisions"] = decisions;
         return Ok(result);
     }
     if !args["answer"].is_null() {
         exact["arguments"]["answer"] = args["answer"].clone();
-        if exact != *request || args["proposal_revision"] != pr {
-            return Err(CoreError::new("claim review answer changed or is stale"));
+        if args["proposal_revision"] != pr {
+            return Err(CoreError::new(
+                "claim-review-stale: claim review proposal or bound context changed; \
+                 resubmit current judgment through verification/review-claim/v1, then answer \
+                 its returned decision reference. Existing command evidence needs no rerun \
+                 unless its own currentness requires it",
+            ));
+        }
+        if exact != *request {
+            return Err(CoreError::new(
+                "claim-review-request-shape: incomplete or altered confirmation envelope; \
+                 use the full returned claim_review.confirmation_request or the pending \
+                 verification-claim-review decision reference with only confirm/defer. \
+                 Preserve current reentry; no claim judgment was admitted",
+            ));
         }
         if args["answer"] == "defer" {
             result["status"] = json!("deferred");
