@@ -36,6 +36,91 @@ def repository(root: Path) -> dict:
     return {"target": str(root), "task": "Complete the feature change", "changed": ["src/feature.txt"]}
 
 
+@pytest.mark.parametrize("route", ["full", "reference", "delegated"])
+def test_two_source_confirmation_exposes_exact_request_and_publishes(tmp_path, shared_core_binary, native_cli, route):
+    from tests.test_native_public_cli import pin_instructions
+
+    context = repository(tmp_path)
+    instruction = tmp_path / ".agentic-workspace/instructions/feature.md"
+    instruction.write_text(instruction.read_text().replace("reconcile: [docs/guide.md]", "reconcile: [docs/guide.md, docs/second.md]"))
+    (tmp_path / "docs/second.md").write_text("A second canonical source.\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "docs/second.md"], check=True, capture_output=True)
+    pin_instructions(tmp_path)
+    if route == "delegated":
+        config = tmp_path / ".agentic-workspace/config.toml"
+        config.write_text(
+            config.read_text()
+            + '\ndecision_delegations=[{owner="verification",scope=["path:docs/guide.md","path:docs/second.md","path:src/feature.txt"]}]\n'
+        )
+
+    def call(extra=None):
+        return consume("native", shared_core_binary, native_cli, {**context, **(extra or {})}, host_path=os.environ["PATH"])
+
+    material = call()["verification"]["source_reconciliation"]["requests"][0]
+    material["arguments"]["judgments"] = {
+        path: {"disposition": "reviewed-current", "reason": "Compared this canonical source with the current feature behavior."}
+        for path in ("docs/guide.md", "docs/second.md")
+    }
+    proposed = call({"request": material})
+    if route == "delegated":
+        ready = proposed
+    else:
+        owner = proposed["verification"]["source_reconciliation"]
+        assert owner["status"] == "bounded-domain-judgment-required"
+        question = next(q for q in proposed["decision_packet"]["pending_consequences"]["decisions"] if q["id"] == "source-reconciliation")
+        exact = owner["confirmation_request"]
+        assert exact == question["response_request"]
+        assert exact["id"].startswith("answer:decision:")
+        incomplete = copy.deepcopy(material)
+        incomplete["arguments"] = {**exact["arguments"], "answer": "confirm"}
+        with pytest.raises(AssertionError, match="source-reconciliation-request-shape"):
+            call({"request": incomplete})
+        stale = copy.deepcopy(exact)
+        stale["arguments"].update(answer="confirm", proposal_revision="changed-proposal")
+        with pytest.raises(AssertionError, match="source-reconciliation-stale"):
+            call({"request": stale})
+        deferred = copy.deepcopy(exact)
+        deferred["arguments"]["answer"] = "defer"
+        assert call({"request": deferred})["verification"]["source_reconciliation"]["status"] == "deferred"
+        source = tmp_path / "docs/second.md"
+        original = source.read_bytes()
+        source.write_bytes(original + b"changed source")
+        confirmed = copy.deepcopy(exact)
+        confirmed["arguments"]["answer"] = "confirm"
+        with pytest.raises(AssertionError, match="source-reconciliation-stale"):
+            call({"request": confirmed})
+        assert not (tmp_path / ".agentic-workspace/proof/receipts").exists()
+        source.write_bytes(original)
+        if route == "full":
+            ready = call({"request": confirmed})
+        else:
+            carried = call({"request": material, "projection": "carried"})
+            packet = carried["view"]["decision_packet"]
+            question = next(
+                q
+                for q in [packet["decision_request"], *packet["pending_consequences"]["decisions"]]
+                if q and q["id"] == "source-reconciliation"
+            )
+            ready = consume(
+                "native",
+                shared_core_binary,
+                native_cli,
+                {"request": carried["carriage"], "reference": question["reference"], "answer": "confirm"},
+                host_path=os.environ["PATH"],
+            )
+    action = ready["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "verification.record-source-reconciliation"
+    first = call({"invocation": action})
+    assert first["status"] == "applied"
+    assert call({"invocation": action})["value"] == first["value"]
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["status"] == "current"
+    assert set(owner["evidence"]["judgments"]) == {"docs/guide.md", "docs/second.md"}
+    assert owner["evidence"]["completion_authority"] is False
+    (tmp_path / "unrelated.txt").write_text("unrelated task material")
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 @pytest.mark.parametrize("disposition", ["updated", "reviewed-current"])
 def test_exact_source_judgment_is_retained_and_selectively_stales(tmp_path, shared_core_binary, native_cli, surface, disposition):
@@ -405,7 +490,6 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     # the published source/projection/receipts, but not ignored local custody.
     receiving_receipts = sorted((relocated / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json"))
     imported = {path: path.read_bytes() for path in receiving_receipts}
-    source_before = (relocated / "src/feature.txt").read_bytes()
     projection = next((relocated / ".agentic-workspace/proof/current").glob("source-reconciliation-*.json"))
     projection_before = projection.read_bytes()
     current_receipt = json.loads((relocated / fresh["arguments"]["receipt_ref"]).read_bytes())
@@ -440,6 +524,9 @@ def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_
     relocated.rename(prior_checkout)
     subprocess.run(["git", "clone", "-q", "--no-hardlinks", str(prior_checkout), str(relocated)], check=True, capture_output=True)
     assert not (relocated / ".agentic-workspace/local").exists()
+    # Git checkout may apply this host's line-ending policy. Publication must
+    # preserve the actual receiving bytes, independently of that transformation.
+    source_before = (relocated / "src/feature.txt").read_bytes()
     same_path = receiving_call()["verification"]["source_reconciliation"]
     assert same_path["status"] == "judgment-material-required"
     assert same_path["coverage"]["accepted"] == 0
