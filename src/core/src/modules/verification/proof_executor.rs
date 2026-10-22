@@ -138,6 +138,8 @@ fn private_source(path: &str) -> bool {
         path.to_owned()
     };
     path.split('/').any(|part| part == ".git")
+        || path == ".agentic-workspace/config.local.toml"
+        || path == "agentic-workspace.local.toml"
         || path == ".agentic-workspace/local"
         || path.starts_with(".agentic-workspace/local/")
 }
@@ -202,10 +204,12 @@ fn resolved_inputs(
                             ))
                         })?
                 };
+                #[cfg(windows)]
+                let name = name.as_str();
                 if !resolved.is_empty() {
                     resolved.push('/');
                 }
-                resolved.push_str(&name);
+                resolved.push_str(name);
                 if linked(&self.root.symlink_metadata(&resolved).map_err(err)?) {
                     return Err(err("proof-snapshot-link-unsupported"));
                 }
@@ -260,7 +264,9 @@ fn resolved_inputs(
                     if !relative(&child) {
                         return Err(err("proof-input-path-unsupported"));
                     }
-                    found |= self.visit(&child, pattern, matched)?;
+                    // Only a literal directory covers its entire subtree.
+                    // Matching a directory's name cannot widen a file pattern.
+                    found |= self.visit(&child, pattern, covered)?;
                 }
                 Ok(found)
             } else if metadata.is_file() {
@@ -1085,6 +1091,47 @@ mod tests {
             .unwrap();
         }
         assert_eq!(snapshot(&path, &pattern).unwrap().len(), 132);
+        std::fs::create_dir(path.join("source/cache.py")).unwrap();
+        std::fs::write(
+            path.join("source/cache.py/secrets.txt"),
+            "outside file pattern",
+        )
+        .unwrap();
+        std::fs::write(path.join("source/cache.py/nested.py"), "matching file").unwrap();
+        assert_eq!(
+            resolved_inputs(&path, &json!({"inputs":["source/*.py"]}), MAX_SCAN_ENTRIES).unwrap(),
+            vec!["source/cache.py/nested.py", "source/nested/module.py"]
+        );
+        assert_eq!(
+            resolved_inputs(
+                &path,
+                &json!({"inputs":["source/cache.py"]}),
+                MAX_SCAN_ENTRIES
+            )
+            .unwrap(),
+            vec!["source/cache.py/nested.py", "source/cache.py/secrets.txt"]
+        );
+        std::fs::create_dir_all(path.join(".agentic-workspace")).unwrap();
+        std::fs::write(path.join("public.toml"), "public source").unwrap();
+        for private in [
+            ".agentic-workspace/config.local.toml",
+            "agentic-workspace.local.toml",
+        ] {
+            std::fs::write(path.join(private), "machine-local configuration").unwrap();
+            assert!(
+                snapshot(&path, &json!({"inputs":["*.toml"]}))
+                    .err()
+                    .unwrap()
+                    .to_string()
+                    .contains("private-state")
+            );
+            assert_eq!(
+                resolved_inputs(&path, &json!({"inputs":["public.toml"]}), MAX_SCAN_ENTRIES)
+                    .unwrap(),
+                vec!["public.toml"]
+            );
+            std::fs::remove_file(path.join(private)).unwrap();
+        }
         let subject = json!({"requirements":[{"source_inputs":["source/input"]}]});
         assert!(source_prerequisites(&files, &subject).is_ok());
         for missing in ["source/omitted", "../outside"] {

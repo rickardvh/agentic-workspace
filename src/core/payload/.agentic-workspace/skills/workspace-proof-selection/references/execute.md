@@ -29,10 +29,13 @@ For isolated proof, `[execution].inputs` accepts repository-relative literal
 files/directories and `*`, `?`, or bracket patterns such as `tests/*.py` and
 `src/**`. Matching follows scoped-instruction fnmatch rules: `*` spans `/`,
 `**` has the same meaning as `*`, and Windows matches case-insensitively.
-Matched directories include descendants. Selection includes regular tracked
-and untracked files, sorted and deduplicated. Git internals and AW local state
-are outside the source universe and are never traversed; a scope explicitly
-selecting their directories is rejected. Links and special files are rejected.
+Literal directories include descendants; patterns select each matching regular
+file, including nested files when the pattern matches their full path. Selection
+includes tracked and untracked files, sorted and deduplicated. Git internals,
+AW local directories, `.agentic-workspace/config.local.toml` and the legacy
+`agentic-workspace.local.toml` are private state. Their directories are never
+traversed, and an input matching private state is rejected. Links and special
+files are rejected.
 Expansion stops after 50,000 visited entries; snapshots retain their 20,000-entry,
 128 MiB and 64-component limits. Narrow `execution.inputs` when an input is
 unmatched, unsafe or exceeds a bound. Membership, bytes and executable modes are
