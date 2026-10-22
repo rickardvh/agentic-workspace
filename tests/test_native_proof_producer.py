@@ -802,7 +802,7 @@ def test_native_isolated_proof_preserves_executable_intent_and_mode_freshness(tm
         + "]\n"
         + '[execution]\nkind="docker-readonly-source-v1"\nimage='
         + json.dumps(image.stdout.strip())
-        + '\ninputs=["a.txt","src","scripts"]\n'
+        + '\ninputs=["a.txt","src/*.py","scripts/**"]\n'
     )
 
     def git(*args):
@@ -813,16 +813,45 @@ def test_native_isolated_proof_preserves_executable_intent_and_mode_freshness(tm
     git("update-index", "--chmod=+x", "scripts/run.sh")
     git("update-index", "--chmod=-x", "src/example.py")
     git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "mode authority")
+    helper = tmp_path / "src/nested/helper.py"
+    helper.parent.mkdir()
+    helper.write_text("untracked matching input")
+    (tmp_path / "src/ignored.txt").write_text("outside the declared pattern")
 
     def call(extra=None):
         return consume("native", shared_core_binary, native_cli, {**context, **(extra or {})}, host_path=os.environ["PATH"])
 
     request = call()["verification"]["execution_requests"][0]
     action = call({"request": request})["decision_packet"]["primary_action"]
+    executor = action["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]
+    text = manifest.read_text()
+    manifest.write_text(text.replace('"src/*.py","scripts/**"', '"src/example.py","src/nested/helper.py","scripts"'))
+    equivalent = call({"request": call()["verification"]["execution_requests"][0]})["decision_packet"]["primary_action"]
+    assert equivalent["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]["source_revision"] == executor["source_revision"]
+    manifest.write_text(text)
     before = {path: (path.read_bytes(), path.stat().st_mode) for path in [module, script]}
     result = call({"invocation": action})
     assert result["value"]["process"]["status"] == "passed", result
     assert before == {path: (path.read_bytes(), path.stat().st_mode) for path in [module, script]}
+    for change in ("add", "rename", "delete"):
+        extra = tmp_path / "src/extra.py"
+        if change == "add":
+            extra.write_text("new matching input")
+        elif change == "rename":
+            helper.rename(extra)
+        else:
+            helper.unlink()
+        with pytest.raises(AssertionError, match="stale|changed"):
+            call({"invocation": action})
+        evidence_request = call()["verification"]["requests"][0]
+        evidence_request["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
+        assert call({"request": evidence_request})["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
+        if change == "add":
+            extra.unlink()
+        elif change == "rename":
+            extra.rename(helper)
+        else:
+            helper.write_text("untracked matching input")
     # A byte-identical change to the responsible mode authority invalidates the
     # old selected action/receipt. Windows tests Git intent, never chmod on NTFS.
     if os.name == "nt":
