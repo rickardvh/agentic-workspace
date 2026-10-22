@@ -49,6 +49,59 @@ def proof_consumer(call, context, reference, task="Retain the selected proof for
     return Path(context["target"]) / result["value"]["owner_path"]
 
 
+def test_deliberate_repeat_uses_terminal_custody_and_keeps_both_observations(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    command = (
+        "Add-Content count.txt executed; if ((Get-Content count.txt).Count -eq 1) { exit 7 }"
+        if os.name == "nt"
+        else "echo executed >> count.txt; test $(wc -l < count.txt) -gt 1"
+    )
+    manifest.write_text(manifest.read_text().split("commands=")[0] + "commands=[" + json.dumps(command) + "]\n")
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    first_action = call(request=call()["verification"]["execution_requests"][0])["decision_packet"]["primary_action"]
+    first = call(invocation=first_action)["value"]
+    assert first["process"]["status"] == "failed"
+    assert call(invocation=first_action)["value"] == first
+    inspect = call()["verification"]["requests"][0]
+    inspect["arguments"]["evidence_refs"] = [first["publication"]["reference"]]
+    carried = call(request=inspect)
+    repeat = carried["verification"]["repeat_requests"][0]
+    repeat["arguments"]["repeat"]["reason"] = "Measure again to distinguish a persistent failure from the first-run failure."
+    second_action = call(request=repeat)["decision_packet"]["primary_action"]
+    assert second_action["idempotency_key"] != first_action["idempotency_key"]
+    second = call(invocation=second_action)["value"]
+    assert second["process"]["status"] == "passed"
+    assert second["publication"]["reference"] != first["publication"]["reference"]
+    assert call(invocation=second_action)["value"] == second
+    assert call(invocation=first_action)["value"] == first
+    # The rationale is not a nonce for minting more children of the same attempt.
+    repeat["arguments"]["repeat"]["reason"] = "A different reason for the same predecessor."
+    same_successor = call(request=repeat)["decision_packet"]["primary_action"]
+    assert same_successor["idempotency_key"] == second_action["idempotency_key"]
+    with pytest.raises(AssertionError, match="custody|stale|differs"):
+        call(invocation=same_successor)
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed", "executed"]
+    request = call()["verification"]["claim_review"]["request"]
+    request["arguments"].update(
+        disposition="satisfied",
+        reason="Inspect both measurements.",
+        candidate_refs=[first["publication"]["reference"], second["publication"]["reference"]],
+        evidence_refs=[second["publication"]["reference"]],
+    )
+    reviewed = call(request=request)["verification"]
+    assert {e["reference"] for e in reviewed["evidence"]} == set(request["arguments"]["candidate_refs"])
+    assert reviewed["negative_evidence"][0]["status"] in ("required-failure", "relevance-unresolved")
+    assert reviewed["claim_review"]["status"] == "bounded-domain-answer-required"
+    (tmp_path / "a.txt").write_text("changed input")
+    with pytest.raises(AssertionError, match="proof-repeat-stale"):
+        call(request=repeat)
+    assert len((tmp_path / "count.txt").read_text().splitlines()) == 2
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_native_selected_command_stays_local_and_replays_without_task_claim(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
@@ -436,6 +489,13 @@ def test_native_proof_actual_interruption_cannot_reexecute(tmp_path: Path, share
             process.wait(timeout=5)
     with pytest.raises(AssertionError, match="proof-execution-uncertain"):
         consume("native", shared_core_binary, native_cli, {**context, "invocation": invocation}, host_path=os.environ["PATH"])
+    run = next((tmp_path / ".agentic-workspace/local/proof-receipts/runs").glob("*/run.json"))
+    request["arguments"]["repeat"] = {
+        "evidence_ref": "proof://local/" + run.parent.name.removeprefix("native-sha256-"),
+        "reason": "An uncertain attempt must not be used as a terminal predecessor.",
+    }
+    with pytest.raises(AssertionError, match="custody|committed"):
+        consume("native", shared_core_binary, native_cli, {**context, "request": request}, host_path=os.environ["PATH"])
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
     assert not (tmp_path / ".agentic-workspace/proof/receipts/index.json").exists()
 
@@ -471,6 +531,17 @@ def test_native_failed_or_timed_out_command_is_retained_without_retry(
     assert claim["arguments"]["evidence_refs"] == []
     assert claim["arguments"]["candidate_refs"] == [evidence["reference"]]
     assert claim["arguments"]["disposition"] == "insufficient"
+
+    if failure == "timeout":
+        repeat = result["continuation"]["result"]["verification"]["repeat_requests"][0]
+        repeat["arguments"]["repeat"]["reason"] = "Measure the completed timeout again under the same current execution budget."
+        next_action = call({**context, "request": repeat})["decision_packet"]["primary_action"]
+        assert next_action["idempotency_key"] != action["idempotency_key"]
+        repeated = call({**context, "invocation": next_action})["value"]
+        assert repeated["process"]["status"] == "timeout"
+        assert call({**context, "invocation": next_action})["value"] == repeated
+        assert call({**context, "invocation": action})["value"] == result["value"]
+        assert (tmp_path / "count.txt").read_text().splitlines() == ["executed", "executed"]
 
 
 def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
@@ -731,7 +802,7 @@ def test_native_isolated_proof_preserves_executable_intent_and_mode_freshness(tm
         + "]\n"
         + '[execution]\nkind="docker-readonly-source-v1"\nimage='
         + json.dumps(image.stdout.strip())
-        + '\ninputs=["a.txt","src","scripts"]\n'
+        + '\ninputs=["a.txt","src/*.py","scripts/**"]\n'
     )
 
     def git(*args):
@@ -742,16 +813,45 @@ def test_native_isolated_proof_preserves_executable_intent_and_mode_freshness(tm
     git("update-index", "--chmod=+x", "scripts/run.sh")
     git("update-index", "--chmod=-x", "src/example.py")
     git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "mode authority")
+    helper = tmp_path / "src/nested/helper.py"
+    helper.parent.mkdir()
+    helper.write_text("untracked matching input")
+    (tmp_path / "src/ignored.txt").write_text("outside the declared pattern")
 
     def call(extra=None):
         return consume("native", shared_core_binary, native_cli, {**context, **(extra or {})}, host_path=os.environ["PATH"])
 
     request = call()["verification"]["execution_requests"][0]
     action = call({"request": request})["decision_packet"]["primary_action"]
+    executor = action["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]
+    text = manifest.read_text()
+    manifest.write_text(text.replace('"src/*.py","scripts/**"', '"src/example.py","src/nested/helper.py","scripts"'))
+    equivalent = call({"request": call()["verification"]["execution_requests"][0]})["decision_packet"]["primary_action"]
+    assert equivalent["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]["source_revision"] == executor["source_revision"]
+    manifest.write_text(text)
     before = {path: (path.read_bytes(), path.stat().st_mode) for path in [module, script]}
     result = call({"invocation": action})
     assert result["value"]["process"]["status"] == "passed", result
     assert before == {path: (path.read_bytes(), path.stat().st_mode) for path in [module, script]}
+    for change in ("add", "rename", "delete"):
+        extra = tmp_path / "src/extra.py"
+        if change == "add":
+            extra.write_text("new matching input")
+        elif change == "rename":
+            helper.rename(extra)
+        else:
+            helper.unlink()
+        with pytest.raises(AssertionError, match="stale|changed"):
+            call({"invocation": action})
+        evidence_request = call()["verification"]["requests"][0]
+        evidence_request["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
+        assert call({"request": evidence_request})["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
+        if change == "add":
+            extra.unlink()
+        elif change == "rename":
+            extra.rename(helper)
+        else:
+            helper.write_text("untracked matching input")
     # A byte-identical change to the responsible mode authority invalidates the
     # old selected action/receipt. Windows tests Git intent, never chmod on NTFS.
     if os.name == "nt":

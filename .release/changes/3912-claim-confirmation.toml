@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose exact claim-review confirmation requests and distinguish incomplete confirmation envelopes from stale proposals."

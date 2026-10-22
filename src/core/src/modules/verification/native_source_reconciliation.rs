@@ -1084,12 +1084,17 @@ fn group_view(
         expected["id"] = request["id"].clone();
         if *request != expected {
             return Err(err(
-                "source reconciliation answer is stale or differs from the exact owner request",
+                "source-reconciliation-stale: source reconciliation answer is stale or differs from the exact owner request identity; reenter verification/reconcile-sources/v1 for current material and its exact confirmation",
+            ));
+        }
+        if request["arguments"]["binding_revision"].is_null() {
+            return Err(err(
+                "source-reconciliation-request-shape: missing binding in the confirmation envelope; use the full returned confirmation_request or the source-reconciliation decision reference with current reentry",
             ));
         }
         if request["arguments"]["binding_revision"] != revision {
             return Err(err(
-                "source reconciliation answer is stale or differs from the exact owner request",
+                "source-reconciliation-stale: source reconciliation answer is stale or differs from the exact owner request binding; reenter verification/reconcile-sources/v1 and assess current sources",
             ));
         }
         let judgments = &request["arguments"]["judgments"];
@@ -1110,8 +1115,15 @@ fn group_view(
         let arguments = json!({"relation_id":binding["relation_id"],"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
         let decisions = json!([{"id":"source-reconciliation","question":"Confirm your source assessment for this exact group after checking the supplied sources and resulting work, or defer if the evidence is insufficient. This is an agent/domain judgment; no human approval is required and no independent review is granted.",
                 "material":view["proposal"],
+                "basis":crate::restriction_basis("task-requirement", &json!(source_revision), REQUEST, &view["proposal"]),
                 "response_request":{"request_kind":REQUEST,"arguments":arguments},
                 "choices":[{"id":"confirm","label":"Record this exact domain assessment"},{"id":"defer","label":"Do not publish; leave this group unresolved"}],"affects":["claim:complete"]}]);
+        let compiled = crate::compile_value(
+            json!({"intent":{"current_work":work},"capability_contract":contract,
+            "contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
+        )?;
+        let mut exact =
+            compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
         if request["arguments"]["answer"].is_null() {
             if request["id"] != REQUEST {
                 return Err(err(
@@ -1119,11 +1131,7 @@ fn group_view(
                 ));
             }
             if binding.get("decision_authority").is_some() {
-                let compiled = crate::compile_value(
-                    json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
-                )?;
-                let mut authorized =
-                    compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
+                let mut authorized = exact;
                 authorized["arguments"]["answer"] = json!("confirm");
                 return relation_view(
                     target,
@@ -1136,24 +1144,26 @@ fn group_view(
                 );
             }
             view["status"] = json!("bounded-domain-judgment-required");
+            // The inner decision contribution is a compiler template, not a
+            // public answer envelope. Expose the actual next request directly.
+            view["confirmation_request"] = exact;
             view["decisions"] = decisions;
             return Ok(view);
         }
-        let compiled = crate::compile_value(
-            json!({"intent":{"current_work":work},"capability_contract":contract,
-            "contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
-        )?;
-        let mut exact =
-            compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
-        exact["arguments"]["answer"] = request["arguments"]["answer"].clone();
-        if exact != *request {
+        if request["arguments"]["proposal_revision"].is_null() {
             return Err(err(
-                "answer differs from the exact owner-issued bounded request",
+                "source-reconciliation-request-shape: missing proposal revision; use the full returned confirmation_request or the source-reconciliation decision reference with only confirm/defer and current reentry",
             ));
         }
         if request["arguments"]["proposal_revision"] != proposal_revision {
             return Err(err(
-                "source reconciliation proposal changed; obtain a current bounded answer",
+                "source-reconciliation-stale: source reconciliation proposal changed; obtain current material through verification/reconcile-sources/v1 and answer its exact decision reference",
+            ));
+        }
+        exact["arguments"]["answer"] = request["arguments"]["answer"].clone();
+        if exact != *request {
+            return Err(err(
+                "source-reconciliation-request-shape: answer differs from the exact owner-issued bounded request; use the full returned confirmation_request or the source-reconciliation decision reference with only confirm/defer and current reentry. No publication was admitted",
             ));
         }
         if request["arguments"]["answer"] == "defer" {

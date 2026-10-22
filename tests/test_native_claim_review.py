@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import json
 import os
@@ -149,6 +150,27 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     )
     full = call(request=full_request)
     assert full["verification"]["claim_review"]["proposal"] == proposed["verification"]["claim_review"]["proposal"]
+    assert full["verification"]["claim_review"]["confirmation_request"] == decision["response_request"]
+    incomplete = copy.deepcopy(full["verification"]["claim_review"]["confirmation_request"])
+    incomplete["arguments"]["answer"] = "confirm"
+    del incomplete["arguments"]["candidate_refs"]
+    with pytest.raises(AssertionError, match="claim-review-request-shape"):
+        call(request=incomplete)
+    carried = call(request=full_request, projection="carried")
+    packet = carried["view"]["decision_packet"]
+    question = next(
+        d
+        for d in [packet["decision_request"], *packet["pending_consequences"]["decisions"]]
+        if d and d["id"] == "verification-claim-review"
+    )
+    by_reference = consume(
+        "native",
+        shared_core_binary,
+        native_cli,
+        {"request": carried["carriage"], "reference": question["reference"], "answer": "confirm"},
+        host_path=os.environ["PATH"],
+    )
+    assert by_reference["verification"]["claim_review"]["status"] == "current"
     evidence = decision["material"]["evidence"][0]
     assert evidence["status"] == "admitted"
     assert evidence["admission_scope"] == "selected-command"
@@ -157,7 +179,7 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     assert evidence["limits"] == ["nested-tool-runtime-unobserved", "live-tree-transient-mutation-unobserved"]
     assert decision["material"]["protocol_coverage"]["check"]["status"] == "current-command-evidence-satisfied"
     assert proposed["verification"]["evidence"][0]["runtime_admission"]["sufficiency_currentness"] == "current"
-    answer = decision["response_request"]
+    answer = full["verification"]["claim_review"]["confirmation_request"]
     answer["arguments"]["answer"] = "confirm"
     reentry = [answer]
     if binding_assignment:

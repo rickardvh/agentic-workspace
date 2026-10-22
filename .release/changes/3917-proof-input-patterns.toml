@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Support bounded wildcard proof inputs with exact file membership, private-state confinement, and executable-mode currentness."

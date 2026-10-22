@@ -4,18 +4,19 @@
 use crate::{CoreError, digest};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
+#[cfg(any(windows, test))]
+use std::time::Instant;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     io::Read,
     path::{Component, Path, PathBuf},
     process::Command,
     time::Duration,
 };
-#[cfg(any(windows, test))]
-use std::{collections::BTreeSet, time::Instant};
 
 const MAX_BYTES: usize = 128 * 1024 * 1024;
 const MAX_FILES: usize = 20000;
+const MAX_SCAN_ENTRIES: usize = 50000;
 pub(crate) const KIND: &str = "docker-readonly-source-v1";
 pub(crate) fn missing_declaration_recovery() -> Value {
     json!({"kind":"capability-gap","cause":"missing-executor-declaration","human_answer_allowed":false,
@@ -130,29 +131,267 @@ fn input_paths(config: &Value) -> Result<Vec<&str>, CoreError> {
         .collect()
 }
 
+fn private_source(path: &str) -> bool {
+    let path = if cfg!(windows) {
+        path.to_lowercase()
+    } else {
+        path.to_owned()
+    };
+    path.split('/').any(|part| part == ".git")
+        || path == ".agentic-workspace/config.local.toml"
+        || path == "agentic-workspace.local.toml"
+        || path == ".agentic-workspace/local"
+        || path.starts_with(".agentic-workspace/local/")
+}
+
+// Expand only the declared literal directory or the prefix before its first
+// wildcard. Enumeration includes untracked sources and never follows links.
+// The shared matcher supplies host-case fnmatch semantics, including * across /.
+fn resolved_inputs(
+    target: &Path,
+    config: &Value,
+    scan_limit: usize,
+) -> Result<Vec<String>, CoreError> {
+    struct Scan<'a> {
+        root: &'a Dir,
+        files: BTreeSet<String>,
+        visited: usize,
+        limit: usize,
+        #[cfg(windows)]
+        names: BTreeMap<String, BTreeMap<String, String>>,
+    }
+    impl Scan<'_> {
+        fn prefix(&mut self, path: &str) -> Result<String, CoreError> {
+            let mut resolved = String::new();
+            for component in Path::new(path).components() {
+                let Component::Normal(name) = component else {
+                    continue;
+                };
+                let name = name
+                    .to_str()
+                    .ok_or_else(|| err("proof-input-path-unsupported"))?;
+                #[cfg(windows)]
+                let name = {
+                    let parent = if resolved.is_empty() { "." } else { &resolved };
+                    if !self.names.contains_key(parent) {
+                        let mut names = BTreeMap::new();
+                        for entry in self.root.read_dir(parent).map_err(err)? {
+                            self.visited += 1;
+                            if self.visited > self.limit {
+                                return Err(err(
+                                    "proof-input-expansion-budget-exceeded: narrow execution.inputs",
+                                ));
+                            }
+                            let actual = entry
+                                .map_err(err)?
+                                .file_name()
+                                .into_string()
+                                .map_err(|_| err("proof-input-path-unsupported"))?;
+                            if names.insert(actual.to_lowercase(), actual).is_some() {
+                                return Err(err(
+                                    "proof-input-case-ambiguous: use an unambiguous execution.inputs scope",
+                                ));
+                            }
+                        }
+                        self.names.insert(parent.to_owned(), names);
+                    }
+                    self.names[parent]
+                        .get(&name.to_lowercase())
+                        .cloned()
+                        .ok_or_else(|| {
+                            err(format!(
+                                "proof-input-observation-failed:{path}: missing source"
+                            ))
+                        })?
+                };
+                #[cfg(windows)]
+                let name = name.as_str();
+                if !resolved.is_empty() {
+                    resolved.push('/');
+                }
+                resolved.push_str(name);
+                if linked(&self.root.symlink_metadata(&resolved).map_err(err)?) {
+                    return Err(err("proof-snapshot-link-unsupported"));
+                }
+            }
+            Ok(if resolved.is_empty() {
+                ".".into()
+            } else {
+                resolved
+            })
+        }
+        fn visit(&mut self, path: &str, pattern: &str, covered: bool) -> Result<bool, CoreError> {
+            self.visited += 1;
+            if self.visited > self.limit {
+                return Err(err(
+                    "proof-input-expansion-budget-exceeded: narrow execution.inputs",
+                ));
+            }
+            if path.split('/').count() > 64 {
+                return Err(err("proof-input-depth-exceeded: narrow execution.inputs"));
+            }
+            let matched = covered || crate::instruction_applicability::matches(pattern, path);
+            if private_source(path) {
+                if matched {
+                    return Err(err(
+                        "proof-input-private-state-unsupported: exclude Git and AW local state from execution.inputs",
+                    ));
+                }
+                return Ok(false);
+            }
+            let metadata = self
+                .root
+                .symlink_metadata(path)
+                .map_err(|e| err(format!("proof-input-observation-failed:{path}: {e}")))?;
+            if linked(&metadata) {
+                return Err(err(format!("proof-snapshot-link-unsupported:{path}")));
+            }
+            if metadata.is_dir() {
+                let mut found = false;
+                // Do not collect an unbounded directory listing before charging
+                // traversal. Final membership is sorted independently below.
+                for entry in self.root.read_dir(path).map_err(err)? {
+                    let name = entry
+                        .map_err(err)?
+                        .file_name()
+                        .into_string()
+                        .map_err(|_| err("proof-input-path-unsupported"))?;
+                    let child = if path == "." {
+                        name
+                    } else {
+                        format!("{path}/{name}")
+                    };
+                    if !relative(&child) {
+                        return Err(err("proof-input-path-unsupported"));
+                    }
+                    // Only a literal directory covers its entire subtree.
+                    // Matching a directory's name cannot widen a file pattern.
+                    found |= self.visit(&child, pattern, covered)?;
+                }
+                Ok(found)
+            } else if metadata.is_file() {
+                if matched {
+                    self.files.insert(path.to_owned());
+                    if self.files.len() > MAX_FILES {
+                        return Err(err(
+                            "proof-snapshot-capacity-exceeded: narrow execution.inputs",
+                        ));
+                    }
+                }
+                Ok(matched)
+            } else {
+                Err(err(format!(
+                    "proof-snapshot-special-file-unsupported:{path}"
+                )))
+            }
+        }
+    }
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let mut scan = Scan {
+        root: &root,
+        files: BTreeSet::new(),
+        visited: 0,
+        limit: scan_limit,
+        #[cfg(windows)]
+        names: BTreeMap::new(),
+    };
+    for input in input_paths(config)? {
+        let input = Path::new(input)
+            .components()
+            .filter_map(|c| match c {
+                Component::Normal(name) => name.to_str(),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("/");
+        if private_source(&input) {
+            return Err(err(
+                "proof-input-private-state-unsupported: change execution.inputs",
+            ));
+        }
+        let pattern = input.contains(['*', '?', '[']);
+        let prefix = if pattern {
+            input
+                .split('/')
+                .take_while(|part| !part.contains(['*', '?', '[']))
+                .collect::<Vec<_>>()
+                .join("/")
+        } else {
+            input.clone()
+        };
+        let prefix = scan.prefix(&prefix)?;
+        // Ancestors are checked before enumeration, including a linked prefix.
+        let mut parent = Path::new(&prefix);
+        while !parent.as_os_str().is_empty() && parent != Path::new(".") {
+            if linked(
+                &root
+                    .symlink_metadata(parent)
+                    .map_err(|e| err(format!("proof-input-observation-failed:{input}: {e}")))?,
+            ) {
+                return Err(err("proof-snapshot-link-unsupported"));
+            }
+            parent = parent.parent().unwrap_or(Path::new(""));
+        }
+        if !scan.visit(&prefix, &input, !pattern)? && pattern {
+            return Err(err(format!(
+                "proof-input-pattern-unmatched:{input}: correct execution.inputs"
+            )));
+        }
+    }
+    Ok(scan.files.into_iter().collect())
+}
+
 // Windows has no dependable checkout execute bit. Git's stage-zero regular-file
 // mode is its bounded authority; untracked inputs are conservatively non-executable.
 // Conflicted/non-regular index entries cannot silently acquire a regular mode.
-#[cfg(any(windows, test))]
+#[cfg(test)]
 fn indexed_modes(
     target: &Path,
     config: &Value,
 ) -> Result<BTreeMap<String, Option<bool>>, CoreError> {
-    let inputs = input_paths(config)?;
-    let mut queries = vec![
-        inputs
-            .iter()
-            .map(|p| format!(":(literal){p}"))
+    indexed_modes_for_paths(
+        target,
+        &input_paths(config)?
+            .into_iter()
+            .map(str::to_owned)
             .collect::<Vec<_>>(),
-    ];
+    )
+}
+#[cfg(any(windows, test))]
+fn indexed_modes_for_paths(
+    target: &Path,
+    inputs: &[String],
+) -> Result<BTreeMap<String, Option<bool>>, CoreError> {
+    // Keep each literal/ancestor pair atomic while bounding Windows argv size.
+    fn batches(groups: impl IntoIterator<Item = Vec<String>>) -> Vec<Vec<String>> {
+        let mut result = Vec::new();
+        let mut batch = Vec::new();
+        let mut units = 0;
+        for group in groups {
+            let cost: usize = group.iter().map(|s| s.encode_utf16().count() + 3).sum();
+            if !batch.is_empty() && units + cost > 12000 {
+                result.push(std::mem::take(&mut batch));
+                units = 0;
+            }
+            units += cost;
+            batch.extend(group);
+        }
+        if !batch.is_empty() {
+            result.push(batch);
+        }
+        result
+    }
+    let mut queries = batches(inputs.iter().map(|p| vec![format!(":(literal){p}")]));
+    let input_set: BTreeSet<_> = inputs.iter().map(String::as_str).collect();
     let mut ancestors: BTreeMap<usize, BTreeSet<String>> = BTreeMap::new();
-    for input in &inputs {
+    for input in inputs {
         let mut parent = Path::new(input).parent();
         while let Some(parent_path) = parent.filter(|p| !p.as_os_str().is_empty()) {
             let path = parent_path.to_str().unwrap().replace('\\', "/");
-            if !inputs
-                .iter()
-                .any(|input| path == *input || path.starts_with(&format!("{input}/")))
+            if !Path::new(&path)
+                .ancestors()
+                .filter_map(Path::to_str)
+                .any(|p| input_set.contains(p.replace('\\', "/").as_str()))
             {
                 ancestors
                     .entry(path.split('/').count())
@@ -166,9 +405,7 @@ fn indexed_modes(
     // untracked file. Query one depth at a time and exclude descendants, so
     // observing an ancestor never imports its unrelated directory contents.
     for paths in ancestors.values() {
-        let mut specs = Vec::new();
-        for path in paths {
-            specs.push(format!(":(literal){path}"));
+        queries.extend(batches(paths.iter().map(|path| {
             let escaped: String = path
                 .chars()
                 .flat_map(|c| {
@@ -179,9 +416,11 @@ fn indexed_modes(
                     }
                 })
                 .collect();
-            specs.push(format!(":(exclude,glob){escaped}/**"));
-        }
-        queries.push(specs);
+            vec![
+                format!(":(literal){path}"),
+                format!(":(exclude,glob){escaped}/**"),
+            ]
+        })));
     }
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut modes = BTreeMap::new();
@@ -251,15 +490,31 @@ fn indexed_modes(
 /// Read confined regular sources and their executable property. No source script
 /// runs; Windows reads bounded Git index metadata without mutating the checkout.
 fn snapshot(target: &Path, config: &Value) -> Result<BTreeMap<String, SourceFile>, CoreError> {
+    let inputs = resolved_inputs(target, config, MAX_SCAN_ENTRIES)?;
     #[cfg(windows)]
-    let modes = Some(indexed_modes(target, config)?);
+    let modes = Some(indexed_modes_for_paths(target, &inputs)?);
     #[cfg(not(windows))]
     let modes = None;
-    snapshot_with_modes(target, config, modes.as_ref())
+    snapshot_paths_with_modes(target, &inputs, modes.as_ref())
 }
+#[cfg(test)]
 fn snapshot_with_modes(
     target: &Path,
     config: &Value,
+    modes: Option<&BTreeMap<String, Option<bool>>>,
+) -> Result<BTreeMap<String, SourceFile>, CoreError> {
+    snapshot_paths_with_modes(
+        target,
+        &input_paths(config)?
+            .into_iter()
+            .map(str::to_owned)
+            .collect::<Vec<_>>(),
+        modes,
+    )
+}
+fn snapshot_paths_with_modes(
+    target: &Path,
+    inputs: &[String],
     modes: Option<&BTreeMap<String, Option<bool>>>,
 ) -> Result<BTreeMap<String, SourceFile>, CoreError> {
     fn visit(
@@ -341,12 +596,11 @@ fn snapshot_with_modes(
         Ok(())
     }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let inputs = input_paths(config)?;
     let mut files = BTreeMap::new();
     let mut total = 0;
     let mut visited = 0;
     for input in inputs {
-        let path = input;
+        let path = input.as_str();
         // Check ancestors as well: a confined link is still not snapshot custody.
         let mut parent = Path::new(path);
         while !parent.as_os_str().is_empty() {
@@ -760,6 +1014,124 @@ mod tests {
         }
         let files = snapshot(&path, &json!({"inputs":["source"]})).unwrap();
         assert_eq!(files["source/input"].bytes, b"current");
+        std::fs::create_dir(path.join("source/nested")).unwrap();
+        std::fs::write(path.join("source/nested/module.py"), "nested untracked").unwrap();
+        let literal = snapshot(&path, &json!({"inputs":["source"]})).unwrap();
+        let pattern = json!({"inputs":["source/**","source/input"]});
+        let original = identity(&snapshot(&path, &pattern).unwrap()).unwrap();
+        assert_eq!(original, identity(&literal).unwrap());
+        assert_eq!(
+            original,
+            identity(&snapshot(&path, &json!({"inputs":["source//**", "source/input"]})).unwrap())
+                .unwrap()
+        );
+        #[cfg(windows)]
+        assert_eq!(
+            original,
+            identity(&snapshot(&path, &json!({"inputs":["SOURCE/**", "source/INPUT"]})).unwrap())
+                .unwrap()
+        );
+        assert_eq!(
+            resolved_inputs(
+                &path,
+                &json!({"inputs":["source/?nput","source/[n]ested/*.py"]}),
+                MAX_SCAN_ENTRIES
+            )
+            .unwrap(),
+            vec!["source/input", "source/nested/module.py"]
+        );
+        for event in ["add", "rename", "delete"] {
+            let module = path.join("source/nested/module.py");
+            match event {
+                "add" => std::fs::write(path.join("source/added"), "new member").unwrap(),
+                "rename" => {
+                    std::fs::rename(&module, path.join("source/nested/renamed.py")).unwrap()
+                }
+                _ => std::fs::remove_file(&module).unwrap(),
+            }
+            assert_ne!(
+                original,
+                identity(&snapshot(&path, &pattern).unwrap()).unwrap()
+            );
+            match event {
+                "add" => std::fs::remove_file(path.join("source/added")).unwrap(),
+                "rename" => {
+                    std::fs::rename(path.join("source/nested/renamed.py"), &module).unwrap()
+                }
+                _ => std::fs::write(&module, "nested untracked").unwrap(),
+            }
+        }
+        assert!(
+            resolved_inputs(&path, &pattern, 1)
+                .unwrap_err()
+                .to_string()
+                .contains("expansion-budget")
+        );
+        assert!(
+            snapshot(&path, &json!({"inputs":["source/*.missing"]}))
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("pattern-unmatched")
+        );
+        assert!(
+            snapshot(&path, &json!({"inputs":[".git/**"]}))
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("private-state")
+        );
+        // More matches than the declaration count limit remain supported; Git
+        // observes only bounded literal argv batches, including long filenames.
+        for i in 0..130 {
+            std::fs::write(
+                path.join(format!("source/{}-{i}", "x".repeat(140))),
+                "bounded",
+            )
+            .unwrap();
+        }
+        assert_eq!(snapshot(&path, &pattern).unwrap().len(), 132);
+        std::fs::create_dir(path.join("source/cache.py")).unwrap();
+        std::fs::write(
+            path.join("source/cache.py/secrets.txt"),
+            "outside file pattern",
+        )
+        .unwrap();
+        std::fs::write(path.join("source/cache.py/nested.py"), "matching file").unwrap();
+        assert_eq!(
+            resolved_inputs(&path, &json!({"inputs":["source/*.py"]}), MAX_SCAN_ENTRIES).unwrap(),
+            vec!["source/cache.py/nested.py", "source/nested/module.py"]
+        );
+        assert_eq!(
+            resolved_inputs(
+                &path,
+                &json!({"inputs":["source/cache.py"]}),
+                MAX_SCAN_ENTRIES
+            )
+            .unwrap(),
+            vec!["source/cache.py/nested.py", "source/cache.py/secrets.txt"]
+        );
+        std::fs::create_dir_all(path.join(".agentic-workspace")).unwrap();
+        std::fs::write(path.join("public.toml"), "public source").unwrap();
+        for private in [
+            ".agentic-workspace/config.local.toml",
+            "agentic-workspace.local.toml",
+        ] {
+            std::fs::write(path.join(private), "machine-local configuration").unwrap();
+            assert!(
+                snapshot(&path, &json!({"inputs":["*.toml"]}))
+                    .err()
+                    .unwrap()
+                    .to_string()
+                    .contains("private-state")
+            );
+            assert_eq!(
+                resolved_inputs(&path, &json!({"inputs":["public.toml"]}), MAX_SCAN_ENTRIES)
+                    .unwrap(),
+                vec!["public.toml"]
+            );
+            std::fs::remove_file(path.join(private)).unwrap();
+        }
         let subject = json!({"requirements":[{"source_inputs":["source/input"]}]});
         assert!(source_prerequisites(&files, &subject).is_ok());
         for missing in ["source/omitted", "../outside"] {
@@ -787,6 +1159,13 @@ mod tests {
         junction::create(path.join("source"), path.join("link")).unwrap();
         assert!(snapshot(&path, &json!({"inputs":["link/input"]})).is_err());
         assert!(snapshot(&path, &json!({"inputs":["link"]})).is_err());
+        assert!(
+            snapshot(&path, &json!({"inputs":["link/**"]}))
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("link-unsupported")
+        );
         #[cfg(windows)]
         junction::delete(path.join("link")).unwrap();
         std::fs::remove_dir_all(path).unwrap();

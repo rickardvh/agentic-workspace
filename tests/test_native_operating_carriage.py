@@ -60,8 +60,11 @@ def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tm
         }
     )
     packet = proposed["view"]["decision_packet"]
-    assert packet["decision_request"] is None  # The ordinary task has no selected primary claim.
-    question = next(q for q in packet["pending_consequences"]["decisions"] if q["id"] == "verification-claim-review")
+    question = next(
+        q
+        for q in [packet["decision_request"], *packet["pending_consequences"]["decisions"]]
+        if q and q["id"] == "verification-claim-review"
+    )
     material = question["material"]
     assert material["task"] == context["task"]
     assert material["result_paths"] == ["result.txt"]

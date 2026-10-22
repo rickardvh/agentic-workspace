@@ -302,6 +302,15 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "repeat": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evidence_ref", "reason"],
+          "properties": {
+            "evidence_ref": {"type": "string", "pattern": "^proof://local/[a-f0-9]{64}$"},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 2048}
+          }
+        },
         "promotion": {
           "type": "object",
           "additionalProperties": false,
@@ -311,7 +320,7 @@
             "consumer": {"type": "string", "minLength": 1},
             "reason": {"type": "string", "minLength": 1, "maxLength": 2048}
           },
-          "description": "Retain exact local proof for a current admitted Planning consumer."
+          "description": "Retain local proof for a Planning consumer."
         },
         "route_id": {
           "type": "string",
@@ -322,7 +331,7 @@
           "minLength": 1
         }
       },
-      "description": "Choose an offered route/command; Verification revalidates before effects."
+      "description": "Select current proof."
     },
     "verification_record_request": {
       "type": "object",
@@ -390,14 +399,14 @@
         },
         "selection": {
           "type": "object",
-          "description": "Verification-derived command, strategy, subject, work, runtime and timeout."
+          "description": "Current owner-derived proof selection."
         },
         "record_receipt": {
           "const": true,
           "description": "Retain an interoperability observation."
         }
       },
-      "description": "Owner-derived selected proof process and receipt publication effect, sealed to the current native subject and strategy.",
+      "description": "Owner-bound proof execution or receipt publication.",
       "oneOf": [
         {
           "required": [

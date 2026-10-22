@@ -1377,6 +1377,7 @@ pub(crate) fn view_with_applicability(
     let mut evidence = Vec::new();
     let mut requested = false;
     let mut claim_review_request = None;
+    let mut repeat_request = None;
     for request in requests {
         prepare_request_value(
             json!({"request":request,"current_work":request["task_identity"],"capability_contract":admission_contract}),
@@ -1397,6 +1398,21 @@ pub(crate) fn view_with_applicability(
             strategy_assessment = Some(request["arguments"].clone());
         } else if request["request_kind"] == "verification/execute-selected/v1" {
             proof_choice = Some(request["arguments"].clone());
+            if let Some(reference) = request["arguments"]["repeat"]["evidence_ref"].as_str() {
+                repeat_request = Some(request.clone());
+                let receipt = crate::native_proof::local_receipt(target, reference)?;
+                let committed = crate::native_proof::committed_publication(target, &receipt)?
+                    .ok_or_else(|| CoreError::new("proof-repeat-terminal-custody-required"))?;
+                evidence_refs.extend(
+                    committed["invocation"]["arguments"]["selection"]["evidence_refs"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(Value::as_str)
+                        .map(str::to_owned),
+                );
+                evidence_refs.push(reference.to_owned());
+            }
         } else if request["request_kind"] == "verification/record-receipt/v1" {
             proof_choice = Some(
                 json!({"route_id":request["arguments"]["route_id"],"command":request["arguments"]["command"]}),
@@ -1557,20 +1573,27 @@ pub(crate) fn view_with_applicability(
     if execution["status"] == "selected" {
         evidence_refs.sort();
         evidence_refs.dedup();
-        execution["selection"]["evidence_refs"] = json!(evidence_refs);
+        if execution["selection"]["repeat_of"].is_null() {
+            execution["selection"]["evidence_refs"] = json!(evidence_refs);
+        }
         execution["selection"]["strategy_request"] = if strategy_assessment.is_some() {
             strategy_request.clone()
         } else {
             Value::Null
         };
     }
-    let execution_actions = crate::native_proof::action(
+    let mut execution_actions = crate::native_proof::action(
         target,
         task,
         changed,
         &execution,
         &admission_contract["revision"],
     )?;
+    if let Some(request) = repeat_request {
+        for action in execution_actions.as_array_mut().unwrap() {
+            action["source_requests"] = json!([request]);
+        }
+    }
     let execution_request = |choice: Value| {
         let mut request = template.clone();
         request["request_kind"] = json!("verification/execute-selected/v1");
@@ -1624,6 +1647,15 @@ pub(crate) fn view_with_applicability(
     };
     let execution_requests: Vec<Value> =
         execution_requests.into_iter().map(&with_context).collect();
+    let repeat_requests: Vec<Value> = evidence.iter()
+        .filter(|e| e["reference"].as_str().is_some_and(|r| r.starts_with("proof://local/"))
+            && e["runtime_admission"]["status"] == "reusable")
+        .map(|e| {
+            let mut choice = e["runtime_admission"]["command_coverage"].clone();
+            choice["repeat"] = json!({"evidence_ref":e["reference"],
+                "reason":"Inspect this completed observation and state why another measurement is needed."});
+            with_context(execution_request(choice))
+        }).collect();
     let contextual_execution_request = |choice: Value| with_context(execution_request(choice));
     let record_requests: Vec<Value> = record_requests.into_iter().map(&with_context).collect();
     let visible_strategy = visible_strategy(
@@ -1958,12 +1990,15 @@ pub(crate) fn view_with_applicability(
     };
     let mut result = json!({"kind":"agentic-workspace/native-verification-view/v1","status":status,
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
-        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"repeat_requests":repeat_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"claim_judgment_required":strict_closeout,"contribution":{"owner":"verification","revision":source_revision,
             "restriction_basis":crate::restriction_basis("task-requirement",&json!(source_revision),MANIFEST,&json!({"strategy":strategy_policy,"assurance":assurance,"proof_scope":proof_scope,"strict_closeout":strict_closeout})),
             "decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"});
+    if repeat_requests.is_empty() {
+        result.as_object_mut().unwrap().remove("repeat_requests");
+    }
     if !negative_evidence.is_empty() {
         result["negative_evidence"] = json!(negative_evidence);
     }
