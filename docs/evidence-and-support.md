@@ -31,17 +31,15 @@ A saved result remains evidence about the exact code, inputs and environment it 
 
 ## Verify a download or investigate support
 
-Use the assets attached to the release you selected:
+For a standalone ZIP, use the assets attached to the release you selected:
 
-1. Open `distribution-install-readiness.json` and find your operating system and
-   architecture in `platforms[].target`. The matching row identifies its
-   `artifact.asset`, `artifact.sha256` and exact installation `command`.
+1. Open `platform-release-manifest.json` and find your operating system and
+   architecture in `platforms[].target`. Download the exact filename in that
+   row's `native_archive.asset`; its recorded digest is `native_archive.sha256`.
    A row for another architecture is not evidence that yours is supported.
-2. For a standalone download, obtain its archive and `SHA256SUMS` from that same
-   release. Compare the archive's computed SHA-256 with the entry for its exact
-   filename. Stop if the filename is absent or the digest differs.
-3. For registry installation, select the same release version in the package
-   manager. A GitHub asset alone does not establish registry availability.
+2. Obtain `SHA256SUMS` from that same release. Compute the downloaded ZIP's
+   SHA-256 and compare it with the entry for that exact filename. Stop if the
+   filename is absent or the digest differs.
 
 For example, after downloading an archive, replace the filename below with its
 actual name. In PowerShell:
@@ -50,10 +48,16 @@ actual name. In PowerShell:
 Get-FileHash -Algorithm SHA256 -LiteralPath ./downloaded-archive.zip
 ```
 
-On Linux, use `sha256sum ./downloaded-archive.tar.gz`; on macOS, use
-`shasum -a 256 ./downloaded-archive.tar.gz`. These commands only compute the digest;
+On Linux, use `sha256sum ./downloaded-archive.zip`; on macOS, use
+`shasum -a 256 ./downloaded-archive.zip`. These commands only compute the digest;
 compare it with the selected release's checksum entry. A matching digest verifies
 the downloaded bytes against that entry, not every support or security claim.
+
+For Python/uv installation, `distribution-install-readiness.json` lists each
+`platforms[].target` with its Python wheel (`artifact.asset` and
+`artifact.sha256`) and exact `uv tool install` command. For registry installation,
+select the same release version in the package manager. A GitHub asset alone does
+not establish registry availability.
 
 These files are useful for auditing a release. You do not need to learn the publisher's internal release checks to use the package. Maintainers use [release and versioning](release-and-versioning.md) for that procedure.
 
