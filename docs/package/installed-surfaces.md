@@ -86,12 +86,17 @@ the [security guide](../security/threat-model.md).
 
 ## Update AW
 
-Update the repository's AW dependency with the package manager you used.
+Install the desired AW version through the same package manager or distribution
+you used initially. For Cargo or standalone installs, replace both executables
+with the same version. The
+[installation guide](../agentic-workspace-install.md#1-install-aw) describes those
+choices.
 
-On the next relevant use, AW compares its package-managed repository files with
-the installed version. If setup files need refreshing, it returns the setup or
-refresh action needed for that repository. Unrelated read-only work can continue
-when the missing refresh does not affect it.
+From the Git working-tree root, run `setup` using that new installation, just as
+for initial adoption. It shows the proposed refresh and asks before applying it.
+An agent can also follow the setup or refresh action returned during ordinary
+work. Unrelated read-only work can continue when the missing refresh does not
+affect it.
 
 Review and commit the shared diff. Repeating a completed refresh should not keep
 changing the same files.
@@ -100,7 +105,10 @@ If a package-managed file was edited manually, AW should stop before overwriting
 it. Preserve any useful project-specific change in a project-owned file, then
 continue the refresh.
 
-See the [lifecycle reference](lifecycle.md) for detailed update behaviour.
+If a fresh clone lacks the machine-local setup record, follow the
+[setup conflict recovery](../troubleshooting.md#updating-or-removing-aw-reports-conflicting-files)
+instead of copying another checkout's records. See the
+[lifecycle reference](lifecycle.md) for detailed update behaviour.
 
 ## Remove AW
 
@@ -141,7 +149,7 @@ material belongs to the host; shared enablement does not install their bytes.
 Repository removal
 requires removing owned plugin exposure before deleting its bundle. Removing
 only plugin exposure preserves the generic `AGENTS.md` entry. See the
-[installation guide](../agentic-workspace-install.md#optional-installed-entry-skill)
+[optional entry guide](../entry-plugin.md)
 for the repository lifecycle and deliberate global option.
 
 The small `AGENTS.md` entry works for agents that read repository instructions.

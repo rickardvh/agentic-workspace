@@ -14,6 +14,11 @@ project-owned records.
 From the Git working-tree root, `agentic-workspace setup` shows the proposed file
 changes and asks before applying them.
 
+Use the installation selected in [Getting started](../agentic-workspace-install.md#1-install-aw).
+After installing a new version, run its `setup` command again to refresh the
+existing integration. For repository-local npm, the invocation is
+`npm exec --no -- agentic-workspace setup`.
+
 It preserves text outside AW's managed section in `AGENTS.md` and preserves
 project-owned data. Use `--dry-run --format json` to inspect the proposal and
 `--yes` to accept that exact proposal in automation.

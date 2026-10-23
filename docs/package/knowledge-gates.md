@@ -1,201 +1,57 @@
-# Pre-Work Knowledge Gates
+# When missing knowledge constrains work
 
-Knowledge gates are compact startup and work-shaping decisions that prevent
-blind starts. They apply when known sources may change task interpretation,
-work shape, proof burden, allowed actions, or completion claims.
+Use this page when AW reports a missing source, evidence requirement or restriction.
+Identify the action or claim that depends on it. A missing API contract can affect
+implementation; missing test evidence can affect a completion claim. Neither
+automatically prevents unrelated work.
 
-A gate is not a reading list. It names the smallest governing source or selector
-that can answer the shaping question, then states what work is allowed before
-that source is consulted, dismissed, refreshed, or escalated.
+[Knowledge routing](knowledge-routing.md) explains source selection. The installed
+startup skill and returned native response supply the current procedure and
+exact request.
 
-Knowledge gates build on [Knowledge routing and source
-authority](knowledge-routing.md). Source authority decides what can govern a
-task; a gate decides whether that governance must be handled before design,
-editing, proof, or closeout.
+## Read the scope and basis
 
-## Gate Record Model
+A restriction names its responsible component, reason and affected actions or
+claims. Inspect its `basis`, `affects` and supplied recovery.
 
-Command outputs and future contracts should use these names when they project a
-knowledge gate:
-
-| Field | Meaning |
+| Basis | Interpretation |
 | --- | --- |
-| `gate_id` | stable local identifier for the gate decision |
-| `route_id` | referenced `knowledge_route` from the source-authority model |
-| `surface` | `start`, `implement`, `summary`, `preflight`, `report`, `proof`, or `closeout` |
-| `trigger` | why the route may change this task |
-| `force` | how strongly the gate constrains work |
-| `reason` | short explanation of the task-shaping risk |
-| `next_allowed_action` | smallest safe next action |
-| `forbidden_actions` | actions blocked until the gate is resolved |
-| `required_actions` | consult, dismiss, refresh, prove, capture, promote, demote, or escalate |
-| `record_resolution_to` | owner surface for evidence or dismissal |
-| `resolution_state` | `open`, `consulted`, `dismissed`, `stale`, `missing`, `unavailable`, `captured`, or `superseded` |
-| `closeout_boundaries` | completion, merge, or issue-closure boundaries imposed by the gate |
-| `fallback` | safe behaviour when a CLI, source, or external access is unavailable |
+| `task-requirement` | A real requirement remains for the affected work. Establish its missing fact or complete the required action. |
+| `operation-guard` | The named native operation is refused. Another route needs its own authority. |
+| `attestation-limit` | AW has not established the stated evidence or custody. This alone adds no task acceptance requirement. |
+| `optional-work` | The improvement is optional; availability does not make it a task veto. |
 
-The gate record should be omitted when no route can change the current work.
-Commands may expose a count or selector when a gate exists but should not dump
-all known knowledge routes by default.
+An unknown basis leaves the dependent decision unresolved. An empty blocker list
+does not prove the user's outcome achieved.
 
-## Trigger Sources
+For example, an API contract governing adapters supplies implementation context
+and requires a current judgement of affected adapters. Unrelated documentation
+work should not acquire that requirement. After the contract changes, an adapter
+that remains correct needs the required review but no artificial edit.
 
-Knowledge gates can be triggered by:
+## Follow the supplied next step
 
-- task text naming issues, PRs, modules, external sources, proof expectations,
-  source authority, durable knowledge, or closeout pressure;
-- issue or PR references whose current comments, state, labels, or reviews may
-  change requested outcome or merge safety;
-- changed paths matching module roots, generated references, schema contracts,
-  installed startup adapters, Memory notes, Planning state, or Verification
-  protocols;
-- active Planning state that owns lane order, continuation, parent-intent
-  closure, or stop conditions;
-- Memory routes that report durable knowledge, stale notes, promotion pressure,
-  or chat-derived knowledge that needs a stable owner;
-- Verification protocols that can change proof selection, evidence collection,
-  or known-gap reporting;
-- module participation declarations that match the current loop step;
-- external source freshness policies that require current vendor, legal,
-  platform, or product behaviour before design or claim;
-- closeout residue that must be captured or dismissed before the work can be
-  honestly claimed complete.
+Use the request or recovery for the particular restriction. A question asks for
+a bounded answer; an action offers an exact prepared operation. Finding a route
+does not itself satisfy the requirement.
+The [CLI example](commands.md#answer-a-returned-question) shows the transport.
 
-The route must explain why the trigger may change the task. A path match alone
-is not enough to block work unless the matched source can alter interpretation,
-allowed action, proof, or closeout.
+A domain judgement does not automatically require human approval. Ask a human
+only when the current authority requires that person's decision. Human assent
+cannot supply a missing executable, evidence or independent review.
 
-## Force Levels
+If the native route is unavailable, preserve its restriction and assess ordinary
+alternatives under the user, repository and host rules. Do not bypass a protected
+operation or claim external work acquired AW custody. The installed
+[restriction guidance](../../.agentic-workspace/skills/workspace-startup/references/constraints.md)
+explains that boundary and reporting a material limitation.
 
-Use one of these force levels:
+## Recheck the affected result
 
-| Force | Effect |
-| --- | --- |
-| `informational` | show compact context, but do not constrain work |
-| `recommended_before_work` | advise consultation before work; skipping must be visible if it affects confidence |
-| `required_before_design` | block architecture or work-shape decisions until resolved |
-| `required_before_edit` | block file edits until resolved |
-| `required_before_claim` | allow work but block completion, merge, or issue-closure claims |
-| `stale_check_required` | require freshness verification before treating the source as governing |
+After recovery, inspect whether the needed fact is established and whether the
+dependent action or claim is allowed. A saved answer or successful transport does
+not prove substantive satisfaction.
 
-The force should be the minimum needed to protect the task. A gate can lower
-force after consultation, dismissal, or a freshness check.
-
-## Gate Effects
-
-Gate effects should be explicit:
-
-- block architecture choice until the source is consulted or dismissed;
-- block edits until repo-owned intent, active Planning state, or source
-  freshness is checked;
-- block completion claims until required external or tracker authority is
-  verified;
-- lower closeout trust when recommended or required knowledge was skipped;
-- route durable chat-derived knowledge to Memory, docs, Planning, or issues
-  before it disappears;
-- expose conflicts between sources instead of choosing a policy winner silently;
-- require escalation when the source is unavailable and no lower-authority path
-  is acceptable.
-
-Forbidden actions should be concrete. Prefer "do not change schema fields until
-the generated reference owner is checked" over generic "do not proceed" text.
-
-## Command Integration
-
-`start` should emit only gates that affect the first safe action. It may include
-the gate id, force, source selector, reason, next allowed action, blocked
-actions, and closeout boundaries. It should not emit broad route lists.
-
-`implement --changed` should combine task text with changed paths. It should
-raise gates for active Planning ownership, generated-reference freshness,
-module-owned rules, workflow obligations, Memory promotion pressure, and
-Verification protocols when those sources can change implementation or proof.
-
-`summary` should preserve active Planning gates and claim boundaries. It should
-make a missing active owner or stale follow-up route visible before work
-continues.
-
-`preflight` should bundle startup and active-state gates for takeover or
-recovery. It should prefer selectors and detail commands over raw source
-content.
-
-`report` should expose gate health: open gates, resolved gates, stale sources,
-missing sources, unavailable sources, and claim-limiting gates.
-
-Work-shape skills should treat gates as posture input. A required gate changes
-whether the next step is direct implementation, design, investigation,
-verification, closeout, or escalation.
-
-## Task Posture Fields
-
-A task posture packet may include:
-
-| Field | Meaning |
-| --- | --- |
-| `knowledge_gates` | compact list of gates relevant to the current task |
-| `gate_summary` | count by force and resolution state |
-| `blocked_actions` | concrete actions currently forbidden |
-| `next_allowed_action` | smallest safe action across all active gates |
-| `resolution_routes` | owner surfaces or commands for consultation, dismissal, refresh, or capture |
-| `gate_conflicts` | source conflicts that need owner or human resolution |
-
-The packet should include gate detail only when the gate changes action. Other
-routes remain available through selectors. Knowledge gates do not add a separate
-claim-blocking vocabulary to the packet; completion, merge, and issue-closure
-limits are expressed through the existing `closeout_boundaries` field, while
-`blocked_actions` is reserved for concrete actions that are currently forbidden.
-
-## Closeout And Report Evidence
-
-Closeout and reports should record gate resolution using these states:
-
-- `consulted`: the source was checked and shaped the result;
-- `dismissed`: the source matched but did not apply, with a reason;
-- `stale`: the source was found but could not govern without refresh;
-- `missing`: an expected source did not exist;
-- `unavailable`: the source exists but could not be accessed;
-- `captured`: new reusable knowledge moved to the right owner;
-- `superseded`: a newer source replaced the route.
-
-If a required gate remains open, closeout must block completion claims or route
-the unsatisfied work to a durable owner. If a recommended gate was skipped,
-closeout should lower confidence or explain why the skipped source could not
-change the result.
-
-## Fallback Behaviour
-
-When the CLI cannot emit gate detail, use the normal source authority model:
-identify the owner surface, read the smallest routeable selector, and record the
-fallback in closeout.
-
-When external access is unavailable, do not invent freshness. Treat the route as
-`unavailable` or `stale_check_required`, then either block claims, use a
-lower-authority design posture, or escalate.
-
-When Memory is not installed, route durable knowledge capture to docs, Planning,
-issues, or local-only notes according to source authority. Do not silently turn
-chat context into checked-in authority.
-
-When active Planning state is missing or stale, do not close parent intent from
-local evidence alone. Promote, repair, or explicitly route the missing owner
-before claiming completion.
-
-## Compact Audit Rules
-
-Knowledge gates stay compact by following these rules:
-
-- emit gates only when a source may change task interpretation, work shape,
-  proof, allowed action, or completion claim;
-- emit selectors and detail commands before raw source content;
-- include source owner, force, next allowed action, blocked actions, and evidence
-  route;
-- keep local-only and inferred sources below hard-gate authority unless they are
-  explicitly promoted;
-- do not require external web lookup unless the source authority or freshness
-  policy requires current external state;
-- never mirror issue threads, external docs, or Memory bundles into gate output;
-- make skipped required gates visible in closeout instead of hiding them behind
-  successful tests.
-
-These rules let gates prevent blind starts without making ordinary startup a
-general knowledge search.
+Keep confirmed effects even if preparing the next response failed. Recover an
+uncertain effect before retrying. Preserve unfinished work when stopping would
+otherwise lose its purpose or next step; reuse an adequate existing record.

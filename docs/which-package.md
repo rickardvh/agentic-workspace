@@ -1,7 +1,9 @@
 # Which AW components should I use?
 
-Start with `agentic-workspace`. Enable Planning, Memory or Verification only when
-that component solves a recurring problem in your repository.
+Start with `agentic-workspace`. Planning, Memory and Verification are available
+by default. Use and configure a component when it solves a recurring problem in
+your repository. If your repository explicitly disabled it, enable it first; see
+[default availability](package/modules.md#default-availability).
 
 AW itself can still be useful without any optional component: it can route the
 agent to project instructions and skills, read current AW settings and support
@@ -34,7 +36,7 @@ future extension.
 
 ## Keep ordinary use simple
 
-Installing a component should not make every task read its manual or follow a new
+Using a component should not make every task read its manual or follow a new
 command sequence. The repository's startup skill remains the entry point, and AW
 only shows component information when it matters to the current task.
 
@@ -49,7 +51,7 @@ component workflow.
 - [Modules and extensions](package/modules.md)
 - [Integration boundaries](extension-boundary.md)
 - [Your repository and AW files](package/installed-surfaces.md)
-- [Memory](../packages/memory/README.md)
-- [Planning](../packages/planning/README.md)
-- [Verification](../packages/verification/README.md)
+- [Memory](package/modules.md#memory)
+- [Planning](package/modules.md#planning)
+- [Verification](package/modules.md#verification)
 - [Architecture](architecture.md)

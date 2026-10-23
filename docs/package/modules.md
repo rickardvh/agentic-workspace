@@ -8,40 +8,24 @@ three separate module runtimes or answer a module-selection questionnaire.
 
 ## Default availability
 
-The default policy is **all three available, with task-specific use and setup**.
-Omitting `[modules]` already allowed all three native owners; AW retains that
-behaviour. The schema and generated configuration reference now describe it
-accurately. A null modules value in native output means the selector was omitted,
-not that no modules are available. Explicit selections remain distinguishable:
+All three components are available when `[modules]` is omitted. A repository can
+deliberately select a smaller set:
 
-| Repository configuration | Available built-in owners |
+| Repository configuration | Available components |
 | --- | --- |
 | No `[modules]` section | Planning, Memory, Verification |
 | `enabled = ["planning", "memory", "verification"]` | Planning, Memory, Verification |
 | `enabled = ["planning", "memory"]` | Planning and Memory |
 | `enabled = []` | Routing and configuration only |
 
-The built-in code and shipped procedures are available without creating plans,
-notes or checking declarations. Actual useful behaviour still needs applicable
-repository sources, permissions and consumer checks. The installed startup
-procedure directs the agent to the relevant setup and domain procedure as the
-task warrants; enabling a module is not proof that this follow-through happened.
-Automatic relevant consumer follow-through is tracked separately in
-[#3885](https://github.com/rickardvh/agentic-workspace/issues/3885).
+Setup and compatible updates preserve an explicit selection, including an empty
+list. See the [configuration reference](../reference/workspace-config.md) for exact
+settings and the [compatibility policy](../release-and-versioning.md#package-compatibility-boundary)
+for upgrade guarantees.
 
-Keeping all three available avoids making ordinary users choose internal
-components before they have a concrete need. A smaller explicit list remains
-useful for a repository that deliberately excludes a capability, but omission
-must not silently disable an owner previously available. Relevance controls
-ordinary reads, output and retained work; availability does not require a plan,
-Memory import, proof run or native startup call on every edit.
-
-Fresh adoption and compatible updates preserve the selector exactly. Setup does
-not insert a module list, turn an explicit subset into all three, or replace an
-explicit empty list. Disabled AW and local safety limits remain authoritative.
-This is a correction of the declared default and installed guidance, not a runtime
-enablement migration or a new preset. It introduces no supported consumer-owned
-migration burden under the [package compatibility policy](../release-and-versioning.md#package-compatibility-boundary).
+Availability creates no plans, lessons or checking declarations by itself. The
+agent should use a component only when relevant and establish the project-specific
+configuration it needs. Disabled AW and local safety limits still apply.
 
 ## Planning
 

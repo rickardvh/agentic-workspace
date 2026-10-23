@@ -40,13 +40,20 @@ The [scoped-instruction guide](package/scoped-instructions.md) introduces the
 installed [instruction-authoring method](../.agentic-workspace/skills/workspace-instruction-authoring/SKILL.md)
 and its exact Markdown reference. Add fields only when their behaviour is needed.
 
-If the API contract governs the implementation, use `governed_by` in place of
-`read`. The contract is then supplied when implementation work needs it, and a change to
-the contract identifies the files or procedures that need another look. Review
-the returned groups until every affected current consumer is covered. If a group
-is genuinely unaffected, record that judgement without making artificial edits.
-Save the declaration through AW's supported instruction operation; ordinary
-background reading does not create a write.
+Use `read` when the agent needs the contract as context. Use `governed_by` when
+the API files must also be reviewed for consistency with that contract.
+
+In this example, files under `src/api/` are the contract's consumers. When the
+contract changes, AW can present groups of those files for a current Verification
+judgement. Ask the agent:
+
+> Review the API files affected by this contract change. Identify which remain
+> consistent, which need changes and what evidence supports that judgement.
+
+Continue until every affected group is covered. A still-correct file needs no
+artificial edit. The [scoped-instruction example](package/scoped-instructions.md#source-reconciliation)
+explains this review obligation. Save the declaration through the supported
+instruction operation; ordinary background reading does not create a write.
 
 ## Change an existing setting
 
@@ -60,26 +67,29 @@ A saved setting is only part of the check. For an executable location, also veri
 
 ## Add a reusable procedure
 
-For working conventions such as preparing dependencies before tests, ask the
-agent to connect the rule to the action that needs it, including a test run with
-no file changes. It should reuse existing instructions and commands, favour a
-command that already prepares its environment, and verify a fresh consumer.
-Unchanged inputs alone do not establish surviving outputs or a running service.
-Machine readiness stays local; no additional AW module is needed. The installed
-[working-rule procedure](../.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md)
-explains authoring and recovery choices.
-
 A rule says what must hold. A skill explains how to perform a recurring kind of work.
 
 For example, a change-note skill can tell an agent to compare the patch with accepted behaviour and draft a user-facing note only when behaviour changed. Keep that method in repository-owned files, such as `tools/skills/change-note/SKILL.md`, rather than editing an installed AW skill.
 
 Start with ordinary Markdown the agent can read directly. The [skill-authoring guide](package/skill-authoring.md) shows that complete example, then adds optional questions, selectively loaded branches and a deterministic helper. Those additions are useful only when they reduce repeated work; an ordinary skill does not need them.
 
-## Enable a capability when it becomes useful
+For a procedure that prepares dependencies before tests, connect it to the test
+action, including a run with no file changes. The agent should reuse the project's
+commands and check that required outputs or services are actually available.
+Unchanged inputs do not establish that generated files still exist or a service
+is running. See the installed
+[working-rule procedure](../.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md)
+for that use case.
+
+## Configure a capability when it becomes useful
 
 Planning helps with interrupted or delegated work. Memory helps retain expensive-to-rediscover lessons. Verification helps reuse checking procedures and evidence.
 
-Ask the agent to enable the relevant capability and identify any configuration it still needs. Selecting Verification, for example, does not invent the project's test commands or prove the code correct. [Modules](package/modules.md) explains these choices.
+All three are available by default. Ask the agent to use the relevant capability
+and identify any project configuration it still needs. Enable it first only if
+your repository explicitly disabled it. Verification, for example, still needs
+the project's checking procedures; availability does not invent test commands or
+prove the code correct. [Modules](package/modules.md) explains these choices.
 
 A new project rule or method usually needs no module. A separately reusable capability with its own data or operations may justify one; that is the [module-authoring](module-capability-contract.md) path.
 
