@@ -21,6 +21,8 @@ Use [the current question](procedure.md) or its same-source links directly:
 - [Bound the outcome and its dependencies](references/structure.md).
 - [Save progress and resume from the saved record](references/continuity.md).
 
-Use the configured native invocation and exact owner requests/actions. Without it,
-read only relevant sources; current custody is unknown and managed state stays
-preserved. Optional procedure supplies no assignment, proof or completion authority.
+Use the configured native invocation and exact owner requests/actions for managed
+Planning changes. If AW cannot run, preserve managed state and treat current
+Planning custody as unknown; independently authorised work from readable sources
+may continue under the [no-runtime boundary](../../../skills/workspace-startup/references/unavailable.md).
+Selecting this procedure grants no assignment, proof or completion authority.

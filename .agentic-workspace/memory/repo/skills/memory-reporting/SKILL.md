@@ -1,22 +1,29 @@
 ---
 name: memory-reporting
-description: Resolve current Memory owner questions and distinguish source-maintenance diagnostics from native operating authority.
+description: Report selected Memory advice, disposition and current limits without a compulsory full-state read.
 ---
 
-# Memory Reporting
+# Report current Memory findings
 
-Follow `.agentic-workspace/skills/workspace-startup/SKILL.md` with the actual Memory
-question. Use the configured native invocation for `start --target . --task
-"<memory question>" --format json`, then pass exact owner-returned requests to
-`invoke`. Report the observed owner answer, its evidence and any unresolved
-freshness or admission boundary. Open only the owner-selected detail; a current
-query does not authorize cleanup, promotion or a completion claim.
+Use for a question about Memory advice, its scope or its disposition. First read
+the current `advisory_context` and any already-delivered selected Memory detail.
+When these facts are sufficient and still current, report them directly.
+
+If the question depends on missing or changed native facts, use the repository's
+[configured AW invocation](../../../../skills/workspace-startup/references/ordinary.md)
+with `start --target . --task "<actual Memory question>"`. Start with compact
+output and follow only the exact owner/detail references needed for the answer.
+Distinguish no matching advice from unavailable or unresolved selection.
+
+For a requested Memory change, answer only the current owner's exact question
+and invoke only its admitted action. A reporting request alone authorises no
+cleanup, retirement, promotion or completion claim. Report the actual source,
+evidence, validity limits and any remaining owner gap.
 
 ## Source-maintenance diagnostics
 
-For source maintenance, `make verify-memory` runs the native Memory declaration
-checks and `make memory-freshness` runs the repository freshness checker. Inspect
-those current Makefile targets when choosing evidence for a specific change.
-The retired `agentic-memory doctor/report` commands are not current entry points.
-Report each check's scope and findings; exit zero does not establish workspace
-health, current trust or task completion.
+For repository source maintenance, `make verify-memory` checks declarations and
+`make memory-freshness` checks freshness. Inspect the current Makefile targets
+before relying on their scope. Retired `agentic-memory doctor/report` commands
+are not entry points. A successful check is evidence for that check, not proof
+of workspace health or task completion.

@@ -1,15 +1,28 @@
 ---
 name: planning-reporting
-description: Report the selected plan, remaining steps and restrictions from current Planning detail.
+description: Report selected Planning progress, next steps and restrictions from current sources.
 ---
 
-# Planning Reporting
+# Report current Planning work
 
-Use this skill for a bounded account of current Planning work. It supplies reporting procedure; Planning owns state, and Verification owns evidence admission.
+Use when asked for the status of a selected plan or unfinished task. Reuse the
+current `planning_context` and already-delivered Planning detail when they cover
+the question and their sources remain current. Do not start another AW operation
+merely to produce a report.
 
-1. Resolve the configured invocation through [canonical startup](../../../skills/workspace-startup/references/ordinary.md), then use its `start --target <repo> --task "<task>"` with known changed paths.
-2. Follow relevant exact Planning detail references using the same work context. Do not load all records or reconstruct retired summary field names.
-3. Report the returned owner references, current work, required continuation and restrictions. Distinguish unavailable or ambiguous state from an empty selection.
-4. Read exact source records only when needed to answer the question. Recorded assertions alone do not prove live currentness or completion.
+When the needed owner identity or progress is missing or stale, use the
+[configured invocation](../../../skills/workspace-startup/references/ordinary.md)
+with `start --target <repo> --task "<actual task>"` and any known relevant
+changed paths. Follow only the returned Planning detail references needed
+for this question, using the same work context. Do not scan all plans or
+reconstruct retired summary fields.
 
-Use `planning-closeout-trust` for intent/closure judgment and `planning-work` for structure/continuity. Use current Verification detail or the workspace proof-selection skill for evidence questions. Reporting never grants a mutation, proof or completion claim.
+Report the selected work, accepted progress, next action, real restrictions and
+source references. Distinguish an empty current selection from missing or
+ambiguous custody. Read exact source records only to resolve a material gap;
+recorded status alone does not prove live currentness or completion.
+
+Use `planning-closeout-trust` for intent/closure judgment and `planning-work`
+for structure or continuation. Use current Verification evidence or
+`workspace-proof-selection` for proof. Reporting grants no write, proof,
+independent-review or completion authority.
