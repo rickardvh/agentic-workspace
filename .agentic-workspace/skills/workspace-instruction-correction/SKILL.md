@@ -30,6 +30,9 @@ Use [the selection question](procedure.md), or follow the same source directly:
 - [Save advice, a decision, or a method repair](references/other.md).
 - [Check whether policy permits a proposed improvement](references/opportunity.md).
 
-Use the configured invocation and [exact owner carriage](../workspace-startup/references/owners.md).
-Verify the receiving source and its effect before saying the correction is saved.
-If the supported operation is unavailable, name that gap and preserve managed state.
+For a managed source change, use the configured invocation and
+[exact returned owner request/action](../workspace-startup/references/owners.md).
+For ordinary repository files, use the authorised editing workflow. Verify the
+receiving source and relevant effect before saying the correction is saved.
+If a required managed operation is unavailable, name that gap and preserve its state;
+independently authorised work may continue.

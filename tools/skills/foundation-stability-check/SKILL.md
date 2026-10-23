@@ -31,6 +31,5 @@ not need this check merely because it touches Planning or Memory code.
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/planning/execplans/`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/memory/`
 - package bootstrap/generated payload copies

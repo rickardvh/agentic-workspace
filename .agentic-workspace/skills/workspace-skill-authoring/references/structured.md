@@ -29,8 +29,10 @@ For another repository-owned tree, declare its repository-relative registry in
 `registry_sources` of that existing registry. AW reads declared sources, not every
 file named `REGISTRY.json`. No core switch or package-managed copy is needed.
 
-Use the configured AW invocation with `start --target . --task "Draft a change note" --projection full`.
-From `semantic_routes.requests`, choose the returned
+For this explicit discovery inspection example, use the configured AW
+invocation with `start --target . --task "Draft a change note" --projection full`.
+Ordinary tasks use compact output and current returned requests without a full
+projection. In this example, from `semantic_routes.requests`, choose the returned
 request whose `request_kind` is `semantic-routes/discover/v1`. Set only its
 `arguments.parent` to `notes/change`, save that complete request as
 `request.json`, and run the same command with `--input request.json`.

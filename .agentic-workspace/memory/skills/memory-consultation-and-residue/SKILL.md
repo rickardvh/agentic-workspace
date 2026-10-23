@@ -10,8 +10,20 @@ delivered `advisory_context`; obtain current selection through the configured AW
 `start --target . --task "<task>"` with known changed paths only when needed.
 A no-match result needs no further Memory work or saved record.
 
-Keep the useful conclusion with its smallest existing owner. Planning owns execution continuity, Verification owns proof, and repository decisions retain their deciding authority. A passing test does not establish a durable lesson or authorize a Memory write.
+Keep the useful conclusion with its smallest existing owner. Planning
+owns execution continuity, Verification owns proof, and repository decisions
+retain their deciding authority. A passing test does not establish a
+durable lesson or authorise a Memory write.
 
-For a selected note or advisory fact, follow [Memory Hygiene](../memory-hygiene/SKILL.md). Current native disposition requests preserve external source ownership and need an exact bounded domain answer under current task authority. Promotion additionally needs current receiving-owner admission of the complete lesson. If that admission is unavailable, preserve advisory value or expose reconciliation.
+Use selected advice directly when it is still relevant; consultation alone
+does not require a hygiene decision. If a note may be stale, duplicated
+or misleading, or the current result requests a disposition, follow
+[Memory Hygiene](../memory-hygiene/SKILL.md). Its bounded domain answer
+uses current task authority. Promotion additionally requires a stronger
+owner's admission of the complete lesson. Without that admission, preserve
+advisory value or report the unresolved receiving-owner gap.
 
-Do not create a record just to show consultation, archive the conversation, or revive retired summary/report/promotion commands. Report the selected source, useful lesson or no-signal result, and unresolved owner only when those facts help continuation.
+Do not create a record just to show consultation, archive the conversation,
+or revive retired summary/report/promotion commands. Report the selected
+source, useful lesson or no-signal result, and unresolved owner only when
+those facts help continuation.

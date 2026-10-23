@@ -17,7 +17,9 @@ Use [the current question](procedure.md) or its same-source links directly:
 - [Compare the requested outcome](references/intent.md).
 - [Check proof, preserve useful results and record remaining work](references/finish.md).
 
-Use the configured native invocation and exact owner requests/actions. Without it,
-follow [the no-runtime boundary](../../../skills/workspace-startup/references/unavailable.md):
-AW custody and effects remain unavailable; independently authorised repository
-work can continue. Optional procedure supplies no assignment, proof or completion authority.
+When a Planning state change or missing current owner fact actually depends on
+AW, use the configured native invocation and its exact request/action. Otherwise
+compare sufficient current evidence directly. If AW is unavailable, follow
+[the no-runtime boundary](../../../skills/workspace-startup/references/unavailable.md):
+AW custody and effects remain unknown, while independently authorised work may
+continue. This procedure grants no assignment, proof or completion authority.
