@@ -34,7 +34,7 @@ For a deliberately authored fallback decision, use the current
 `memory.capture.requests` entry of kind `memory/capture-decision/v1`.
 Supply only the requested semantic material: stable decision ID, decision,
 bounded consequence, rationale, alternatives, exact dependency paths and
-any admitted supersession references. The owner derives scope from current
+any exact admitted supersession references. The owner derives scope from current
 changed paths and constructs the destination, complete source and manifest
 postimages, dependencies, work, policy and capability bindings.
 

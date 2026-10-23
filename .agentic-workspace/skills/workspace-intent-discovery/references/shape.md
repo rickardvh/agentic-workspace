@@ -12,7 +12,7 @@
 ## External Reporting Targets
 
 Use this as an agent checklist, not as runtime keyword policy. Issue or
-PR references used only for comments, reports, replies or follow-ups are
+PR references used only for comments, reports, replies, evidence hubs or follow-ups are
 destinations for the current communication task. They do not by themselves
 make those issues implementation targets or establish a multi-issue lane.
 
