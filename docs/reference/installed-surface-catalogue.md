@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:16d270011f667c848963d3d8ef23795fe5907bd2b5de148106da7265aae597ad`
+- Contract digest: `sha256:849d6ef6dfb2bdfa8f48d3f8a9e2cda7c89562b5a88e880c2e62bea8484be784`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -38,6 +38,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Selectively loaded repository working-rule authoring procedure |
+| `.agentic-workspace/skills/workspace-setup-jumpstart/references/consumers.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Selectively loaded repository working-rule authoring procedure |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/other.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -98,6 +99,9 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-instruction-authoring/references/format.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand instruction authoring procedure or public Markdown reference |
 | `.agentic-workspace/skills/workspace-instruction-authoring/references/publish.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand instruction authoring procedure or public Markdown reference |
 | `.agentic-workspace/skills/workspace-instruction-authoring/references/writing.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand repository skill authoring procedure or its canonical public contract |
+| `.agentic-workspace/skills/workspace-instruction-correction/references/review.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-instruction-correction/references/related.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/memory/skills/memory-hygiene/references/disposition.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden.
 
@@ -131,6 +135,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/source-checkout.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md`
+- `.agentic-workspace/skills/workspace-setup-jumpstart/references/consumers.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/references/destination.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/references/instructions.md`
@@ -191,6 +196,9 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-instruction-authoring/procedure.md`
 - `.agentic-workspace/skills/workspace-instruction-authoring/references/format.md`
 - `.agentic-workspace/skills/workspace-instruction-authoring/references/publish.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/review.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/references/related.md`
+- `.agentic-workspace/memory/skills/memory-hygiene/references/disposition.md`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 
@@ -225,4 +233,4 @@ These exact preimages are retained only for de-adoption compatibility. Current-v
 - `.agentic-workspace/fallback/no_cli_startup.py` -- `sha256:b22d032e2c3c40512f41e3b9091e105a7f800a001dfaba6f2ca3ee77d48d919c`
 - `.agentic-workspace/system-intent/WORKFLOW.md` -- `sha256:93fab856c88682d958fdf817e15a8262e6a5a624b70fd7b6ef883cb6301f2d70`
 
-Historical profiles and executable fallback maintenance live in the separate [source-maintenance inventory](source-maintenance-surface-catalogue.md). They are not public host profiles or CLI commands.
+For source-only and historical representations, see [contracts and reference maintenance](../package/contracts.md#internal-and-historical-material). They are not alternative public host profiles or CLI commands.

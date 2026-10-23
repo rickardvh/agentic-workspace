@@ -3,16 +3,17 @@
 Verification is AW's component for reusable checking procedures, saved test or
 review results, and known gaps.
 
-The full component documentation lives in
-[packages/verification/README.md](../packages/verification/README.md). This page
-remains a short public link target rather than a second manual.
+For when to use Verification, see the
+[component guide](package/modules.md#verification). For choosing and interpreting
+checks on your own work, see [Everyday use](everyday-use.md#check-the-result).
 
 For ordinary work, follow the current `start` result. If Verification has
 something relevant, AW returns the specific request or action needed. The
-[native CLI catalogue](/docs/reference/cli-catalogue.md) lists the executable
+[native CLI catalogue](reference/cli-catalogue.md) lists the executable
 commands.
 
-Verification's implementation lives in `packages/verification/`. Repository
+Verification's implementation lives in
+[`src/core/src/modules/verification/`](../src/core/src/modules/verification/). Repository
 configuration and saved verification records live under
 `.agentic-workspace/verification/` when that component is enabled.
 

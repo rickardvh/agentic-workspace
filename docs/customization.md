@@ -75,11 +75,15 @@ For example, a change-note skill can tell an agent to compare the patch with acc
 
 Start with ordinary Markdown the agent can read directly. The [skill-authoring guide](package/skill-authoring.md) shows that complete example, then adds optional questions, selectively loaded branches and a deterministic helper. Those additions are useful only when they reduce repeated work; an ordinary skill does not need them.
 
-## Enable a capability when it becomes useful
+## Configure a capability when it becomes useful
 
 Planning helps with interrupted or delegated work. Memory helps retain expensive-to-rediscover lessons. Verification helps reuse checking procedures and evidence.
 
-Ask the agent to enable the relevant capability and identify any configuration it still needs. Selecting Verification, for example, does not invent the project's test commands or prove the code correct. [Modules](package/modules.md) explains these choices.
+All three are available by default. Ask the agent to use the relevant capability
+and identify any project configuration it still needs. Enable it first only if
+your repository explicitly disabled it. Verification, for example, still needs
+the project's checking procedures; availability does not invent test commands or
+prove the code correct. [Modules](package/modules.md) explains these choices.
 
 A new project rule or method usually needs no module. A separately reusable capability with its own data or operations may justify one; that is the [module-authoring](module-capability-contract.md) path.
 

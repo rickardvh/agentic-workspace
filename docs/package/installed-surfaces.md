@@ -141,7 +141,7 @@ material belongs to the host; shared enablement does not install their bytes.
 Repository removal
 requires removing owned plugin exposure before deleting its bundle. Removing
 only plugin exposure preserves the generic `AGENTS.md` entry. See the
-[installation guide](../agentic-workspace-install.md#optional-installed-entry-skill)
+[optional entry guide](../entry-plugin.md)
 for the repository lifecycle and deliberate global option.
 
 The small `AGENTS.md` entry works for agents that read repository instructions.

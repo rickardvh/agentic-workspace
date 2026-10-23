@@ -140,7 +140,7 @@ def render_surface_catalogue() -> str:
     lines.extend(
         [
             "",
-            "Historical profiles and executable fallback maintenance live in the separate [source-maintenance inventory](source-maintenance-surface-catalogue.md). They are not public host profiles or CLI commands.",
+            "For source-only and historical representations, see [contracts and reference maintenance](../package/contracts.md#internal-and-historical-material). They are not alternative public host profiles or CLI commands.",
             "",
         ]
     )

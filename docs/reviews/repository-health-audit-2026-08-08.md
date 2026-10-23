@@ -109,8 +109,8 @@ exit 1
 
 - The result was the same with Node 24.19.0, matching the release workflow’s major version, and Node 25.2.1.
 - Failure classes included 54 invalid-option parser failures, 59 unsupported-command refusal mismatches, 22 missing/invalid stdout-field failures, 28 output-shape mismatches, and two exit-code mismatches. These categories overlap because some cases are checked in more than one execution mode.
-- The workspace npm package declares itself “mutation-capable-adapter,” “runnable,” and “Node/TypeScript only” in [package.json](../../generated/workspace/typescript/package.json).
-- The npm self-tests in [command-package.test.mjs](../../generated/workspace/typescript/test/command-package.test.mjs) passed. Those tests sample parser shape and a few native operations; they do not prove the full conformance registry.
+- The workspace npm package declares itself “mutation-capable-adapter,” “runnable,” and “Node/TypeScript only” in [package.json](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/generated/workspace/typescript/package.json).
+- The npm self-tests in [command-package.test.mjs](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/generated/workspace/typescript/test/command-package.test.mjs) passed. Those tests sample parser shape and a few native operations; they do not prove the full conformance registry.
 - [CI](../../.github/workflows/ci.yml) runs the static generated-package checker without the conformance flag and only two selected generated-process cases.
 - [Release](../../.github/workflows/release.yml) runs npm test and packs the tarballs, but does not run the failing semantic-conformance command.
 
@@ -168,7 +168,7 @@ The built conformance image computes:
 - no Git index identity;
 - otherwise equal content hashes for the files it has.
 
-[Dockerfile.conformance](../../generated/python/Dockerfile.conformance) and [typescript.conformance.Dockerfile](../../generated/typescript.conformance.Dockerfile) omit both .git and uv.lock, so the current equality check cannot succeed by construction. In the TypeScript Docker failure path, the Windows/Python 3.14 caller also emitted a CP1252 UnicodeDecodeError from a subprocess reader thread.
+[Dockerfile.conformance](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/generated/python/Dockerfile.conformance) and [typescript.conformance.Dockerfile](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/generated/typescript.conformance.Dockerfile) omit both .git and uv.lock, so the current equality check cannot succeed by construction. In the TypeScript Docker failure path, the Windows/Python 3.14 caller also emitted a CP1252 UnicodeDecodeError from a subprocess reader thread.
 
 By contrast:
 
@@ -346,7 +346,7 @@ The exact moment when the CLI is missing or broken is when fallback instructions
 - Repository rulesets are empty.
 - CI runs only for non-draft pull requests.
 - There is no CI push trigger for master.
-- A push to master starts [Prepare Coordinated Release](../../.github/workflows/release-from-semver-label.yml), which has contents:write, pull-requests:write, and actions:write.
+- A push to master starts [Prepare Coordinated Release](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/.github/workflows/release-from-semver-label.yml), which has contents:write, pull-requests:write, and actions:write.
 
 #### Generic host impact
 
@@ -476,7 +476,7 @@ A host may believe a “strict” check protects current work while it only prov
 
 #### Evidence
 
-[workspace_runtime_core.py](../../src/agentic_workspace/workspace_runtime_core.py) is 54,723 lines and [workspace_runtime_primitives.py](../../src/agentic_workspace/workspace_runtime_primitives.py) is 51,750 lines.
+[workspace_runtime_core.py](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/src/agentic_workspace/workspace_runtime_core.py) is 54,723 lines and [workspace_runtime_primitives.py](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/src/agentic_workspace/workspace_runtime_primitives.py) is 51,750 lines.
 
 AST comparison of top-level functions found:
 
@@ -727,7 +727,7 @@ A mature host accumulates thousands of repo-visible planning artefacts, increase
 
 - Installed-surface ownership and actual ownership output disagree for OWNERSHIP.toml.
 - Installed-surface docs list WORKFLOW.md and module-map.md, while migration removes them and necessary install omits them.
-- [maturity-model.md](../maturity-model.md) labels Agentic Planning beta, but [Planning pyproject](../../packages/planning/pyproject.toml) declares Development Status :: 3 - Alpha.
+- [maturity-model.md](../maturity-model.md) labels Agentic Planning beta, but [Planning pyproject](https://github.com/rickardvh/agentic-workspace/blob/642ec80946fdb8aaf3bac1b527385a130a194df4/packages/planning/pyproject.toml) declares Development Status :: 3 - Alpha.
 - Root docs label the root and Memory beta; the root pyproject has no maturity classifier.
 - Documentation status was last reviewed 2026-06-18. Between that date and the latest release, the project published dozens of releases; master was ten commits ahead of v0.36.2 at audit time.
 - Internal payload/mirror Markdown contains missing relative links even though the main public docs tree is comparatively healthy.
