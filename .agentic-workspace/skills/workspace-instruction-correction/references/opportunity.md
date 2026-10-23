@@ -6,12 +6,16 @@ native `start` with the actual task and changed context only when that setting
 is missing or has changed and the next action depends on it. Judge whether the
 observed improvement concerns current work or proactive work.
 A material opportunity needs no failed test or new human prompt. Weak cosmetic
-observations warrant no action or retention. No material opportunity means no
-lookup or report. Even when latitude permits no action, preserve an already
-material observed finding in the task's current evidence or owner; this method
-does not turn it into a new write. Effective latitude permits: `none` (no nomination),
-`reporting` (a bounded report), `conservative` (a current-work proposal;
-report other opportunities), or `proactive` (a proposal in either scope).
+observations warrant no action or retention. If there is no material opportunity,
+do not look up the setting or report a finding. A material finding already
+observed remains visible to the current task even when no initiative is permitted;
+this does not require another record.
+
+The effective setting permits:
+- `none`: no new nomination.
+- `reporting`: a bounded report.
+- `conservative`: a proposal within current work; report other opportunities.
+- `proactive`: a proposal in current or other work.
 
 This selects initiative only. Trusted corrections, hard owner defects, source
 admission and publication still follow the [destination procedure](destination.md). Do not run this
