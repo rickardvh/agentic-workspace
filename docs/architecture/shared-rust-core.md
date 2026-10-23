@@ -113,6 +113,35 @@ These calls are synchronous and return JSON objects. The package includes
 transport, while Rust validates requests. The same exports are available from
 `@agentic-workspace/workspace-cli/operating`.
 
+## Continue from a returned question
+
+The [CLI walkthrough](../package/commands.md#answer-a-returned-question) follows
+one setup question through an answer and shows how to carry a later action into
+an invocation. Its Python helper equivalent is below. This branch assumes the
+current response offers the `assess-setup` job for `instructions`; it is not a
+mandatory setup step.
+
+```python
+from agentic_workspace import select_reference, start
+
+result = start({"target": ".", "task": "Inspect this repository", "projection": "compact"})
+step = result["setup_context"]["next_step"]
+answered = select_reference(
+    result["reentry"],
+    step["reference"],
+    answer={"job": "assess-setup", "concern": "instructions"},
+)
+```
+
+Inspect `answered` before continuing. It may supply another question or restriction.
+Select the answer using the current question and schema; do not copy this
+example's job into a different question. Use the latest returned work context and
+exact action for a separately authorised `invoke`.
+
+In TypeScript, the corresponding call is
+`selectReference(result.reentry, step.reference, {job: "assess-setup", concern: "instructions"})`.
+Both helpers preserve transport fields; they do not supply domain judgement.
+
 ## Inputs and results
 
 A work context contains `target`, a description in `task`, and optional `changed`

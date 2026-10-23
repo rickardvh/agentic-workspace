@@ -12,11 +12,22 @@ If direct reading works but native skill discovery does not, inspect the host's 
 
 ## The command cannot be found or the core cannot start
 
-Run this in the same environment the agent uses:
+In the same environment the agent uses, run `--help` with the invocation selected
+during [installation](agentic-workspace-install.md#1-install-aw). For a shared
+tool on PATH:
 
 ```sh
 agentic-workspace --help
 ```
+
+For a repository-local npm installation:
+
+```sh
+npm exec --no -- agentic-workspace --help
+```
+
+For a custom executable location, use that exact path. A bare command missing from
+PATH does not show that a local installation is broken.
 
 Check the executable search path and any repository-local invocation override. A command working in your terminal does not establish that a sandboxed agent can launch it.
 
@@ -64,7 +75,7 @@ is not a supported repair.
 
 If an installed AW-file update stopped partway through, ordinary startup may
 report the exact error `activation index stale`. Run `agentic-workspace setup --dry-run`
-to inspect the current Configuration proposal, then `setup --yes` to authorize it.
+to inspect the current Configuration proposal, then `setup --yes` to authorise it.
 If setup reports an interrupted repository setup, inspect `setup --recover --dry-run`
 and use `setup --recover --yes` to finish that exact update. Setup can repair the partially updated package files without first relying on
 them as current procedure; repository rules and file-preservation checks still apply. Re-enter ordinary startup

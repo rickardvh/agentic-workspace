@@ -11,13 +11,28 @@ and linked-worktree tasks. Runtime installation through npm, pip, uv or Cargo an
 repository setup remain separate. Keep the `AGENTS.md` pointer: passive discovery
 does not guarantee automatic activation. Select the entry skill when needed.
 
+## Choose the host and scope
+
+| Your need | Use |
+| --- | --- |
+| Enable the plugin for one project or team | [Repository integration](#enable-for-one-repository), selecting Codex or Claude Code |
+| Use one plugin installation across many repositories | [Deliberate global installation](#deliberate-global-installation) for your chosen host |
+| Manage bundled skills through an existing npm/pnpm consumer | [The bundled npm skill](#install-the-bundled-npm-skill) and its separate installer |
+
+Choose the host you actually use. These options do not replace runtime
+installation or repository setup.
+
 ## Enable for one repository
 
 The shared plugin exposes one skill and has no hooks, MCP server or runtime.
 Use repository integration by default. After adoption, ask your agent:
 
-> Enable the AW entry plugin for this repository in Codex and Claude Code project
-> scope. Show the Configuration proposal and preserve unrelated host settings.
+> Enable the AW entry plugin for this repository in Codex project scope.
+> Show the Configuration proposal and preserve unrelated host settings.
+
+For Claude Code, name Claude Code project scope instead. For a single-user
+checkout-local Claude integration, request `claude-local`. Choose one host and
+scope per request.
 
 Configuration installs the canonical bundle under `.agentic-workspace/plugins/`
 and offers `configuration/read-plugin-exposure/v1` in selected setup detail. Choose `codex`,
