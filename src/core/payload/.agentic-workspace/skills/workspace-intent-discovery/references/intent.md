@@ -46,7 +46,9 @@ does not answer them or grant effects.
    Then distinguish clear work, meaningful ambiguity and a required owner decision.
    Prepare the selected posture above only when needed; clarify the remaining
    domain question, not which filename or AW mechanism the human should choose.
-3. Classify work as `direct`, `bounded`, `lane`, or `epic` using continuity value.
+3. When the current decision needs a decomposition or continuity owner, classify
+   work as `direct`, `bounded`, `lane`, or `epic` using [shape](shape.md). Clear
+   direct work needs no classification artifact.
 4. Carry useful clarified intent to its existing issue or current owner. Create
    Planning only through its exact native operation when durable continuity helps.
 5. Preserve uncertainty and hard owner restrictions under every mode.

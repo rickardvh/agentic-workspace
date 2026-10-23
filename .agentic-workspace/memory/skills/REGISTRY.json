@@ -113,15 +113,15 @@
           "recheck"
         ],
         "when": [
-          "relevant repo changes",
-          "weakly routed notes"
+          "selected advice may depend on changed repository sources",
+          "current Memory disposition requires rechecking"
         ]
       },
       "id": "memory-refresh",
       "path": "memory-refresh/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "Reassess only Memory selected by the current changed paths and preserve useful lessons while currentness is unresolved."
+      "summary": "Reassess advice selected for this task only when its relevant source dependencies changed."
     },
     {
       "activation_hints": {

@@ -54,8 +54,9 @@ owner, advisory Memory, or no retention. A producer suggestion is untrusted and
 is not proof of durable value. Stronger-owner disposition needs exact current
 receiving source material; it does not grant that source new authority.
 
-For advisory retention, the procedure carries the existing exact publication
-proposal. Human or exact delegated authorization still applies. No-signal work
+For advisory retention, use the returned exact publication proposal and its
+current authorisation. Request a human answer only when the owner identifies a
+human-required decision, not merely because Memory is writing. No-signal work
 has no capture question or retrospective; no-retention is success. Carriage keeps
 explicit candidate evidence and pending claim consequences across reentry. Do not
 silently drop those references during a partial handoff.

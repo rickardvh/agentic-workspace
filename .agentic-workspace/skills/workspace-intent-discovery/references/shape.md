@@ -4,7 +4,9 @@
 
 - `direct`: target and proof are obvious; answer or edit with the narrowest proof and no durable artifact unless routed.
 - `bounded`: finite implementation with meaningful proof, continuation, or issue-linkage risk; use compact implement/proof routing.
-- `lane`: multi-slice or issue-lane work; checked-in Planning state owns sequencing before implementation.
+- `lane`: multi-slice or issue-lane work; reuse a suitable issue or Planning owner
+  for sequencing and dependencies before work that depends on them. Do not create
+  a duplicate plan when current repository records are sufficient.
 - `epic`: multiple lanes, high assurance, or unclear decomposition; shape before implementation.
 
 ## External Reporting Targets
