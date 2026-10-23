@@ -12,6 +12,7 @@ observed remains visible to the current task even when no initiative is permitte
 this does not require another record.
 
 The effective setting permits:
+
 - `none`: no new nomination.
 - `reporting`: a bounded report.
 - `conservative`: a proposal within current work; report other opportunities.
