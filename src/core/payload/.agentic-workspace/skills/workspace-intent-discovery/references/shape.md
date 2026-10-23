@@ -11,7 +11,10 @@
 
 ## External Reporting Targets
 
-Use this as an agent checklist, not as runtime keyword policy. Issue or PR references used only as comment, report, reply, evidence-hub, or follow-up destinations are context for the current communication task. Do not treat those refs as implementation issue scope or multi-issue lane evidence by themselves.
+Use this as an agent checklist, not as runtime keyword policy. Issue or
+PR references used only for comments, reports, replies or follow-ups are
+destinations for the current communication task. They do not by themselves
+make those issues implementation targets or establish a multi-issue lane.
 
 When a task mixes an implementation issue with a reporting target, separate them before judging shape:
 
@@ -19,8 +22,13 @@ When a task mixes an implementation issue with a reporting target, separate them
 - reporting target refs identify where to post, edit, or read a comment;
 - the agent still owns the final direct/bounded/lane judgment from action safety, source impact, proof burden, and closure claims.
 
-Do not implement this distinction with hardcoded prompt/prose keyword matching in AW runtime. Runtime may expose neutral refs, structured PR refs, changed paths, active Planning state, and proof facts; the semantic split belongs to this checklist and agent judgment.
+Do not implement this distinction with prompt-keyword matching in AW runtime.
+The runtime may expose references, changed paths, active Planning state and
+proof facts; deciding which reference governs work remains agent judgment.
 
 ## Reference Output
 
-When this reference is explicitly requested, report the inferred intended outcome, work shape, why that shape fits, the first repo-visible surface to inspect or update, satisfaction evidence, required next route, and whether Planning state is optional, recommended, or required.
+When this reference is explicitly requested, report the inferred outcome,
+work shape and rationale, first repository source to inspect or change,
+satisfaction evidence, next required route, and whether Planning is optional,
+recommended or required.

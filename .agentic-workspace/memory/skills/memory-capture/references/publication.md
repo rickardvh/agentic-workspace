@@ -30,11 +30,34 @@ prose or confirm truth. Durable obsolete advice requires that terminal owner;
 candidate expiry cannot retire it. Promotion requires independently admitted
 receiving material and an exact authorised disposition.
 
-For a deliberately authored fallback decision, use the current `memory.capture.requests` entry of kind `memory/capture-decision/v1`. Supply only the requested semantic material: stable decision ID, decision, bounded consequence, rationale, alternatives, exact dependency paths, and any exact admitted supersession references. The owner derives scope from the current changed paths and constructs the destination, source and manifest postimages, dependencies, work, policy and capability bindings. A configured repository decision owner takes precedence; use its returned destination or preserve its explicit unsupported gap.
+For a deliberately authored fallback decision, use the current
+`memory.capture.requests` entry of kind `memory/capture-decision/v1`.
+Supply only the requested semantic material: stable decision ID, decision,
+bounded consequence, rationale, alternatives, exact dependency paths and
+any admitted supersession references. The owner derives scope from current
+changed paths and constructs the destination, complete source and manifest
+postimages, dependencies, work, policy and capability bindings.
 
-Submit the proposal through `start --input` with the same task and changed paths. Inspect its complete postimage and exact returned domain decision request. Supply the acting agent's bounded judgment under current task authority; do not supply actor, authority, authorship or provenance labels. The owner records the actual domain basis and preserves historical human provenance. Missing policy delegation does not create a human approval requirement. Capability approval does not confirm a particular record.
+If a repository decision owner is configured, use its returned destination.
+When that owner cannot support this decision, preserve its explicit gap.
+
+Submit the proposal through `start --input` with the same task and changed
+paths. Inspect its complete postimage and exact returned domain decision
+request. Supply the acting agent's bounded judgment under current task
+authority; do not supply actor, authority, authorship or provenance labels.
+The owner records the actual domain basis and preserves historical human
+provenance. Missing policy delegation does not create a human approval
+requirement. Capability approval does not confirm a particular record.
 
 Invoke only the exact returned action. Inspect its result and use its current
 continuation; resolve again only if missing or changed facts affect the next action
 or required claim. The deciding basis is the exact owner-issued proposal/request
-and bounded answer, with no claim of cryptographically authenticated identity. Publication receipts establish the write only. Fresh relevant work revalidates source, declared scope, dependencies and policy before projecting the consequence; unrelated work stays quiet. Preserve former rationale during scoped supersession. For an interrupted publication, use the exact recovery action exposed at the current frontier in the original work context; do not repeat a consumed authorization or overwrite a colliding source.
+and bounded answer, with no claim of cryptographically authenticated
+identity. Publication receipts establish the write only. Fresh relevant
+work revalidates source, declared scope, dependencies and policy before
+projecting the consequence; unrelated work stays quiet.
+
+Preserve former rationale during scoped supersession. For interrupted
+publication, use the exact recovery action exposed at the current frontier
+in the original work context. Do not repeat consumed authorisation or
+overwrite a colliding source.
