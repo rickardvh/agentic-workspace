@@ -1,83 +1,68 @@
-# CLI Output Selection
+# Choose an AW output view
 
-Agentic Workspace commands should return the smallest answer that lets an agent take the next correct step.
+Use this reference when a CLI or API consumer needs more detail than the default
+response, or needs to carry exact requests outside the model's context. For a
+worked query, answer and invocation, use the [CLI guide](commands.md).
 
-The default design rule is next-decision first:
+The default response should contain what changes the next decision: applicable
+restrictions, questions and exact available actions. Optional inventories and
+diagnostics should not obscure that information.
 
-- say what action is safe next
-- name the files or commands needed for that action
-- surface blockers, warnings, or ambiguity that change the action
-- hide diagnostics, inventories, provenance, and long explanations unless they change the action
+## Choose how much to return
 
-## Default And Drill-Down
+`start` accepts three values for `--projection`; API callers use the same values
+in `projection`:
 
-The ordinary command output should be small. When an agent needs one or two exact fields, prefer `--select <field.path>` over a broader payload. Use `--verbose` for diagnostic, inventory, provenance, and audit detail.
+| View | Use it when |
+| --- | --- |
+| `compact` (default) | The caller needs the current decision and exact selected requests/actions. Optional detail stays behind `detail_refs`. |
+| `full` | The caller deliberately needs expanded component details or the current capability contract, for example while debugging an integration. |
+| `carried` | A host can keep opaque transport data outside model output. The result separates the model-facing `view` from disposable `carriage`. |
 
-Do not keep a parallel profile compatibility path. If a command needs more detail, expose an exact selector such as `--select` or `--section`, and reserve `--verbose` for diagnostics.
+For example, from the repository being inspected, using the installation chosen
+in [Getting started](../agentic-workspace-install.md#1-install-aw):
 
-Healthy or normal data should usually be absent from default output. Examples include normal package identity, normal package boundaries, module inventories, empty obligation counts, inactive closeout policy, and full authority marker records.
+```sh
+agentic-workspace start --target . --task "Inspect this repository" --projection full --format json
+```
 
-Abnormal data should remain visible when it changes the next step. Examples include blocking compatibility drift, path authority warnings, missing changed paths, proof blockers, and active planning state that must be followed before implementation.
+Changing the view does not grant permission, satisfy a requirement or perform an
+action. Compact output retains relevant restrictions; a shorter answer is not a
+weaker set of checks.
 
-## Command Guidance
+## Read one returned detail
 
-Use `implement --changed <paths>` before `start` when the user or current context already names the changed paths. Use `start --task "<task>"` for ordinary first contact when the path scope is unknown.
+Prefer a specific `detail_refs` reference when only one component's detail is
+needed. Submit that exact reference with the response's unchanged `reentry`, or
+use the [API reference helper](../architecture/shared-rust-core.md#inputs-and-results).
+Do not guess a reference from a component name. Answer a question only with its
+requested answer shape; selecting detail is not an instruction to run an effect.
 
-| Command | Smallest ordinary surface | Deeper surface |
-| --- | --- | --- |
-| `start` | `start --task "<task>" --format json` | `start --verbose --format json` |
-| `implement` | `implement --changed <paths> --format json` | `implement --verbose --changed <paths> --format json` |
-| `proof` | `proof --changed <paths> --format json` | `proof --verbose --changed <paths> --format json` |
-| `summary` | `summary --format json` | `summary --select <field.path> --format json` or `summary --verbose --format json` |
-| `config` | `config --format json` | `config --select <field.path> --format json` or `config --verbose --format json` |
-| `report` | default router or `--section <name>` | `report --verbose --format json` |
-| `evaluation status` | lifecycle, coverage, criteria, freshness, owner, blockers, and next action | `evaluation status --evaluation-id <id> --select <field-or-full> --format json` |
+References depend on the original work and relevant sources. If either changes,
+resolve the current task again instead of altering an old reference. Losing
+`carriage` also requires fresh resolution; it is transport data, not a durable
+task record or a transferable permission. Only its `view` belongs in model
+context; the host retains and submits the exact `carriage` through the supported
+helpers.
 
-Commands that do not yet expose `--select` should still follow the same rule: the ordinary output should answer the command's immediate question first, then point to a detail command when more context is needed.
+## Avoid repeating source prose
 
-## Regression Rule
+A continuing caller can return already-held `delivery_refs` through `--delivered`
+(API field `delivered`). This can suppress unchanged source prose after current
+source checks. It does not suppress requirements or establish that the consumer
+understood or followed the source. Clear caller-held delivery information after
+context loss so needed material can be supplied again.
 
-When adding a new CLI command or expanding an existing payload, add or update tests that protect the default output from becoming a diagnostics dump. A useful test checks both:
+## Maintain the contract
 
-- required next-decision fields are present
-- inactive diagnostics or provenance fields are absent
+The current projection and delivery rules come from `operating_projections` in
+the [source decision contract](../../src/core/contracts/source_decision_contract.json).
+Use the [CLI catalogue](../reference/cli-catalogue.md) for flags and the
+[API guide](../architecture/shared-rust-core.md) for exact transport helpers.
 
-## Enforced Budgets
-
-Named ordinary profiles declare four limits in the versioned
-`workspace-output-profile-budgets/v2` contract exposed by the
-`operational_compression` report:
-
-- UTF-8 JSON bytes
-- recursive field count
-- estimated tokens (`ceil(json_bytes / 4)`, used only as a stable regression estimate)
-- non-empty human-render lines
-
-The package tests exercise cold and warm `init` plus ordinary `start`, `report`,
-`doctor`, Assignment lifecycle, and Evaluation status fixtures. Assignment lifecycle uses the
-`assignment-lifecycle-decision/v1` profile: its required `state` member is a compact decision
-projection, while `state_ref` points to complete disposable run state for exact inspection. A
-budget increase is a reviewed contract change, not a
-side effect of adding another default field. Ordinary `init` JSON uses a
-`decision-envelope/v1`; `init --verbose --format json` is the exact expansion
-route for module reports, config, effects, provenance, and the full lifecycle
-plan.
-
-The maintained seeded close-transition fixture records this representative
-full-state/default-result comparison. The test recomputes every dimension and
-requires the compact result to remain smaller as well as within the declared
-profile budget.
-
-| Assignment close subject | JSON bytes | Recursive fields | Estimated tokens | Pretty JSON lines |
-| --- | ---: | ---: | ---: | ---: |
-| Full state via `state_ref` | 10,505 | 245 | 2,627 | 388 |
-| Ordinary compact result | 1,344 | 31 | 336 | 45 |
-
-## Progress Without Log Noise
-
-Compact validation commands buffer successful child output, but emit a
-`[progress]` heartbeat to stderr every 30 seconds while a command remains
-running. The interval can be shortened with
-`--progress-interval-seconds <seconds>` for a known proof environment. The
-heartbeat reports only the label and elapsed time; detailed child output stays
-in the failure log when the command fails.
+When changing response construction, preserve required decision fields, exact
+actions and source checks while keeping unrelated detail deferred. Existing
+[frontier tests](../../tests/test_native_frontier.py) check detail expansion,
+source changes and disposable carriage; [carriage tests](../../tests/test_native_operating_carriage.py)
+cover answer transport, rejection and delivery limits. Extend the relevant case
+only when the changed behaviour needs coverage it does not already provide.

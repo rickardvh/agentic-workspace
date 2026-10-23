@@ -16,7 +16,7 @@ You do not need to read the reference or understand the implementation before us
 
 ## Reference
 
-[CLI](reference/cli-catalogue.md) · [Configuration](reference/workspace-config.md) · [Rust, Python and TypeScript APIs](architecture/shared-rust-core.md)
+[CLI guide](package/commands.md) · [Configuration](reference/workspace-config.md) · [Rust, Python and TypeScript APIs](architecture/shared-rust-core.md)
 
 The [package compatibility policy](release-and-versioning.md#package-compatibility-boundary)
 names the supported calls, including Rust `operating::{start, invoke}`.

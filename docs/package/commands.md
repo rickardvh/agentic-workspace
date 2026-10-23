@@ -5,6 +5,12 @@ context and request controlled changes. For ordinary use through a coding agent,
 see [Everyday use](../everyday-use.md); you do not need to run these commands around
 every edit.
 
+First [install AW](../agentic-workspace-install.md#1-install-aw). The examples
+below assume `agentic-workspace` is available on PATH in the environment running
+them. For repository-local npm, replace that prefix with
+`npm exec --no -- agentic-workspace`; for a custom installation, use its executable
+path. Keep using the same installation for follow-up calls.
+
 ## Inspect the repository
 
 Run this from the repository where the work will happen:

@@ -27,11 +27,15 @@ whose attached receipts and checksums describe the exact release files.
 | npm | `npm install --save-dev --save-exact @agentic-workspace/workspace-cli` in the repository; use `--global` instead of `--save-dev --save-exact` for a shared tool |
 | Python/uv | `uv pip install agentic-workspace` in your repository's virtual environment, or `uv tool install agentic-workspace` for a shared tool; use `agentic-workspace==<version>` when pinning |
 | Cargo | `cargo install --locked agentic-workspace-core`, then `cargo install --locked agentic-workspace-cli`; when pinning, pass the same `--version` to both crates and use the same `--root` for a repository-specific location |
-| Standalone | Open the latest stable GitHub release, choose the archive for your platform and keep both executables together |
+| Standalone | Open the latest stable GitHub release, choose and [verify the archive for your platform](evidence-and-support.md#verify-a-download-or-investigate-support), then extract it and keep both executables together |
 
-Run `--help` using that installation: `npm exec --no -- agentic-workspace` for
-repository-local npm, `agentic-workspace` in the selected environment or on PATH,
-or the executable's path for a custom location.
+Run `npm exec --no -- agentic-workspace --help` for repository-local npm, or
+`agentic-workspace --help` in the selected Python environment or on PATH.
+
+For a standalone archive, use the extracted executable's path: for example,
+`./agentic-workspace --help` on Linux/macOS or `.\agentic-workspace.exe --help`
+in PowerShell from that directory. When running `setup` from the repository root,
+use the executable's absolute path and keep the paired core beside it.
 
 ## 2. Add AW to the repository
 
