@@ -313,6 +313,17 @@ pub(crate) fn select_mode(
                 .flatten()
                 .filter_map(Value::as_str)
             {
+                // Web authority citations are documentary, not filesystem
+                // dependencies. Their declarations remain bound by the strategy
+                // identity; this does not attest the remote content. Explicit
+                // stale_when dependencies still require a local observation.
+                if field == "authority_refs"
+                    && reference.split_once("://").is_some_and(|(scheme, _)| {
+                        scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https")
+                    })
+                {
+                    continue;
+                }
                 if reference.contains(['*', '?', '[']) {
                     gaps.push(format!("proof-dependency-selector-unresolved:{reference}"));
                     continue;
