@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Allow protocol-linked proof with HTTP(S) authority citations to satisfy linked profiles, preserve local dependency checks, and expose dependency admission gaps in compact evidence."
