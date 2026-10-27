@@ -4,6 +4,15 @@ Verification offers `verification/execute-selected/v1` only with exact commands 
 
 The native adapter resolves the supported host shell, records the actual native executable and shell content identities, and uses the existing Rust proof-subject and receipt admission owners. Current selected strategy and exact declared source dependencies participate in freshness. Legacy Python receipts retain their Python recorder identity; native code does not substitute its executable or launch a receipt-selected interpreter.
 
+Protocol and selected domain lane `authority_refs` may cite HTTP or HTTPS
+documentation. These citations remain part of the strategy identity; native proof
+does not fetch or attest their remote content. Local authority references still
+require observable file content. `stale_when` always declares proof dependencies,
+so a URL there remains unavailable rather than becoming documentary authority.
+Use a repository source when remote content must be bound to proof. Missing local
+sources and unresolved selectors remain admission gaps, exposed on the evidence
+item in both compact continuation and claim material.
+
 Execution uses the existing proof-run and attempt-store contracts. Admission and completion carriers are immutable. Missing completion after interruption is uncertain, so retry never blindly runs a potentially non-idempotent command. A current committed invocation returns its exact effect result and freshly resolves continuation. Windows job objects and Unix process groups bound normal execution, timeout, and error cleanup; abrupt host loss still leaves an uncertain external effect rather than a guessed success.
 
 The first native publication acquires an absent canonical receipt index exclusively. A pre-existing index without retained native mutation custody is preserved and blocks this execution route. A concurrent index winner is preserved after execution, leaving an honest unpublished result. Exact Verification index transfer and bounded publication retention are described in [proof publication custody](proof-publication-custody.md).

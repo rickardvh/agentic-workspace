@@ -277,9 +277,13 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
         else 'echo executed >> count.txt; test "$(cat sample.txt)" = ok'
     )
     manifest = aw / "verification/manifest.toml"
+    policy = tmp_path / "POLICY.md"
+    policy.write_text("Local check authority")
     manifest.write_text(
         'schema_version="agentic-workspace/verification-manifest/v1"\n'
         '[protocols.synthetic_check]\napplies_to_paths=["sample.txt"]\n'
+        'authority_refs=["POLICY.md", "https://example.invalid/reference/policy?view=current#check", '
+        '"HTTP://example.invalid/issues/3927"]\n'
         f'commands=[{json.dumps(command)}]\nproof_profiles=["synthetic_required"]\n'
         "[assurance.proof_profiles.synthetic_required]\n"
         f"required_commands=[{json.dumps(command)}]\n"
@@ -293,6 +297,7 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
         )
         + (
             f'[assurance.domain_proof_lanes.synthetic_unlinked]\npurpose="Unlinked matching command"\n'
+            'authority_refs=["POLICY.md", "https://example.invalid/reference/domain?view=current"]\n'
             f'applies_to_paths=["sample.txt"]\ncommands=[{json.dumps(command)}]\n'
             if unlinked
             else ""
@@ -389,6 +394,60 @@ def test_profile_proof_claim_continuation_separates_command_admission_and_protoc
         assert final["evidence_gaps"] == []
         assert confirmed["decision_packet"]["blockers"] == []
         assert final["strategy_control"]["obligations"][0]["evidence_refs"] == [proof["value"]["publication"]["reference"]]
+
+        def inspect_evidence(projection="full"):
+            inspect = call(context)["verification"]["requests"][0]
+            inspect["arguments"]["evidence_refs"] = [proof["value"]["publication"]["reference"]]
+            return call({**context, "request": inspect, "projection": projection})
+
+        # Documentary URLs must not hide required local authority currentness.
+        policy.unlink()
+        missing = inspect_evidence()["verification"]["evidence"][0]
+        assert missing["status"] == "unadmitted"
+        assert "proof-dependency-unavailable:POLICY.md" in missing["gaps"]
+        compact = inspect_evidence("compact")
+        assert compact["verification_context"]["evidence"][0]["gaps"] == missing["gaps"]
+        policy.write_text("Changed check authority")
+        changed = inspect_evidence()["verification"]["evidence"][0]
+        assert changed["checked_scope"] is None
+        assert "proof-dependency-changed:POLICY.md" in changed["gaps"]
+        policy.write_text("Local check authority")
+        assert call(final_input)["verification"]["evidence"][0]["status"] == "admitted"
+        original = manifest.read_bytes()
+        manifest.write_bytes(original.replace(b"/reference/policy?", b"/reference/revised-policy?"))
+        revised = inspect_evidence()["verification"]
+        assert revised["evidence"][0]["runtime_admission"]["sufficiency_currentness"] == "changed"
+        assert revised["strategy_control"]["obligations"][0]["missing_commands"] == [command]
+        manifest.write_bytes(original)
+        # A documentary citation does not waive explicit dependencies, even
+        # for the same URL, nor unresolved local selectors.
+        for declaration, gap in (
+            (
+                'stale_when=["https://example.invalid/reference/policy"]',
+                "proof-dependency-unavailable:https://example.invalid/reference/policy",
+            ),
+            ('stale_when=["policy/*.md"]', "proof-dependency-selector-unresolved:policy/*.md"),
+        ):
+            manifest.write_bytes(original.replace(b"[protocols.synthetic_check]", f"[protocols.synthetic_check]\n{declaration}".encode()))
+            compact = inspect_evidence("compact")
+            blocked = compact["verification_context"]["evidence"][0]
+            assert blocked["runtime_admission"] == "reusable"
+            assert blocked["status"] == "unadmitted"
+            assert gap in blocked["gaps"]
+            judgment = call(context)["verification"]["claim_review"]["request"]
+            judgment["arguments"].update(
+                disposition="insufficient",
+                reason="The explicit dependency remains unresolved.",
+                evidence_refs=[proof["value"]["publication"]["reference"]],
+            )
+            pending = call({**context, "request": judgment})
+            material = next(
+                d["material"]
+                for d in pending["decision_packet"]["pending_consequences"]["decisions"]
+                if d["id"] == "verification-claim-review"
+            )
+            assert gap in material["evidence"][0]["gaps"]
+        manifest.write_bytes(original)
         # A distinct source-required reviewer remains a real blocker even
         # though the command and the agent's semantic judgment are current.
         original = manifest.read_bytes()

@@ -593,8 +593,28 @@ fn receipt_view(
     // strategy coverage, or independent judgment producer.
     if freshness["status"] != "reusable" {
         gaps.push("proof-runtime-compatibility-unproven".into());
+    }
+    if freshness["strategy_coverage"] == "unproven" {
         gaps.push("current-strategy-coverage-unproven".into());
     }
+    // Keep the actual strategy failure on the evidence item so compact
+    // continuation and claim material expose the same reason as full detail.
+    gaps.extend(
+        freshness["remaining_gaps"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(str::to_owned),
+    );
+    gaps.extend(
+        freshness["changed_dependencies"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(|reference| format!("proof-dependency-changed:{reference}")),
+    );
     let checked_scope = if publication["status"] == "admitted"
         && admission["proof_sufficient"] == true
         && admission["result_class"] == "passed"
