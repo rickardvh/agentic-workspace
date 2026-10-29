@@ -81,6 +81,20 @@ is running. See the installed
 [working-rule procedure](../.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md)
 for that use case.
 
+## Use the default testing judgment
+
+AW supplies [testing judgment](../.agentic-workspace/skills/workspace-proof-selection/references/select.md)
+before the agent chooses validation or writes tests, including in a fresh project
+without a custom strategy or enabled Verification. It separates evidence for the
+change, permanent test coverage and recurring execution cost. An escaped bug
+prompts diagnosis and repair of the existing contract coverage; a new incident
+alone does not justify another lasting test.
+
+Add a host-specific proof strategy for actual project requirements, commands,
+environments or test methods. Explicit applicable repository, user and host
+requirements take precedence; the strategy need not restate the portable
+baseline. AW does not install guessed test commands or weaken required checks.
+
 ## Configure a capability when it becomes useful
 
 Planning helps with interrupted or delegated work. Memory helps retain expensive-to-rediscover lessons. Verification helps reuse checking procedures and evidence.

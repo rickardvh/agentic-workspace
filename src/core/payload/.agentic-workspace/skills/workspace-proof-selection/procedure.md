@@ -4,11 +4,11 @@
 {
   "kind": "agentic-workspace/procedure/v1",
   "id": "current-need",
-  "question": "What is missing before the selected result can support this task or completion claim?",
+  "question": "What evidence or test-design decision does this task need?",
   "branches": [
     {
       "id": "select",
-      "description": "Choose relevant evidence and verify that the test prerequisites are ready",
+      "description": "Choose validation, permanent coverage and recurring cadence before authoring tests",
       "next": "references/select.md"
     },
     {
@@ -42,8 +42,8 @@
       "need",
       "binding"
     ],
-    "applicability": "A test, claim, review finding or missing prerequisite needs current evidence or readiness before proceeding.",
-    "outcome": "Current prerequisite readiness, admitted evidence and an accurately bounded claim.",
+    "applicability": "Validation or test design is being considered, or a claim, review finding or missing prerequisite needs current evidence.",
+    "outcome": "Proportionate validation, retention and cadence choices, ready prerequisites and an accurately bounded claim.",
     "binding_owners": [
       "verification"
     ]
