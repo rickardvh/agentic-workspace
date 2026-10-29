@@ -46,6 +46,7 @@
     ".agentic-workspace/skills/workspace-resources/references/hygiene.md",
     ".agentic-workspace/skills/workspace-resources/procedure.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/select.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/design.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/execute.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
     ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
@@ -670,6 +671,19 @@
       "materialization": {
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-proof-selection/references/select.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/design.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "On-demand testing design examples and research for the canonical selection method",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/references/design.md"
       }
     },
     {
@@ -1471,6 +1485,7 @@
       ".agentic-workspace/skills/workspace-resources/references/hygiene.md",
       ".agentic-workspace/skills/workspace-resources/procedure.md",
       ".agentic-workspace/skills/workspace-proof-selection/references/select.md",
+      ".agentic-workspace/skills/workspace-proof-selection/references/design.md",
       ".agentic-workspace/skills/workspace-proof-selection/references/execute.md",
       ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
       ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",

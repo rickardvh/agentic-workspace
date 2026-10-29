@@ -61,7 +61,7 @@ threshold determines it. Unrelated remembered plans remain inert.
 
 Then decide what other information the next action needs:
 
-- Before choosing validation or adding, changing or retaining tests, use
+- Before choosing validation or adding, changing, retaining or removing tests, use
   [proof selection](../workspace-proof-selection/references/select.md). Apply its
   lifetime-cost judgment at test-design time, including when considering a
   regression before any proof command. Reuse guidance already read; this needs
