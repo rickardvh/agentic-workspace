@@ -17,7 +17,7 @@
     },
     {
       "activation": {
-        "applicability": "A test, claim, review finding or missing prerequisite needs current evidence or readiness before proceeding.",
+        "applicability": "Validation or test design is being considered, or a claim, review finding or missing prerequisite needs current evidence.",
         "binding_owners": [
           "verification"
         ],
@@ -25,7 +25,7 @@
           "need",
           "binding"
         ],
-        "outcome": "Current prerequisite readiness, admitted evidence and an accurately bounded claim."
+        "outcome": "Proportionate validation, retention and cadence choices, ready prerequisites and an accurately bounded claim."
       },
       "id": "workspace-proof-selection",
       "path": "workspace-proof-selection/SKILL.md",
@@ -125,6 +125,17 @@
       "path": ".agentic-workspace/planning/skills/REGISTRY.json"
     }
   ],
+  "resources": {
+    "instruction-markdown": {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md"
+    },
+    "instruction-writing": {
+      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md"
+    },
+    "memory-disposition": {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md"
+    }
+  },
   "schema_version": "skill-registry.v1",
   "skills": [
     {
@@ -193,14 +204,14 @@
       "scope": "specialized-subskill",
       "semantic_routes": [
         {
-          "description": "Select and interpret evidence for the claim actually being made.",
+          "description": "Choose evidence, test coverage and cadence before test design, and interpret results.",
           "id": "workspace/proof/selection",
           "match": "exact",
           "priority": 10
         }
       ],
       "stability": "contract-backed-projection",
-      "summary": "Choose evidence for the actual claim, run an admitted check, and interpret its result.",
+      "summary": "Choose validation, permanent coverage and recurring cadence; interpret evidence for the actual claim.",
       "visibility": "routed-on-demand"
     },
     {
@@ -241,6 +252,9 @@
       "id": "workspace-instruction-correction",
       "path": "workspace-instruction-correction/SKILL.md",
       "procedure_resource": "procedure.md",
+      "required_resources": [
+        "memory-disposition"
+      ],
       "scope": "specialized-subskill",
       "semantic_routes": [
         {
@@ -250,18 +264,15 @@
           "priority": 10
         },
         {
-          "id": "workspace/instructions/review",
           "description": "Review retained source-owner knowledge on request, group supported improvement opportunities and advance a permitted source-directed result.",
+          "id": "workspace/instructions/review",
           "match": "exact",
           "priority": 10
         }
       ],
       "stability": "contract-backed-projection",
       "summary": "Review retained repository knowledge on request, or correct a useful finding through its controlling source.",
-      "visibility": "routed-on-demand",
-      "required_resources": [
-        "memory-disposition"
-      ]
+      "visibility": "routed-on-demand"
     },
     {
       "id": "workspace-dogfooding",
@@ -287,8 +298,8 @@
       "scope": "specialized-subskill",
       "semantic_routes": [
         {
-          "id": "workspace/skills/authoring",
           "description": "Create or maintain the smallest useful repository-owned ordinary or AW-assisted skill.",
+          "id": "workspace/skills/authoring",
           "match": "exact",
           "priority": 10
         }
@@ -300,35 +311,24 @@
     {
       "id": "workspace-instruction-authoring",
       "path": "workspace-instruction-authoring/SKILL.md",
-      "scope": "specialized-subskill",
-      "visibility": "routed-on-demand",
-      "stability": "package-managed",
-      "summary": "Create or revise a deliberately scoped repository rule, publish exact Markdown and inspect its effect.",
-      "semantic_routes": [
-        {
-          "id": "workspace/instructions/authoring",
-          "description": "Author a repository rule directly or publish an instruction already selected by correction intake.",
-          "match": "exact",
-          "priority": 10
-        }
-      ],
       "procedure_resource": "procedure.md",
       "required_resources": [
         "instruction-markdown",
         "instruction-writing"
-      ]
+      ],
+      "scope": "specialized-subskill",
+      "semantic_routes": [
+        {
+          "description": "Author a repository rule directly or publish an instruction already selected by correction intake.",
+          "id": "workspace/instructions/authoring",
+          "match": "exact",
+          "priority": 10
+        }
+      ],
+      "stability": "package-managed",
+      "summary": "Create or revise a deliberately scoped repository rule, publish exact Markdown and inspect its effect.",
+      "visibility": "routed-on-demand"
     }
   ],
-  "source_kind": "installed-workspace-skills",
-  "resources": {
-    "instruction-markdown": {
-      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/format.md"
-    },
-    "instruction-writing": {
-      "path": ".agentic-workspace/skills/workspace-instruction-authoring/references/writing.md"
-    },
-    "memory-disposition": {
-      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md"
-    }
-  }
+  "source_kind": "installed-workspace-skills"
 }

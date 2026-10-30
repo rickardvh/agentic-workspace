@@ -61,6 +61,12 @@ threshold determines it. Unrelated remembered plans remain inert.
 
 Then decide what other information the next action needs:
 
+- Before choosing validation or adding, changing, retaining or removing tests, use
+  [proof selection](../workspace-proof-selection/references/select.md). Apply its
+  lifetime-cost judgment at test-design time, including when considering a
+  regression before any proof command. Reuse guidance already read; this needs
+  no configured Verification module or host strategy and adds no runtime call.
+  Unrelated work needs no testing procedure.
 - If the repository sources needed for this task expose a useful missing setup
   connection, complete it through [consumer setup](../workspace-setup-jumpstart/references/consumers.md)
   before the dependent action. For example, documented checking rules may have
