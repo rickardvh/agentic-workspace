@@ -62,29 +62,28 @@ does the work. A skill or route never grants mutation, proof or completion right
 
 ## Current material and needs
 
-Supply a new finding or missing prerequisite in the same `start` context,
-separately from `task`. The `material` field tells AW what changed and where the
-observation came from; it does not make the finding a policy or prove a claim.
-For the CLI, write a context object to a UTF-8 JSON file and pass `start --input`:
+Nominate one finding with `--observation`, or an unmet prerequisite with `--need`,
+through the same `start` invocation. Keep the original task and supply the actual
+source you know. For example, with the configured invocation in place of
+`agentic-workspace`:
 
-```json
-{
-  "target": ".",
-  "task": "The unchanged current task",
-  "material": [{
-    "id": "test-prerequisite",
-    "kind": "need",
-    "summary": "The upcoming test requires current service readiness.",
-    "source": {"producer": "acting-agent", "reference": "current test requirement", "coverage": "bounded"}
-  }]
-}
+```sh
+agentic-workspace start --target . --task "The unchanged current task" --need "The service must be running before validation" --source "Current service check requirement"
 ```
 
-Use `observation` for a material fact, correction, tool result or external/module
-observation; use `need` before an action whose prerequisite remains unmet. Include
-exact source revisions and repository dependency reference/revision pairs when
-known. Labels remain assertions, never human authority or proof. Carry returned
-work-bound material explicitly on reentry; there is no event store.
+Use `--observation` for a fact, correction, tool result or external/module finding.
+Optional `--coverage bounded|partial|unknown` and `--source-revision` carry facts
+you actually know. Omitted source and coverage remain `unknown`; `cli-caller`
+identifies the submitting transport, not an authenticated person or agent.
+These flags create ordinary `material`, with no retention, authority or proof.
+An asserted revision does not check a file's current bytes.
+
+If current reentry is already held in a file, `start --input <reentry.json>` with
+the single-finding flags keeps that task and its earlier answers and material.
+Use the returned reentry for subsequent owner questions without repeating the
+flags. There is no event store. For multiple findings, explicit producer labels
+or checked source dependencies, use [structured material carriage](transport.md#structured-current-material).
+No finding needs no call or retrospective.
 
 Read `activation` for procedures that may help handle this finding. Read the
 restrictions in the same result before taking an affected action. When a returned

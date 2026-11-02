@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Show current prepared context, execution capabilities and initiating-host obligations at consequential executor comparisons without adding work to ordinary local entry."

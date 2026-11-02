@@ -257,13 +257,26 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "revision":"pending", "owners":[{"owner":"workspace","revision":revision}],
         "restriction_authorities":restrictions});
     capability_contract["revision"] = json!(digest(&capability_contract)?);
-    Ok(
-        json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
+    // Execution posture is declared by the repository configuration, not the
+    // local executor policy or other observed configuration sources.
+    let posture_sources: Vec<Value> = if shared["execution_posture"]
+        .as_object()
+        .is_some_and(|postures| !postures.is_empty())
+    {
+        sources
+            .iter()
+            .filter(|source| source["reference"] == SHARED && source["status"] == "current")
+            .map(|source| json!({"reference":source["reference"],"revision":source["revision"]}))
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let mut view = json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
         "sources":sources,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "clarification":local["clarification"],"agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
         "upstream_dogfooding":shared["workspace"]["upstream_dogfooding"].as_bool().unwrap_or(false),
-        "improvement_latitude":shared["workspace"]["improvement_latitude"],"execution_posture":shared["execution_posture"],"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
+        "improvement_latitude":shared["workspace"]["improvement_latitude"],"execution_posture":shared["execution_posture"],"execution_posture_sources":posture_sources,"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
             "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
             "decision_record_target":shared["assurance"]["decision_record_target"],
@@ -273,8 +286,15 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "safety":{"safe_to_auto_run_commands":safe,"requires_human_verification_on_pr":human_review,
             "automatic_execution_permitted":false},
         "contribution":{"owner":"workspace","revision":revision,"blockers":blockers,
-            "restriction_basis":crate::restriction_basis("task-requirement",&json!(revision),SHARED,&json!({"sources":sources,"payload":payload["policy"],"safety":local["safety"],"assignment_policy":assignment_policy}))}}),
-    )
+            "restriction_basis":crate::restriction_basis("task-requirement",&json!(revision),SHARED,&json!({"sources":sources,"payload":payload["policy"],"safety":local["safety"],"assignment_policy":assignment_policy}))}});
+    // Keep absent provenance out of ordinary state; the comparison projection
+    // supplies its explicit empty list when no posture is declared.
+    if posture_sources.is_empty() {
+        view.as_object_mut()
+            .unwrap()
+            .remove("execution_posture_sources");
+    }
+    Ok(view)
 }
 
 #[cfg(test)]

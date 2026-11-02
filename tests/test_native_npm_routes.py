@@ -152,7 +152,8 @@ def test_real_packed_npm_discovers_without_python_or_source_checkout(packed: Pat
     assert not (tmp_path / ".agentic-workspace").exists()
     package = json.loads((packed / "package.json").read_text())
     manifest = json.loads((packed / "src/native/bin/artifact.json").read_text())
-    assert manifest["package_version"] == package["version"]
+    # Artifact identity uses the source/Python version; npm has its own spelling.
+    assert manifest["package_version"] == tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
     assert package["os"] == [manifest["platform"]]
     assert package["cpu"] == [manifest["arch"]]
     assert not list(packed.rglob("*.py"))

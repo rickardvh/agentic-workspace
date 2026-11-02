@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:849d6ef6dfb2bdfa8f48d3f8a9e2cda7c89562b5a88e880c2e62bea8484be784`
+- Contract digest: `sha256:1bd7c1e6e36f9a697b02c45aed87b53f94fbccd92e69f1023f829654011f761f`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -52,6 +52,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-resources/references/hygiene.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-resources/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/select.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/design.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | On-demand testing design examples and research for the canonical selection method |
 | `.agentic-workspace/skills/workspace-proof-selection/references/execute.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/references/claim.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -150,6 +151,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
 - `.agentic-workspace/skills/workspace-resources/procedure.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/design.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
 - `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`

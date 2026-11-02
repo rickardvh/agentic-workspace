@@ -252,6 +252,22 @@ def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core
     offered = answer(initial, {"required_result_classes": ["read-only"]})
     comparison = offered["assignment_context"]
     assert {a["id"] for a in comparison["alternatives"]} == {"local:internal", "worker:cli"}
+    basis = comparison["comparison_basis"]
+    assert basis["role"] == "executor"
+    assert basis["posture_status"] == "not-declared"
+    assert basis["available_posture_routes"] == []
+    assert basis["posture_sources"] == []
+    assert basis["execution_posture"] is None
+    assert set(basis["initiator_responsibilities"]) == {"result_admission", "integration", "proof_and_review"}
+    assert {c["id"] for c in basis["candidate_capabilities"]} == {"local:internal", "worker:cli"}
+    assert all(c["current"] and c["eligible"] and c["constructible"] for c in basis["candidate_capabilities"])
+    worker = next(c for c in basis["candidate_capabilities"] if c["id"] == "worker:cli")
+    assert worker["transport"] == "cli" and worker["result_classes"] == ["read-only", "unapplied-patch"]
+    assert worker["proof_classes"] == [] and worker["capability_revision"]
+    assert comparison["handoff_preparation"]["planning_definition"] == "not-declared"
+    assert comparison["handoff_preparation"]["status"] != "ready"
+    assert comparison["handoff_preparation"]["input_judgment_complete"] is False
+    assert basis["planning_selection"]["reference"]
     current = answer(
         offered,
         {
@@ -305,6 +321,7 @@ def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core
     assert settled["assignment_context"]["determination"] == "sole-eligible-configuration"
     assert settled["assignment_context"]["local_continuation_allowed"] is True
     assert "next_step" not in settled["assignment_context"]
+    assert "comparison_basis" not in settled["assignment_context"]
     # Source prohibitions are visible in the first question, without transport
     # discovery; unknown applicability cannot silently admit the local target.
     source.write_text(BASE + 'forbidden_task_classes=["boundary-shaping"]\n')
