@@ -995,10 +995,16 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
             } else { Value::Null },
             "planning_definition":if source_work.is_object(){"source-shaped"}else{"not-declared"},
             "sealed_handoff_status":requirements["handoff"]["status"],
+            "input_judgment_complete":inputs["status"] == "ready",
             "prompt_owner":"sealed-packet-and-worker-entry",
             "prompt_authoring_required":false,
             "authority":"Preparation facts only. A saved plan is not a prepared worker packet. Compare the bounded child's marginal preparation and verification/integration work; these facts grant no dispatch or return admission."
         });
+        if inputs["status"] == "ready" {
+            result["handoff_preparation"]["remaining_work"] = json!(
+                "Inputs are observed and judged complete. After a nonlocal choice, follow the exact export continuation; the owner constructs and seals the packet. No input recapture or replacement prompt is requested."
+            );
+        }
         let requests = request_entries(full, context)?;
         // Prerequisite bundles also retain the earlier submitted input answer.
         // Select the owner's current continuation, not the first same-kind
@@ -1099,7 +1105,12 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
         result["comparison_basis"] = json!({
             "role":requirements["result"]["role"],
             "execution_posture":requirements["result"]["execution_posture"],
-            "posture_status":if requirements["result"]["execution_posture"].is_object(){"active"}else{"not-selected-or-not-declared"},
+            "posture_status":if requirements["result"]["execution_posture"].is_object(){"active"}
+                else if full["configuration"]["execution_posture"].as_object().is_some_and(|p| !p.is_empty()){"unselected"}
+                else{"not-declared"},
+            "available_posture_routes":full["configuration"]["execution_posture"].as_object()
+                .into_iter().flat_map(|p| p.keys()).collect::<Vec<_>>(),
+            "posture_sources":full["configuration"]["sources"],
             "candidate_capabilities":requirements["execution_configurations"]["configurations"]["candidates"]
                 .as_array().into_iter().flatten()
                 .filter(|row| assessment["alternatives"].as_array().into_iter().flatten()

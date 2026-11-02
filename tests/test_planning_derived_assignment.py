@@ -166,6 +166,8 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
             assert unselected["assignment_context"]["handoff_preparation"]["planning_definition"] == "not-declared"
             assert unselected["assignment_context"]["handoff_preparation"]["observed_inputs"] == []
             assert unselected["assignment_context"]["comparison_basis"]["planning_selection"]["reference"]
+            assert unselected["assignment_context"]["comparison_basis"]["posture_status"] == "unselected"
+            assert unselected["assignment_context"]["comparison_basis"]["available_posture_routes"] == ["repo/child-analysis"]
         selection = call(task)["planning"]["selection_requests"][0]
         selection["arguments"]["owner_ref"] = reference
         ready = call(task, selection)
@@ -215,6 +217,7 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
         assert preparation["input_refs"] == ["accepted.txt"]
         assert preparation["observed_inputs"] == [{"reference": "accepted.txt", "revision": revision}]
         assert preparation["status"] == "ready" and preparation["prompt_authoring_required"] is False
+        assert preparation["input_judgment_complete"] is True
         assert not (tmp_path / "worker-ran.txt").exists()
         comparison = offered["task_requirements"]["assignment"]["requests"][0]
         comparison[-1]["arguments"].update(

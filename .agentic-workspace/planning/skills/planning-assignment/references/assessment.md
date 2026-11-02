@@ -30,10 +30,11 @@ or competence from packet bytes.
 Read `policy_mode`, `binding` and `affects` with local continuation. Nonbinding
 advice does not require a comparison answer before local implementation, even
 when advice remains unresolved. Keep independent restrictions visible.
-If `posture_status` is `not-selected-or-not-declared`, check for an applicable
-source-owned task activity before a consequential comparison. Select it through
-the current semantic-route request and preserve reentry; reading a skill alone
-does not activate its posture. An absent selected posture establishes no preference.
+If `posture_status` is `unselected`, use `available_posture_routes` to check for
+an applicable task activity. Select it through the current semantic-route request
+and preserve reentry; reading a skill alone does not activate its posture.
+`not-declared` reports no posture in the owner's current configuration sources;
+it needs no speculative activity search. Neither absence establishes a preference.
 If relying on saved Planning work, use the offered `planning_selection` reference
 and confirm `planning_definition: source-shaped` after reobservation. Related but
 unselected plans remain inert. A missing or incomplete definition needs its current
@@ -42,6 +43,9 @@ Judge the observed instructions for the worker's role and access. Capturing name
 alone cannot establish complete context. The initiating host admits the return,
 integrates an admitted patch, performs repository proof and obtains required review;
 a snapshot worker cannot run the parent's repository commands.
+When `input_judgment_complete` is true, `remaining_work` distinguishes mechanical
+export after a nonlocal choice from missing preparation. An unsealed packet before
+selection asks for no recapture or replacement prompt.
 When binding admission permits local continuation, continue direct work. A mechanically
 settled choice needs no comparison answer, self-assignment record or handoff.
 Non-local or unresolved admission still follows its current recovery.

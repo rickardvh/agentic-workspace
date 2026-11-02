@@ -254,7 +254,9 @@ def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core
     assert {a["id"] for a in comparison["alternatives"]} == {"local:internal", "worker:cli"}
     basis = comparison["comparison_basis"]
     assert basis["role"] == "executor"
-    assert basis["posture_status"] == "not-selected-or-not-declared"
+    assert basis["posture_status"] == "not-declared"
+    assert basis["available_posture_routes"] == []
+    assert basis["posture_sources"]
     assert basis["execution_posture"] is None
     assert set(basis["initiator_responsibilities"]) == {"result_admission", "integration", "proof_and_review"}
     assert {c["id"] for c in basis["candidate_capabilities"]} == {"local:internal", "worker:cli"}
@@ -264,6 +266,7 @@ def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core
     assert worker["proof_classes"] == [] and worker["capability_revision"]
     assert comparison["handoff_preparation"]["planning_definition"] == "not-declared"
     assert comparison["handoff_preparation"]["status"] != "ready"
+    assert comparison["handoff_preparation"]["input_judgment_complete"] is False
     assert basis["planning_selection"]["reference"]
     current = answer(
         offered,
