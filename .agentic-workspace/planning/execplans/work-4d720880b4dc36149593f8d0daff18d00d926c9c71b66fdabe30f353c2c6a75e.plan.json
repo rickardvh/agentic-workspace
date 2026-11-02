@@ -1,0 +1,108 @@
+{
+  "blockers": [],
+  "canonical_core": {
+    "entry": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    "intent": "SYSTEM_INTENT.md"
+  },
+  "continuation": {
+    "accepted": "The #3933 startup candidate reduces mandatory source bytes from 10909 to 5099 while retaining policy and owner triggers. Native proof.report generation parity and startup/context suites passed. BW candidate diagnosis inquiry_a93e9ac9b47aabf6919d5589281387098edffadd87f95370aa591acc197452e3 records author judgment and tradeoffs; fresh reader behavior remains unobserved. Local config repair and Configuration payload refresh are verified; user correction was nominated through current material ingress.",
+    "bw": "project_1c50b8b280e0367717bd4be18ee85b40bc71386a795b0f60b1a55a9f38341831",
+    "decisions": "Use AW native owners for repair, planning and proof. Preserve independent review for an externally initiated reviewer. Reuse accepted #3810 lifecycle coverage. No new permanent prose-word tests; generation and public owner contracts cover structure, finite fresh-consumer exercise will cover changed path selection.",
+    "scratch": ".agentic-workspace/local/scratch/cb5aa0aa641577c8dde9f4288cb9ba120b9056cf39b24a8a274ba6f3f8133f20"
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/81218555cf0cd1997bc831a5d6ff1778b475c03c7d6c0a73e328d7c9f32292de.attempt.json",
+        "revision": "sha256:0ad3d41c03d840b8513068504780e26bb76e91f8bb9bd884b814003273ac9298",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/81218555cf0cd1997bc831a5d6ff1778b475c03c7d6c0a73e328d7c9f32292de.result.json",
+        "revision": "sha256:6fe8f196c95c4b129678220bc5895880b4aa3327e5ec2241e6326cbff35ecd16",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:211afcdeb52ad85883063ec36229da64f1124084629eaf40d36325745280b33a",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:9abde497df8f8521073c17ca1fdc22b461a558509f3da4debb263a5cd8202ae9"
+  },
+  "id": "work-4d720880b4dc36149593f8d0daff18d00d926c9c71b66fdabe30f353c2c6a75e",
+  "intent": {
+    "constraints": "Preserve current-checkout required-best-fit admission, exact custody, no-signal quietness, source protection, generated parity and independent review.",
+    "outcome": "Implement #3933 startup entry, #3934 single-material ingress and #3935 prepared Assignment comparison in sequential stacked PRs, using the existing BW audit and bounded consumer evidence."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Commit #3933 subject after fixing the plan scratch reference through Planning; freeze a paired Linux artifact and run three bounded fresh-consumer cases. Then finish #3933 PR and continue #3934 and #3935 in stacked branches.",
+  "owner_level": "lane",
+  "parent": {
+    "source": "User request 2026-11-02"
+  },
+  "phase": "shaping",
+  "proof": {
+    "remaining": [
+      "Per-issue acceptance and bounded consumer journey",
+      "Selected public contract checks",
+      "Source and generated parity",
+      "Externally initiated independent review"
+    ]
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3933",
+    "https://github.com/rickardvh/agentic-workspace/issues/3934",
+    "https://github.com/rickardvh/agentic-workspace/issues/3935"
+  ],
+  "relationships": {},
+  "revision": 2,
+  "scope": {
+    "excluded": [
+      "Changed executor policy",
+      "New stores or rankings",
+      "Review by implementer",
+      "Unrelated existing checkout files"
+    ],
+    "included": [
+      "Canonical startup and selected references",
+      "Existing start transport and guidance",
+      "Current Assignment choice projection and assessment guidance"
+    ]
+  },
+  "title": "Agent-facing comprehension: stacked issues 3933-3935",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/58aa5da722951cc26c15d9d3fcc76392699f1b05aeecbfab59f5db0ca4b69fac.attempt.json",
+        "revision": "sha256:db19052c11e2a0d79f1d258461802b8b615cf5222533db22d8f5feb865674124",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/58aa5da722951cc26c15d9d3fcc76392699f1b05aeecbfab59f5db0ca4b69fac.result.json",
+        "revision": "sha256:d57edbcdf23c0333653d3533ebfbce74adc7b973ce5f2738f78cdc7890d7f6a7",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:e9424b0c179f7ac486995a608c0126acfd1ef079cf57c76f81fc8b56c7ec8e45",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:afe7177e17a35258c5fad587c380c26ca95068c6f3d8672284a888f6ffb95a77",
+        "owner_id": "work-4d720880b4dc36149593f8d0daff18d00d926c9c71b66fdabe30f353c2c6a75e",
+        "owner_path": ".agentic-workspace/planning/execplans/work-4d720880b4dc36149593f8d0daff18d00d926c9c71b66fdabe30f353c2c6a75e.plan.json"
+      }
+    }
+  }
+}

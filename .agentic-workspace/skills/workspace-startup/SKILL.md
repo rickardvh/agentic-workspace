@@ -5,164 +5,73 @@ description: Start or resume repository work; decide whether current AW facts or
 
 # Start ordinary work
 
-Read the task and applicable repository instructions whenever work starts or
-resumes. Establish any executor requirement before choosing AW-admitted implementation.
+Read the task and applicable repository instructions. If supplied text and current
+sources suffice, work directly. A new session or context loss alone requires no
+AW call, specialist read or duplicate plan. Reuse observations while their relevant
+sources and scope remain current and their content is still available.
 
-Finish when the requested outcome, relevant evidence and applicable user,
-repository and host requirements are satisfied. AW's unfinished bookkeeping or
-missing attestation adds no acceptance criterion. Ordinary authorised tools and
-readable sources remain usable when an AW operation is unavailable; no final AW
-acknowledgement, exception form or optional-state update is required. State a
-material evidence limitation once in the existing task/PR evidence. Preserve
-explicit native-producer, protection, reviewer and custody requirements at their
-actual scope. For an unavailable runtime, use [current readable sources](references/unavailable.md).
+**Before implementation, establish the target checkout's executor policy.** Read
+its `.agentic-workspace/config.local.toml` and any selected
+`workspace.shared_config_path`; local values take precedence. No declaration
+means `local-preferred`. An earlier report, parent checkout or available editor
+cannot establish this checkout's policy. For an invalid or unavailable configured
+source, use native `start` to obtain the restriction and recovery; do not assume
+the default. Under `required-best-fit`, obtain or reuse current executor admission
+before affected implementation, including host edits. Follow
+`assignment_context.next_step` and [Assignment](../../planning/skills/planning-assignment/SKILL.md).
+`local-preferred` needs no routine comparison; `best-fit-advisory` advice does not
+prohibit local work. Independent executor requirements still bind.
 
-Before implementation, establish the executor policy in the **target checkout**.
-Read its `.agentic-workspace/config.local.toml`; if it selects
-`workspace.shared_config_path`, read that source too, with local values taking
-precedence. With no declaration, the policy defaults to `local-preferred`.
-Reuse these facts while their sources remain current. An earlier setup report,
-parent checkout or available editor cannot establish this checkout's policy.
-If a configured source is unavailable or invalid, use native `start` when usable
-to obtain its current restriction and recovery instead of assuming the default.
-An unusable runtime does not prevent independently authorised non-AW work.
+**Obtain current AW facts when the next action depends on them.** Missing or changed
+permission, setup, state, evidence or recovery needed for an edit, test or claim
+requires native `start`. Use [ordinary use](references/ordinary.md) for the
+configured invocation: local `workspace.cli_invoke`, then repository config,
+otherwise `agentic-workspace`. A missing PATH command does not make that invocation
+unavailable. When AW cannot run, preserve managed state and use
+[the unavailable-runtime procedure](references/unavailable.md); do not infer
+missing permission or custody from readable sources.
 
-- `local-preferred`: ordinary local work may continue directly. Consider
-  Assignment only for a concrete bounded delegation opportunity or another
-  current source requirement; no routine comparison or native call is needed.
-- `best-fit-advisory`: use current Assignment advice when an executor comparison
-  can help. Advice supplies no implementation prohibition; independent
-  restrictions still apply.
-- `required-best-fit`: before the affected implementation, use native `start`
-  to obtain or reuse a current admitted executor decision. Follow
-  `assignment_context.next_step` and the
-  [Assignment procedure](../../planning/skills/planning-assignment/SKILL.md).
-  `admitted-local` permits direct work through AW; a selected worker follows its
-  exact dispatch and return. Unresolved admission keeps AW-admitted implementation
-  blocked, including any claim that host editor/shell edits had that admission.
-  For an independently permitted alternative, use non-AW continuation above.
-  A separate user, repository or host executor requirement still binds.
-  Admission does not attest earlier external edits.
+Load another procedure only for a concern this task needs:
 
-Use the configured invocation in [ordinary use](references/ordinary.md): local
-`workspace.cli_invoke`, then the repository's `.agentic-workspace/config.toml`
-value, otherwise `agentic-workspace`. A missing PATH command does not make that
-configured invocation unavailable.
+- At entry, judge whether decomposition or durable continuity would materially
+  improve execution. Reuse an adequate issue, repository record or explicitly
+  related owner. Otherwise use [Planning work](../../planning/skills/planning-work/SKILL.md)
+  before important meaning is lost; do not postpone the first judgment to handoff.
+  Unrelated remembered plans remain inert.
+- Before choosing validation or designing, adding, changing, retaining or removing
+  tests, use [proof selection](../workspace-proof-selection/references/select.md).
+  Reuse guidance already read; this needs no Verification module or runtime call.
+- For setup/refresh or a useful missing setup connection exposed by task sources,
+  use [consumer setup](../workspace-setup-jumpstart/references/consumers.md) before
+  the dependent action, even after `already-current` or `owner-managed`. Missing
+  files alone imply no setup work; reuse settled choices.
+- For a finding, correction, unmet prerequisite or useful improvement that could
+  change what happens next, supply `material` through
+  [ordinary ingress](references/ordinary.md#current-material-and-needs) before
+  losing it or taking the dependent action. Applicable repository observation
+  rules also cover friction despite eventual success. Nomination needs no proven
+  defect or predicted recurrence; no signal needs no scan or call.
+- When already-selected retained facts could change an imminent decision, or their
+  controlling source changed, use [related findings](../workspace-instruction-correction/references/related.md).
+  A requested review of retained repository knowledge uses
+  [the selected improvement review](../workspace-instruction-correction/references/review.md).
+- Before handoff, pause or context loss, use
+  [Planning continuity](../../planning/skills/planning-work/references/continuity.md)
+  if existing records omit meaning a later actor needs. Verify the saved result;
+  unchanged progress and simple completed work need no new artifact.
 
-On entry to new work, judge whether decomposition or durable continuity would
-materially improve execution: preserving the intended outcome, constraints,
-dependencies or unfinished follow-through before that meaning is lost. Reuse an
-adequate issue, repository record or explicitly related owner when it already
-carries that meaning. When it does not, follow
-[Planning work](../../planning/skills/planning-work/SKILL.md) now and use its
-existing native create/select path. Do not wait for handoff to make the first
-Planning judgment. Task shape is agent judgment; no keyword, size or duration
-threshold determines it. Unrelated remembered plans remain inert.
+Read a returned restriction's `basis`, exact `affects` and recovery before the
+dependent action or claim. Use [restriction handling](references/constraints.md)
+for an unresolved requirement, owner route, unavailable recovery or human decision.
+A restriction alone is no request for human approval. For managed changes, follow
+the responsible component's exact request/action through
+[owner interaction](references/owners.md); a route or skill grants no authority.
+If `start` returns `inactive` with `configuration.enabled: false`, end ordinary AW
+startup without retrying or asking to enable it; independent repository rules remain.
 
-Then decide what other information the next action needs:
-
-- Before choosing validation or adding, changing, retaining or removing tests, use
-  [proof selection](../workspace-proof-selection/references/select.md). Apply its
-  lifetime-cost judgment at test-design time, including when considering a
-  regression before any proof command. Reuse guidance already read; this needs
-  no configured Verification module or host strategy and adds no runtime call.
-  Unrelated work needs no testing procedure.
-- If the repository sources needed for this task expose a useful missing setup
-  connection, complete it through [consumer setup](../workspace-setup-jumpstart/references/consumers.md)
-  before the dependent action. For example, documented checking rules may have
-  no usable selected proof route, or a source-backed lesson may need selective
-  future recall. This applies after basic configuration and relevant updates,
-  even when package setup says `already-current` or modules are `owner-managed`.
-  Infer authorised choices from those sources; do not wait for a setup request.
-  Missing files alone imply no work. Reuse current consumers and settled
-  deferrals; unrelated small work needs no setup pass or extra command.
-- When the user asks to review what is known about the repository and find useful
-  improvements, use the existing correction method's [selected improvement
-  review](../workspace-instruction-correction/references/review.md). It discovers
-  retained evidence before choosing a finding; ordinary work does not run a review.
-- If the supplied text and current sources suffice, do the work directly. A new
-  session or context loss alone does not require a command or duplicate plan.
-- If an edit, test, completion claim or recovery depends on missing or changed
-  permission, setup, state or evidence, use native `start` to obtain those facts.
-  [Ordinary use](references/ordinary.md) explains the configured command.
-
-Reuse an observation while its relevant sources and scope remain unchanged and
-its content is still available. A saved response does not grant current permission.
-After context loss, recover only missing or invalidated facts needed by this task.
-
-## Follow the result for the affected action
-
-If `start` returns `status: inactive` with `configuration.enabled: false`, end AW
-startup and continue repository work under the existing repository, user and host
-rules. Do not retry unchanged startup or ask the user to enable AW. This opt-out
-supplies no repository permissions and waives no repository requirements. Explicit
-AW setup, diagnostics and recovery remain available through their existing paths.
-
-If `start` reports a restriction, read its `basis`, `affects` and supplied recovery.
-A `task-requirement` identifies an actual remaining requirement. An
-`operation-guard` refuses the exact native effect; an `attestation-limit` says
-what AW has not established. `optional-work` supplies no task veto. Legacy or
-unknown governing policy stays conservative for its dependent action. Neither
-AW's missing acknowledgement nor an empty blocker list decides task success.
-Use [restriction detail](references/constraints.md) only when needed.
-
-A restriction is not a request for human approval. Relay the owner's complete
-human decision context only when its returned resolution requires a bounded
-human answer and its `human_eligibility` names a current Verification requirement
-for human judgment or an explicitly configured human task owner. Routine domain
-decisions belong to the acting agent under the current task authority.
-An independently required user, repository or host approval follows its own
-authority; it does not need an AW request to exist.
-For `owner-recovery-required`, follow the supplied recovery. For
-`current-owner-route`, follow the matching consequence route and complete any
-bounded owner selection; a route does not resolve the restriction. For
-`owner-resolution-unavailable`, explain the missing fact or capability and that
-no supported AW recovery is currently supplied. Preserve that AW block; choose a
-separately authorised non-AW continuation when useful. Do not invent a recovery or
-ask the user to waive a missing capability.
-
-AW calls the component responsible for a rule, record or operation its **owner**.
-For changes to managed state, use that component's exact returned request/action
-through [the owner interaction procedure](references/owners.md).
-If setup or package refresh needs attention, follow the
-[setup procedure](../workspace-setup-jumpstart/SKILL.md), then return to the task.
-If AW cannot run, [read the relevant sources](references/unavailable.md), preserve
-managed state and report which current facts remain unknown.
-
-## Handle findings and unfinished work
-
-When already-selected retained facts could change an imminent design, edit, proof
-or claim, use the correction method's [related findings](../workspace-instruction-correction/references/related.md)
-to assess their combined consequence and reconcile the affected advice after a
-verified source change. Reuse sufficient current evidence; this does not require
-a separate review, an extra `start` call or discovery of unrelated findings.
-
-When a source/test finding, correction, unmet prerequisite or useful improvement
-could change what happens next, include it in the `material` input to `start`
-before losing it or taking the dependent action. See
-[how to supply a finding](references/ordinary.md#current-material-and-needs).
-An applicable repository observation procedure may also ask for material friction
-or waste even when the original task can continue; eventual success does not erase
-that finding. Nominate observed facts before their context disappears, without
-requiring a proven defect or predicted recurrence. Do not scan or call merely to
-establish that no signal exists.
-Follow the returned restrictions and relevant procedure choices. Current policy
-determines whether to repair, report or take no action; a finding grants no write.
-
-Before a handoff, pause or context loss, check whether existing records explain
-the remaining objective, accepted decisions and next step. A diff may omit that
-meaning. If losing it would cause rediscovery or unsafe continuation, use
-[Planning continuity](../../planning/skills/planning-work/references/continuity.md)
-and verify the saved result. Reuse an adequate record; simple completed work and
-unchanged progress need no new artifact. On resume, establish whether the selected
-plan actually belongs to this task.
-
-Finish when the requested outcome and its required evidence are established.
-Historical status alone does not reopen completed work. Reobserve a captured
-fact when the current action depends on it; update retained meaning only when
-its loss or a wrong currently relied-upon instruction would change safe continuation.
-A completed slice with a pending prerequisite leaves the objective unfinished;
-report the remaining work. Keep lessons only when they have
-[future value](references/reconcile.md). Load another [procedure](procedure.md)
-only for a concern the current task needs. Reading a skill grants no permission,
-proof success or completion authority.
+Finish when the requested outcome and applicable evidence, protection, producer,
+reviewer and custody requirements are satisfied. A completed slice with a pending
+prerequisite leaves that objective unfinished. AW bookkeeping or missing optional
+attestation adds no acceptance criterion or final-call requirement. Preserve a
+material evidence limit once in existing task/PR evidence. Keep lessons only when
+they have [future value](references/reconcile.md).
