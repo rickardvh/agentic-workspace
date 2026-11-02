@@ -5,7 +5,7 @@
     "intent": "SYSTEM_INTENT.md"
   },
   "continuation": {
-    "accepted": "Implementation stack: #3936 closes #3933, #3937 closes #3934, #3938 closes #3935 on merge. #3936 and #3937 are ready for independent review; #3938 behavior and evidence are complete, final metadata publication remains. No independent review, merge or release approval is supplied by this actor.",
+    "accepted": "External review accepts #3936 without changes. #3937 requested a bounded current-head crash classification; #3938 requested relevant posture provenance and a neutral reader. No implementation self-review or merge authority is supplied here.",
     "bayesian_writing": "Existing project retains startup/ingress diagnoses, #3935 design inquiry_ed95dd78d641cafc0c05629e84c9d1699d775d8db480c0457470dfcc4eca7741, first-reader feedback inquiry_34428a9527bc65a0e46ed208fefa7766a21452d65d6619d74afd92000420f943 and final evaluation inquiry_be114b9110073977d2fc6a2faa701a13a7430d91a769f36f51c8ec558536129f. These are attributed author assessments; fresh readers ran in the external fixed-subject consumer harness.",
     "bw": "project_1c50b8b280e0367717bd4be18ee85b40bc71386a795b0f60b1a55a9f38341831",
     "comparison": "Existing Assignment projects prepared current context, capability revisions, declared/active posture, exact selection/capture/export and initiating-host responsibilities. Current host and isolated native Assignment/Planning families passed all 26. The first broader policy run passed 64 and failed one missing method-source fixture; the snapshot now includes its full source directory. No authority, rank or dispatch policy changed.",
@@ -14,6 +14,15 @@
     "limitations": "Broader #3934 native runs twice saw unexplained JSON-process SIGSEGV. The final selected 12-case ingress proof and 26-case comparison proof passed. A 1000-call frozen #3933 quiet probe did not reproduce a crash and supplies no causal explanation. Failed runs remain in PR #3937 and scratch; no unqualified broad-suite pass. Native source reconciliation rejected a two-document judgment because its issued group is broader; writer review of the two generated references is recorded without a whole-repository attestation.",
     "proof_repair": "Offline Hatchling, omitted snapshot sources and separate absolute container temporary scratch are repaired. Final selected native ingress and comparison families passed 12 and 26 cases. No packaging rerun or interpretation remains in progress; the distinct broader JSON-process SIGSEGV limitation remains explicit in #3937. Original failed runs are preserved.",
     "readers": "Two finite fresh Sol/medium choice sessions are preserved. First exposed posture/sealing ambiguity. Refined reader identified complete captured inputs and parent proof/review/integration before the actual answer; native observer admitted worker:cli. Neither dispatched a worker or changed files; sandboxes removed. Pre-answer read bundles fell 8 to 6, but total commands/output increased and the prompt changed: no causal or overall economic advantage.",
+    "review_bayesian_writing": "Review evaluation inquiry_83dc1630e9a4ad81c9b82d020acb1bde8ea5cbf0fd52d255b7e0fca4f240001a in the existing project is pinned to the actual 8008-byte Assignment view, SHA-256 8c2d16124bd177e052f1228dc076cf6a844f80642b28f044943a7f711c5b5dc9. BW records author assessment, while the external fixed-subject harness supplies fresh-reader and protected product observations.",
+    "review_classification": "Matched #3937 head 8eececbdc158d9ecb6d1396a80c7b98690340729 and parent 2a2dd8bfc6e74525f4628cfb027847bded766802 each passed the two original JSON cases, 500 original-environment quiet calls and 500 fault-handler calls. Driver, image, limits, temp paths, environment and manifest match; core binaries differ and are pinned in review-3937-classification-summary.json. Native receipts 75ca02eb2c6df26519d179d02bcecf30e79fffb061e49d8ffc39e81b7c511142 and ddfc272c14624481e9f73c7918ed7b792a4b6047e6faa31abe4e1b34d0c3e6d2. Classification is bounded non-reproduction, not proof of a separate host cause; original SIGSEGVs remain unexplained. The first diagnostic had two fixture setup errors and is retained.",
+    "review_current_proof": "The new owner-derived declaration provenance, absent/unselected/active counterexamples and ordinary product question passed host and native 26-case Assignment/Planning families. Native receipt native-sha256-9f279521410d5c1380172e41972af85d01958c356418b2be230318471a8bc089. Generation parity and commit hooks passed. No permanent incident test or provider matrix was added.",
+    "review_neutral": "Final frozen paired subject 5b88f528b0b505b4947521c358f02219a0a11272 used the first neutral prompt byte-for-byte (SHA-256 84c0e777e7f5448618fee7a8bd52256b9467613c9535d978fbd1337f5429cf07), same Sol/medium and fixture. Pre-submission progress recognized complete inputs/no recapture; the assessment retained host proof/review and recognized no patch integration for read-only output. Native observer admitted local; no worker launch or file change; sandbox removed. Six pre-submission read bundles versus eight first; eight total commands versus nine. A named standard-input device attempt returned EACCES, then file carriage succeeded; both attempts retained. Do not overstate this as hidden-cognition, general performance or monetary evidence.",
+    "review_proof_economy": "Removed the standalone single_finding_ingress protocol; its durable transport/freshness family is now a short command under native_public_owners. The temporary diagnostic driver and selection were removed from repository source. Raw scripts, first results and matched classification remain in owned scratch. Refreshed native ingress proof passed 12 cases, native-sha256-94bd32bc0e9547b8c2b599e61da01a0fd8f75f574711c73f7704dcc87c3d7d03.",
+    "review_provenance": "Configuration now contributes execution_posture_sources only from an admitted current repository configuration that actually declares posture, with minimal reference/revision pairs; no declaration yields an empty list. Assignment projects that owner fact. Existing public tests cover absent, unselected and active attribution. The actual comparison question now points to captured inputs/export and retained host responsibilities; the external reader prompt is byte-identical to the first neutral trial.",
+    "review_reader_limit": "The earlier explicitly cued second reader demonstrates availability only and is not used as neutral recognition evidence. The final neutral trial is separately preserved; no monetary or overall workflow cost advantage is claimed.",
+    "review_round": "Review fixes, host/native 26-case proof and neutral first-prompt evaluation are complete. #3937 response is posted; final #3938 metadata commit, guarded push and prepared response publication remain. The implementation is ready for external re-review after publication, not approved or merged.",
+    "review_stack": "#3937 new head 75a7854ea7238b2e5d9ac2d129270b7ad67fdcef. Single-checkout restack of #3938 was checked against old remote 8f4a89ba28d82dc19e371cfa2d3b506edf543a00 and preserved aggregate patch identity cdf978348e6ad8f55e63abea71a38a077adbea572731167e60b49f8e41b45c31. User policy forbids unnecessary worktrees. Guard the final push with the exact old-remote lease.",
     "scratch": ".agentic-workspace/local/scratch/cb5aa0aa641577c8dde9f4288cb9ba120b9056cf39b24a8a274ba6f3f8133f20",
     "startup": "Startup shrank 10909 to 5099 bytes. Preserved frozen reader trials cover local admission, true prohibition and supplied-guide direct work; the first unsupplied direct reader did not fetch startup and remains a disclosed limitation."
   },
@@ -48,7 +57,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish the final metadata/proof-input commit on #3938, verify the three stacked bases/heads and mark #3938 ready for independent review. An externally initiated eligible reviewer then owns review; no merge or release is authorized here. Preserve the broader JSON-process limitation before any unqualified full-suite or parent-lane completion claim.",
+  "next_action": "Commit this native continuity update, publish #3938 with the exact 8f4a89ba28d82dc19e371cfa2d3b506edf543a00 remote lease, then publish its prepared body/comment and mark ready for external independent re-review. Observe current GitHub CI and review verdicts before merge. Preserve original unexplained SIGSEGVs and scoped non-reproduction; no global crash-fix claim.",
   "owner_level": "lane",
   "parent": {
     "source": "User request 2026-11-02"
@@ -68,7 +77,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3935"
   ],
   "relationships": {},
-  "revision": 5,
+  "revision": 8,
   "scope": {
     "excluded": [
       "Changed executor policy",
@@ -87,18 +96,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/477e076081a7598a0640092226f28a078d4e9c74193615c7d0e169aa3342ff27.attempt.json",
-        "revision": "sha256:27d74f0bf2159b2334b83249db2067fe3c5f7ca8d3887554fad7173c210d80cb",
+        "path": ".agentic-workspace/local/effects/58b490f8e32f6ea9bafa9d6bdbefe2c84e9d31c709171437d5fa57646b7bc421.attempt.json",
+        "revision": "sha256:df91781210c66a33e0bd4afd2a73f462382c86b3f9abde6d1267347ffb09198b",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/477e076081a7598a0640092226f28a078d4e9c74193615c7d0e169aa3342ff27.result.json",
-        "revision": "sha256:c9e74c2affd409cf72bd9e4fcc0de277bb1b15ddd30a1a79a9621d84dc705787",
+        "path": ".agentic-workspace/local/effects/58b490f8e32f6ea9bafa9d6bdbefe2c84e9d31c709171437d5fa57646b7bc421.result.json",
+        "revision": "sha256:ff5aaea8decf9483a6f04cb8db407cae51720a8fba65b8e12f284ce385b7285a",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:f6ca98248fc5b99ded270cccda58ae80c95e91b203d6efbe693e6c35af2456c3",
+    "invocation_revision": "sha256:d01172ec35dc74102d92979a2ca27cf0d1260042c54cce05ad7a2edd45669e94",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -106,7 +115,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:30cd8d90728f03e03eb777ed8368be4c78358fc65f5763159278725ff7d9bc4d",
+        "document_revision": "sha256:bcd22f9667e05b9268293aec90365811b5129298c46dd497cf7be9b2167be0d6",
         "owner_id": "work-4d720880b4dc36149593f8d0daff18d00d926c9c71b66fdabe30f353c2c6a75e",
         "owner_path": ".agentic-workspace/planning/execplans/work-4d720880b4dc36149593f8d0daff18d00d926c9c71b66fdabe30f353c2c6a75e.plan.json"
       }
