@@ -271,8 +271,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     } else {
         Vec::new()
     };
-    Ok(
-        json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
+    let mut view = json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
         "sources":sources,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "clarification":local["clarification"],"agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
@@ -287,8 +286,15 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "safety":{"safe_to_auto_run_commands":safe,"requires_human_verification_on_pr":human_review,
             "automatic_execution_permitted":false},
         "contribution":{"owner":"workspace","revision":revision,"blockers":blockers,
-            "restriction_basis":crate::restriction_basis("task-requirement",&json!(revision),SHARED,&json!({"sources":sources,"payload":payload["policy"],"safety":local["safety"],"assignment_policy":assignment_policy}))}}),
-    )
+            "restriction_basis":crate::restriction_basis("task-requirement",&json!(revision),SHARED,&json!({"sources":sources,"payload":payload["policy"],"safety":local["safety"],"assignment_policy":assignment_policy}))}});
+    // Keep absent provenance out of ordinary state; the comparison projection
+    // supplies its explicit empty list when no posture is declared.
+    if posture_sources.is_empty() {
+        view.as_object_mut()
+            .unwrap()
+            .remove("execution_posture_sources");
+    }
+    Ok(view)
 }
 
 #[cfg(test)]

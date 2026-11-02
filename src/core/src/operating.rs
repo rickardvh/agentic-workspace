@@ -1110,7 +1110,8 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
                 else{"not-declared"},
             "available_posture_routes":full["configuration"]["execution_posture"].as_object()
                 .into_iter().flat_map(|p| p.keys()).collect::<Vec<_>>(),
-            "posture_sources":full["configuration"]["execution_posture_sources"],
+            "posture_sources":full["configuration"]["execution_posture_sources"]
+                .as_array().cloned().unwrap_or_default(),
             "candidate_capabilities":requirements["execution_configurations"]["configurations"]["candidates"]
                 .as_array().into_iter().flatten()
                 .filter(|row| assessment["alternatives"].as_array().into_iter().flatten()
