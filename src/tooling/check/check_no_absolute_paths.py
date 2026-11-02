@@ -13,6 +13,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 # rather than weakening the detector globally.
 ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
 ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
+    # Declared container-only temporary scratch; independent of host paths.
+    Path(".agentic-workspace/verification/manifest.toml"): frozenset({"/" + "workspace/proof-tmp"}),
     # Fixed isolated executor paths; no maintainer filesystem is mounted.
     Path("src/core/src/modules/verification/proof_executor.rs"): frozenset(
         "/" + path

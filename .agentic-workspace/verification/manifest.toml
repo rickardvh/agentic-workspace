@@ -150,7 +150,7 @@ scratch_paths = ["target", "proof-tmp"]
 [execution.environment]
 RUSTUP_TOOLCHAIN = "1.98.1"
 # Packaging consumers need their own temporary space alongside Cargo output.
-TMPDIR = "proof-tmp"
+TMPDIR = "/workspace/proof-tmp"
 
 [scenarios]
 
