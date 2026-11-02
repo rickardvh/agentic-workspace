@@ -49,6 +49,7 @@ struct Parsed {
     input_path: Option<String>,
     explicit: BTreeSet<String>,
     format: String,
+    material: Option<Value>,
 }
 
 fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
@@ -164,12 +165,42 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
         *answer = serde_json::from_str(answer.as_str().unwrap())
             .map_err(|_| "--answer must be JSON".to_owned())?;
     }
+    let observation = values.remove("observation");
+    let need = values.remove("need");
+    let source = values.remove("source");
+    let revision = values.remove("source_revision");
+    let coverage = values.remove("coverage");
+    let material = if observation.is_some() || need.is_some() {
+        if args[0] != "start" || (observation.is_some() && need.is_some()) {
+            return Err("start accepts one of --observation or --need".into());
+        }
+        let (kind, summary) = if let Some(summary) = observation {
+            ("observation", summary)
+        } else {
+            ("need", need.unwrap())
+        };
+        let mut origin = json!({"producer":"cli-caller",
+            "reference":source.unwrap_or_else(|| json!("unknown")),
+            "coverage":coverage.unwrap_or_else(|| json!("unknown"))});
+        if let Some(revision) = revision {
+            origin["revision"] = revision;
+        }
+        Some(json!({"id":"cli-material","kind":kind,"summary":summary,"source":origin}))
+    } else {
+        if source.is_some() || revision.is_some() || coverage.is_some() {
+            return Err(
+                "--source, --source-revision and --coverage require --observation or --need".into(),
+            );
+        }
+        None
+    };
     Ok(Some(Parsed {
         command: args[0].clone(),
         values: Value::Object(values),
         input_path,
         explicit: seen,
         format,
+        material,
     }))
 }
 
@@ -231,6 +262,33 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, mut input: Value) -> Resul
             require_invoke_context(|field| parsed.explicit.contains(field))?;
         }
         parsed.values[field] = input;
+    }
+    if let Some(mut material) = parsed.material.take() {
+        if parsed.values["task"]
+            .as_str()
+            .is_none_or(|s| s.trim().is_empty())
+        {
+            return Err(
+                "material needs the current task through --task or returned reentry in --input"
+                    .into(),
+            );
+        }
+        let items = parsed
+            .values
+            .as_object_mut()
+            .unwrap()
+            .entry("material")
+            .or_insert_with(|| json!([]))
+            .as_array_mut()
+            .ok_or("material in the input envelope must be an array")?;
+        // Identity is disposable transport, never a semantic or authority claim.
+        // Preserve all previously carried material, including dependency bindings.
+        let mut suffix = 1;
+        while items.iter().any(|item| item["id"] == material["id"]) {
+            suffix += 1;
+            material["id"] = json!(format!("cli-material-{suffix}"));
+        }
+        items.push(material);
     }
     Ok(())
 }
@@ -503,6 +561,10 @@ mod tests {
             args(&["start", "--target", ".", "--target", "other"]),
             args(&["start", "--format", "yaml"]),
             args(&["start", "--changed"]),
+            args(&["start", "--observation", "fact", "--need", "prerequisite"]),
+            args(&["start", "--source", "a.txt"]),
+            args(&["start", "--need", "prerequisite", "--coverage", "complete"]),
+            args(&["invoke", "--input", "-", "--observation", "fact"]),
             args(&["planning_view"]),
         ] {
             assert!(parse(&declaration(), &arguments).is_err(), "{arguments:?}");

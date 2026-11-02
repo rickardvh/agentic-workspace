@@ -27,7 +27,8 @@ def wheel(tmp_path_factory):
         Path(os.environ["AW_NATIVE_ARTIFACT_DIR"]) if os.environ.get("AW_NATIVE_ARTIFACT_DIR") else tmp_path_factory.mktemp("native-wheel")
     )
     if not os.environ.get("AW_NATIVE_ARTIFACT_DIR"):
-        subprocess.run(["uv", "build", "--wheel", "--out-dir", str(output)], cwd=ROOT, check=True, capture_output=True)
+        built = subprocess.run(["uv", "build", "--wheel", "--out-dir", str(output)], cwd=ROOT, capture_output=True)
+        assert built.returncode == 0, built.stdout + built.stderr
     wheels = list(output.glob("agentic_workspace-*.whl"))
     if len(wheels) > 1:
         import importlib.util
@@ -174,12 +175,12 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     consumer = tmp_path / "consumer"
     consumer.mkdir()
     (consumer / "package.json").write_text('{"private":true}')
-    subprocess.run(
+    local_install = subprocess.run(
         [npm, "install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", str(archive)],
         cwd=consumer,
-        check=True,
         capture_output=True,
     )
+    assert local_install.returncode == 0, local_install.stdout + local_install.stderr
     package = consumer / "node_modules/@agentic-workspace/workspace-cli"
     metadata = json.loads((package / "package.json").read_text())
     assert set(metadata["exports"]) == {".", "./operating"}
@@ -245,11 +246,11 @@ console.log(JSON.stringify(result.effect_outcome));
     with pytest.raises(ValueError, match="^Installed startup skill missing$"):
         validate_pointer(consumer)
     prefix = tmp_path / "global-install"
-    subprocess.run(
+    global_install = subprocess.run(
         [npm, "install", "--global", "--prefix", str(prefix), "--offline", "--no-audit", "--no-fund", "--ignore-scripts", str(archive)],
-        check=True,
         capture_output=True,
     )
+    assert global_install.returncode == 0, global_install.stdout + global_install.stderr
     global_env = dict(environment)
     global_env["PATH"] = str(prefix if os.name == "nt" else prefix / "bin") + os.pathsep + environment["PATH"]
     executable = shutil.which("agentic-workspace", path=global_env["PATH"])

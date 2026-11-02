@@ -347,7 +347,7 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
         assert not selection.parent.exists(), "constructing intention must not mutate state"
     if selection_source == "local":
         decision = continued["decision_packet"]
-        assert decision["decision_request"]["id"] == "planning-selector-transfer"
+        assert any(item["id"] == "planning-selector-transfer" for item in decision["pending_consequences"]["decisions"])
         assert decision["primary_action"] is None
         assert not any(item["code"] == "planning-selection-custody-required" for item in decision["blockers"])
         assert not (tmp_path / ".agentic-workspace/local/effects").exists()
@@ -790,7 +790,8 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
         assert other["verification"]["judgment_request"]["work_ref"] == subject["work_ref"]
         assert other["verification"]["judgment_request"]["work_revision"] == subject["work_revision"]
         assert other["verification"]["evidence"][0]["task_judgment"]["matched_judgment_count"] == 0
-        assert "exact-task-request-identity-mismatch" in other["verification"]["evidence"][0]["gaps"]
+        classifications = other["verification"]["evidence"][0]["task_judgment"]["classifications"]
+        assert any("exact-task-request-identity-mismatch" in item["reasons"] for item in classifications)
     index_path = tmp_path / ".agentic-workspace/proof/receipts/index.json"
     index = json.loads(index_path.read_text())
     index["receipts"][publication_id]["status"] = "superseded"
@@ -1224,6 +1225,88 @@ def test_native_bare_action_requires_issuing_work_context(tmp_path, shared_core_
     )
     assert json.loads(accepted.stdout)["effect_outcome"]["status"] == "committed"
     assert 'cli_invoke = "aw-local"' in (tmp_path / ".agentic-workspace/config.toml").read_text()
+
+
+@pytest.mark.parametrize("kind", ["observation", "need"])
+@pytest.mark.parametrize("known_source", [False, True])
+def test_single_finding_matches_structured_current_owner(tmp_path, shared_core_binary, native_cli, kind, known_source):
+    folder = tmp_path / ".agentic-workspace"
+    folder.mkdir()
+    (folder / "config.local.toml").write_text(
+        '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\n'
+        '[delegation_targets.local]\ntransports=[{kind="internal"}]\n',
+        encoding="utf-8",
+    )
+    context = {"target": str(tmp_path), "task": "Validate the service", "projection": "full"}
+    summary = "Current service prerequisite — observed, not yet established."
+    source = {"producer": "cli-caller", "reference": "unknown", "coverage": "unknown"}
+    options = ["--observation" if kind == "observation" else "--need", summary]
+    if known_source:
+        source.update(reference="service check:17", revision="observed-revision", coverage="partial")
+        options += ["--source", source["reference"], "--source-revision", source["revision"], "--coverage", source["coverage"]]
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    quiet = consume("json", shared_core_binary, native_cli, context)
+    cli = subprocess.run(
+        [str(native_cli), "start", "--target", str(tmp_path), "--task", context["task"], "--projection", "full", *options],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    current = json.loads(cli.stdout)
+    material = {"id": "cli-material", "kind": kind, "summary": summary, "source": source}
+    structured = consume("json", shared_core_binary, native_cli, {**context, "material": [material]})
+    # Fresh Memory consideration samples its own observation clock on each call.
+    # Compare the material, current decision and owner activation, not that age.
+    for key in ("current_work", "material", "activation", "decision_packet", "task_requirements"):
+        assert current.get(key) == structured.get(key), key
+    assert current["current_work"] == quiet["current_work"]
+    assert any(b["owner"] == "assignment" and "effect:implementation" in b["affects"] for b in current["decision_packet"]["blockers"])
+    assert current["material"]["items"][0]["trust"] == "caller-asserted"
+    assert current["material"]["items"][0]["currentness"] == "unverified"
+    assert "material" not in quiet
+
+    # Appending current context preserves its earlier source binding. A stale
+    # dependency cannot be bypassed by selecting the cheaper CLI transport.
+    dependency = tmp_path / "service.txt"
+    dependency.write_bytes(b"observed")
+    prior = {**material, "dependencies": [{"reference": "service.txt", "revision": "sha256:" + hashlib.sha256(b"observed").hexdigest()}]}
+    reentry = {**context, "material": [prior]}
+    appended = subprocess.run(
+        [str(native_cli), "start", "--input", "-", *options],
+        input=json.dumps(reentry),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    items = json.loads(appended.stdout)["material"]["items"]
+    assert items[0]["currentness"] == "dependencies-current"
+    assert items[0]["material"]["dependencies"] == prior["dependencies"]
+    assert items[1]["material"] == {**material, "id": "cli-material-2", "work": current["current_work"]}
+    dependency.write_bytes(b"changed")
+    rejected = subprocess.run(
+        [str(native_cli), "start", "--input", "-", *options],
+        input=json.dumps(reentry),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert rejected.returncode == 2 and "dependency changed" in rejected.stderr
+    dependency.unlink()
+    assert before == {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
+def test_single_finding_requires_task_without_creating_state(tmp_path, native_cli):
+    result = subprocess.run(
+        [str(native_cli), "start", "--target", str(tmp_path), "--need", "Observe readiness"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 2 and "current task" in result.stderr
+    assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

@@ -97,10 +97,13 @@ inputs = [
   "Cargo.lock",
   "rust-toolchain.toml",
   "pyproject.toml",
+  "hatch_build.py",
+  "deny.toml",
   "uv.lock",
   "README.md",
   "LICENSE",
   ".github/release-ownership.json",
+  ".github/release-platforms.json",
   "docs/reference/cli-catalogue.md",
   "docs/reference/installed-surface-catalogue.md",
   "docs/decisions/shared-semantic-authority.md",
@@ -137,13 +140,17 @@ inputs = [
   ".gitattributes",
   "AGENTS.md",
   "tools/skills/REGISTRY.json",
+  "tools/skills/github-issue-shaping/SKILL.md",
+  "tools/skills/github-issue-creation/SKILL.md",
   "tools/skills/pr-review-recheck/procedure.md",
   "tools/skills/self-improvement-dogfooding/procedure.md",
   "tools/skills/self-improvement-dogfooding/SKILL.md",
 ]
-scratch_paths = ["target"]
+scratch_paths = ["target", "proof-tmp"]
 [execution.environment]
 RUSTUP_TOOLCHAIN = "1.98.1"
+# Packaging consumers need their own temporary space alongside Cargo output.
+TMPDIR = "proof-tmp"
 
 [scenarios]
 

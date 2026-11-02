@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:c4aab9f89ff48984ca3c4815590b6f2ebd6e5ea79a060c50916dd2827a2e2463`
+- Contract digest: `sha256:925b2686eeeabfa0d55534e81452a8edac71caafd40a477aaf7e9baeffcadb41`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -31,6 +31,11 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--reference` | — | — | Exact immutable reference from carried output; --input supplies the machine-carried object. |
 | `--answer` | — | — | JSON answer for an exact decision reference, or an arguments object for an exact owner request reference. Preserves owner identity and prior carried answers; normal owner validation applies. |
 | `--delivered` | — | — | Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations. |
+| `--observation` | — | — | Nominate one current finding through start, without a JSON file; use --source for its actual provenance. Mutually exclusive with --need. |
+| `--need` | — | — | Nominate one unmet prerequisite through start, without a JSON file; keep the current task. Mutually exclusive with --observation. |
+| `--source` | — | — | Actual source reference for --observation or --need; omitted provenance remains unknown. |
+| `--source-revision` | — | — | Known source revision for the single finding; an asserted revision is not a checked dependency or authority. |
+| `--coverage` | — | bounded, partial, unknown | Actual source coverage for the single finding (default: unknown). |
 | `--input` | — | — | JSON input file, or - for stdin; start accepts current owner requests or work context; invoke accepts a complete invocation/work envelope, carriage plus --reference, or a bare exact action with explicit original work context. |
 | `--yes` | — | — | Authorise the exact setup proposal (setup only). |
 | `--dry-run` | — | — | Show the setup proposal without changes (setup only). |

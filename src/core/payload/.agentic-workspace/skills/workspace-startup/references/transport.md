@@ -51,3 +51,29 @@ text is lost, even if the carrier file survives. Reacquire required text and
 preserve useful meaning with Planning, not a transport file. A host rejection
 before execution establishes only the observed rejection; once execution may
 have started, preserve effect uncertainty and follow recovery.
+
+## Structured current material
+
+Use `start --input <UTF-8 JSON file>` (or `--input -` for stdin) when material
+needs multiple items, explicit producer labels or checked repository dependencies.
+Keep current reentry and add only the observed material; do not reconstruct its
+owner identities. The ordinary single-finding CLI flags need no transport file.
+
+```json
+{
+  "target": ".",
+  "task": "The unchanged current task",
+  "material": [{
+    "id": "test-prerequisite",
+    "kind": "need",
+    "summary": "The upcoming test requires current service readiness.",
+    "source": {"producer": "acting-agent", "reference": "current test requirement", "coverage": "bounded"}
+  }]
+}
+```
+
+An item may include `dependencies` with exact repository `reference`/`revision`
+pairs. Native ingress rejects changed dependencies or a mismatched work binding.
+Source labels and revisions remain assertions; nomination grants no write,
+retention, permission or proof. Preserve earlier material and current owner answers
+on reentry; rich carriage and single-finding flags use the same native owners.

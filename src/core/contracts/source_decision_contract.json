@@ -308,6 +308,32 @@
         "description": "Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations."
       },
       {
+        "flag": "--observation",
+        "field": "observation",
+        "description": "Nominate one current finding through start, without a JSON file; use --source for its actual provenance. Mutually exclusive with --need."
+      },
+      {
+        "flag": "--need",
+        "field": "need",
+        "description": "Nominate one unmet prerequisite through start, without a JSON file; keep the current task. Mutually exclusive with --observation."
+      },
+      {
+        "flag": "--source",
+        "field": "source",
+        "description": "Actual source reference for --observation or --need; omitted provenance remains unknown."
+      },
+      {
+        "flag": "--source-revision",
+        "field": "source_revision",
+        "description": "Known source revision for the single finding; an asserted revision is not a checked dependency or authority."
+      },
+      {
+        "flag": "--coverage",
+        "field": "coverage",
+        "choices": ["bounded", "partial", "unknown"],
+        "description": "Actual source coverage for the single finding (default: unknown)."
+      },
+      {
         "flag": "--input",
         "field": "input",
         "description": "JSON input file, or - for stdin; start accepts current owner requests or work context; invoke accepts a complete invocation/work envelope, carriage plus --reference, or a bare exact action with explicit original work context."

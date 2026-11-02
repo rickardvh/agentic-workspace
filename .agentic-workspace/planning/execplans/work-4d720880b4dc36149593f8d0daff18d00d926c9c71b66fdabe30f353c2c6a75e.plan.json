@@ -5,9 +5,10 @@
     "intent": "SYSTEM_INTENT.md"
   },
   "continuation": {
-    "accepted": "The #3933 startup candidate reduces mandatory source bytes from 10909 to 5099 while retaining policy and owner triggers. Native proof.report generation parity and startup/context suites passed. BW candidate diagnosis inquiry_a93e9ac9b47aabf6919d5589281387098edffadd87f95370aa591acc197452e3 records author judgment and tradeoffs; fresh reader behavior remains unobserved. Local config repair and Configuration payload refresh are verified; user correction was nominated through current material ingress.",
+    "accepted": "PR #3936 implements #3933 and is ready for independent review. Frozen paired Linux subject and four preserved fresh reader sessions show required local admission, real prohibition and supplied-guide direct work; the first unsupplied direct reader did not fetch startup and is a disclosed limitation. Startup shrank 10909 to 5099 bytes. BW records distinguish author diagnosis from reader observation. #3934 new CLI observation/need flags preserve current work and owner restrictions; 11 focused cases passed. Actual host finding used the new route, was considered by Memory and judged no-retention (existing #3854 owns the clock semantics).",
     "bw": "project_1c50b8b280e0367717bd4be18ee85b40bc71386a795b0f60b1a55a9f38341831",
-    "decisions": "Use AW native owners for repair, planning and proof. Preserve independent review for an externally initiated reviewer. Reuse accepted #3810 lifecycle coverage. No new permanent prose-word tests; generation and public owner contracts cover structure, finite fresh-consumer exercise will cover changed path selection.",
+    "decisions": "Continue native AW dogfooding and repair config at its owner. Stack #3934 on #3933 and #3935 on #3934; external independent review remains pending. No matched provider economics or supplied fresh-reader service claimed.",
+    "proof_repair": "The first native broad check failed: 19 failures, 147 passes, 2 skips, 3 setup errors. Bounded repairs correct old question/diagnostic assertions, add missing immutable snapshot inputs, and pin a prepared offline Hatchling image through Configuration. The original failed receipt and subsequent runs remain in scratch. Broad rerun is in progress; packaging global-install failure still requires interpretation.",
     "scratch": ".agentic-workspace/local/scratch/cb5aa0aa641577c8dde9f4288cb9ba120b9056cf39b24a8a274ba6f3f8133f20"
   },
   "creation_provenance": {
@@ -41,7 +42,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Commit #3933 subject after fixing the plan scratch reference through Planning; freeze a paired Linux artifact and run three bounded fresh-consumer cases. Then finish #3933 PR and continue #3934 and #3935 in stacked branches.",
+  "next_action": "Finish #3934 native proof/setup repairs, documentation reconciliation and ready PR. Then #3935 combine current handoff preparation, execution posture and initiating-host obligations at the existing consequential comparison, extend selected/unselected/quiet contract journeys, and run a bounded fresh choice exercise.",
   "owner_level": "lane",
   "parent": {
     "source": "User request 2026-11-02"
@@ -61,7 +62,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3935"
   ],
   "relationships": {},
-  "revision": 2,
+  "revision": 3,
   "scope": {
     "excluded": [
       "Changed executor policy",
@@ -80,18 +81,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/58aa5da722951cc26c15d9d3fcc76392699f1b05aeecbfab59f5db0ca4b69fac.attempt.json",
-        "revision": "sha256:db19052c11e2a0d79f1d258461802b8b615cf5222533db22d8f5feb865674124",
+        "path": ".agentic-workspace/local/effects/8d83168a33fb2a2ac1127cc48675bcd042d9d1c9385bcf3a7928acfadc325ef7.attempt.json",
+        "revision": "sha256:1e9af0f15217ef655377c2029f4eb4e89e79c61e75d7e0a17d925998630e2d83",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/58aa5da722951cc26c15d9d3fcc76392699f1b05aeecbfab59f5db0ca4b69fac.result.json",
-        "revision": "sha256:d57edbcdf23c0333653d3533ebfbce74adc7b973ce5f2738f78cdc7890d7f6a7",
+        "path": ".agentic-workspace/local/effects/8d83168a33fb2a2ac1127cc48675bcd042d9d1c9385bcf3a7928acfadc325ef7.result.json",
+        "revision": "sha256:e26a2a97ffd1940fb57776b6b97c1c70316f11d6cd1e0ccdebcb0856f952f240",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:e9424b0c179f7ac486995a608c0126acfd1ef079cf57c76f81fc8b56c7ec8e45",
+    "invocation_revision": "sha256:040a3bfb9fc322d702a0a417062a391ec91e8bfa4bc355d2a91d9e882ba012e6",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -99,7 +100,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:afe7177e17a35258c5fad587c380c26ca95068c6f3d8672284a888f6ffb95a77",
+        "document_revision": "sha256:e688e847c4e811b240de4111f377a26c4feb017068a6c00db5bf04d5498faadf",
         "owner_id": "work-4d720880b4dc36149593f8d0daff18d00d926c9c71b66fdabe30f353c2c6a75e",
         "owner_path": ".agentic-workspace/planning/execplans/work-4d720880b4dc36149593f8d0daff18d00d926c9c71b66fdabe30f353c2c6a75e.plan.json"
       }
