@@ -17,37 +17,31 @@ For a patch handoff, establish the intended allowed paths in the existing
 implementation has not begun. Captured `mutation_paths` must fit that scope;
 capturing a file does not expand it. A scope correction needs fresh resolution
 with the actual task and paths, then current activity and owner answers.
-`handoff_preparation` shows current input observation/completeness, source-shaped
-defaults and its exact next reference. A shaped child may reuse accepted inputs;
-compare its marginal preparation, verification and integration costs rather than
-assuming the worker needs the full parent conversation. The coupled parent may
-remain local while independent children are assessed under their own current
-work and policy. A plan without typed inputs supplies no prepared handoff but
-does not itself prohibit an otherwise admitted local executor. The existing
-sealed packet and worker entry construct the prompt; manual transport supplies
-`manual_presentation.prompt`. Do not author a replacement prompt or infer token
-cost, price or competence from packet bytes.
+At an unresolved executor choice, `comparison_basis` puts the active posture,
+role, supported result/transport classes and initiating-host responsibilities
+beside the alternatives. `handoff_preparation` identifies the selected Planning
+definition, observed input revisions, completeness gaps and exact next request.
+Reuse sufficient accepted inputs; compare the bounded child's remaining capture,
+repair, proof and integration work. The coupled parent may remain local. These
+are preparation and capability facts, not measured comparative cost or a ranking.
+The sealed packet constructs the prompt; manual transport supplies
+`manual_presentation.prompt`. Do not author a replacement or infer tokens, price
+or competence from packet bytes.
 Read `policy_mode`, `binding` and `affects` with local continuation. Nonbinding
 advice does not require a comparison answer before local implementation, even
 when advice remains unresolved. Keep independent restrictions visible.
-Before a consequential comparison, check any source-owned `execution_posture`
-for the applicable existing task activity. When one fits this work, select that
-activity through the current semantic-route request and preserve its returned
-reentry while browsing this method. Confirm the active posture in the current
-requirements; reading a skill does not select an activity, and an unselected
-posture's preferences do not apply. This check belongs to an actual comparison,
-not passive local work, and does not prohibit an eligible local executor.
-Compare the outcome the receiver can actually execute. A snapshot worker returning
-an unapplied patch cannot also perform the parent's repository commands. Reuse an
-existing bounded Planning definition, or shape the needed child there before
-comparison; keep integration and repository proof with the initiating host.
-When relying on a related Plan's typed definition, select that owner through the
-current Planning selection request and confirm `planning_definition: source-shaped`
-in current `handoff_preparation`. Reading the Plan alone does not bind its child
-scope; `not-declared` still describes direct task context, not that saved definition.
-Judge captured instructions for that role and its access, including any referenced
-material it needs. Do not declare the parent's whole conversation or entry workflow
-complete worker context merely because its file names were captured.
+If `posture_status` is `not-selected-or-not-declared`, check for an applicable
+source-owned task activity before a consequential comparison. Select it through
+the current semantic-route request and preserve reentry; reading a skill alone
+does not activate its posture. An absent selected posture establishes no preference.
+If relying on saved Planning work, use the offered `planning_selection` reference
+and confirm `planning_definition: source-shaped` after reobservation. Related but
+unselected plans remain inert. A missing or incomplete definition needs its current
+shaping/capture route; it does not itself prohibit an eligible local executor.
+Judge the observed instructions for the worker's role and access. Capturing names
+alone cannot establish complete context. The initiating host admits the return,
+integrates an admitted patch, performs repository proof and obtains required review;
+a snapshot worker cannot run the parent's repository commands.
 When binding admission permits local continuation, continue direct work. A mechanically
 settled choice needs no comparison answer, self-assignment record or handoff.
 Non-local or unresolved admission still follows its current recovery.

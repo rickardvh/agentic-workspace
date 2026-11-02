@@ -150,6 +150,22 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
         created = act(task, call(task, creation), "planning.create")
         contexts[task] = created["continuation"]["context"]
         reference = created["value"]["owner_path"]
+        if number == 1:
+            # A related saved child alone supplies no current Assignment inputs.
+            unselected_context = {
+                "target": str(tmp_path),
+                "task": "Consider the child without selecting its saved definition",
+                "changed": [],
+            }
+            unselected = consume("native", shared_core_binary, native_cli, unselected_context)
+            requirement = unselected["task_requirements"]["requests"][0]
+            requirement["arguments"]["required_result_classes"] = ["read-only"]
+            unselected = consume(
+                "native", shared_core_binary, native_cli, {**unselected_context, "request": requirement, "projection": "compact"}
+            )
+            assert unselected["assignment_context"]["handoff_preparation"]["planning_definition"] == "not-declared"
+            assert unselected["assignment_context"]["handoff_preparation"]["observed_inputs"] == []
+            assert unselected["assignment_context"]["comparison_basis"]["planning_selection"]["reference"]
         selection = call(task)["planning"]["selection_requests"][0]
         selection["arguments"]["owner_ref"] = reference
         ready = call(task, selection)
@@ -163,6 +179,11 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
             changed = call(task, selection)["task_requirements"]
             assert changed["source_work"]["status"] == "shaping-required"
             assert changed["result"]["status"] == "unresolved"
+            incomplete = consume(
+                "native", shared_core_binary, native_cli, {**contexts[task], "task": task, "request": selection, "projection": "compact"}
+            )
+            assert incomplete["assignment_context"]["source_work"]["status"] == "shaping-required"
+            assert "comparison_basis" not in incomplete["assignment_context"]
             dependency.unlink()
             assert call(task, selection)["task_requirements"]["source_work"]["status"] == "shaping-required"
             dependency.write_text("Accepted prerequisite.\n")
@@ -183,6 +204,13 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
             },
         )
         preparation = compact["assignment_context"]["handoff_preparation"]
+        basis = compact["assignment_context"]["comparison_basis"]
+        assert basis["role"] == "executor" and basis["posture_status"] == "active"
+        assert basis["execution_posture"] == offered["task_requirements"]["result"]["execution_posture"]
+        assert "planning_selection" not in basis
+        assert {c["id"] for c in basis["candidate_capabilities"]} == {a["id"] for a in compact["assignment_context"]["alternatives"]}
+        assert {"local:internal", "worker:cli"} <= {c["id"] for c in basis["candidate_capabilities"]}
+        assert set(basis["initiator_responsibilities"]) == {"result_admission", "integration", "proof_and_review"}
         assert preparation["source_work"]["producer"] == "planning"
         assert preparation["input_refs"] == ["accepted.txt"]
         assert preparation["observed_inputs"] == [{"reference": "accepted.txt", "revision": revision}]

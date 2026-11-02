@@ -1094,6 +1094,48 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
         result["alternatives"] = assessment["alternatives"].clone();
         result["unresolved_alternatives"] = assessment["unresolved_alternatives"].clone();
         result["execution_gaps"] = requirements["execution_configurations"]["gaps"].clone();
+        // Project the existing owners' current facts at the actual comparison.
+        // This is neither another candidate store nor an estimate of cost.
+        result["comparison_basis"] = json!({
+            "role":requirements["result"]["role"],
+            "execution_posture":requirements["result"]["execution_posture"],
+            "posture_status":if requirements["result"]["execution_posture"].is_object(){"active"}else{"not-selected-or-not-declared"},
+            "candidate_capabilities":requirements["execution_configurations"]["configurations"]["candidates"]
+                .as_array().into_iter().flatten()
+                .filter(|row| assessment["alternatives"].as_array().into_iter().flatten()
+                    .any(|alternative| alternative["id"] == row["configuration"]["id"]))
+                .map(|row| {
+                    let candidate = &row["configuration"];
+                    json!({"id":candidate["id"],"current":candidate["current"],
+                        "eligible":row["eligible"],"constructible":candidate["constructible"],
+                        "transport":candidate["transport"],"result_classes":candidate["result_classes"],
+                        "proof_classes":candidate["proof_classes"],"execution_guarantees":candidate["execution_guarantees"],
+                        "capability_revision":candidate["capability_revision"],
+                        "source_ref":candidate["execution"]["owner_reference"],
+                        "host_capability":candidate["execution"]["host_capability"]})
+                }).collect::<Vec<_>>(),
+            "preparation_basis":"handoff_preparation reports the selected source definition, observed input revisions and remaining capture/export request. Source-shaped defaults alone are not complete worker context.",
+            "initiator_responsibilities":{
+                "result_admission":"Judge and admit the actual returned result through the current owner.",
+                "integration":"Integrate admitted changes through the current integration owner when needed.",
+                "proof_and_review":"Perform initiating-host proof and obtain required independent review; worker success is not parent completion."
+            },
+            "return_contract":"The sealed packet owns prompt construction and binds the required result to current work and return custody. Do not author a replacement prompt.",
+            "cost_evidence":"Preparation and eligible capabilities are current owner facts. Comparative effort, latency, price, repair cost and overall suitability remain unmeasured unless separate evidence is supplied."
+        });
+        if requirements["source_work"].is_null()
+            && let Some(selection) = full["planning"]["selection_requests"]
+                .as_array()
+                .and_then(|r| r.first())
+            && let Some(request) = request_entries(full, context)?
+                .iter()
+                .find(|r| r["envelope"] == *selection)
+        {
+            result["comparison_basis"]["planning_selection"] = json!({
+                "reference":request["reference"],"answer_shape":{"owner_ref":"<the related bounded Planning owner reference>"},
+                "use":"No selected typed Planning definition is available to this comparison. Select one only when relying on that saved work, then reobserve its shaping and capture requirements. A related or remembered plan is not prepared input."
+            });
+        }
         (
             "assignment/assess-best-fit/v1",
             "Which current alternative best fits the required outcome? Compare capability, preparation, coupling and repair cost using the supplied evidence and standing preferences; loaded context alone does not settle the choice. Keep real uncertainty explicit.",
