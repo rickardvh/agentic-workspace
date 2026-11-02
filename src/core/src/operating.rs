@@ -1110,7 +1110,7 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
                 else{"not-declared"},
             "available_posture_routes":full["configuration"]["execution_posture"].as_object()
                 .into_iter().flat_map(|p| p.keys()).collect::<Vec<_>>(),
-            "posture_sources":full["configuration"]["sources"],
+            "posture_sources":full["configuration"]["execution_posture_sources"],
             "candidate_capabilities":requirements["execution_configurations"]["configurations"]["candidates"]
                 .as_array().into_iter().flatten()
                 .filter(|row| assessment["alternatives"].as_array().into_iter().flatten()
@@ -1149,7 +1149,7 @@ fn assignment_question(full: &Value, context: &Value) -> Result<Option<Value>, C
         }
         (
             "assignment/assess-best-fit/v1",
-            "Which current alternative best fits the required outcome? Compare capability, preparation, coupling and repair cost using the supplied evidence and standing preferences; loaded context alone does not settle the choice. Keep real uncertainty explicit.",
+            "Which current alternative best fits this bounded outcome? Use handoff_preparation's captured-input/export facts, current capabilities/posture and the initiating host's remaining admission, proof and integration responsibilities. Compare marginal coordination and repair using evidence and standing preferences; loaded context alone does not settle the choice. Keep unmeasured costs explicit.",
             json!({"alternative":"<returned alternative id>","reason":"<material comparative tradeoff>","uncertainties":[]}),
         )
     } else if matches!(

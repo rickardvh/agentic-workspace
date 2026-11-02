@@ -256,7 +256,7 @@ def test_compact_assignment_answers_preserve_owner_context(tmp_path, shared_core
     assert basis["role"] == "executor"
     assert basis["posture_status"] == "not-declared"
     assert basis["available_posture_routes"] == []
-    assert basis["posture_sources"]
+    assert basis["posture_sources"] == []
     assert basis["execution_posture"] is None
     assert set(basis["initiator_responsibilities"]) == {"result_admission", "integration", "proof_and_review"}
     assert {c["id"] for c in basis["candidate_capabilities"]} == {"local:internal", "worker:cli"}

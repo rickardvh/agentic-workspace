@@ -168,6 +168,12 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
             assert unselected["assignment_context"]["comparison_basis"]["planning_selection"]["reference"]
             assert unselected["assignment_context"]["comparison_basis"]["posture_status"] == "unselected"
             assert unselected["assignment_context"]["comparison_basis"]["available_posture_routes"] == ["repo/child-analysis"]
+            assert unselected["assignment_context"]["comparison_basis"]["posture_sources"] == [
+                {
+                    "reference": ".agentic-workspace/config.toml",
+                    "revision": "sha256:" + hashlib.sha256((tmp_path / ".agentic-workspace/config.toml").read_bytes()).hexdigest(),
+                }
+            ]
         selection = call(task)["planning"]["selection_requests"][0]
         selection["arguments"]["owner_ref"] = reference
         ready = call(task, selection)
@@ -209,6 +215,12 @@ def test_two_children_keep_source_context_and_returns(tmp_path, shared_core_bina
         basis = compact["assignment_context"]["comparison_basis"]
         assert basis["role"] == "executor" and basis["posture_status"] == "active"
         assert basis["execution_posture"] == offered["task_requirements"]["result"]["execution_posture"]
+        assert basis["posture_sources"] == [
+            {
+                "reference": ".agentic-workspace/config.toml",
+                "revision": "sha256:" + hashlib.sha256((tmp_path / ".agentic-workspace/config.toml").read_bytes()).hexdigest(),
+            }
+        ]
         assert "planning_selection" not in basis
         assert {c["id"] for c in basis["candidate_capabilities"]} == {a["id"] for a in compact["assignment_context"]["alternatives"]}
         assert {"local:internal", "worker:cli"} <= {c["id"] for c in basis["candidate_capabilities"]}
