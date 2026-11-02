@@ -1,5 +1,14 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[protocols.single_finding_ingress]
+applies_to_paths = ["src/cli/rust/src/main.rs", "src/core/contracts/source_decision_contract.json", "tests/test_native_public_cli.py"]
+steps = ["Compare cheap single-finding entry with structured current material, preserving identity, dependency freshness, restrictions, quiet entry and installed authoring."]
+authority_refs = ["tests/test_native_public_cli.py", "docs/maintainer/testing-strategy.md"]
+
+[proof_routes.single_finding_ingress]
+protocol_refs = ["single_finding_ingress"]
+commands = ["uv run pytest tests/test_native_public_cli.py -q -k 'single_finding or current_material_is_disposable or material_activates_repository or internal_finding or installed_native_activation_index'"]
+
 [protocols.non_aw_continuation]
 applies_to_paths = ["SYSTEM_INTENT.md", ".agentic-workspace/skills/workspace-startup/SKILL.md", ".agentic-workspace/skills/workspace-startup/references/constraints.md", ".agentic-workspace/skills/workspace-startup/references/unavailable.md", "src/core/src/operating.rs", "tests/test_native_workspace_disabled.py"]
 steps = ["Keep independently authorized direct work available while preserving native restrictions, effect custody, malformed-runtime boundaries and unrelated facilities."]
