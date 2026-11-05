@@ -4,7 +4,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:31832d98dc6386e921c1896c46ba04dafc257e02c620df6caa2bb6a50525ad8e`
+- Contract digest: `sha256:f9e7d493879dedd778f6c7f332725aba26c670fe64a6c696c91b96e970bc5bcb`
 
 | Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -16,6 +16,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/REGISTRY.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Passive route and executable procedure declarations |
 | `.agentic-workspace/skills/workspace-startup/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-change-design/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Portable change-design guidance selected from ordinary startup |
+| `.agentic-workspace/skills/workspace-change-design/references/dependencies.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Selected guidance for material dependency decisions within change design |
 | `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
@@ -116,6 +117,7 @@ Portable source promotions:
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-change-design/SKILL.md`
+- `.agentic-workspace/skills/workspace-change-design/references/dependencies.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`

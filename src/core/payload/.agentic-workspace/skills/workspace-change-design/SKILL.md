@@ -17,6 +17,10 @@ constraints. Apply a different local method when its authority and scope cover
 the choice. This guidance is readable directly and grants no permission, proof
 or exception to workspace restrictions, including explicit disablement.
 
+When adding, replacing, removing or materially updating a package or toolchain,
+consult [dependency choices](references/dependencies.md) before committing.
+Routine use of an established dependency can proceed with the current setup.
+
 - **Find the existing responsibility.** Read the implementation, governing
   source and nearby callers relevant to the choice. Prefer changing the
   component that owns the behaviour over teaching each caller another version
