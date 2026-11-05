@@ -36,9 +36,11 @@ source, trust or support assumptions change during work.
   Preserve a bridge only for an actual transition. Vendored code still needs
   maintenance, provenance and licence handling.
 
-Prepare the environment using the repository's established method. If a known
-prerequisite does not reach its consumer, use the [working-rule procedure](../../workspace-setup-jumpstart/references/working-rules.md)
+Successful resolution shows that the manager found a dependency graph that
+satisfies the requested constraints. Use the repository's preparation method
+and check the actual environment to establish installation and readiness.
+If a known prerequisite does not reach its consumer, use the
+[working-rule procedure](../../workspace-setup-jumpstart/references/working-rules.md)
 to connect it. Use [proof selection](../../workspace-proof-selection/references/select.md)
-to verify the changed capability and material installation, packaging or runtime
-effects. Successful resolution establishes that the manager found an environment.
-Exercise the feature separately when its behaviour is the claim.
+for material installation, packaging or runtime effects. Exercise the feature
+separately when its behaviour is the claim.
