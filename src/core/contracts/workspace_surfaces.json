@@ -9,6 +9,7 @@
     ".agentic-workspace/OWNERSHIP.toml",
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    ".agentic-workspace/skills/workspace-change-design/SKILL.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
@@ -190,6 +191,19 @@
       "materialization": {
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-startup/SKILL.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-change-design/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Portable change-design guidance selected from ordinary startup",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-change-design/SKILL.md"
       }
     },
     {
@@ -1448,6 +1462,7 @@
       "src/core/contracts/portable_ownership.toml",
       ".agentic-workspace/skills/REGISTRY.json",
       ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      ".agentic-workspace/skills/workspace-change-design/SKILL.md",
       ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
       ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
