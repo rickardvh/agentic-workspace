@@ -33,6 +33,11 @@ missing permission or custody from readable sources.
 
 Load another procedure only for a concern this task needs:
 
+- Before committing to a choice that materially changes code responsibility or
+  coupling, dependency commitments, or behaviour that callers or stored data rely
+  on, use [change design](../workspace-change-design/SKILL.md). Apply it when the
+  choice arises, including during clear tasks and design-only work. Reuse relevant
+  guidance already read. Settled mechanical work can proceed directly.
 - At entry, judge whether decomposition or durable continuity would materially
   improve execution. Reuse an adequate issue, repository record or explicitly
   related owner. Otherwise use [Planning work](../../planning/skills/planning-work/SKILL.md)

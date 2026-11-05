@@ -81,6 +81,20 @@ is running. See the installed
 [working-rule procedure](../.agentic-workspace/skills/workspace-setup-jumpstart/references/working-rules.md)
 for that use case.
 
+## Specialise the default change-design method
+
+AW offers a [change-design method](../.agentic-workspace/skills/workspace-change-design/SKILL.md)
+when a task can change which component owns a behaviour, what the project
+depends on or what callers and stored data can rely on. The agent can consult
+it from startup or when the choice comes up later in the task.
+
+Use your existing scoped instructions or contracts for project-specific
+decisions, such as which component owns a public interface. A requirement in
+scope can strengthen the default or specify a different method, subject to
+applicable user, shared and host restrictions. Keep those rules in your own
+sources so package updates and removal can manage the installed guidance
+separately.
+
 ## Use the default testing judgment
 
 AW supplies [testing judgment](../.agentic-workspace/skills/workspace-proof-selection/references/select.md)

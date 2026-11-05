@@ -181,6 +181,14 @@
       "visibility": "ordinary-default"
     },
     {
+      "id": "workspace-change-design",
+      "path": "workspace-change-design/SKILL.md",
+      "scope": "specialized-subskill",
+      "stability": "package-managed",
+      "summary": "Choose a maintainable change when responsibility, dependencies, consumed behaviour or stored data are at stake.",
+      "visibility": "routed-on-demand"
+    },
+    {
       "id": "workspace-intent-discovery",
       "path": "workspace-intent-discovery/SKILL.md",
       "procedure_resource": "procedure.md",
