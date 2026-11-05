@@ -11,6 +11,7 @@
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-change-design/SKILL.md",
     ".agentic-workspace/skills/workspace-change-design/references/dependencies.md",
+    ".agentic-workspace/skills/workspace-change-design/references/contract-evolution.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
@@ -218,6 +219,19 @@
       "materialization": {
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-change-design/references/dependencies.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-change-design/references/contract-evolution.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Selected guidance for consumed behaviour and retained data within change design",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-change-design/references/contract-evolution.md"
       }
     },
     {
@@ -1478,6 +1492,7 @@
       ".agentic-workspace/skills/workspace-startup/SKILL.md",
       ".agentic-workspace/skills/workspace-change-design/SKILL.md",
       ".agentic-workspace/skills/workspace-change-design/references/dependencies.md",
+      ".agentic-workspace/skills/workspace-change-design/references/contract-evolution.md",
       ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
       ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",

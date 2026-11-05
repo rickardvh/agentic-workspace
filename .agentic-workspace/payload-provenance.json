@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/payload-provenance/v1",
-  "managed_revision": "sha256:f299f069aff4f068f483e29b41811ac79241487a888576f9823c648faf9435cb",
+  "managed_revision": "sha256:f5ebdc694643ce7d51e4bb3cc359335d41018b0140034ed2c4b92ea1621d347a",
   "payload_capabilities": [
     "installed-state-sync-v2"
   ],
@@ -14,6 +14,7 @@
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-change-design/SKILL.md",
     ".agentic-workspace/skills/workspace-change-design/references/dependencies.md",
+    ".agentic-workspace/skills/workspace-change-design/references/contract-evolution.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",

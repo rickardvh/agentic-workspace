@@ -21,6 +21,10 @@ When adding, replacing, removing or materially updating a package or toolchain,
 consult [dependency choices](references/dependencies.md) before committing.
 Routine use of an established dependency can proceed with the current setup.
 
+Before changing behaviour that callers or stored data may rely on, consult
+[contract evolution](references/contract-evolution.md) where consumers, support
+or a transition could affect the choice. Apply this to behaviour-only edits too.
+
 - **Find the existing responsibility.** Read the implementation, governing
   source and nearby callers relevant to the choice. Prefer changing the
   component that owns the behaviour over teaching each caller another version
