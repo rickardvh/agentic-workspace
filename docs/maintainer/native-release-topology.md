@@ -95,7 +95,7 @@ promotion still requires the separate exact-subject server, runtime, install,
 redistribution and security receipts. Implementation completion does not grant
 independent review acceptance, merge readiness or parent-issue closure.
 
-The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on Apple Silicon ARM64**, as declared in `.github/release-platforms.json`. Both Rust executables are built with that explicit `MACOSX_DEPLOYMENT_TARGET`; Python wheel tags and the platform inventory bound by installation receipts carry the same minimum. Compiler-free macOS coverage is limited to these versions and newer. Older macOS versions are not covered by release installation proof.
+The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on Apple Silicon ARM64**, as declared in `.github/release-platforms.json`. Both Rust executables use the declared `MACOSX_DEPLOYMENT_TARGET`. Python wheel tags and the platform inventory carry the same minimum. The hosted compiler-free consumer checks run on macOS 15 on both architectures.
 
 ## Exact installed owner conformance
 
