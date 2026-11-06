@@ -8,10 +8,11 @@ Use the exact current resource proposal request:
 
 Supply fresh intent in its `arguments.request`, such as
 `{"operation":"scratch-create"}`, through the shared startup request carriage.
-This observes and proposes only. Resolve the resulting exact action identity,
-for example `workspace.resources.scratch-create`, then invoke only its current
-returned reference/envelope. Selection never executes; proposals reject an
-`expected_revision` supplied as an attempt to execute during start.
+This observes and proposes only. Submit the proposal on its own. Inspect the
+returned action, for example `workspace.resources.scratch-create`, then invoke
+its current reference or envelope in a separate tool submission. Keep the
+proposal output for inspection instead of piping it into an invocation. Selection
+never executes. A proposal rejects an `expected_revision` supplied in its request.
 
 The configured `resources --target <repo> --task <task> --input <request.json>`
 primitive and Python/TypeScript/JSON resources entrypoints remain directly useful

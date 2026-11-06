@@ -12,8 +12,9 @@ job in `setup_context` and answer its bounded question. Native owners preserve
 the rest and revalidate current sources. If a dependency changes, use the returned
 current question or recovery; discarded answers do not regain authority by replay.
 
-For substantial structured input, use a file-writing tool to save UTF-8 JSON in
-one bounded task scratch file. Submit it separately with `start --input <path>`.
+For substantial structured input, use an editor or file-writing tool directly
+when available to save UTF-8 JSON in a bounded task scratch file. Keep the file
+write separate from any AW call. Submit it with a short `start --input <path>`.
 Put the complete reentry, reference and answer in that file. Keep its task, target,
 changed paths and projection together; do not also pass conflicting context flags
 or construct nested semantic JSON in a shell command. Simple answers need no
@@ -27,10 +28,11 @@ context. Use the repository's configured invocation through native `invoke`.
 Do not copy `reentry.request` into that invocation input: the unchanged action
 already carries its owner dependencies. Reentry plus `invocation` is not this
 input shape; select only the work context and the action.
-Inspect each result before preparing a dependent owner request or action. Use a
-separate submission for the next transition even when both commands would be
-short. Parallel submissions require independent operations that can each satisfy
-their own action and currentness checks.
+Inspect each result before preparing a dependent owner request or action. Submit
+the next transition separately even when both commands would be short. For
+example, save a proposal result and inspect its action before invoking it in a
+later tool call. Parallel submissions require independent operations that can
+each satisfy their own action and currentness checks.
 
 Preserve the whole effect result and owner-specific next requests. Follow a
 current continuation directly; another startup call solely for ceremony adds no
