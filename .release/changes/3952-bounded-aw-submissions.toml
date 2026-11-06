@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Guide agents to submit dependent AW commands separately, use managed scratch for large requests, and recover safely when a command result is missing."

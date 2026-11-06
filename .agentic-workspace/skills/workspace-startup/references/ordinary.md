@@ -27,6 +27,14 @@ configuration value, not an executable called `workspace.cli_invoke`. Append
 positional argument. A missing PATH command does not make a configured local
 executable unavailable.
 
+When building a host tool submission, keep a simple AW call direct. If a later
+call needs an earlier result, submit the earlier call on its own and inspect its
+result before building the next request. Independent operations may use separate
+or parallel submissions when safe. Keep verbose shell preparation and substantial
+structured input out of the execution command. Follow [owner carriage](owners.md)
+for file input and [recovery after a missing result](owners.md#recover-after-a-missing-result)
+if the host refuses or loses a submission.
+
 Plain shell/tool callers use the default compact output. It includes the selected
 exact request/action and required material; follow a returned `detail_refs`
 reference only for missing useful detail. Do not request full projection merely

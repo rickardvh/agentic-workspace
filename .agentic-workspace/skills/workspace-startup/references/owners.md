@@ -12,9 +12,11 @@ job in `setup_context` and answer its bounded question. Native owners preserve
 the rest and revalidate current sources. If a dependency changes, use the returned
 current question or recovery; discarded answers do not regain authority by replay.
 
-For substantial structured input, use a file-writing tool to save UTF-8 JSON in
-one bounded task scratch file and submit it with `start --input <path>`. Put the
-complete reentry, reference and answer in that file. Keep its task, target,
+For substantial structured input, obtain a managed scratch directory through
+[task resources](../../workspace-resources/SKILL.md). Use an editor or file-writing
+tool directly when available to save UTF-8 JSON there. Keep the file write
+separate from any AW call. Submit it with a short `start --input <path>`.
+Put the complete reentry, reference and answer in that file. Keep its task, target,
 changed paths and projection together; do not also pass conflicting context flags
 or construct nested semantic JSON in a shell command. Simple answers need no
 scratch file; the supported reference/answer inputs remain sufficient.
@@ -27,6 +29,12 @@ context. Use the repository's configured invocation through native `invoke`.
 Do not copy `reentry.request` into that invocation input: the unchanged action
 already carries its owner dependencies. Reentry plus `invocation` is not this
 input shape; select only the work context and the action.
+Inspect each result before preparing a dependent owner request or action. Submit
+the next transition separately even when both commands would be short. For
+example, save a proposal result and inspect its action before invoking it in a
+later tool call. Parallel submissions require independent operations that can
+each satisfy their own action and currentness checks.
+
 Preserve the whole effect result and owner-specific next requests. Follow a
 current continuation directly; another startup call solely for ceremony adds no
 authority. Native checks carry receipts and still require semantic sufficiency.
@@ -37,17 +45,27 @@ scope, obligations and evidence gaps. Load `material.proposal_detail.reference`
 only for a needed binding detail. Keep peer restrictions visible; an answer cannot
 replace independent review.
 
-If execution may have happened but its reply or continuation is missing, preserve
-the uncertainty and any confirmed effect. Use exact recovery or fresh current
-observation; never repeat an effect to recover context. Changed task/target/scope
-needs fresh resolution. Source delivery suppression is valid only while the
-current source text remains available; after context loss reacquire it.
-
-Use [task resources](../../workspace-resources/SKILL.md) for temporary transport
-files and remove them when no longer needed. Transport is not retained task
-meaning or permission. A recurring transport correction belongs in its controlling
-source through the [correction procedure](../../workspace-instruction-correction/SKILL.md).
+Remove the scratch directory through task resources when transport is no longer
+needed. Transport is not retained task meaning or permission. A recurring
+transport correction belongs in its controlling source through the
+[correction procedure](../../workspace-instruction-correction/SKILL.md).
 
 Load [client transport detail](transport.md) only when implementing an integration
 or handling a host that must store carriage outside its model-visible result.
 Ordinary answers use the returned reentry and references directly.
+
+## Recover after a missing result
+
+If the host explicitly reports that the process did not start, report the refusal
+as a host-tool result. When the attempted operation could have had no effect and
+the host permits the same operation through normal tooling, try one smaller
+submission using the same current request or action. Use file input if structured
+data made the command large. A successful retry leaves the cause of an opaque
+refusal unknown.
+
+If execution is possible or unclear, preserve the uncertainty and any confirmed
+effect. Use exact owner recovery or a fresh current observation before deciding
+what remains to do. Never repeat an effect to recover context. Changed
+task/target/scope needs fresh resolution. Source delivery suppression is valid
+only while the current source text remains available; after context loss
+reacquire it.
