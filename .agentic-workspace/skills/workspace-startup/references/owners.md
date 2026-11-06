@@ -12,9 +12,10 @@ job in `setup_context` and answer its bounded question. Native owners preserve
 the rest and revalidate current sources. If a dependency changes, use the returned
 current question or recovery; discarded answers do not regain authority by replay.
 
-For substantial structured input, use an editor or file-writing tool directly
-when available to save UTF-8 JSON in a bounded task scratch file. Keep the file
-write separate from any AW call. Submit it with a short `start --input <path>`.
+For substantial structured input, obtain a managed scratch directory through
+[task resources](../../workspace-resources/SKILL.md). Use an editor or file-writing
+tool directly when available to save UTF-8 JSON there. Keep the file write
+separate from any AW call. Submit it with a short `start --input <path>`.
 Put the complete reentry, reference and answer in that file. Keep its task, target,
 changed paths and projection together; do not also pass conflicting context flags
 or construct nested semantic JSON in a shell command. Simple answers need no
@@ -44,10 +45,10 @@ scope, obligations and evidence gaps. Load `material.proposal_detail.reference`
 only for a needed binding detail. Keep peer restrictions visible; an answer cannot
 replace independent review.
 
-Use [task resources](../../workspace-resources/SKILL.md) for temporary transport
-files and remove them when no longer needed. Transport is not retained task
-meaning or permission. A recurring transport correction belongs in its controlling
-source through the [correction procedure](../../workspace-instruction-correction/SKILL.md).
+Remove the scratch directory through task resources when transport is no longer
+needed. Transport is not retained task meaning or permission. A recurring
+transport correction belongs in its controlling source through the
+[correction procedure](../../workspace-instruction-correction/SKILL.md).
 
 Load [client transport detail](transport.md) only when implementing an integration
 or handling a host that must store carriage outside its model-visible result.
