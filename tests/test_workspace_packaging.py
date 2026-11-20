@@ -333,14 +333,17 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheel:
     empty = tmp_path / "version-probe"
     empty.mkdir()
     cargo_version = tomllib.loads((WORKSPACE_ROOT / "src/cli/rust/Cargo.toml").read_text(encoding="utf-8"))["package"]["version"]
+    env = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
+    env["AGENTIC_WORKSPACE_OUTPUT_FORMAT"] = "yaml"
     reported = subprocess.run(
         [str(workspace_exe), "--version"],
         cwd=empty,
-        env={**os.environ, "AGENTIC_WORKSPACE_OUTPUT_FORMAT": "yaml"},
+        env=env,
         capture_output=True,
         text=True,
-        check=True,
+        check=False,
     )
+    assert reported.returncode == 0, reported.stderr
     assert reported.stdout == f"agentic-workspace {cargo_version}\n"
     assert not reported.stderr
     assert list(empty.iterdir()) == []
