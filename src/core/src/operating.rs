@@ -1586,32 +1586,7 @@ fn use_selected(
         next["request"] = json!(requests);
         if invoking {
             let current = native_public::start_selected(next.clone(), &Resolution::Frontier(None))?;
-            let action = &current["decision_packet"]["primary_action"];
-            if action["source_owner"] != "configuration"
-                || action["operation_id"] != "configuration.write"
-                || action["arguments"]["request"] != answered
-                || current["decision_packet"]["ready_actions"]
-                    .as_array()
-                    .map(Vec::len)
-                    != Some(1)
-            {
-                let mut rejected = native_public::rejected_invocation(
-                    &next,
-                    "Configuration authorization did not produce a unique matching action. Inspect the current decision before invoking.",
-                );
-                rejected["continuation_status"] = json!("current");
-                rejected["continuation"]["status"] = json!("current");
-                rejected["continuation"]["context"] = next.clone();
-                rejected["continuation"]["result"] = project_start(current, next, projection)?;
-                return Ok(rejected);
-            }
-            next.as_object_mut().unwrap().remove("request");
-            next["invocation"] = action.clone();
-            return Ok(project_invocation(
-                native_public::invoke_selected(next, &resolution(projection, detail)),
-                projection,
-                detail,
-            ));
+            return invoke_authorized_configuration(next, current, &answered, projection, detail);
         }
         next["projection"] = projection.clone();
         return match operate_selected(next.clone(), false, detail) {
@@ -1658,6 +1633,41 @@ fn use_selected(
         attach_request_answer(&mut result, &current, &context, &selected_entry);
     }
     Ok(result)
+}
+
+fn invoke_authorized_configuration(
+    mut next: Value,
+    current: Value,
+    answered: &Value,
+    projection: &Value,
+    detail: Option<Option<&str>>,
+) -> Result<Value, CoreError> {
+    let action = &current["decision_packet"]["primary_action"];
+    if action["source_owner"] != "configuration"
+        || action["operation_id"] != "configuration.write"
+        || &action["arguments"]["request"] != answered
+        || current["decision_packet"]["ready_actions"]
+            .as_array()
+            .map(Vec::len)
+            != Some(1)
+    {
+        let mut rejected = native_public::rejected_invocation(
+            &next,
+            "Configuration authorization did not produce a unique matching action. Inspect the current decision before invoking.",
+        );
+        rejected["continuation_status"] = json!("current");
+        rejected["continuation"]["status"] = json!("current");
+        rejected["continuation"]["context"] = next.clone();
+        rejected["continuation"]["result"] = project_start(current, next, projection)?;
+        return Ok(rejected);
+    }
+    next.as_object_mut().unwrap().remove("request");
+    next["invocation"] = action.clone();
+    Ok(project_invocation(
+        native_public::invoke_selected(next, &resolution(projection, detail)),
+        projection,
+        detail,
+    ))
 }
 
 fn config_cli_write_question(question: &Value) -> bool {
@@ -2873,6 +2883,49 @@ mod tests {
             filtered["candidates"][1]["occasion"],
             json!({"from":"/decision_packet/blockers","owners":["planning"]})
         );
+    }
+
+    #[test]
+    fn configuration_authorization_yields_competing_actions_without_effect() {
+        let answered = json!({"request_kind":"configuration/edit-source/v1",
+            "arguments":{"key":"workspace.cli_invoke","answer":"authorize-write"}});
+        let write = json!({"source_owner":"configuration","operation_id":"configuration.write",
+            "arguments":{"request":answered}});
+        let peer = json!({"source_owner":"planning","operation_id":"planning.update"});
+        let prepared = json!({"decision_packet":{
+            "status":"actionable","ready_actions":[write,peer],"primary_action":null
+        }});
+        let next = json!({"target":std::env::temp_dir(),"task":"Set invocation",
+            "changed":[],"request":[answered]});
+        for projection in [json!("compact"), json!("carried")] {
+            let result = invoke_authorized_configuration(
+                next.clone(),
+                prepared.clone(),
+                &answered,
+                &projection,
+                None,
+            )
+            .unwrap();
+            assert_eq!(result["effect_outcome"]["status"], "rejected-before-effect");
+            assert_eq!(result["effects"], json!([]));
+            assert_eq!(result["continuation_status"], "current");
+            assert_eq!(result["continuation"]["status"], "current");
+            assert_eq!(result["continuation"]["retry_effect"], false);
+            let projected = &result["continuation"]["result"];
+            let view = if projection == "carried" {
+                assert!(projected["carriage"].is_object());
+                &projected["view"]
+            } else {
+                projected
+            };
+            assert_eq!(
+                view["decision_packet"]["ready_actions"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                2
+            );
+        }
     }
 
     #[test]
