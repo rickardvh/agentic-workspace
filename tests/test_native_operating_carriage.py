@@ -16,8 +16,8 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def proposal(surface, binary, native, root):
-    context = {"target": str(root), "task": "Set the configured invocation"}
+def proposal(surface, binary, native, root, task="Set the configured invocation"):
+    context = {"target": str(root), "task": task}
     initial = consume(surface, binary, native, context)
     initial = consume(surface, binary, native, {**context, "request": initial["configuration_write"]["creation_discovery_request"]})
     request = next(r for r in initial["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "workspace.cli_invoke")
@@ -28,6 +28,124 @@ def proposal(surface, binary, native, root):
 
 def size(value):
     return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode())
+
+
+@pytest.mark.parametrize("projection", ["compact", "carried"])
+def test_invoke_current_configuration_answer_commits_once(tmp_path, shared_core_binary, native_cli, projection):
+    context = proposal("json", shared_core_binary, native_cli, tmp_path)
+    source = tmp_path / ".agentic-workspace/config.toml"
+
+    def call(value):
+        return consume("json", shared_core_binary, native_cli, value)
+
+    result = call({**context, "projection": projection})
+    view = result["view"] if projection == "carried" else result
+    question = view["decision_packet"]["decision_request"]
+    authorization = {"reference": question["reference"], "answer": "authorize-write"}
+    if projection == "carried":
+        effect = {"invocation": result["carriage"], **authorization}
+        preparation = {"request": result["carriage"], **authorization}
+    else:
+        effect = {**view["reentry"], **authorization}
+        preparation = effect
+    assert call({**preparation, "projection": "compact"})["decision_packet"]["primary_action"]["operation_id"] == "configuration.write"
+    assert (
+        call({**preparation, "answer": "defer", "projection": "compact"})["decision_packet"]["primary_action"]["operation_id"]
+        == "configuration.defer-choice"
+    )
+    assert not source.exists()
+
+    def invoke(value):
+        command = [str(native_cli), "invoke", "--format", "json", "--input", "-"]
+        if projection == "compact":
+            command += ["--reference", value["reference"], "--answer", json.dumps(value["answer"])]
+            value = {k: v for k, v in value.items() if k not in {"reference", "answer"}}
+        completed = subprocess.run(
+            command,
+            input=json.dumps(value),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(completed.stdout)
+
+    assert invoke({**effect, "answer": "defer"})["effect_outcome"]["status"] == "rejected-before-effect"
+    assert not source.exists()
+    source.parent.mkdir(exist_ok=True)
+    source.write_bytes(b'[workspace]\ncli_invoke = "maintainer-aw"\n')
+    concurrent = source.read_bytes()
+    assert invoke(effect)["effect_outcome"]["status"] == "rejected-before-effect"
+    assert source.read_bytes() == concurrent
+    source.unlink()
+    other = proposal("json", shared_core_binary, native_cli, tmp_path, "Another task with the identical edit")
+    other_question = call({**other, "projection": "compact"})["decision_packet"]["decision_request"]
+    written = invoke(effect)
+    assert written["effect_outcome"]["status"] == "committed"
+    assert 'cli_invoke = "aw-local"' in source.read_text()
+    current = source.read_bytes()
+    assert invoke(effect)["effect_outcome"]["status"] == "rejected-before-effect"
+    assert source.read_bytes() == current
+    source.write_bytes(concurrent)
+    fresh = call({**context, "request": None, "projection": "compact"})
+    detail = call({**fresh["reentry"], "reference": fresh["detail_refs"]["/configuration_write"]})["value"]
+    request = detail["inspect_write_request"]
+    args = question["request_material"] if projection == "carried" else question["response_request"]["arguments"]
+    request["arguments"] = {
+        "source": args["source"],
+        "proposal_revision": args["proposal_revision"],
+        "post_revision": question["material"]["post_revision"],
+    }
+    verified = call({**fresh["reentry"], "request": request, "projection": "compact"})["configuration_write_outcome"]
+    assert verified["status"] == "committed"
+    assert verified["source_current"] is False
+    assert verified["receipt"] == written["custody"]["committed"]
+    assert other_question["material"]["post_revision"] == request["arguments"]["post_revision"]
+    assert other_question["response_request"]["arguments"]["proposal_revision"] == request["arguments"]["proposal_revision"]
+    other_entry = call({**other, "request": None, "projection": "compact"})
+    other_detail = call({**other_entry["reentry"], "reference": other_entry["detail_refs"]["/configuration_write"]})["value"]
+    other_request = {**other_detail["inspect_write_request"], "arguments": request["arguments"].copy()}
+    unproven = call({**other_entry["reentry"], "request": other_request, "projection": "compact"})["configuration_write_outcome"]
+    assert unproven["status"] == "not-established"
+    assert "receipt" not in unproven
+    request["arguments"]["proposal_revision"] = "sha256:" + "0" * 64
+    unproven = call({**fresh["reentry"], "request": request, "projection": "compact"})["configuration_write_outcome"]
+    assert unproven["status"] == "not-established"
+    assert "receipt" not in unproven
+    assert source.read_bytes() == concurrent
+
+
+def test_claim_summary_keeps_early_review_and_current_obligations(tmp_path, shared_core_binary, native_cli):
+    config = tmp_path / ".agentic-workspace/config.toml"
+    manifest = config.parent / "verification/manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    config.write_text("[assurance]\nstrict_closeout=true\n")
+    manifest.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        '[assurance.requirements.review]\nlevel="high"\nforce="required-before-closeout"\n'
+        'review_owner="independent-agent"\napplies_to_task_markers=["different scope"]\n'
+    )
+    context = {"target": str(tmp_path), "task": "Inspect the repository"}
+
+    def call(value):
+        return consume("json", shared_core_binary, native_cli, value)
+
+    view = call({**context, "projection": "compact"})
+    packet = view["decision_packet"]
+    assert any(b["code"] == "assurance:review:unresolved" for b in packet["blockers"])
+    assert not any(b["code"] == "strict-closeout-judgment-required" for b in packet["blockers"])
+    later = packet["later_claim_requirements"]
+    assert set(later["by_claim"]) == {"claim:complete", "claim:claim-work-complete", "claim:claim-slice-complete"}
+    opened = call({**view["reentry"], "reference": later["reference"]})
+    exact = next(b for b in opened["value"]["blockers"] if b["code"] == "strict-closeout-judgment-required")
+    assert exact["basis"]["reference"] == "effective-assurance-policy#strict_closeout"
+    assert any(
+        r["routes"]
+        for r in opened["consequence_recovery"]
+        if any(member["consequence_id"] == exact["consequence_id"] for member in r["consequences"])
+    )
+    (tmp_path / "result.txt").write_text("result")
+    later_task = call({**context, "changed": ["result.txt"], "projection": "compact"})
+    assert any(b["code"] == exact["code"] for b in later_task["decision_packet"]["blockers"])
 
 
 def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tmp_path, shared_core_binary, native_cli):

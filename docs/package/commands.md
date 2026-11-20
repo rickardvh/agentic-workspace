@@ -122,6 +122,33 @@ Keep temporary transport files out of shared project policy. The
 [API guide](../architecture/shared-rust-core.md#continue-from-a-returned-question)
 shows the corresponding in-memory helper.
 
+### Authorize and execute a Configuration write
+
+For the current `workspace.cli_invoke` Configuration proposal, use its
+decision reference with `invoke` and the JSON scalar `"authorize-write"` when
+you intend the displayed change to execute now. Include the original
+`reentry` in the input envelope, or put the returned carriage in the
+`invocation` field. Use `start` with the same reference and scalar to
+prepare an action, or with `"defer"` to prepare a deferral.
+
+This example uses a saved copy of the question's `reentry`.
+
+```sh
+agentic-workspace invoke --input reentry.json --reference "$QUESTION" --answer '"authorize-write"'
+```
+
+AW checks the question against current sources and executes only its unique
+admitted action. If the response was lost, start fresh with the original
+target, task and changed paths and open
+`/configuration_write`. Submit its fresh `inspect_write_request` with
+`source` and `proposal_revision` from the original question's
+`response_request.arguments` or its carried `request_material`. Take
+`post_revision` from that question's `material.post_revision`. This read
+can verify the original receipt even if the file changed again.
+`source_current` tells you whether that write's result is still current.
+An interrupted write can also have an exact recovery request. If the outcome
+is unspecified, establish the current state before considering another effect.
+
 ## Other tools
 
 | Command | Use |

@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:b251faf8bc9c178ce09d344376597df67f8c24c68797d828fd074efded2bb393`
+- Contract digest: `sha256:48cac3b0564bbbd6afaaf2e30e46f43eeb4a3fb70b8f4d32b5257c5c6dac3d55`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -16,7 +16,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `agentic-workspace worker` | yes | Present worker entry or a complete manual snapshot, expand an exact captured input, or wrap new return material with host-held Assignment identity. |
 | `agentic-workspace resources` | yes | Propose with a resource request; execute by passing the exact returned action envelope unchanged to --input. Explicit context flags must match; omitted context comes from the envelope. |
 | `agentic-workspace start` | no | Resolve the current operating decision. |
-| `agentic-workspace invoke` | yes | Invoke an exact returned action with a complete work envelope or carriage plus --reference; a bare action requires original --target, --task and --changed flags. Empty changed scope requires an envelope or carriage. |
+| `agentic-workspace invoke` | yes | Invoke an exact action with a complete work envelope or carriage. A bare action requires original --target, --task and --changed. For a current workspace.cli_invoke question, use its exact reference, reentry or carriage, and --answer with the JSON authorize-write scalar to authorize and execute together. |
 | `agentic-workspace activation-index` | yes | Check or derive a repository registry activation index from its procedure sources; explicit authoring only. |
 
 ## Options

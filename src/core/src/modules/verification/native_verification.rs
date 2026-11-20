@@ -1751,7 +1751,7 @@ pub(crate) fn view_with_applicability(
         );
     }
     if strict_closeout {
-        blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],
+        blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"],"disclose_at_claim":true,
             "basis":crate::restriction_basis("task-requirement",&json!(source_revision),"effective-assurance-policy#strict_closeout",&config["assurance"])}));
     }
     for (id, protocol) in &protocols {
@@ -1765,11 +1765,17 @@ pub(crate) fn view_with_applicability(
                 "basis":crate::restriction_basis("attestation-limit",&json!(source_revision),&format!("{MANIFEST}#protocols.{id}"),protocol)}));
         }
     }
+    let assurance_rows = assurance["requirements"].as_array().unwrap();
+    let derived_profile_gaps: std::collections::BTreeSet<_> = assurance_rows
+        .iter()
+        .filter_map(crate::verification_strategy::applicability_gap)
+        .collect();
     for gap in strategy_control["gaps"]
         .as_array()
         .into_iter()
         .flatten()
         .filter_map(Value::as_str)
+        .filter(|gap| !derived_profile_gaps.contains(*gap))
     {
         blockers.as_array_mut().unwrap().push(json!({"code":gap,"message":"Current Verification strategy control remains unresolved; no profile or evidence waiver is inferred.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
     }
@@ -1806,9 +1812,23 @@ pub(crate) fn view_with_applicability(
             blockers.as_array_mut().unwrap().push(json!({"code":format!("proof-scope-unresolved:{id}"),"message":"Named proof scope requires current applicability judgment; selection grants no proof or claim authority.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
         }
     }
-    for row in assurance["requirements"].as_array().unwrap() {
-        if row["status"] == "unresolved" {
-            decisions.insert(row["id"].as_str().unwrap().into(), json!("unresolved"));
+    for row in assurance_rows {
+        let unresolved = row["status"] == "unresolved";
+        let id = row["id"].as_str().unwrap();
+        if unresolved {
+            decisions.insert(id.into(), json!("unresolved"));
+        }
+        let profile_gap = crate::verification_strategy::applicability_gap(row);
+        let mut affects = std::collections::BTreeSet::new();
+        if profile_gap.is_some() {
+            affects.extend(
+                [
+                    "claim:complete",
+                    "claim:claim-work-complete",
+                    "claim:claim-slice-complete",
+                ]
+                .map(str::to_owned),
+            );
         }
         if row["status"] != "not-applicable"
             && matches!(
@@ -1816,17 +1836,38 @@ pub(crate) fn view_with_applicability(
                 Some("blocking" | "required-before-closeout")
             )
         {
-            let affects: Vec<String> = row["blocking_claims"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .map(|claim| format!("claim:{claim}"))
-                .collect();
-            if !affects.is_empty() {
-                blockers.as_array_mut().unwrap().push(json!({"code":format!("assurance:{}:{}",row["id"].as_str().unwrap(),row["status"].as_str().unwrap()),
-                "message":if row["status"]=="unresolved" {"Current source assurance applicability needs agent judgment; evidence cannot resolve scope."} else {"Current assurance evidence/measurement/review admission remains required; applicability does not prove satisfaction."},"affects":affects}));
-            }
+            affects.extend(
+                row["blocking_claims"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(|claim| format!("claim:{claim}")),
+            );
+        }
+        if !affects.is_empty() {
+            let message = if profile_gap.is_some() {
+                "Judge this source requirement's applicability once for both assurance and its proof profile. The judgment does not establish proof or claim authority."
+            } else if unresolved {
+                "Current source assurance applicability needs agent judgment; evidence cannot resolve scope."
+            } else {
+                "Current assurance evidence/measurement/review admission remains required; applicability does not prove satisfaction."
+            };
+            let message = match row["source_requirement"]["review_owner"].as_str() {
+                Some(owner) => format!(
+                    "{message} If this requirement applies, arrange the review owned by {owner} before the dependent work."
+                ),
+                None => message.to_owned(),
+            };
+            blockers.as_array_mut().unwrap().push(json!({
+                "code":format!("assurance:{id}:{}",row["status"].as_str().unwrap()),
+                "message":message,"affects":affects,
+                "disclose_at_claim":!unresolved && row["force"] == "required-before-closeout"
+                    && row["source_requirement"].get("review_owner").is_none()
+                    && row["source_requirement"]["required_evidence"].as_array().is_none_or(Vec::is_empty)
+                    && row["source_requirement"]["proof_profile"].is_null(),
+                "basis":crate::restriction_basis("task-requirement",&json!(source_revision),MANIFEST,row)
+            }));
         }
     }
     if decisions.is_empty() {

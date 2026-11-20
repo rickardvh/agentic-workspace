@@ -22,6 +22,8 @@ export interface StartInput extends WorkContext {
 export interface InvokeInput extends WorkContext {
   invocation?: Json;
   reference?: string;
+  /** Execute the exact current workspace.cli_invoke question with its reference. */
+  answer?: "authorize-write";
 }
 /** Results retain the exact Rust shape, including unknown owner contributions. */
 export function start(context: StartInput): JsonObject;

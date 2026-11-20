@@ -11,6 +11,7 @@ const SHARED: &str = ".agentic-workspace/config.toml";
 const LOCAL: &str = ".agentic-workspace/config.local.toml";
 const EDIT: &str = "configuration/edit-source/v1";
 const RECOVER: &str = "configuration/recover-write/v1";
+const INSPECT_WRITE: &str = "configuration/inspect-write/v1";
 const DEFER: &str = "configuration.defer-choice";
 const READ: &str = "configuration/read-choice/v1";
 const READ_CREATION: &str = "configuration/read-creation-choices/v1";
@@ -264,6 +265,13 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"type":"string"},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v4","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
     let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write"), operation(DEFER)]});
+    let revision = json!({"type":"string","pattern":"^sha256:[0-9a-f]{64}$"});
+    owner["requests"].as_array_mut().unwrap().push(json!({
+        "kind":INSPECT_WRITE,"result_kind":"agentic-workspace/configuration-write-result/v1",
+        "input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
+            "required":["source","post_revision","proposal_revision"],
+            "properties":{"source":{"enum":[SHARED,LOCAL]},"post_revision":revision,"proposal_revision":revision}}
+    }));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_PAYLOAD,"result_kind":"agentic-workspace/configuration-payload-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"selected_owner":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,63}$"}}}}));
@@ -393,6 +401,9 @@ pub(crate) fn view_selected(
         "payload_recovery_policy": {"sources":config["sources"],"artifact_profile":config["artifact_profile"],"owner_revision":owner["revision"]}});
     result["contribution"]["revision"] = json!(digest(&binding)?);
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
+    if detail || request.is_some_and(|request| request["request_kind"] == INSPECT_WRITE) {
+        result["inspect_write_request"] = template(INSPECT_WRITE, json!({}));
+    }
     result["behavior_request"] = template(
         crate::native_configuration_procedure::READ,
         json!({"concern":"instructions"}),
@@ -750,6 +761,45 @@ pub(crate) fn view_selected(
         return Ok(result);
     }
     let args = &request["arguments"];
+    if request["request_kind"] == INSPECT_WRITE {
+        let source = args["source"].as_str().unwrap();
+        let post = args["post_revision"].as_str().unwrap();
+        result["status"] = json!("write-outcome-inspected");
+        let mut report = json!({"status":"not-established","source":source,
+            "post_revision":post,"source_current":current[source] == post});
+        if let Some(record) = retained(target, source, post)? {
+            let requested = &record["invocation"]["arguments"]["request"];
+            if requested["task_identity"] == *work
+                && requested["arguments"]["key"] == "workspace.cli_invoke"
+                && requested["arguments"]["proposal_revision"] == args["proposal_revision"]
+            {
+                let prepared = crate::attempt_store::prepare_commit(
+                    target.to_str().unwrap(),
+                    record["custody"].clone(),
+                    record["outcome"].clone(),
+                )?;
+                let receipt = &prepared["custody"]["committed"];
+                if crate::native_planning::read(&root, receipt["path"].as_str().unwrap())?.is_some()
+                {
+                    let committed = crate::attempt_store::inspect_committed(
+                        target.to_str().unwrap(),
+                        prepared["custody"].clone(),
+                    )?;
+                    if committed["invocation"] != record["invocation"]
+                        || committed["outcome"] != record["outcome"]
+                    {
+                        return Err(err(
+                            "committed Configuration receipt does not match the write",
+                        ));
+                    }
+                    report["status"] = json!("committed");
+                    report["receipt"] = receipt.clone();
+                }
+            }
+        }
+        result["write_outcome"] = report;
+        return Ok(result);
+    }
     if request["request_kind"] == READ {
         let key = args["key"].as_str().unwrap();
         let (section, field) = key

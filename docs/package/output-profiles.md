@@ -32,12 +32,20 @@ weaker set of checks.
 
 ## Find a restriction and its recovery
 
-Compact and carried views keep each restriction in `decision_packet.blockers`.
-When an activation candidate's `occasion.from` is `/decision_packet/blockers`,
-its trigger is every blocker in that list whose `owner` appears in
-`occasion.owners`, in the order shown. The same response supplies each blocker's
-message, affected scope and source basis. The `/activation` detail reference
-returns the expanded candidate if needed.
+Compact and carried views keep restrictions that can change the current
+decision in `decision_packet.blockers`. On direct entry before any changed
+paths or selected request, `later_claim_requirements` can summarize
+owner-designated closeout restrictions by claim. Open its exact reference
+with the same context for the complete current packet, source bases and recovery
+routes. Re-enter with the actual changed paths or claim request when assessing
+the claim. Scope uncertainty and requirements that affect planning, such as
+independent review, remain visible.
+
+When an activation candidate uses `occasion.from: /decision_packet/blockers`,
+filter the displayed list by `occasion.owners` in order. When it uses
+`occasion.from: /decision_packet`, open `occasion.reference` and filter the
+list at `occasion.selector` in the returned value. The `/activation` detail
+reference also returns the expanded candidate.
 
 Look up a blocker's `consequence_id` in `consequence_recovery[].consequences`.
 Restrictions share a row only when the owner nominated the same exact routes

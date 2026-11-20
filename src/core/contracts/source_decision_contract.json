@@ -183,7 +183,7 @@
     "proof_observation": "A committed run retains original execution, subject and output identity independently of later invocation admission/publication. observation.reference uses the existing local receipt carrier; current evidence consumption rechecks actual source/runtime/strategy coverage without replay. Assessment detail preserves post-run failure causes. Historical passes, current proof, native publication and task/reviewer judgment remain distinct; live launch/return equality supplies no immutable-snapshot guarantee.",
     "default": "compact",
     "full": "Original current owner views and capability/detail contracts.",
-    "compact": "Resolve current mandatory owner contributions and exact selected envelopes; defer optional configuration fields, proof alternatives and Planning portability. A binding occasion can identify its exact ordered blockers by owner in decision_packet.blockers. Identical available owner-nominated recovery routes share a consequences list with each member's scope. No required action-detail fetch.",
+    "compact": "Resolve current mandatory owner contributions and exact selected envelopes. On direct entry without changed paths or a selected request, summarize owner-designated claim-only closeout details by scope in later_claim_requirements with an exact complete packet reference. Keep uncertain scope and earlier prerequisites visible. A binding occasion can identify its ordered blockers by owner, with an exact complete packet reference when the response summarizes any. Identical available owner-nominated recovery routes share a consequences list with each member's scope.",
     "carried": "Separate model-facing view and disposable carriage of exact selected actions/questions plus small lazy owner descriptors; no full top-level owner objects. Only the view belongs in model context.",
     "session_capture": "Opted-in native transport observation: capturing, identity-unavailable (requirement: AW_SESSION_LOGICAL_IDENTITY), or capture-failed, with authoritative: false. Absent when disabled. Attached after capture to the result or carried model-facing view, never semantic inputs or immutable carriage. Replaces the previous observation without warnings or history; recovery is prospective.",
     "reference_identity": [
@@ -192,7 +192,7 @@
       "original work context"
     ],
     "admission": "References are opaque identity, not authority. Rust addresses selected owner detail before optional hydration, reobserves mandatory dependency contributions, and executes exact actions through current native admission. Compact/carried post-effect continuation uses the same frontier boundary.",
-    "bounded_answer": "For a decision, fill only its absent answer slot and preserve supplied owner arguments. For an exact owner request reference, supply an arguments object merged into its template; owner identity, revisions and task binding remain immutable and normal owner validation admits the proposal. Preserve prior peer requests in returned carriage. Neither form executes effects.",
+    "bounded_answer": "Start fills only the exact decision's absent answer slot, or merges an arguments object into an exact owner request template. It preserves immutable owner and source identity and prior peer requests. Start prepares without an effect. Invoke may explicitly authorize and execute the displayed workspace.cli_invoke change with that primary question reference and the authorize-write scalar. Rust must freshly admit one matching Configuration write; a rejected selection reports no effect, and fresh Configuration detail can expose a committed matching receipt.",
     "context": "Carry unchanged target/task/changed/request; explicit differences require fresh start.",
     "source_delivery": "Optional delivered refs and available_sources assertions suppress only source prose after fresh owner resolution. Assertions name reference, raw-byte sha256 revision and extent (whole-source, or exact-fragment with selector and content_revision). They match only resolved source_material, never discover files. Unknown or incomplete extent stays deliverable. Both are caller-local, absent from carriage; clear them after context loss. delivery describes included, caller-held, already-delivered or needed material, never comprehension, policy satisfaction, proof or effects.",
     "recovery": "Unknown, changed or lost carriage requires fresh source-owner resolution; no durable registry.",
@@ -243,7 +243,7 @@
       },
       {
         "name": "invoke",
-        "description": "Invoke an exact returned action with a complete work envelope or carriage plus --reference; a bare action requires original --target, --task and --changed flags. Empty changed scope requires an envelope or carriage.",
+        "description": "Invoke an exact action with a complete work envelope or carriage. A bare action requires original --target, --task and --changed. For a current workspace.cli_invoke question, use its exact reference, reentry or carriage, and --answer with the JSON authorize-write scalar to authorize and execute together.",
         "input_field": "invocation",
         "input_required": true,
         "accepts_input_envelope": true

@@ -4,6 +4,13 @@ use crate::{CoreError, digest};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
 
+pub(crate) fn applicability_gap(requirement: &Value) -> Option<String> {
+    let profile = requirement["source_requirement"]["proof_profile"].as_str()?;
+    let id = requirement["id"].as_str()?;
+    (!profile.is_empty() && requirement["status"] == "unresolved")
+        .then(|| format!("profile-applicability-unresolved:{id}"))
+}
+
 pub(crate) fn declaration() -> Value {
     let all: Value = serde_json::from_str(include_str!(
         "../contracts/schemas/source_decision_input.schema.json"
@@ -100,11 +107,8 @@ pub(crate) fn view(
         if profile.is_empty() || row["status"] == "not-applicable" {
             continue;
         }
-        if row["status"] == "unresolved" {
-            gaps.push(format!(
-                "profile-applicability-unresolved:{}",
-                row["id"].as_str().unwrap_or("")
-            ));
+        if let Some(gap) = applicability_gap(row) {
+            gaps.push(gap);
         } else if matches!(
             row["force"].as_str(),
             Some("blocking" | "required-before-closeout")

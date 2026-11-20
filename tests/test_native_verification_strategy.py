@@ -230,6 +230,9 @@ def test_current_scope_judgment_travels_with_profile_execution(tmp_path: Path, s
     with source.open("a") as stream:
         stream.write(
             '[assurance.requirements.semantic]\nlevel="high"\nforce="required-before-closeout"\napplies_to_task_markers=["semantic scope"]\nproof_profile="required"\n'
+            'blocking_claims=["close-parent-lane"]\n'
+            '[assurance.requirements.semantic_peer]\nlevel="medium"\nforce="required-before-closeout"\n'
+            'applies_to_task_markers=["separate scope"]\nproof_profile="required"\n'
         )
 
     config = tmp_path / ".agentic-workspace/config.toml"
@@ -244,8 +247,28 @@ def test_current_scope_judgment_travels_with_profile_execution(tmp_path: Path, s
     startup_read = packet["startup_adapter"]["requests"][0]
     first = packet["verification"]
     assert first["strategy_control"]["selected_profiles"] == []
+    rows = {
+        row["code"]: row
+        for row in packet["decision_packet"]["blockers"]
+        if row["code"].startswith(("assurance:semantic", "profile-applicability-unresolved:semantic"))
+    }
+    assert set(rows) == {"assurance:semantic:unresolved", "assurance:semantic_peer:unresolved"}
+    assert set(rows["assurance:semantic:unresolved"]["affects"]) == {
+        "claim:close-parent-lane",
+        "claim:complete",
+        "claim:claim-work-complete",
+        "claim:claim-slice-complete",
+    }
+    assert rows["assurance:semantic:unresolved"]["recovery"] == "public-request:verification/assurance-applicability/v1"
     scope = first["assurance_request"]
+    assert set(scope["arguments"]["decisions"]) == {"semantic", "semantic_peer"}
     scope["arguments"]["decisions"]["semantic"] = "applicable"
+    scope["arguments"]["decisions"]["semantic_peer"] = "not-applicable"
+    original_manifest = source.read_text()
+    source.write_text(original_manifest.replace('["semantic scope"]', '["changed semantic scope"]'))
+    stale = call({**context, "request": scope})
+    assert stale["verification"]["assurance_request"]["arguments"]["decisions"]["semantic"] == "unresolved"
+    source.write_text(original_manifest)
     chosen = call({**context, "request": scope})["verification"]
     execution = chosen["execution_requests"][0]
     assert len(execution) == 2

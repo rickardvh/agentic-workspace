@@ -428,6 +428,7 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
         }
     }
     let mut recoveries = Vec::new();
+    let mut owner_details = None;
     let requests = request_entries(full, context)?;
     for blocker in full["decision_packet"]["blockers"]
         .as_array()
@@ -477,8 +478,13 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
                 }
                 if has_request(value, owner) {
                     let selector = format!("/{}", key.replace('~', "~0").replace('/', "~1"));
-                    let selected = entries(full, context)?
-                        .into_iter()
+                    if owner_details.is_none() {
+                        owner_details = Some(entries(full, context)?);
+                    }
+                    let selected = owner_details
+                        .as_ref()
+                        .unwrap()
+                        .iter()
                         .find(|e| e["selector"] == selector)
                         .unwrap();
                     routes.push(json!({"selector":selector,"reference":selected["reference"]}));
@@ -598,7 +604,7 @@ fn same_pending_action(pending: &Value, invocation: &Value) -> bool {
 
 // A binding occasion can point into this response only when filtering its
 // visible blockers reproduces the entire owner signal, including order.
-fn compact_binding_occasions(activation: &mut Value, blockers: &Value) {
+fn compact_binding_occasions(activation: &mut Value, blockers: &Value, detail: Option<&Value>) {
     if activation["kind"] != "agentic-workspace/activation/v1" {
         return;
     }
@@ -625,7 +631,11 @@ fn compact_binding_occasions(activation: &mut Value, blockers: &Value) {
             .filter(|b| b["owner"].as_str().is_some_and(|o| owners.contains(o)))
             .eq(binding)
         {
-            candidate["occasion"] = json!({"from":"/decision_packet/blockers","owners":owners});
+            candidate["occasion"] = if let Some(reference) = detail {
+                json!({"from":"/decision_packet","selector":"/blockers","reference":reference,"owners":owners})
+            } else {
+                json!({"from":"/decision_packet/blockers","owners":owners})
+            };
         }
     }
 }
@@ -722,8 +732,13 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 .as_array()
                 .is_some_and(|choices| !choices.is_empty());
             if bounded_choice {
-                question["answer_input"] =
-                    json!("Set answer to one listed choices[].id value. Copy that value alone.");
+                question["answer_input"] = if config_cli_write_question(question) {
+                    json!(
+                        "Answer with one choices[].id. Use start to prepare or defer. Use invoke with authorize-write to execute this exact change now."
+                    )
+                } else {
+                    json!("Set answer to one listed choices[].id value. Copy that value alone.")
+                };
             }
             if !carried {
                 continue;
@@ -782,8 +797,38 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":context,
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    let mut claim_details = std::collections::BTreeSet::new();
+    if context["request"].is_null()
+        && context["changed"].as_array().is_some_and(Vec::is_empty)
+        && full["decision_packet"]["status"] == "direct"
+        && let Some(blockers) = result["decision_packet"]["blockers"].as_array_mut()
+    {
+        let mut by_claim = std::collections::BTreeMap::<String, Vec<Value>>::new();
+        blockers.retain(|blocker| {
+            if blocker["disclose_at_claim"] != true {
+                return true;
+            }
+            claim_details.insert(blocker["consequence_id"].as_str().unwrap().to_owned());
+            for claim in blocker["affects"].as_array().unwrap() {
+                by_claim
+                    .entry(claim.as_str().unwrap().to_owned())
+                    .or_default()
+                    .push(json!({"owner":blocker["owner"],"reason":blocker["message"]}));
+            }
+            false
+        });
+        if !by_claim.is_empty() {
+            result["decision_packet"]["later_claim_requirements"] = json!({
+                "by_claim":by_claim, "reference":result["detail_refs"]["/decision_packet"],
+                "use":"Reobserve before making an affected claim. This reference opens all current source bases and recovery routes."
+            });
+        }
+    }
     if let Some(continuation) = full.get("non_aw_continuation") {
         result["non_aw_continuation"] = continuation.clone();
+    }
+    if let Some(outcome) = full["configuration_write"].get("write_outcome") {
+        result["configuration_write_outcome"] = outcome.clone();
     }
     if let Some(assignment) = assignment_question(full, context)? {
         result["assignment_context"] = assignment;
@@ -978,7 +1023,18 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     }
     if let Some(activation) = full.get("activation") {
         let mut activation = activation.clone();
-        compact_binding_occasions(&mut activation, &result["decision_packet"]["blockers"]);
+        compact_binding_occasions(
+            &mut activation,
+            &result["decision_packet"]["blockers"],
+            None,
+        );
+        if !claim_details.is_empty() {
+            compact_binding_occasions(
+                &mut activation,
+                &full["decision_packet"]["blockers"],
+                Some(&result["detail_refs"]["/decision_packet"]),
+            );
+        }
         result["activation"] = activation;
     }
     let retention = &full["memory"]["terminal_retention"];
@@ -1015,7 +1071,15 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let recovery = consequence_recovery(full, context)?;
     if !recovery.is_empty() {
         reconcile_restriction_routes(&mut result, &recovery);
-        result["consequence_recovery"] = Value::Array(group_recovery_routes(recovery));
+        let visible = recovery
+            .into_iter()
+            .filter(|row| {
+                row["consequences"][0]["consequence_id"]
+                    .as_str()
+                    .is_none_or(|id| !claim_details.contains(id))
+            })
+            .collect();
+        result["consequence_recovery"] = Value::Array(group_recovery_routes(visible));
     }
     // A selected leaf already establishes which procedure is useful. Keep its
     // exact refs visible so compact consumers need no discovery/detail hop.
@@ -1438,24 +1502,38 @@ fn use_selected(
     } else {
         current.pointer(selector) != Some(&selected_entry["envelope"])
     } {
+        if invoking && answer.is_some() {
+            return Err(error(
+                "Configuration question is no longer current. Resolve fresh work and inspect /configuration_write for the prior outcome before considering another write.",
+            ));
+        }
         return Err(error("operating reference stale or not owner-issued"));
     }
     if invoking {
-        if !action_selector(selector) || answer.is_some() {
-            return Err(error(
-                "invoke requires an exact owner-issued action reference without answer",
+        if answer.is_none() {
+            if !action_selector(selector) {
+                return Err(error(
+                    "invoke requires an exact owner-issued action reference",
+                ));
+            }
+            let mut execution = context;
+            execution.as_object_mut().unwrap().remove("request");
+            execution["invocation"] = selected_entry["envelope"].clone();
+            return Ok(project_invocation(
+                native_public::invoke_selected(execution, &resolution(projection, detail)),
+                projection,
+                detail,
             ));
         }
-        let mut execution = context;
-        execution.as_object_mut().unwrap().remove("request");
-        execution["invocation"] = selected_entry["envelope"].clone();
-        // Native admission reobserves the execution snapshot; the reference is
-        // only immutable transport and never a grant.
-        return Ok(project_invocation(
-            native_public::invoke_selected(execution, &resolution(projection, detail)),
-            projection,
-            detail,
-        ));
+        let question = &selected_entry["envelope"];
+        if selector != "/decision_packet/decision_request"
+            || !config_cli_write_question(question)
+            || answer.as_ref() != Some(&json!("authorize-write"))
+        {
+            return Err(error(
+                "only the current workspace.cli_invoke Configuration question accepts invoke with the authorize-write answer; use start to prepare or defer",
+            ));
+        }
     }
     if (decision_selector(selector) && answer.is_some())
         || (selector.starts_with("request:") && answer.is_some())
@@ -1504,8 +1582,37 @@ fn use_selected(
             answered["request_kind"].as_str(),
             Some("verification/assurance-applicability/v1" | "verification/strategy/v1")
         );
-        requests.push(answered);
+        requests.push(answered.clone());
         next["request"] = json!(requests);
+        if invoking {
+            let current = native_public::start_selected(next.clone(), &Resolution::Frontier(None))?;
+            let action = &current["decision_packet"]["primary_action"];
+            if action["source_owner"] != "configuration"
+                || action["operation_id"] != "configuration.write"
+                || action["arguments"]["request"] != answered
+                || current["decision_packet"]["ready_actions"]
+                    .as_array()
+                    .map(Vec::len)
+                    != Some(1)
+            {
+                let mut rejected = native_public::rejected_invocation(
+                    &next,
+                    "Configuration authorization did not produce a unique matching action. Inspect the current decision before invoking.",
+                );
+                rejected["continuation_status"] = json!("current");
+                rejected["continuation"]["status"] = json!("current");
+                rejected["continuation"]["context"] = next.clone();
+                rejected["continuation"]["result"] = project_start(current, next, projection)?;
+                return Ok(rejected);
+            }
+            next.as_object_mut().unwrap().remove("request");
+            next["invocation"] = action.clone();
+            return Ok(project_invocation(
+                native_public::invoke_selected(next, &resolution(projection, detail)),
+                projection,
+                detail,
+            ));
+        }
         next["projection"] = projection.clone();
         return match operate_selected(next.clone(), false, detail) {
             Err(failure) if verification_transition && failure.2.is_some() => {
@@ -1544,10 +1651,20 @@ fn use_selected(
     // restriction routes from that same current surface after validating it.
     let recovery = consequence_recovery(&current, &context)?;
     reconcile_restriction_routes(&mut result["value"], &recovery);
+    if selector == "/decision_packet" && !recovery.is_empty() {
+        result["consequence_recovery"] = json!(group_recovery_routes(recovery));
+    }
     if selector.starts_with("request:") {
         attach_request_answer(&mut result, &current, &context, &selected_entry);
     }
     Ok(result)
+}
+
+fn config_cli_write_question(question: &Value) -> bool {
+    question["owner"] == "configuration"
+        && question["id"] == "configuration-write-authorization"
+        && question["response_request"]["request_kind"] == "configuration/edit-source/v1"
+        && question["response_request"]["arguments"]["key"] == "workspace.cli_invoke"
 }
 
 /// Shared by JSON and all thin consumers. References and the optional carrier
@@ -1560,6 +1677,10 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     match operate(value.clone(), true) {
         Ok(result) => Ok(result),
         Err(failure) => {
+            let mut message = failure.to_string();
+            if value["answer"] == "authorize-write" && value["reference"].is_string() {
+                message.push_str(" Start fresh and open /configuration_write to inspect the original proposal's outcome before considering another write.");
+            }
             let mut context = value.clone();
             if value["invocation"]["kind"] == CARRIAGE {
                 context = value["invocation"]["context"].clone();
@@ -1571,10 +1692,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                     }
                 }
             }
-            Ok(native_public::rejected_invocation(
-                &context,
-                &failure.to_string(),
-            ))
+            Ok(native_public::rejected_invocation(&context, &message))
         }
     }
 }
@@ -1884,8 +2002,8 @@ fn operate_current(
             // also owns committed replay and uncertain-effect recovery. A fresh
             // pre-effect start may no longer return the original action after
             // it committed; do not replace that disposition with a lookup error.
-            if invoking {
-                if !action_selector(selector) || answer.is_some() {
+            if invoking && answer.is_none() {
+                if !action_selector(selector) {
                     return Err(error(
                         "invoke requires an exact carried action without answer",
                     ));
@@ -1953,7 +2071,13 @@ fn operate_current(
         {
             return Ok(recovery);
         }
-        let selected_entry = select_entry(&current, &context, &selected)?;
+        let selected_entry = select_entry(&current, &context, &selected).map_err(|failure| {
+            if invoking && answer.is_some() {
+                error("Configuration question is no longer current. Resolve fresh work and inspect /configuration_write for the prior outcome before considering another write.")
+            } else {
+                failure
+            }
+        })?;
         return use_selected(
             context,
             current,
@@ -2728,7 +2852,7 @@ mod tests {
         let candidates: Vec<_> = occasions.iter().map(|v| json!({"occasion":v})).collect();
         let mut activation =
             json!({"kind":"agentic-workspace/activation/v1","candidates":candidates});
-        compact_binding_occasions(&mut activation, &blockers);
+        compact_binding_occasions(&mut activation, &blockers, None);
         assert_eq!(
             activation["candidates"][0]["occasion"],
             json!({"from":"/decision_packet/blockers","owners":["planning","verification"]})
@@ -2736,6 +2860,19 @@ mod tests {
         for (i, original) in occasions.iter().enumerate().skip(1) {
             assert_eq!(&activation["candidates"][i]["occasion"], original);
         }
+        let mut filtered = json!({"kind":"agentic-workspace/activation/v1","candidates":[
+            {"occasion":{"binding":[a,b]}},{"occasion":{"binding":[c]}}
+        ]});
+        compact_binding_occasions(&mut filtered, &json!([c, d, b]), None);
+        compact_binding_occasions(&mut filtered, &blockers, Some(&json!("exact-packet")));
+        assert_eq!(
+            filtered["candidates"][0]["occasion"],
+            json!({"from":"/decision_packet","selector":"/blockers","reference":"exact-packet","owners":["verification"]})
+        );
+        assert_eq!(
+            filtered["candidates"][1]["occasion"],
+            json!({"from":"/decision_packet/blockers","owners":["planning"]})
+        );
     }
 
     #[test]
