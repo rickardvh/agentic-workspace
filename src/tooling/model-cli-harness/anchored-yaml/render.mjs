@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { isDeepStrictEqual } from 'node:util'
 import * as yamlLibrary from 'yaml'
 import { anchored, parseJSON, jsonText } from './node-baseline.mjs'
 import { renderAgentYaml } from './checkout-view.mjs'
@@ -13,8 +14,13 @@ if (mode === 'yaml') {
   const value = parseJSON(raw)
   const tokens = text => enc.encode(text, [], []).length
   if (mode === 'node-rust') {
-    const node = anchored(value, yamlLibrary)
     const rust = renderAgentYaml(raw)
+    // This comparison takes full-value model inputs. Reject carried transport
+    // before emitting either arm, including a carried effect continuation.
+    if (!isDeepStrictEqual(yamlLibrary.parse(rust, { intAsBigInt: true }), value)) {
+      throw new Error('The node-rust comparison requires an exact, unwrapped model view.')
+    }
+    const node = anchored(value, yamlLibrary)
     process.stdout.write(JSON.stringify({ node, rust, tokens: { node: tokens(node), rust: tokens(rust) } }))
   } else {
     const json = jsonText(value)

@@ -50,7 +50,7 @@ fn string(value: &str, flow: bool) -> String {
         && !value.ends_with([' ', ':'])
         && !value.contains(": ")
         && !value.contains(" #")
-        && !(flow && value.contains(['[', ']', '{', '}', ',']))
+        && !(flow && value.contains(['[', ']', '{', '}', ',', '?']))
         && !matches!(
             value.to_ascii_lowercase().as_str(),
             "true" | "false" | "null" | "yes" | "no" | "on" | "off" | "y" | "n" | ".inf" | ".nan"
