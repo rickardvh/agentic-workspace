@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Reduce repeated restriction records and recovery instructions in compact and carried views while keeping every affected scope and exact owner route available."

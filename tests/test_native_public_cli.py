@@ -1590,6 +1590,22 @@ def test_installed_first_party_activation_and_quiet_control(tmp_path, shared_cor
     assert quiet["decision_packet"]["blockers"] == native_blockers
     assert all(c["status"] == "binding-consequence" for c in quiet.get("activation", {}).get("candidates", []))
 
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        '[delegation]\nassignment_policy="required-best-fit"\n'
+        '[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
+        'location="external"\ntransports=[{kind="manual"}]\n',
+        encoding="utf-8",
+    )
+    compact = consume("native", shared_core_binary, native_cli, {**context, "projection": "compact"})
+    candidate = next(c for c in compact["activation"]["candidates"] if c["entry"]["skill_id"] == "planning-assignment")
+    assert candidate["status"] == "binding-consequence"
+    assert candidate["occasion"] == {"from": "/decision_packet/blockers", "owners": ["assignment"]}
+    detail = consume("native", shared_core_binary, native_cli, {**compact["reentry"], "reference": compact["detail_refs"]["/activation"]})
+    claim_blockers = [b for b in compact["decision_packet"]["blockers"] if b["owner"] == "assignment"]
+    expanded = next(c for c in detail["value"]["candidates"] if c["id"] == candidate["id"])
+    assert expanded == {**candidate, "occasion": {"binding": claim_blockers}}
+    assert claim_blockers and detail["currentness"] == "reobserved"
+
 
 @pytest.mark.parametrize("nonlocal_work", [False, True])
 def test_consumer_assignment_fixture_is_native_compatible(tmp_path, shared_core_binary, native_cli, nonlocal_work):

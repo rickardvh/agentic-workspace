@@ -30,6 +30,20 @@ Changing the view does not grant permission, satisfy a requirement or perform an
 action. Compact output retains relevant restrictions; a shorter answer is not a
 weaker set of checks.
 
+## Find a restriction and its recovery
+
+Compact and carried views keep each restriction in `decision_packet.blockers`.
+When an activation candidate's `occasion.from` is `/decision_packet/blockers`,
+its trigger is every blocker in that list whose `owner` appears in
+`occasion.owners`, in the order shown. The same response supplies each blocker's
+message, affected scope and source basis. The `/activation` detail reference
+returns the expanded candidate if needed.
+
+Look up a blocker's `consequence_id` in `consequence_recovery[].consequences`.
+Restrictions share a row only when the owner nominated the same exact routes
+and all recovery instructions agree. Each member retains its own affected scope.
+Routes that require a scope judgment appear separately for each restriction.
+
 ## Read one returned detail
 
 Prefer a specific `detail_refs` reference when only one component's detail is
