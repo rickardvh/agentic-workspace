@@ -325,9 +325,7 @@ def test_cli_recovers_from_semantic_route_kind_as_reference(tmp_path: Path, nati
 
     initial = json.loads(call().stdout)
     detail_ref = initial["detail_refs"]["/semantic_routes"]
-    detail = json.loads(call("--reference", detail_ref).stdout)
     kind = "semantic-routes/select/v1"
-    request = next(row for row in detail["value"]["requests"] if row["request_kind"] == kind)
     arguments = {"posture": "selected", "routes": [route]}
     rejected = call("--reference", kind, "--answer", json.dumps(arguments))
     assert rejected.returncode == 2 and not rejected.stdout
@@ -340,6 +338,9 @@ def test_cli_recovers_from_semantic_route_kind_as_reference(tmp_path: Path, nati
     assert [p for p in tmp_path.rglob("*") if p.is_file()] == [registry]
     assert registry.read_text(encoding="utf-8") == source
 
+    detail = call("--reference", detail_ref)
+    assert detail.returncode == 0, detail.stderr
+    request = next(row for row in json.loads(detail.stdout)["value"]["requests"] if row["request_kind"] == kind)
     request["arguments"] = arguments
     selected = call("--input", "-", request=request)
     assert selected.returncode == 0, selected.stderr

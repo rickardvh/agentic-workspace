@@ -233,7 +233,7 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
         )
     {
         return Err(
-            "--reference received a semantic route request kind. Use the returned detail_refs[\"/semantic_routes\"] as --reference and find the matching object in value.requests. Edit only arguments, then send the complete request as JSON to start --input - with the original --target, --task and any --changed values. Omit --reference and --answer on that submission."
+            "--reference received a semantic route request kind. Open the returned detail_refs[\"/semantic_routes\"] with --reference and no --answer. In value.requests, find the matching object and edit only arguments. Submit the complete object as JSON to start --input - with the same --target, --task and any --changed values, without --reference or --answer."
                 .into(),
         );
     }
