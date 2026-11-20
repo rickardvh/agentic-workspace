@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:3cb406005d5a640cb3aca02123f7a66a1a2dae15dec5f09ff09ede3f2026e7ce`
+- Contract digest: `sha256:d42715c6ef9a9a985c50f430e1d257b0187dc605faca6d9911c3907aac04db4c`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -40,6 +40,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--yes` | — | — | Authorise the exact setup proposal (setup only). |
 | `--dry-run` | — | — | Show the setup proposal without changes (setup only). |
 | `--recover` | — | — | Inspect and authorise an interrupted setup (setup only). |
+| `--version` | — | — | Show the version of the invoked native executable. Run it without a command. |
 
 Use `--help` for the installed artefact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.
 
