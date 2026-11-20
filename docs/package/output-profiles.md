@@ -55,13 +55,17 @@ context loss so needed material can be supplied again.
 
 ## Render one YAML format for an agent
 
-The npm CLI defaults to JSON for machine commands. Select anchored YAML with
-`--format yaml`, or set `AGENTIC_WORKSPACE_OUTPUT_FORMAT=yaml` for that process
-environment. An explicit `--format json` overrides the environment. Use Node 22.12
-or later and install `yaml@2.9.1` alongside the npm package to enable YAML.
-The selected format applies to output, including structured errors and
-continuations. Requests passed through `--input` or `--answer` still use JSON.
-The native CLI and language bindings use their existing formats.
+The npm CLI defaults to anchored YAML when both output streams go to a terminal
+and the renderer is available. Redirected or captured output defaults to JSON.
+Interactive `setup` defaults to its text prompt. Use Node 22.12 or later and
+install `yaml@2.9.1` alongside the npm package to enable YAML. Choose
+`--format yaml` or `--format json` for a single call, or set
+`AGENTIC_WORKSPACE_OUTPUT_FORMAT` to `yaml` or `json` in the process environment.
+An explicit flag takes precedence.
+
+The selection applies to output, including structured errors and continuations.
+Requests passed through `--input` or `--answer` use JSON. The native CLI and
+language bindings use their existing formats.
 
 ```sh
 agentic-workspace start --target . --task "Inspect current restrictions" --format yaml

@@ -15,16 +15,23 @@ async function run(args) {
   const format = explicit
     ? (split ? args[formatIndex + 1] : args[formatIndex].slice("--format=".length))
     : process.env.AGENTIC_WORKSPACE_OUTPUT_FORMAT;
+  const interactive = !explicit && !format && args[0] !== "setup" && process.stdout.isTTY && process.stderr.isTTY;
 
   if (format === "json" && !explicit) return runNativeCli([...args, "--format", "json"]);
-  if (format !== "yaml") {
+  if (format !== "yaml" && !interactive) {
     if (format && !explicit) throw new TypeError("AGENTIC_WORKSPACE_OUTPUT_FORMAT must be json or yaml");
     return runNativeCli(args);
   }
 
   // Load the renderer before running a command that may have effects.
   const { anchored, loadYaml, parseJSON } = await import("./native/_agent-yaml.mjs");
-  const yaml = await loadYaml();
+  let yaml;
+  try {
+    yaml = await loadYaml();
+  } catch (error) {
+    if (interactive) return runNativeCli(args);
+    throw error;
+  }
   const nativeArgs = [...args];
   if (!explicit) nativeArgs.push("--format", "json");
   else if (split) nativeArgs[formatIndex + 1] = "json";
