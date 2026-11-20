@@ -139,7 +139,7 @@ agentic-workspace invoke --input reentry.json --reference "$QUESTION" --answer '
 
 AW checks the question against current sources and executes only its unique
 admitted action. If the response was lost, start fresh with the original
-target, task and changed paths and open
+target, task, changed paths and any maintenance mode. Open
 `/configuration_write`. Submit its fresh `inspect_write_request` with
 `source` and `proposal_revision` from the original question's
 `response_request.arguments` or its carried `request_material`. Take
