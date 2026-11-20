@@ -1,17 +1,8 @@
+// Historical benchmark control. This module is never shipped.
 import assert from 'node:assert/strict'
 
 function requireNumericSupport() {
   if (typeof JSON.rawJSON !== 'function') throw new TypeError('The YAML view requires Node 22.12 or later')
-}
-
-export async function loadYaml() {
-  requireNumericSupport()
-  try {
-    return await import('yaml')
-  } catch (error) {
-    if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error
-    throw new Error('Install yaml@2.9.1 alongside the AW npm package to enable YAML output.')
-  }
 }
 
 // AW uses serde_json integers (including u64) and finite IEEE doubles. Keep

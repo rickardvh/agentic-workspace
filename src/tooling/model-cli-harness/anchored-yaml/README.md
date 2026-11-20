@@ -1,6 +1,6 @@
 # Anchored YAML for AW responses
 
-The benchmark exercises the Node package's optional agent view. It displays one AW response as YAML 1.2, keeps the first occurrence of a repeated value in place, and reuses it through document-local aliases. Hosts can also issue short selections and retain exact native values. The [package guide](../../../../docs/package/output-profiles.md#render-one-yaml-format-for-an-agent) covers both entry points. The broader work is tracked in [AW #3957](https://github.com/rickardvh/agentic-workspace/issues/3957).
+The benchmark exercises the native Rust renderer through the Node package's optional agent view. It displays one AW response as YAML 1.2, keeps the first occurrence of a repeated value in place, and reuses it through document-local aliases. Hosts can also issue short selections and retain exact native values. The [package guide](../../../../docs/package/output-profiles.md#render-one-yaml-format-for-an-agent) covers both entry points. The broader work is tracked in [AW #3957](https://github.com/rickardvh/agentic-workspace/issues/3957).
 
 ## Try it
 
@@ -13,7 +13,7 @@ uv run python src/tooling/run_agentic_workspace.py start --target . --task "Insp
     node "$prototype/render.mjs"
 ```
 
-The current renderer considers repeated values of at least 24 UTF-16 code units in compact JSON, uses short alphabetic anchor names, and puts short scalar lists on one line. It checks expansion with the standard YAML parser before printing. Structures exceeding the parser's alias limit fall back to ordinary YAML. The filter preserves native 64-bit integers and negative zero. The benchmark-only `pair` mode retains compact JSON and the original 48-unit anchored layout as controls.
+The shared renderer considers repeated values of at least 24 bytes of compact JSON, uses short alphabetic anchors and permits nested aliases within the expansion limit. Further uses that would exceed the limit are written inline. The filter preserves native 64-bit integers and negative zero. The benchmark retains the historical Node implementation as a comparison control. `--compare node-rust` compares both full-value renderers on identical native responses. `--compare json-yaml` retains the original 48-unit layout for reproducing the pilot.
 
 ## Hosted selections · 20 November 2026
 

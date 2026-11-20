@@ -2,10 +2,9 @@
 // enters model context. Native bindings live in this process for one session.
 import { createInterface } from 'node:readline'
 import { getEncoding } from 'js-tiktoken'
-import * as yamlLibrary from 'yaml'
-import { createAgentSession } from '../../../cli/typescript/native/agent-view.mjs'
+import { createAgentSession } from './checkout-view.mjs'
 
-const session = createAgentSession(yamlLibrary)
+const session = createAgentSession()
 const enc = getEncoding('o200k_base')
 let view
 for await (const line of createInterface({ input: process.stdin, crlfDelay: Infinity })) {

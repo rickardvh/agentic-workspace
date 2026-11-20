@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import * as yamlLibrary from 'yaml'
-import { createAgentSession as newSession, renderAgentYaml } from '../../../cli/typescript/native/agent-view.mjs'
+import { createAgentSession as newSession, renderAgentYaml } from './checkout-view.mjs'
 
 const { parse } = yamlLibrary
 const createAgentSession = () => newSession(yamlLibrary)

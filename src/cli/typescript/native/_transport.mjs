@@ -50,9 +50,9 @@ export function runNativeCli(args) {
   return result.status ?? 1;
 }
 
-export function request(payload) {
-  const result = spawnSync(toNamespacedPath(coreBinary()), [], {
-    input: JSON.stringify(payload),
+function runCore(args, input) {
+  const result = spawnSync(toNamespacedPath(coreBinary()), args, {
+    input,
     encoding: "utf8",
     windowsHide: true,
     // Full owner responses can exceed Node's default 1 MiB capture limit.
@@ -65,5 +65,13 @@ export function request(payload) {
     try { message = JSON.parse(result.stderr).error.message; } catch {}
     throw new Error(message);
   }
-  return JSON.parse(result.stdout);
+  return result.stdout;
+}
+
+export function request(payload) {
+  return JSON.parse(runCore([], JSON.stringify(payload)));
+}
+
+export function renderYaml(json) {
+  return runCore(["--render-yaml"], json);
 }

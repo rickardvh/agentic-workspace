@@ -59,7 +59,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     node_arch = {"amd64": "x64", "x86_64": "x64", "arm64": "arm64", "aarch64": "arm64"}[platform.machine().lower()]
     native = output / "src/native/bin"
     native.mkdir(parents=True)
-    for name in ("_transport.mjs", "operating.mjs", "operating.d.mts", "_agent-yaml.mjs", "agent-view.mjs", "agent-view.d.mts"):
+    for name in ("_transport.mjs", "operating.mjs", "operating.d.mts", "agent-view.mjs", "agent-view.d.mts"):
         shutil.copy2(ROOT / "src/cli/typescript/native" / name, native.parent / name)
     shutil.copy2(ROOT / "src/cli/typescript/cli.mjs", output / "src/cli.mjs")
     shutil.copy2(ROOT / "src/cli/typescript/agent-yaml.mjs", output / "src/agent-yaml.mjs")

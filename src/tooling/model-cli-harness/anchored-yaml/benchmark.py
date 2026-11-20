@@ -65,9 +65,9 @@ def native_reply(host, actual):
 
 
 @lru_cache(maxsize=20)
-def render(raw):
+def render(raw, mode="pair"):
     result = subprocess.run(
-        ["node", str(HERE / "render.mjs"), "pair"], input=raw, capture_output=True, encoding="utf-8", timeout=90, check=True
+        ["node", str(HERE / "render.mjs"), mode], input=raw, capture_output=True, encoding="utf-8", timeout=90, check=True
     )
     return json.loads(result.stdout)
 
@@ -153,7 +153,7 @@ def cell(journey, name, fmt, trial, actor_dir, host):
                 presented = host({"op": "present", "raw": raw})
                 payload, payload_tokens = presented["text"], presented["tokens"]
             else:
-                pair = render(raw)
+                pair = render(raw, "node-rust" if fmt in {"node", "rust"} else "pair")
                 payload, payload_tokens = pair[fmt], pair["tokens"][fmt]
             step = {"sha256": hashlib.sha256(raw.encode()).hexdigest(), "payload_tokens": payload_tokens, "matched": False}
             step["presented_sha256"] = hashlib.sha256(payload.encode()).hexdigest()
@@ -217,9 +217,9 @@ def main():
     mode.add_argument("--out", type=Path)
     mode.add_argument("--check", action="store_true", help="Exercise the native workflows and render both formats without model calls")
     parser.add_argument("--repeats", type=int, default=2, choices=range(1, 11))
-    parser.add_argument("--compare", choices=["json-yaml", "yaml-hosted"], default="json-yaml")
+    parser.add_argument("--compare", choices=["json-yaml", "yaml-hosted", "node-rust"], default="json-yaml")
     args = parser.parse_args()
-    arms = ["yaml", "hosted-yaml"] if args.compare == "yaml-hosted" else ["json", "yaml"]
+    arms = {"yaml-hosted": ["yaml", "hosted-yaml"], "json-yaml": ["json", "yaml"], "node-rust": ["node", "rust"]}[args.compare]
     if not __debug__:
         parser.error("Run with Python assertions enabled for native outcome checks")
     if args.out and not args.out.parent.is_dir():
@@ -233,7 +233,7 @@ def main():
         },
     )
     factories = {"checkout": lambda _: checkout_route(checkout), "write": write_config, "stale": stale_config}
-    if args.compare == "yaml-hosted":
+    if args.compare != "json-yaml":
         factories["defer"] = defer_config
     # Validate the scorer against a real known-good journey before spending
     # model tokens. In particular, a successful native read can return a
@@ -247,7 +247,7 @@ def main():
             _, view, answer = next(journey)
             while True:
                 raw = json.dumps(view, ensure_ascii=False, separators=(",", ":"))
-                render(raw)
+                render(raw, "node-rust" if args.compare == "node-rust" else "pair")
                 if host:
                     import yaml
 

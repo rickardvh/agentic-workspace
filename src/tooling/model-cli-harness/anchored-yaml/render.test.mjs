@@ -51,3 +51,20 @@ test('nested repeats stay readable with the standard YAML alias limit', () => {
   const value = Array(15).fill(row)
   assert.deepEqual(parse(render(JSON.stringify(value))), value)
 })
+
+test('aliases shared evidence inside repeated records', () => {
+  const evidence = 'shared-evidence:' + 'ab'.repeat(32)
+  const first = { evidence, owner: 'configuration' }
+  const second = { evidence, owner: 'verification' }
+  const value = [first, second, first, second]
+  const yaml = render(JSON.stringify(value))
+  assert.equal(yaml.split(evidence).length - 1, 1)
+  assert.deepEqual(parse(yaml), value)
+})
+
+test('preserves prose, flow punctuation, special scalars and multiline whitespace', () => {
+  const values = ['a,b', 'a[b]', 'a # comment', 'a: b', '.NaN', '.INF', 'ON', 'n', '/path',
+    'first\nlast', '\nfirst  \n indented\n\n', '  first\nlast', 'first\n   \n', 'first\r\nlast']
+  const doc = [Object.fromEntries(values.map(key => [key, [key, key]])), ...values]
+  assert.deepEqual(parse(render(JSON.stringify(doc))), doc)
+})
