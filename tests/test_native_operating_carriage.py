@@ -630,3 +630,45 @@ def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, sha
     assert any("New source appeared" in r.get("guidance", "") for r in opaque["decision_packet"]["material"]["scoped-instructions"])
     assert "text" in call()["decision_packet"]["material"]["startup-adapter"]
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+def test_cli_delivery_flags_distinguish_array_input_from_source_drift(tmp_path, native_cli):
+    source = tmp_path / "AGENTS.md"
+    text = "Read current repository instructions.\n" * 10
+    source.write_text(text, encoding="utf-8", newline="\n")
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n', encoding="utf-8")
+    command = [str(native_cli), "start", "--target", str(tmp_path), "--task", "Read current policy", "--format", "json"]
+
+    def packet(*args):
+        result = subprocess.run([*command, *args], capture_output=True, check=True)
+        return json.loads(result.stdout)
+
+    first = packet()
+    startup = first["decision_packet"]["material"]["startup-adapter"]
+    assert startup["text"] == text
+    assert startup["delivery"]["status"] == "included"
+    refs = first["delivery_refs"]
+    assert startup["delivery"]["reference"] in refs
+
+    for flags in (["--delivered", json.dumps(refs)], [f"--delivered={json.dumps(refs)}"]):
+        rejected = subprocess.run([*command, *flags], capture_output=True)
+        assert rejected.returncode == 2 and not rejected.stdout
+        error = json.loads(rejected.stderr)["error"]
+        assert error["code"] == "invalid-cli-input"
+        assert "--delivered RECEIPT1 --delivered RECEIPT2" in error["message"]
+        assert all(ref not in error["message"] for ref in refs)
+
+    flags = ["--delivered", startup["delivery"]["reference"], "--delivered", "sha256:" + "0" * 64]
+    repeated = packet(*flags)["decision_packet"]
+    delivered = repeated["material"]["startup-adapter"]
+    assert "text" not in delivered
+    assert delivered["delivery"]["status"] == "already-delivered"
+    for key in ("blockers", "claim_boundary", "primary_action", "status"):
+        assert repeated[key] == first["decision_packet"][key]
+
+    source.write_text(text + "Read the new instruction.\n", encoding="utf-8", newline="\n")
+    drift = packet(*flags)["decision_packet"]["material"]["startup-adapter"]
+    assert drift["delivery"]["status"] == "included"
+    assert drift["text"] == text + "Read the new instruction.\n"

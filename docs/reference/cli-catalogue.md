@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:793ed4aea9ab0c8008aa4802a6d48a1f92e31da3fedf24a7396f8f44026afe57`
+- Contract digest: `sha256:3cb406005d5a640cb3aca02123f7a66a1a2dae15dec5f09ff09ede3f2026e7ce`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -30,7 +30,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--projection` | — | compact, full, carried | Compact executable decision (default), full detail, or view plus disposable exact carriage for a thin host. |
 | `--reference` | — | — | Exact immutable reference from carried output; --input supplies the machine-carried object. |
 | `--answer` | — | — | JSON answer for an exact decision reference, or an arguments object for an exact owner request reference. Preserves owner identity and prior carried answers; normal owner validation applies. |
-| `--delivered` | — | — | Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations. |
+| `--delivered` | — | — | Pass individual values from delivery_refs, e.g. --delivered RECEIPT1 --delivered RECEIPT2. Suppresses unchanged source prose for this continuing consumer without changing owner checks or obligations. |
 | `--observation` | — | — | Nominate one current finding through start, without a JSON file; use --source for its actual provenance. Mutually exclusive with --need. |
 | `--need` | — | — | Nominate one unmet prerequisite through start, without a JSON file; keep the current task. Mutually exclusive with --observation. |
 | `--source` | — | — | Actual source reference for --observation or --need; omitted provenance remains unknown. |

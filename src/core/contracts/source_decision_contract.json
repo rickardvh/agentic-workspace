@@ -305,7 +305,7 @@
         "flag": "--delivered",
         "field": "delivered",
         "multiple": true,
-        "description": "Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations."
+        "description": "Pass individual values from delivery_refs, e.g. --delivered RECEIPT1 --delivered RECEIPT2. Suppresses unchanged source prose for this continuing consumer without changing owner checks or obligations."
       },
       {
         "flag": "--observation",
