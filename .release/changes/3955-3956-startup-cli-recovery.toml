@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Show how to submit semantic route requests and reuse startup instruction receipts when start receives either value in the wrong CLI form."

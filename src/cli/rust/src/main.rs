@@ -177,6 +177,16 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
         {
             return Err(format!("{flag} must be one of {choices:?}"));
         }
+        if field == "delivered"
+            && supplied
+                .iter()
+                .any(|value| value.trim_start().starts_with('['))
+        {
+            return Err(
+                "--delivered takes individual receipt values. Use --delivered RECEIPT1 --delivered RECEIPT2 with the returned values, or put the array in the delivered field of a JSON --input envelope."
+                    .into(),
+            );
+        }
         if multiple {
             values
                 .entry(field.to_owned())
@@ -215,6 +225,17 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
     if let Some(answer) = values.get_mut("answer") {
         *answer = serde_json::from_str(answer.as_str().unwrap())
             .map_err(|_| "--answer must be JSON".to_owned())?;
+    }
+    if args[0] == "start"
+        && matches!(
+            values.get("reference").and_then(Value::as_str),
+            Some("semantic-routes/select/v1" | "semantic-routes/discover/v1")
+        )
+    {
+        return Err(
+            "--reference received a semantic route request kind. Open the returned detail_refs[\"/semantic_routes\"] with --reference and no --answer. In value.requests, find the matching object and edit only arguments. Submit the complete object as JSON to start --input - with the same --target, --task and any --changed values, without --reference or --answer."
+                .into(),
+        );
     }
     let observation = values.remove("observation");
     let need = values.remove("need");

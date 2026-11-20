@@ -47,11 +47,13 @@ helpers.
 
 ## Avoid repeating source prose
 
-A continuing caller can return already-held `delivery_refs` through `--delivered`
-(API field `delivered`). This can suppress unchanged source prose after current
-source checks. It does not suppress requirements or establish that the consumer
-understood or followed the source. Clear caller-held delivery information after
-context loss so needed material can be supplied again.
+A continuing caller can return individual values from `delivery_refs`, for
+example `--delivered RECEIPT1 --delivered RECEIPT2` with the returned receipt
+strings. To pass the array, use the `delivered` field of a JSON `--input`
+envelope or API request. Receipt reuse suppresses unchanged source prose after
+current source checks. Requirements still apply and delivery carries no evidence
+of satisfaction. Clear caller-held receipts after context loss so needed material
+can be supplied again.
 
 ## Render one YAML format for an agent
 

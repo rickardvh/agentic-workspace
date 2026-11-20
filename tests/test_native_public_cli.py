@@ -306,6 +306,47 @@ def consume(
     return decoded
 
 
+def test_cli_recovers_from_semantic_route_kind_as_reference(tmp_path: Path, native_cli: Path) -> None:
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    route = "sample/docs/find"
+    source = json.dumps({"skills": [{"id": "inspect", "semantic_routes": [route]}]})
+    registry.write_text(source, encoding="utf-8")
+    command = [str(native_cli), "start", "--target", str(tmp_path), "--format", "json"]
+    task = "Find a formatting guide"
+
+    def call(*args: str, task: str = task, request: dict | None = None) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [*command, "--task", task, *args],
+            input=json.dumps(request) if request is not None else None,
+            text=True,
+            capture_output=True,
+        )
+
+    initial = json.loads(call().stdout)
+    detail_ref = initial["detail_refs"]["/semantic_routes"]
+    kind = "semantic-routes/select/v1"
+    arguments = {"posture": "selected", "routes": [route]}
+    rejected = call("--reference", kind, "--answer", json.dumps(arguments))
+    assert rejected.returncode == 2 and not rejected.stdout
+    message = json.loads(rejected.stderr)["error"]["message"]
+    assert all(hint in message for hint in ("request kind", "detail_refs", "/semantic_routes", "value.requests", "start --input -"))
+    for wrong, wrong_task in (("semantic-routes/unknown/v1", task), (detail_ref, "Other work")):
+        invalid = call("--reference", wrong, task=wrong_task)
+        assert invalid.returncode == 2 and not invalid.stdout
+        assert "unknown, ambiguous, or stale operating reference" in json.loads(invalid.stderr)["error"]["message"]
+    assert [p for p in tmp_path.rglob("*") if p.is_file()] == [registry]
+    assert registry.read_text(encoding="utf-8") == source
+
+    detail = call("--reference", detail_ref)
+    assert detail.returncode == 0, detail.stderr
+    request = next(row for row in json.loads(detail.stdout)["value"]["requests"] if row["request_kind"] == kind)
+    request["arguments"] = arguments
+    selected = call("--input", "-", request=request)
+    assert selected.returncode == 0, selected.stderr
+    assert json.loads(selected.stdout)["decision_packet"]["semantic_task_routes"]["routes"] == [route]
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_current_public_route_survives_fresh_process_but_not_source_change(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
