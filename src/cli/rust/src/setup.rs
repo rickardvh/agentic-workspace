@@ -1,9 +1,8 @@
 //! Human interaction composed over Configuration's exact adoption protocol.
 //! This module never reads or writes repository files itself.
-use super::{OutputFormat, output_yaml};
+use super::{OutputFormat, paired_core, render_yaml};
 use serde_json::{Value, json};
 use std::{
-    env,
     io::{self, IsTerminal, Write},
     process::{Command, Stdio},
 };
@@ -13,13 +12,7 @@ fn call(context: &Value, request: Option<Value>, invocation: bool) -> Result<Val
     if let Some(request) = request {
         input[if invocation { "invocation" } else { "request" }] = request;
     }
-    let core = env::current_exe()
-        .map_err(|e| e.to_string())?
-        .with_file_name(if cfg!(windows) {
-            "agentic-workspace-core.exe"
-        } else {
-            "agentic-workspace-core"
-        });
+    let core = paired_core().map_err(|e| e.to_string())?;
     let mut command = Command::new(core);
     command
         .stdin(Stdio::piped())
@@ -70,7 +63,7 @@ fn render(value: &Value, format: OutputFormat) {
             return;
         }
         OutputFormat::Yaml => {
-            print!("{}", output_yaml::render(value));
+            print!("{}", render_yaml(value));
             return;
         }
         OutputFormat::Text => {}

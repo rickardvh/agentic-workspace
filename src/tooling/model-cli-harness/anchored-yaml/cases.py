@@ -13,7 +13,11 @@ def aw(command, payload):
     if binary.with_suffix(".exe").is_file():
         binary = binary.with_suffix(".exe")
     result = subprocess.run(
-        [str(binary), command, "--input", "-"], input=json.dumps(payload), capture_output=True, encoding="utf-8", timeout=90
+        [str(binary), command, "--format", "json", "--input", "-"],
+        input=json.dumps(payload),
+        capture_output=True,
+        encoding="utf-8",
+        timeout=90,
     )
     if result.returncode and not result.stdout.strip():
         raise RuntimeError(result.stderr[:500])

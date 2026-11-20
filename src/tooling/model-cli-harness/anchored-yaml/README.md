@@ -57,7 +57,7 @@ A preliminary shakedown exposed a scoring bug in the checkout case. The checker 
 
 ## Reproduce
 
-The checkout case targets an active AW source checkout with the binding Assignment policy and matching implementation restriction. The fixture cases create temporary repositories outside the source checkout. The runner needs a signed-in Codex CLI that supports Terra, medium effort and ephemeral app-server sessions. The recorded run used Codex CLI 0.170.0 and AW source `766cfc91f6a793a602134ab065eac4ad1c714ae2`.
+The checkout case targets an active AW source checkout with the binding Assignment policy and matching implementation restriction. The fixture cases create temporary repositories outside the source checkout. The runner needs a signed-in Codex CLI that supports Terra, medium effort and ephemeral app-server sessions. The recorded runs used Codex CLI 0.170.0. Their `revision` field identifies the base checkout `766cfc91f6a793a602134ab065eac4ad1c714ae2`. The renderer, harness, and final native answer hint included local edits whose exact revisions were not recorded.
 
 Run these commands from the repository root.
 

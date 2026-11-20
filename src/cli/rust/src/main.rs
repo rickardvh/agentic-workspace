@@ -1,11 +1,12 @@
 use serde_json::{Value, json};
-mod output_yaml;
 mod setup;
+#[cfg(not(unix))]
+use std::io::Write;
 use std::{
     collections::BTreeSet,
     env, fs,
-    io::{self, IsTerminal, Read, Seek, Write},
-    path::Path,
+    io::{self, IsTerminal, Read, Seek},
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -17,6 +18,14 @@ enum OutputFormat {
 }
 
 impl OutputFormat {
+    fn core_args(self) -> &'static [&'static str] {
+        if self == Self::Yaml {
+            &["--cli-yaml"]
+        } else {
+            &[]
+        }
+    }
+
     fn named(value: &str) -> Option<Self> {
         match value {
             "json" => Some(Self::Json),
@@ -373,20 +382,18 @@ fn run(args: &[String], format: OutputFormat) -> Result<(), (&'static str, Strin
         Value::Null
     };
     carry_input(&contract, &mut parsed, input).map_err(|error| ("invalid-cli-input", error))?;
-    // Every semantic operation runs in
-    // the same colocated executable used by the JSON/Python/Node adapters.
-    let executable = env::current_exe().map_err(|error| ("core-location", error.to_string()))?;
-    let core = executable.with_file_name(if cfg!(windows) {
+    // The colocated core owns the operation and formats its own response in the
+    // same process, so selecting YAML has no effect on signal handling.
+    let core = paired_core().map_err(|error| ("core-location", error.to_string()))?;
+    forward(&core, &json!({parsed.command: parsed.values}), format)
+}
+
+fn paired_core() -> io::Result<PathBuf> {
+    Ok(env::current_exe()?.with_file_name(if cfg!(windows) {
         "agentic-workspace-core.exe"
     } else {
         "agentic-workspace-core"
-    });
-    let payload = json!({parsed.command: parsed.values});
-    if format == OutputFormat::Yaml {
-        forward_yaml(&core, &payload)
-    } else {
-        forward(&core, &payload)
-    }
+    }))
 }
 
 fn core_input(payload: &Value) -> Result<fs::File, (&'static str, String)> {
@@ -401,11 +408,18 @@ fn core_input(payload: &Value) -> Result<fs::File, (&'static str, String)> {
 }
 
 #[cfg(unix)]
-fn forward(core: &Path, payload: &Value) -> Result<(), (&'static str, String)> {
+fn forward(
+    core: &Path,
+    payload: &Value,
+    format: OutputFormat,
+) -> Result<(), (&'static str, String)> {
     use std::os::unix::process::CommandExt;
     let input = core_input(payload)?;
     // exec keeps the same process identity and signal lifetime as the core.
-    let error = Command::new(core).stdin(Stdio::from(input)).exec();
+    let error = Command::new(core)
+        .args(format.core_args())
+        .stdin(Stdio::from(input))
+        .exec();
     Err((
         "core-unavailable",
         format!("colocated core {}: {error}", core.display()),
@@ -423,9 +437,14 @@ fn wrap_core(mut command: Command) -> process_wrap::std::CommandWrap {
 }
 
 #[cfg(not(unix))]
-fn forward(core: &Path, payload: &Value) -> Result<(), (&'static str, String)> {
+fn forward(
+    core: &Path,
+    payload: &Value,
+    format: OutputFormat,
+) -> Result<(), (&'static str, String)> {
     let mut command = Command::new(core);
     command
+        .args(format.core_args())
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
@@ -462,51 +481,36 @@ fn forward(core: &Path, payload: &Value) -> Result<(), (&'static str, String)> {
     Ok(())
 }
 
-fn forward_yaml(core: &Path, payload: &Value) -> Result<(), (&'static str, String)> {
-    // Independent anonymous streams avoid deadlock and retain both the core's
-    // effect receipt and diagnostics until the process exits.
-    let stream_error = |error: io::Error| ("core-output", error.to_string());
-    let mut stdout = tempfile::tempfile().map_err(stream_error)?;
-    let mut stderr = tempfile::tempfile().map_err(stream_error)?;
-    let mut command = Command::new(core);
-    command
-        .stdin(core_input(payload)?)
-        .stdout(stdout.try_clone().map_err(stream_error)?)
-        .stderr(stderr.try_clone().map_err(stream_error)?);
-    #[cfg(windows)]
-    let mut command = wrap_core(command);
-    let mut child = command.spawn().map_err(|error| {
-        (
-            "core-unavailable",
-            format!("colocated core {}: {error}", core.display()),
-        )
-    })?;
-    let status = child.wait().map_err(|error| {
-        let _ = child.kill();
-        let _ = child.wait();
-        ("core-wait", error.to_string())
-    })?;
-    fn copy_response(file: &mut fs::File, mut destination: impl Write) -> io::Result<()> {
-        file.rewind()?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)?;
-        match serde_json::from_slice::<Value>(&bytes) {
-            Ok(value) => destination.write_all(output_yaml::render(&value).as_bytes()),
-            Err(_) => destination.write_all(&bytes),
+fn render_yaml(value: &Value) -> String {
+    // Setup reports and CLI input errors already exist as values in this
+    // process. The render-only mode never dispatches an AW operation.
+    let render = || -> Option<String> {
+        let mut command = Command::new(paired_core().ok()?);
+        command
+            .arg("--render-yaml")
+            .stdin(core_input(value).ok()?)
+            .stderr(Stdio::null());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
         }
-    }
-    copy_response(&mut stdout, io::stdout().lock()).map_err(stream_error)?;
-    copy_response(&mut stderr, io::stderr().lock()).map_err(stream_error)?;
-    if !status.success() {
-        std::process::exit(status.code().unwrap_or(2));
-    }
-    Ok(())
+        let result = command.output().ok()?;
+        result
+            .status
+            .success()
+            .then(|| String::from_utf8(result.stdout).ok())
+            .flatten()
+    };
+    // A missing pair must still leave a parseable receipt or diagnostic.
+    // Compact JSON is valid YAML flow syntax.
+    render().unwrap_or_else(|| format!("{value}\n"))
 }
 
 fn report_error(format: OutputFormat, code: &str, message: &str) -> ! {
     let value = json!({"error": {"code": code, "message": message}});
     if format == OutputFormat::Yaml {
-        eprint!("{}", output_yaml::render(&value));
+        eprint!("{}", render_yaml(&value));
     } else {
         eprintln!("{value}");
     }

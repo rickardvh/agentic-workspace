@@ -31,6 +31,21 @@ test('ambiguous strings, Unicode, reserved keys and native integer boundaries ro
   assert.deepEqual(document.text, JSON.parse(input).text)
 })
 
+test('preserves integral floats and escapes nonprinting YAML characters in keys and values', () => {
+  const controls = '\u007f\u0084\u0085\u0086\u009f\u2028\u2029\ufeff\ufffe\uffff'
+  const wideKey = controls.repeat(18)
+  const raw = '{"float":1.0000000000000001e18,"integer":1000000000000000100,' +
+    '"tiny":1e-23,"integral":5.0,' + JSON.stringify(wideKey) + ':' + JSON.stringify('line\n' + controls) + '}'
+  const output = render(raw)
+  for (const char of controls) assert.ok(!output.includes(char))
+  const decoded = parse(output, { intAsBigInt: true })
+  assert.equal(decoded[wideKey], 'line\n' + controls)
+  assert.equal(decoded.integer, 1000000000000000100n)
+  assert.equal(BigInt(decoded.float), 1000000000000000128n)
+  assert.equal(decoded.integral, 5)
+  assert.equal(decoded.tiny, 1e-23)
+})
+
 test('nested repeats stay readable with the standard YAML alias limit', () => {
   const row = Array(15).fill('a long repeated value '.repeat(4))
   const value = Array(15).fill(row)

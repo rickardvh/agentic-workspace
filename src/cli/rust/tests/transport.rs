@@ -153,3 +153,28 @@ fn transport_rejects_private_flags_without_any_runtime() {
     let error: Value = serde_json::from_slice(&result.stderr).unwrap();
     assert_eq!(error["error"]["code"], "invalid-cli-input");
 }
+
+#[cfg(unix)]
+#[test]
+fn yaml_dispatch_keeps_the_public_process_identity() {
+    use std::os::unix::fs::PermissionsExt;
+    use std::process::Stdio;
+    let target = Target::empty();
+    let cli = target.0.join("agentic-workspace");
+    fs::copy(env!("CARGO_BIN_EXE_agentic-workspace"), &cli).unwrap();
+    let core = target.0.join("agentic-workspace-core");
+    fs::write(&core, "#!/bin/sh\nprintf '%s %s\\n' \"$$\" \"$1\"\n").unwrap();
+    fs::set_permissions(&core, fs::Permissions::from_mode(0o700)).unwrap();
+    let child = Command::new(cli)
+        .args(["start", "--format", "yaml"])
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let public_pid = child.id();
+    let result = child.wait_with_output().unwrap();
+    assert!(result.status.success());
+    assert_eq!(
+        result.stdout,
+        format!("{public_pid} --cli-yaml\n").as_bytes()
+    );
+}

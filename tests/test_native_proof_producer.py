@@ -439,7 +439,10 @@ def test_local_proof_promotion_and_owner_disposition_preserve_execution(tmp_path
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
 
 
-def test_native_proof_actual_interruption_cannot_reexecute(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+@pytest.mark.parametrize("output_format", ["json", "yaml"])
+def test_native_proof_actual_interruption_cannot_reexecute(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, output_format: str
+) -> None:
     import subprocess
     import time
 
@@ -467,7 +470,7 @@ def test_native_proof_actual_interruption_cannot_reexecute(tmp_path: Path, share
             "--input",
             "-",
             "--format",
-            "json",
+            output_format,
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
