@@ -16,6 +16,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
@@ -86,6 +87,26 @@ def test_isolated_python_owner_mutation_and_missing_core_rejection(wheel, tmp_pa
     target.mkdir()
     environment = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
     environment["PATH"] = ""
+    rendered = subprocess.run(
+        [
+            str(python),
+            "-I",
+            "-c",
+            "from agentic_workspace.cli import main; raise SystemExit(main())",
+            "start",
+            "--target",
+            str(target),
+            "--task",
+            "Inspect this consumer",
+            "--format",
+            "yaml",
+        ],
+        cwd=target,
+        env=environment,
+        capture_output=True,
+        check=True,
+    )
+    assert yaml.safe_load(rendered.stdout)["decision_packet"]["status"] == "direct"
     script = """
 import json
 from pathlib import Path
@@ -183,8 +204,14 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     assert local_install.returncode == 0, local_install.stdout + local_install.stderr
     package = consumer / "node_modules/@agentic-workspace/workspace-cli"
     metadata = json.loads((package / "package.json").read_text())
-    assert set(metadata["exports"]) == {".", "./operating"}
-    assert {p.name for p in (package / "src/native").glob("*.mjs")} == {"operating.mjs", "_transport.mjs"}
+    assert set(metadata["exports"]) == {".", "./operating", "./experimental/agent-view"}
+    assert metadata["peerDependenciesMeta"]["yaml"]["optional"]
+    assert {p.name for p in (package / "src/native").glob("*.mjs")} == {
+        "operating.mjs",
+        "_transport.mjs",
+        "_agent-yaml.mjs",
+        "agent-view.mjs",
+    }
     assert not (package / "resources").exists()
     assert not (package / "src/commands").exists()
     environment = {key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"}
@@ -192,12 +219,21 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     result = subprocess.run(
         [node, str(package / "src/cli.mjs"), "start", "--target", str(consumer), "--task", "Inspect this consumer", "--format", "json"],
         cwd=consumer,
-        env=environment,
+        env={**environment, "AGENTIC_WORKSPACE_OUTPUT_FORMAT": "yaml"},
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout)["decision_packet"]["status"] == "direct"
+    expected = json.loads(result.stdout)
+    assert expected["decision_packet"]["status"] == "direct"
+    rendered = subprocess.run(
+        [node, str(package / "src/cli.mjs"), "start", "--target", str(consumer), "--task", "Inspect this consumer", "--format", "yaml"],
+        cwd=consumer,
+        env=environment,
+        capture_output=True,
+        check=True,
+    )
+    assert yaml.safe_load(rendered.stdout) == expected
     assert not (consumer / ".agentic-workspace").exists()
     native_dir = package / "src/native/bin"
     node_os = {"Windows": "win32", "Linux": "linux", "Darwin": "darwin"}[platform.system()]

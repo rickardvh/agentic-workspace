@@ -12,7 +12,8 @@ description = "Native command-line adapter for Agentic Workspace"
 workspace = true
 
 [dependencies]
-serde_json = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tempfile = "3"
 
 [[bin]]
 name = "agentic-workspace"
@@ -20,6 +21,3 @@ path = "src/main.rs"
 
 [target.'cfg(windows)'.dependencies]
 process-wrap = { version = "10", default-features = false, features = ["std", "job-object"] }
-
-[target.'cfg(unix)'.dependencies]
-tempfile = "3"

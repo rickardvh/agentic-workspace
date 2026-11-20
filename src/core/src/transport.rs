@@ -1,14 +1,42 @@
 use std::io::{self, Read};
+mod output_yaml;
+
+#[derive(Clone, Copy)]
+enum Format {
+    Json,
+    Yaml,
+}
+
+impl Format {
+    fn render(self, value: &serde_json::Value) -> String {
+        match self {
+            Self::Json => format!("{value}\n"),
+            Self::Yaml => output_yaml::render(value),
+        }
+    }
+}
 
 pub fn run_stdio() {
+    run(Format::Json, false);
+}
+
+pub fn run_yaml_stdio(render_only: bool) {
+    run(Format::Yaml, render_only);
+}
+
+fn run(format: Format, render_only: bool) {
     let mut input = String::new();
     if let Err(error) = io::stdin().read_to_string(&mut input) {
-        fail("transport-read", &error.to_string());
+        fail(format, "transport-read", &error.to_string(), None);
     }
     let request: serde_json::Value = match serde_json::from_str(&input) {
         Ok(value) => value,
-        Err(error) => fail("invalid-json", &error.to_string()),
+        Err(error) => fail(format, "invalid-json", &error.to_string(), None),
     };
+    if render_only {
+        print!("{}", format.render(&request));
+        return;
+    }
     let started = std::time::Instant::now();
     let result = if let Some(result) = crate::native_methods::dispatch(&request) {
         result
@@ -229,24 +257,19 @@ pub fn run_stdio() {
             if let Some(capture) = capture {
                 decision = crate::maintainer_logging::attach_capture(decision, capture);
             }
-            println!(
-                "{}",
-                serde_json::to_string(&decision).expect("decision is JSON serializable")
-            );
+            print!("{}", format.render(&decision));
         }
-        Err(error) => fail_with_capture("invalid-source-decision", &error.to_string(), capture),
+        Err(error) => fail(
+            format,
+            "invalid-source-decision",
+            &error.to_string(),
+            capture,
+        ),
     }
 }
 
-fn fail(code: &str, message: &str) -> ! {
-    fail_with_capture(code, message, None)
-}
-
-fn fail_with_capture(code: &str, message: &str, capture: Option<serde_json::Value>) -> ! {
+fn fail(format: Format, code: &str, message: &str, capture: Option<serde_json::Value>) -> ! {
     let payload = crate::maintainer_logging::error_payload(code, message, capture);
-    eprintln!(
-        "{}",
-        serde_json::to_string(&payload).expect("error is JSON serializable")
-    );
+    eprint!("{}", format.render(&payload));
     std::process::exit(2);
 }

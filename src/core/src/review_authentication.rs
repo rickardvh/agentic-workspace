@@ -27,9 +27,7 @@ fn text(value: &Value) -> &str {
     value.as_str().unwrap_or("")
 }
 fn timestamp(value: &Value) -> Option<i64> {
-    chrono::DateTime::parse_from_rfc3339(&text(value).trim().replacen(' ', "T", 1))
-        .ok()
-        .map(|v| v.timestamp_micros())
+    crate::timestamps::parse_micros(text(value).trim())
 }
 
 fn signature_valid(signature: &Value, payload: &Value, key: &Value) -> bool {

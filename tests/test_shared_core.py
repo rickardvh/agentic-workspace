@@ -416,11 +416,19 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
         "carry_input",
         "require_invoke_context",
         "run",
+        # Paired executable, OS process setup and presentation-only ingress.
+        "paired_core",
+        "core_input",
+        "wrap_core",
         "forward",
+        "render_yaml",
+        "report_error",
         "main",
     }
     assert "source_decision_contract.json" in native
     assert "json!({parsed.command: parsed.values})" in native
+    assert re.search(r'\bcommand\s*\.arg\("--render-yaml"\)', native)
+    assert "mod output_yaml;" not in native
     assert not any(token in native for token in ("compile_value", "planning::", "assignment::", "proof_subject::", "decision_source::"))
 
 

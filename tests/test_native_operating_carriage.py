@@ -338,7 +338,10 @@ def test_exact_answer_and_action_carriage_preserve_full_effects(tmp_path, shared
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
     compact_question = compact["decision_packet"]["decision_request"]
     assert compact_question["reference"] == compact["detail_refs"]["/decision_packet/decision_request"]
-    assert {key: value for key, value in compact_question.items() if key != "reference"} == full["decision_packet"]["decision_request"]
+    assert compact_question["answer_input"] == question["answer_input"]
+    assert "choices[].id" in compact_question["answer_input"]
+    original_fields = {key: value for key, value in compact_question.items() if key not in {"reference", "answer_input"}}
+    assert original_fields == full["decision_packet"]["decision_request"]
     before = copy.deepcopy(carried)
     answered = consume(
         surface,

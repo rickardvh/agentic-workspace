@@ -274,12 +274,12 @@
       {
         "flag": "--format",
         "field": "format",
-        "default": "json",
         "choices": [
           "json",
+          "yaml",
           "text"
         ],
-        "description": "Output format: setup defaults to text; machine commands use json."
+        "description": "Output format. Terminal output defaults to YAML, captured output to JSON, and setup to text. Overrides AGENTIC_WORKSPACE_OUTPUT_FORMAT."
       },
       {
         "flag": "--projection",

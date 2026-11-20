@@ -1,8 +1,8 @@
 //! Human interaction composed over Configuration's exact adoption protocol.
 //! This module never reads or writes repository files itself.
+use super::{OutputFormat, paired_core, render_yaml};
 use serde_json::{Value, json};
 use std::{
-    env,
     io::{self, IsTerminal, Write},
     process::{Command, Stdio},
 };
@@ -12,13 +12,7 @@ fn call(context: &Value, request: Option<Value>, invocation: bool) -> Result<Val
     if let Some(request) = request {
         input[if invocation { "invocation" } else { "request" }] = request;
     }
-    let core = env::current_exe()
-        .map_err(|e| e.to_string())?
-        .with_file_name(if cfg!(windows) {
-            "agentic-workspace-core.exe"
-        } else {
-            "agentic-workspace-core"
-        });
+    let core = paired_core().map_err(|e| e.to_string())?;
     let mut command = Command::new(core);
     command
         .stdin(Stdio::piped())
@@ -62,10 +56,17 @@ fn report(state: &Value, status: &str) -> Value {
     json!({"status":status,"created":created,"updated":updated,"removed":removed,"preserved":state["preserved"],"conflicts":state["blockers"],"custody_recovery":state["custody_recovery"],"next":"Give your agent an ordinary task in this repository; AGENTS.md points to the installed startup skill."})
 }
 
-fn render(value: &Value, json_output: bool) {
-    if json_output {
-        println!("{}", serde_json::to_string_pretty(value).unwrap());
-        return;
+fn render(value: &Value, format: OutputFormat) {
+    match format {
+        OutputFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(value).unwrap());
+            return;
+        }
+        OutputFormat::Yaml => {
+            print!("{}", render_yaml(value));
+            return;
+        }
+        OutputFormat::Text => {}
     }
     println!(
         "Repository setup: {}",
@@ -211,13 +212,12 @@ fn policy_blockers(current: &Value, disabled_maintenance: bool) -> Vec<Value> {
         .collect()
 }
 
-pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
+pub(super) fn run(parsed: super::Parsed, format: OutputFormat) -> Result<(), String> {
     for key in &parsed.explicit {
         if !["target", "format", "yes", "dry_run", "recover"].contains(&key.as_str()) {
             return Err(format!("setup does not accept {key}"));
         }
     }
-    let json_output = parsed.explicit.contains("format") && parsed.format == "json";
     let yes = parsed.values["yes"] == true;
     let dry = parsed.values["dry_run"] == true;
     if yes && dry {
@@ -237,7 +237,7 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
     if pending && parsed.values["recover"] != true {
         render(
             &report(&owner["repository_adoption"], "recovery-required"),
-            json_output,
+            format,
         );
         return Err("An interrupted setup is preserved. Run setup --recover to inspect and authorise its exact recovery.".into());
     }
@@ -272,7 +272,7 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
     let mut summary = report(state, status);
     summary["setup_gap"] = owner["migration_gap"].clone();
     if status == "already-current" {
-        render(&summary, json_output);
+        render(&summary, format);
         return Ok(());
     }
     let mode = if state["mode"] == "recover" {
@@ -288,23 +288,23 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
         summary["status"] = json!("policy-blocked");
         summary["policy_blockers"] = json!(blockers);
         summary["recovery"] = proposed["consequence_recovery"].clone();
-        render(&summary, json_output);
+        render(&summary, format);
         return Err(format!(
             "Setup is blocked by current owner restrictions: {}",
             summary["policy_blockers"]
         ));
     }
     if decision.is_none() {
-        render(&summary, json_output);
+        render(&summary, format);
         return Err("Setup is blocked; resolve the reported conflict without overwriting preserved content.".into());
     }
     if dry {
-        render(&summary, json_output);
+        render(&summary, format);
         return Ok(());
     }
     if !yes {
-        render(&summary, json_output);
-        if json_output || !io::stdin().is_terminal() {
+        render(&summary, format);
+        if format != OutputFormat::Text || !io::stdin().is_terminal() {
             return Err(
                 "No changes made. Use --yes to authorise this bounded setup, or run interactively."
                     .into(),
@@ -320,8 +320,8 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
             println!("No changes made.");
             return Ok(());
         }
-    } else if !json_output {
-        render(&summary, false);
+    } else if format == OutputFormat::Text {
+        render(&summary, format);
     }
     // Approval is carried on this exact proposal. Re-observation must not silently
     // authorise a different footprint after a concurrent edit.
@@ -352,14 +352,14 @@ pub(super) fn run(parsed: super::Parsed) -> Result<(), String> {
             "configuration_write": authorised["configuration_write"]
         });
         summary["continuation_message"] = json!(continuation_message(&authorised));
-        render(&summary, json_output);
+        render(&summary, format);
         return Err("Setup is waiting for the reported continuation; no changes made.".into());
     };
     let result = call(&context, Some(action.clone()), true)?;
     summary["status"] = result["status"].clone();
     summary["effect_outcome"] = result["effect_outcome"].clone();
     summary["custody"] = result["custody"].clone();
-    render(&summary, json_output);
+    render(&summary, format);
     if result["effect_outcome"]["status"] != "committed" {
         return Err(format!(
             "Setup did not commit: {}. Preserve custody and re-run setup to inspect recovery.",

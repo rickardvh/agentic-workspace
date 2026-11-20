@@ -82,8 +82,7 @@ pub(crate) fn negative_evidence(
         // Supersession is a bound semantic judgment, supported by a current pass
         // for this same declared command, route and subject. It never turns the
         // old failure green or accepts unrelated proof as a replacement.
-        let recorded = |item: &Value| item["observation"]["recorded_at"].as_str()
-            .and_then(|time| chrono::DateTime::parse_from_rfc3339(time).ok());
+        let recorded = |item: &Value| item["observation"]["recorded_at"].as_str().and_then(crate::timestamps::parse);
         let superseded = disposition["disposition"] == "superseded" && evidence.iter().any(|pass| {
             pass["reference"] == disposition["superseding_ref"]
                 && pass["checked_scope"]["claim"] == "selected-command-passed"

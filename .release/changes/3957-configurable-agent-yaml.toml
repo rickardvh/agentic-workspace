@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add anchored YAML for interactive CLI output and response-local selections for agent hosts. Allow explicit format selection and default redirected or captured output to JSON."
