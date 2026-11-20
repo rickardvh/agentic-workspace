@@ -392,6 +392,14 @@ def test_former_selection_requires_exact_current_agent_request(
     ]
     manual_bytes = len(json.dumps(non_resource_contract)) - len(json.dumps(without_manual_carriage))
     assert 0 < manual_bytes < 4_500, manual_bytes
+    # Receipt lookup contributes one read-only schema to full introspection.
+    # Bound that exact addition independently of the existing catalogue.
+    configuration = next(owner for owner in contract["owners"] if owner["owner"] == "configuration")
+    inspect_kind = "configuration/inspect-write/v1"
+    inspect_requests = [row for row in configuration["requests"] if row["kind"] == inspect_kind]
+    assert len(inspect_requests) == 1
+    inspect_schema_bytes = len(json.dumps(inspect_requests[0]))
+    assert inspect_schema_bytes < 600, inspect_schema_bytes
     schema_extensions = (
         retention_bytes
         + discovery_bytes
@@ -410,6 +418,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + candidate_consolidation_bytes
         + advisory_revision_bytes
         + candidate_continuation_bytes
+        + inspect_schema_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions - resource_schema_bytes < 86_000
@@ -449,7 +458,13 @@ def test_former_selection_requires_exact_current_agent_request(
     assert setup_discovery["request_kind"] == "configuration/setup-job/v1"
     assert setup_discovery["arguments"] == {"job": "refresh-payload"}
     assert len(json.dumps(setup_discovery)) < 700
-    state["configuration_write"] = {key: value for key, value in state["configuration_write"].items() if key != "setup_job_request"}
+    inspect_write = state["configuration_write"]["inspect_write_request"]
+    assert inspect_write["request_kind"] == inspect_kind
+    assert inspect_write["arguments"] == {}
+    assert len(json.dumps(inspect_write)) < 650
+    state["configuration_write"] = {
+        key: value for key, value in state["configuration_write"].items() if key not in {"setup_job_request", "inspect_write_request"}
+    }
     # Full Memory detail offers only the bounded candidate read envelope until
     # relevant material or a current scoped selection exists. No candidate rows
     # or candidate effect revision may leak into this unrelated entry.
@@ -502,6 +517,7 @@ def test_former_selection_requires_exact_current_agent_request(
     }
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
     assert len(json.dumps(compact)) < 6_000
+    assert inspect_kind not in json.dumps(compact)
     assert "planning_retention" not in compact
     assert len(json.dumps(candidate)) < 8_000
     request = candidate["selection_request"]
