@@ -77,6 +77,22 @@ current source checks. Requirements still apply and delivery carries no evidence
 of satisfaction. Clear caller-held receipts after context loss so needed material
 can be supplied again.
 
+A host presenting the carried view to one continuing reader can set
+`reuse_delivery: true` on its first carried request. AW places the exact
+receipts in `carriage.delivery_refs`. Passing that carriage to the next
+`start` or `invoke` reuses them after current source checks. An exact
+selection uses its usual reference. To refresh the same work without
+selecting anything, pass the carriage as `request` to `start` with
+`projection: "carried"`.
+
+Pass the carriage to a continuing reader after delivering its view. For a new
+reader, a failed presentation, or context loss, refresh with
+`projection: "carried"` and `reuse_delivery: false`. Deliver that view and
+replace the previous carriage with the one just returned. A detail lookup
+does not return a replacement carriage. You can also start with explicit work
+context. Carriage retains up to 256 current receipts and grants no action or
+evidence authority.
+
 ## Render one YAML format for an agent
 
 The CLI defaults to anchored YAML when both output streams go to a terminal.

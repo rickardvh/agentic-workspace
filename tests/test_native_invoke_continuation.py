@@ -31,7 +31,8 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
         ]
     _admit(tmp_path)
     context = proposal(surface, shared_core_binary, native_cli, tmp_path)
-    offered = consume(surface, shared_core_binary, native_cli, context | {"projection": "carried"})
+    carried_delivery = {"reuse_delivery": True} if surface == "json" and projection == "carried" else {}
+    offered = consume(surface, shared_core_binary, native_cli, context | {"projection": "carried", **carried_delivery})
     assert guidance not in json.dumps(offered["view"]["decision_packet"].get("material", {}))
     selected = consume(
         surface,
@@ -69,9 +70,12 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
             **continuation["reentry"]["context"],
             "projection": projection,
             **delivery,
+            **carried_delivery,
         },
     )
     assert continuation["result"] == fresh
+    if carried_delivery:
+        assert "delivery_refs" in fresh["carriage"] and "delivery_refs" not in fresh["view"]
     packet = fresh["view"]["decision_packet"] if projection == "carried" else fresh["decision_packet"]
     if delivery:
         instruction = packet["material"]["scoped-instructions"][0]

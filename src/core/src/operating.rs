@@ -6,6 +6,7 @@ use std::collections::{BTreeSet, HashMap};
 
 const CARRIAGE: &str = "agentic-workspace/operating-carriage/v1";
 const SOURCE_DELIVERY: &str = "agentic-workspace/source-delivery/v2";
+const MAX_DELIVERY_REFS: usize = 256;
 
 /// Diagnostics follow the explicitly carried target even on failed admission;
 /// this is no more authoritative than the ordinary caller-supplied target.
@@ -1733,11 +1734,36 @@ fn operate_selected(
     invoking: bool,
     detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
+    let reuse_delivery = value
+        .as_object_mut()
+        .and_then(|v| v.remove("reuse_delivery"))
+        .map(|v| {
+            v.as_bool()
+                .ok_or_else(|| error("reuse_delivery must be a boolean"))
+        })
+        .transpose()?;
+    let field = if invoking { "invocation" } else { "request" };
+    let remembered = if value[field]["kind"] == CARRIAGE {
+        value[field]
+            .as_object_mut()
+            .unwrap()
+            .remove("delivery_refs")
+    } else {
+        None
+    };
+    let reuse_delivery = reuse_delivery.unwrap_or(remembered.is_some());
     let delivered = value.as_object_mut().and_then(|v| v.remove("delivered"));
-    let delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
+    let mut delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
         .map_err(|_| error("delivered must be an array of exact source delivery refs"))?;
-    if delivered.len() > 256 {
+    if delivered.len() > MAX_DELIVERY_REFS {
         return Err(error("source delivery refs exceed bounded carriage"));
+    }
+    if reuse_delivery
+        && let Some(refs) =
+            remembered.filter(|v| v.as_array().is_some_and(|a| a.len() <= MAX_DELIVERY_REFS))
+        && let Ok(refs) = serde_json::from_value::<Vec<String>>(refs)
+    {
+        delivered.extend(refs);
     }
     let available = value
         .as_object_mut()
@@ -1760,12 +1786,12 @@ fn operate_selected(
         ));
     }
     let mut result = operate_current(value, invoking, detail)?;
-    apply_delivery(&mut result, &delivered, &available)?;
+    apply_delivery(&mut result, &delivered, &available, reuse_delivery)?;
     if let Some(continuation) = result
         .get_mut("continuation")
         .and_then(|c| c.get_mut("result"))
     {
-        apply_delivery(continuation, &delivered, &available)?;
+        apply_delivery(continuation, &delivered, &available, reuse_delivery)?;
         // Full output also mirrors the current packet at next_decision.
         // Both views must describe that same source delivery.
         if result["next_decision"].is_object() {
@@ -1779,13 +1805,15 @@ fn apply_delivery(
     result: &mut Value,
     delivered: &[String],
     available: &[SourceAvailability],
+    reuse_delivery: bool,
 ) -> Result<(), CoreError> {
     // Delivery is caller-local presentation state only. All owner resolution,
     // restriction, action admission and reference checks have already occurred.
+    let carried_delivery = reuse_delivery && result["carriage"]["kind"] == CARRIAGE;
     let view = if result.get("view").is_some() {
         &mut result["view"]
     } else {
-        result
+        &mut *result
     };
     let work = view["decision_packet"]["semantic_task_routes"]["task_identity"].clone();
     let mut refs = Vec::new();
@@ -1839,7 +1867,10 @@ fn apply_delivery(
             }
         }
     }
-    if !refs.is_empty() {
+    if carried_delivery {
+        refs.truncate(MAX_DELIVERY_REFS);
+        result["carriage"]["delivery_refs"] = json!(refs);
+    } else if !refs.is_empty() {
         view["delivery_refs"] = json!(refs);
     }
     Ok(())
@@ -1894,7 +1925,9 @@ fn operate_current(
         context["request"] = json!(requests);
         value = context;
     }
-    if let Some(mut selected) = selected {
+    let refresh = !invoking && selected.is_none() && value[field]["kind"] == CARRIAGE;
+    if refresh || selected.is_some() {
+        let mut selected = selected.unwrap_or(Value::Null);
         if let Some(identity) = selected.as_str().and_then(|s| s.strip_prefix("owner:")) {
             let parts: Vec<_> = identity.splitn(3, ':').collect();
             if parts.len() != 3 {
@@ -1948,6 +1981,16 @@ fn operate_current(
                 {
                     return Err(error("carriage work context changed"));
                 }
+            }
+            if refresh {
+                if answer.is_some() {
+                    return Err(error("answer requires exact operating reference"));
+                }
+                let current = native_public::start_selected(
+                    carrier.context.clone(),
+                    &resolution(&projection, detail),
+                )?;
+                return project_start(current, carrier.context, &projection);
             }
             // Optional requests are lazy, not copied into every carrier. Resolve
             // them against the carried work (including prior answers), exactly
@@ -3180,7 +3223,7 @@ mod tests {
             "material":{"startup-adapter":{"text":"policy".repeat(60)},
                 "scoped-instructions":[{"guidance":"instruction".repeat(40)}]}}});
         let mut first = original.clone();
-        apply_delivery(&mut first, &[], &[]).unwrap();
+        apply_delivery(&mut first, &[], &[], false).unwrap();
         assert_eq!(
             first["decision_packet"]["material"]["startup-adapter"]["delivery"]["reference"],
             "sha256:8a1e672c06a23e524acb8b7740323ee45245a1e8d80bacf84db3ff7bea6e172f"
@@ -3192,7 +3235,7 @@ mod tests {
             .map(|r| r.as_str().unwrap().to_owned())
             .collect();
         let mut repeated = original.clone();
-        apply_delivery(&mut repeated, &refs, &[]).unwrap();
+        apply_delivery(&mut repeated, &refs, &[], false).unwrap();
         for key in ["status", "primary_action", "blockers", "claim_boundary"] {
             assert_eq!(
                 repeated["decision_packet"][key],
@@ -3205,7 +3248,7 @@ mod tests {
                 .is_none()
         );
         let mut forged = original.clone();
-        apply_delivery(&mut forged, &["forged".into()], &[]).unwrap();
+        apply_delivery(&mut forged, &["forged".into()], &[], false).unwrap();
         assert_eq!(
             forged["decision_packet"]["material"],
             first["decision_packet"]["material"]
@@ -3216,7 +3259,7 @@ mod tests {
         ] {
             let mut changed = original.clone();
             *changed.pointer_mut(pointer).unwrap() = json!("new work or source".repeat(40));
-            apply_delivery(&mut changed, &refs, &[]).unwrap();
+            apply_delivery(&mut changed, &refs, &[], false).unwrap();
             assert!(
                 changed["decision_packet"]["material"]["startup-adapter"]
                     .get("text")
