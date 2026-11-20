@@ -12,6 +12,7 @@ export interface WorkContext {
   projection?: Projection;
   delivered?: string[];
   reuse_delivery?: boolean;
+  short_restrictions?: boolean;
   available_sources?: { reference: string; revision: string; extent: string; selector?: string; content_revision?: string }[];
 }
 export interface StartInput extends WorkContext {

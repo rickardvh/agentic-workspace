@@ -1729,29 +1729,35 @@ fn selected_owner(reference: &Value) -> Option<&str> {
         .next()
         .and_then(|owner| owner.split('/').next())
 }
+fn presentation_option(value: &mut Value, field: &str) -> Result<Option<bool>, CoreError> {
+    value
+        .as_object_mut()
+        .and_then(|v| v.remove(field))
+        .map(|v| {
+            v.as_bool()
+                .ok_or_else(|| error(&format!("{field} must be a boolean")))
+        })
+        .transpose()
+}
+
 fn operate_selected(
     mut value: Value,
     invoking: bool,
     detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
-    let reuse_delivery = value
-        .as_object_mut()
-        .and_then(|v| v.remove("reuse_delivery"))
-        .map(|v| {
-            v.as_bool()
-                .ok_or_else(|| error("reuse_delivery must be a boolean"))
-        })
-        .transpose()?;
+    let reuse_delivery = presentation_option(&mut value, "reuse_delivery")?;
+    let short_restrictions = presentation_option(&mut value, "short_restrictions")?;
     let field = if invoking { "invocation" } else { "request" };
+    let mut inherited_labels = false;
     let remembered = if value[field]["kind"] == CARRIAGE {
-        value[field]
-            .as_object_mut()
-            .unwrap()
-            .remove("delivery_refs")
+        let carriage = value[field].as_object_mut().unwrap();
+        inherited_labels = carriage.remove("restriction_refs").is_some();
+        carriage.remove("delivery_refs")
     } else {
         None
     };
     let reuse_delivery = reuse_delivery.unwrap_or(remembered.is_some());
+    let short_restrictions = short_restrictions.unwrap_or(inherited_labels);
     let delivered = value.as_object_mut().and_then(|v| v.remove("delivered"));
     let mut delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
         .map_err(|_| error("delivered must be an array of exact source delivery refs"))?;
@@ -1787,11 +1793,25 @@ fn operate_selected(
     }
     let mut result = operate_current(value, invoking, detail)?;
     apply_delivery(&mut result, &delivered, &available, reuse_delivery)?;
+    if short_restrictions {
+        label_carried_restrictions(&mut result);
+    }
     if let Some(continuation) = result
         .get_mut("continuation")
         .and_then(|c| c.get_mut("result"))
     {
         apply_delivery(continuation, &delivered, &available, reuse_delivery)?;
+        if short_restrictions {
+            let labels = label_carried_restrictions(continuation);
+            for path in [
+                "/setup_result/remaining_gaps",
+                "/configuration_behavior/remaining_restrictions",
+            ] {
+                if let Some(rows) = result.pointer_mut(path) {
+                    label_restriction_rows(rows, &labels);
+                }
+            }
+        }
         // Full output also mirrors the current packet at next_decision.
         // Both views must describe that same source delivery.
         if result["next_decision"].is_object() {
@@ -1799,6 +1819,117 @@ fn operate_selected(
         }
     }
     Ok(result)
+}
+
+// Only native validation identities move to carriage. Source identity, scope,
+// reason, and any additional owner material stay in the displayed record.
+const CARRIED_RESTRICTION_FIELDS: [(&str, &str); 3] = [
+    ("revision", ""),
+    ("binding_revision", "/basis"),
+    ("declaration_revision", "/basis"),
+];
+
+struct RestrictionLabel {
+    display: String,
+    exact: Value,
+}
+
+fn label_carried_restrictions(result: &mut Value) -> HashMap<String, RestrictionLabel> {
+    let mut labels = HashMap::new();
+    if result["carriage"]["kind"] != CARRIAGE {
+        return labels;
+    }
+    let view = &mut result["view"];
+    for blocker in view["decision_packet"]["blockers"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        let Some(id) = blocker["consequence_id"]
+            .as_str()
+            .filter(|id| id.starts_with("blocker:"))
+        else {
+            continue;
+        };
+        let display = format!("restriction-{}", labels.len() + 1);
+        labels.entry(id.to_owned()).or_insert_with(|| {
+            let mut exact = json!({"consequence_id":id});
+            for (field, parent) in CARRIED_RESTRICTION_FIELDS {
+                if let Some(value) = blocker.pointer(parent).and_then(|v| v.get(field))
+                    && value.as_str().is_some_and(|v| {
+                        v.len() == 71
+                            && v.strip_prefix("sha256:")
+                                .is_some_and(|hash| hash.bytes().all(|b| b.is_ascii_hexdigit()))
+                    })
+                {
+                    exact[field] = value.clone();
+                }
+            }
+            RestrictionLabel { display, exact }
+        });
+    }
+    if let Some(rows) = view.pointer_mut("/decision_packet/blockers") {
+        label_restriction_rows(rows, &labels);
+    }
+    if let Some(ids) = view
+        .pointer_mut("/decision_packet/request_resolution/consequence_ids")
+        .and_then(Value::as_array_mut)
+    {
+        for id in ids {
+            if let Some(label) = id.as_str().and_then(|id| labels.get(id)) {
+                *id = json!(label.display);
+            }
+        }
+    }
+    for group in view
+        .get_mut("consequence_recovery")
+        .and_then(Value::as_array_mut)
+        .into_iter()
+        .flatten()
+    {
+        if let Some(rows) = group.get_mut("consequences") {
+            label_restriction_rows(rows, &labels);
+        }
+    }
+    for candidate in view
+        .pointer_mut("/activation/candidates")
+        .and_then(Value::as_array_mut)
+        .into_iter()
+        .flatten()
+    {
+        if let Some(rows) = candidate.pointer_mut("/occasion/binding") {
+            label_restriction_rows(rows, &labels);
+        }
+    }
+    if !labels.is_empty() {
+        view["decision_packet"]["restriction_labels"] = json!(
+            "Labels relate blockers to recovery in this response. Select recovery with its exact route reference."
+        );
+    }
+    result["carriage"]["restriction_refs"] = Value::Object(
+        labels
+            .values()
+            .map(|entry| (entry.display.clone(), entry.exact.clone()))
+            .collect(),
+    );
+    labels
+}
+
+fn label_restriction_rows(rows: &mut Value, labels: &HashMap<String, RestrictionLabel>) {
+    for row in rows.as_array_mut().into_iter().flatten() {
+        let Some(label) = row["consequence_id"].as_str().and_then(|id| labels.get(id)) else {
+            continue;
+        };
+        row["consequence_id"] = json!(label.display);
+        for (field, parent) in CARRIED_RESTRICTION_FIELDS {
+            if let Some(exact) = label.exact.get(field)
+                && let Some(record) = row.pointer_mut(parent).and_then(Value::as_object_mut)
+                && record.get(field) == Some(exact)
+            {
+                record.remove(field);
+            }
+        }
+    }
 }
 
 fn apply_delivery(
@@ -2970,6 +3101,42 @@ mod tests {
                 2
             );
         }
+    }
+
+    #[test]
+    fn carried_labels_relate_current_restrictions_without_inventing_fields() {
+        let current = "blocker:verification:current";
+        let unrelated = "blocker:verification:other";
+        let mut result = json!({
+            "carriage":{"kind":CARRIAGE},
+            "view":{"decision_packet":{
+                "blockers":[{"consequence_id":current,"basis":{"reference":"policy","binding_revision":"owner-format"}}],
+                "request_resolution":{"consequence_ids":[current,unrelated]}
+            },"activation":{"candidates":[{"occasion":{"binding":[{"consequence_id":current}]}}]}}
+        });
+        label_carried_restrictions(&mut result);
+        let view = &result["view"];
+        let blocker = &view["decision_packet"]["blockers"][0];
+        let label = blocker["consequence_id"].as_str().unwrap();
+        assert_eq!(
+            result["carriage"]["restriction_refs"][label]["consequence_id"],
+            current
+        );
+        assert_eq!(
+            view["decision_packet"]["request_resolution"]["consequence_ids"],
+            json!([label, unrelated])
+        );
+        assert_eq!(
+            view["activation"]["candidates"][0]["occasion"]["binding"][0]["consequence_id"],
+            label
+        );
+        assert_eq!(blocker["basis"]["binding_revision"], "owner-format");
+        assert!(view.get("consequence_recovery").is_none());
+
+        let inactive = json!({"status":"inactive"});
+        let mut result = json!({"carriage":{"kind":CARRIAGE}, "view":inactive});
+        label_carried_restrictions(&mut result);
+        assert_eq!(result["view"], inactive);
     }
 
     #[test]

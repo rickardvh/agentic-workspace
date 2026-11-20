@@ -52,6 +52,16 @@ Restrictions share a row only when the owner nominated the same exact routes
 and all recovery instructions agree. Each member retains its own affected scope.
 Routes that require a scope judgment appear separately for each restriction.
 
+Hosts using `projection: "carried"` can set `short_restrictions: true`.
+The view then uses local labels to match blockers to recovery within each
+response. It keeps each blocker’s owner, reason, affected scope, source
+reference and source revision. The full consequence identity and any moved
+validation digests are in `carriage.restriction_refs`, indexed by the label.
+Open the exact `/decision_packet` detail for the full current restrictions.
+Use the route's exact reference to select recovery. Labels have no selection
+authority. Later carried responses inherit the option unless the caller
+specifies `short_restrictions: false`.
+
 ## Read one returned detail
 
 Prefer a specific `detail_refs` reference when only one component's detail is

@@ -31,8 +31,8 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
         ]
     _admit(tmp_path)
     context = proposal(surface, shared_core_binary, native_cli, tmp_path)
-    carried_delivery = {"reuse_delivery": True} if surface == "json" and projection == "carried" else {}
-    offered = consume(surface, shared_core_binary, native_cli, context | {"projection": "carried", **carried_delivery})
+    carried_options = {"reuse_delivery": True, "short_restrictions": True} if surface == "json" and projection == "carried" else {}
+    offered = consume(surface, shared_core_binary, native_cli, context | {"projection": "carried", **carried_options})
     assert guidance not in json.dumps(offered["view"]["decision_packet"].get("material", {}))
     selected = consume(
         surface,
@@ -70,12 +70,18 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
             **continuation["reentry"]["context"],
             "projection": projection,
             **delivery,
-            **carried_delivery,
+            **carried_options,
         },
     )
     assert continuation["result"] == fresh
-    if carried_delivery:
+    if carried_options:
         assert "delivery_refs" in fresh["carriage"] and "delivery_refs" not in fresh["view"]
+        assert "restriction_refs" in fresh["carriage"] and "restriction_refs" not in fresh["view"]
+        blockers = fresh["view"]["decision_packet"]["blockers"]
+        current = {b["consequence_id"] for b in blockers}
+        assert current
+        assert {b["consequence_id"] for b in result["configuration_behavior"]["remaining_restrictions"]} == current
+        assert {b["consequence_id"] for b in result["setup_result"]["remaining_gaps"]} == current
     packet = fresh["view"]["decision_packet"] if projection == "carried" else fresh["decision_packet"]
     if delivery:
         instruction = packet["material"]["scoped-instructions"][0]

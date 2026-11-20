@@ -147,6 +147,35 @@ def test_claim_summary_keeps_early_review_and_current_obligations(tmp_path, shar
     later_task = call({**context, "changed": ["result.txt"], "projection": "compact"})
     assert any(b["code"] == exact["code"] for b in later_task["decision_packet"]["blockers"])
 
+    carried_context = {**context, "changed": ["result.txt"], "projection": "carried"}
+    ordinary = call(carried_context)
+    labelled = call({**carried_context, "short_restrictions": True})
+    identities = labelled["carriage"]["restriction_refs"]
+    assert identities and labelled["carriage"]["envelopes"] == ordinary["carriage"]["envelopes"]
+    view = labelled["view"]
+    assert "restriction_refs" not in view
+    blockers = copy.deepcopy(view["decision_packet"]["blockers"])
+    for blocker in blockers:
+        identity = identities[blocker["consequence_id"]]
+        blocker["consequence_id"] = identity["consequence_id"]
+        if "revision" in identity:
+            blocker["revision"] = identity["revision"]
+        for field in ("declaration_revision", "binding_revision"):
+            if field in identity:
+                blocker["basis"][field] = identity[field]
+    assert blockers == ordinary["view"]["decision_packet"]["blockers"]
+    recovery = copy.deepcopy(view["consequence_recovery"])
+    for group in recovery:
+        for member in group["consequences"]:
+            member["consequence_id"] = identities[member["consequence_id"]]["consequence_id"]
+    assert recovery == ordinary["view"]["consequence_recovery"]
+    reopened = call({"request": labelled["carriage"], "reference": view["detail_refs"]["/decision_packet"]})
+    assert reopened["value"]["blockers"] == blockers
+    with pytest.raises(AssertionError, match="unknown or ambiguous carried reference"):
+        call({"request": labelled["carriage"], "reference": next(iter(identities))})
+    disabled = call({"request": labelled["carriage"], "projection": "carried", "short_restrictions": False})
+    assert disabled == ordinary
+
 
 @pytest.mark.parametrize("reuse_delivery", [False, True])
 def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tmp_path, shared_core_binary, native_cli, reuse_delivery):
