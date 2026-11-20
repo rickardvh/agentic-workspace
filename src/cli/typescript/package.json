@@ -13,13 +13,22 @@
   "engines": {
     "node": ">=20"
   },
+  "peerDependencies": {
+    "yaml": "2.9.1"
+  },
+  "peerDependenciesMeta": {
+    "yaml": {
+      "optional": true
+    }
+  },
   "private": true,
   "publishConfig": {
     "access": "public"
   },
   "type": "module",
   "bin": {
-    "agentic-workspace": "./src/cli.mjs"
+    "agentic-workspace": "./src/cli.mjs",
+    "agentic-workspace-yaml": "./src/agent-yaml.mjs"
   },
   "exports": {
     ".": {
@@ -29,6 +38,10 @@
     "./operating": {
       "types": "./src/native/operating.d.mts",
       "import": "./src/native/operating.mjs"
+    },
+    "./experimental/agent-view": {
+      "types": "./src/native/agent-view.d.mts",
+      "import": "./src/native/agent-view.mjs"
     }
   },
   "files": [

@@ -1,0 +1,347 @@
+{
+  "model": "gpt-6.1-terra",
+  "effort": "medium",
+  "tokenizer": "o200k_base",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "revision": "766cfc91f6a793a602134ab065eac4ad1c714ae2",
+  "codex_version": "codex-cli 0.170.0",
+  "complete": true,
+  "runs": [
+    {
+      "task": "checkout",
+      "format": "json",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "311411560b8f0ffc3ca775d791bc68af02bc67a975a8691bd2804b7bbae27db9",
+          "payload_tokens": 46098,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 52910,
+        "cachedInputTokens": 0,
+        "outputTokens": 112
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 9965
+    },
+    {
+      "task": "stale",
+      "format": "json",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "0ceed071fe26a220e75c1f7bd2c1602c3625a7495302a88e0009628b28792f74",
+          "payload_tokens": 1691,
+          "matched": true
+        },
+        {
+          "sha256": "7788a8af2bc2503610ae28f05f78147a2dc958ed53b1675bae716afa9c64196b",
+          "payload_tokens": 2556,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 19643,
+        "cachedInputTokens": 0,
+        "outputTokens": 108
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 10581
+    },
+    {
+      "task": "write",
+      "format": "yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "daa6df4052725d9cc79730cc15815c878a9c07f82d3cec6bda4e6b4e660d19b3",
+          "payload_tokens": 3038,
+          "matched": true,
+          "mismatches": [
+            {
+              "answer": {
+                "expected": "authorize-write",
+                "received": "{\"answer\":\"authorize-write\",\"source\":\".agentic-workspace/config.toml\",\"key\":\"workspace.cli_invoke\",\"value\":\"aw-local\",\"proposal_revision\":\"sha256:a208489a45c671156403cd6d22e678a509e90bce6ae7bb98ce1b97ac149c6565\"}"
+              }
+            }
+          ]
+        },
+        {
+          "sha256": "28d4e91d117053b975a8106bd847de1efb2127dd285bd73f8f814142334699df",
+          "payload_tokens": 2141,
+          "matched": true
+        }
+      ],
+      "turns": 3,
+      "retries": 1,
+      "success": true,
+      "usage": {
+        "inputTokens": 32218,
+        "cachedInputTokens": 9856,
+        "outputTokens": 363
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 15538
+    },
+    {
+      "task": "checkout",
+      "format": "yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "311411560b8f0ffc3ca775d791bc68af02bc67a975a8691bd2804b7bbae27db9",
+          "payload_tokens": 18064,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 24876,
+        "cachedInputTokens": 0,
+        "outputTokens": 119
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 8859
+    },
+    {
+      "task": "stale",
+      "format": "yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "0ceed071fe26a220e75c1f7bd2c1602c3625a7495302a88e0009628b28792f74",
+          "payload_tokens": 1221,
+          "matched": true
+        },
+        {
+          "sha256": "7788a8af2bc2503610ae28f05f78147a2dc958ed53b1675bae716afa9c64196b",
+          "payload_tokens": 2424,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 18576,
+        "cachedInputTokens": 4736,
+        "outputTokens": 113
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 9333
+    },
+    {
+      "task": "checkout",
+      "format": "yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "311411560b8f0ffc3ca775d791bc68af02bc67a975a8691bd2804b7bbae27db9",
+          "payload_tokens": 18064,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 24876,
+        "cachedInputTokens": 24704,
+        "outputTokens": 120
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 8792
+    },
+    {
+      "task": "stale",
+      "format": "yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "0ceed071fe26a220e75c1f7bd2c1602c3625a7495302a88e0009628b28792f74",
+          "payload_tokens": 1221,
+          "matched": true
+        },
+        {
+          "sha256": "7788a8af2bc2503610ae28f05f78147a2dc958ed53b1675bae716afa9c64196b",
+          "payload_tokens": 2424,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 18582,
+        "cachedInputTokens": 9472,
+        "outputTokens": 119
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 9025
+    },
+    {
+      "task": "write",
+      "format": "json",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "daa6df4052725d9cc79730cc15815c878a9c07f82d3cec6bda4e6b4e660d19b3",
+          "payload_tokens": 3185,
+          "matched": true,
+          "mismatches": [
+            {
+              "answer": {
+                "expected": "authorize-write",
+                "received": "{\"answer\":\"authorize-write\",\"source\":\".agentic-workspace/config.toml\",\"key\":\"workspace.cli_invoke\",\"value\":\"aw-local\",\"proposal_revision\":\"sha256:a208489a45c671156403cd6d22e678a509e90bce6ae7bb98ce1b97ac149c6565\",\"reason\":\"The user authorized setting the shared repository workspace CLI invocation to aw-local.\"}"
+              }
+            }
+          ]
+        },
+        {
+          "sha256": "28d4e91d117053b975a8106bd847de1efb2127dd285bd73f8f814142334699df",
+          "payload_tokens": 2946,
+          "matched": true
+        }
+      ],
+      "turns": 3,
+      "retries": 1,
+      "success": true,
+      "usage": {
+        "inputTokens": 33534,
+        "cachedInputTokens": 19584,
+        "outputTokens": 390
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 15607
+    },
+    {
+      "task": "checkout",
+      "format": "json",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "311411560b8f0ffc3ca775d791bc68af02bc67a975a8691bd2804b7bbae27db9",
+          "payload_tokens": 46098,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 52910,
+        "cachedInputTokens": 52736,
+        "outputTokens": 116
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 8931
+    },
+    {
+      "task": "stale",
+      "format": "json",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "0ceed071fe26a220e75c1f7bd2c1602c3625a7495302a88e0009628b28792f74",
+          "payload_tokens": 1691,
+          "matched": true
+        },
+        {
+          "sha256": "7788a8af2bc2503610ae28f05f78147a2dc958ed53b1675bae716afa9c64196b",
+          "payload_tokens": 2556,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 19645,
+        "cachedInputTokens": 9472,
+        "outputTokens": 110
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 8902
+    },
+    {
+      "task": "write",
+      "format": "json",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "daa6df4052725d9cc79730cc15815c878a9c07f82d3cec6bda4e6b4e660d19b3",
+          "payload_tokens": 3185,
+          "matched": true,
+          "mismatches": [
+            {
+              "answer": {
+                "expected": "authorize-write",
+                "received": "{\"answer\":\"authorize-write\",\"source\":\".agentic-workspace/config.toml\",\"key\":\"workspace.cli_invoke\",\"value\":\"aw-local\",\"proposal_revision\":\"sha256:a208489a45c671156403cd6d22e678a509e90bce6ae7bb98ce1b97ac149c6565\",\"reason\":\"The user authorized setting the shared repository workspace CLI invocation to aw-local.\"}"
+              }
+            }
+          ]
+        },
+        {
+          "sha256": "28d4e91d117053b975a8106bd847de1efb2127dd285bd73f8f814142334699df",
+          "payload_tokens": 2946,
+          "matched": true
+        }
+      ],
+      "turns": 3,
+      "retries": 1,
+      "success": true,
+      "usage": {
+        "inputTokens": 33461,
+        "cachedInputTokens": 24576,
+        "outputTokens": 345
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 16167
+    },
+    {
+      "task": "write",
+      "format": "yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "daa6df4052725d9cc79730cc15815c878a9c07f82d3cec6bda4e6b4e660d19b3",
+          "payload_tokens": 3038,
+          "matched": true,
+          "mismatches": [
+            {
+              "answer": {
+                "expected": "authorize-write",
+                "received": "{\"answer\":\"authorize-write\",\"source\":\".agentic-workspace/config.toml\",\"key\":\"workspace.cli_invoke\",\"value\":\"aw-local\",\"proposal_revision\":\"sha256:a208489a45c671156403cd6d22e678a509e90bce6ae7bb98ce1b97ac149c6565\",\"reason\":\"The user authorized setting the shared repository configuration's workspace CLI invocation to aw-local.\"}"
+              }
+            }
+          ]
+        },
+        {
+          "sha256": "28d4e91d117053b975a8106bd847de1efb2127dd285bd73f8f814142334699df",
+          "payload_tokens": 2141,
+          "matched": true
+        }
+      ],
+      "turns": 3,
+      "retries": 1,
+      "success": true,
+      "usage": {
+        "inputTokens": 32263,
+        "cachedInputTokens": 19328,
+        "outputTokens": 390
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 18424
+    }
+  ]
+}

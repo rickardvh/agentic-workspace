@@ -1,0 +1,427 @@
+{
+  "model": "gpt-6.1-terra",
+  "effort": "medium",
+  "arms": [
+    "yaml",
+    "hosted-yaml"
+  ],
+  "tokenizer": "o200k_base",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "revision": "766cfc91f6a793a602134ab065eac4ad1c714ae2",
+  "codex_version": "codex-cli 0.170.0",
+  "complete": true,
+  "runs": [
+    {
+      "task": "write",
+      "format": "hosted-yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "404ca74059af5eb89ab58fccab4b3eeaed392f1efe050aa134a3673786d00d0c",
+          "payload_tokens": 2346,
+          "matched": true
+        },
+        {
+          "sha256": "f38a760acfa81584a12476b63228e1f41581130ea5faf66bc025f4e9c05de97a",
+          "payload_tokens": 1523,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 19921,
+        "cachedInputTokens": 9472,
+        "outputTokens": 78
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 9089
+    },
+    {
+      "task": "stale",
+      "format": "yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "46f78b96d95dad58c8134c130f29a56be66b6e6eb2f4bd4b4c06f97fc8db8a85",
+          "payload_tokens": 1216,
+          "matched": true
+        },
+        {
+          "sha256": "a0478f1fa07a3ea12b6af77ee532eca39b49f00fa73366983b1bc78b7f69e9de",
+          "payload_tokens": 2414,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 18576,
+        "cachedInputTokens": 9472,
+        "outputTokens": 111
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 9401
+    },
+    {
+      "task": "checkout",
+      "format": "yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "093473f95930fb32cede7a3c8567e9da9399cc1a0430d1c84b5c5e22018bfd83",
+          "payload_tokens": 18077,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 24846,
+        "cachedInputTokens": 0,
+        "outputTokens": 94
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 9672
+    },
+    {
+      "task": "stale",
+      "format": "hosted-yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "46f78b96d95dad58c8134c130f29a56be66b6e6eb2f4bd4b4c06f97fc8db8a85",
+          "payload_tokens": 1188,
+          "matched": true
+        },
+        {
+          "sha256": "a0478f1fa07a3ea12b6af77ee532eca39b49f00fa73366983b1bc78b7f69e9de",
+          "payload_tokens": 1727,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 17829,
+        "cachedInputTokens": 9472,
+        "outputTokens": 74
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 8569
+    },
+    {
+      "task": "checkout",
+      "format": "hosted-yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "093473f95930fb32cede7a3c8567e9da9399cc1a0430d1c84b5c5e22018bfd83",
+          "payload_tokens": 16343,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 23166,
+        "cachedInputTokens": 4736,
+        "outputTokens": 110
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 8855
+    },
+    {
+      "task": "write",
+      "format": "yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "404ca74059af5eb89ab58fccab4b3eeaed392f1efe050aa134a3673786d00d0c",
+          "payload_tokens": 3023,
+          "matched": true
+        },
+        {
+          "sha256": "f38a760acfa81584a12476b63228e1f41581130ea5faf66bc025f4e9c05de97a",
+          "payload_tokens": 2099,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 21868,
+        "cachedInputTokens": 9472,
+        "outputTokens": 123
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 10736
+    },
+    {
+      "task": "stale",
+      "format": "hosted-yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "46f78b96d95dad58c8134c130f29a56be66b6e6eb2f4bd4b4c06f97fc8db8a85",
+          "payload_tokens": 1188,
+          "matched": true
+        },
+        {
+          "sha256": "a0478f1fa07a3ea12b6af77ee532eca39b49f00fa73366983b1bc78b7f69e9de",
+          "payload_tokens": 1767,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 17871,
+        "cachedInputTokens": 4736,
+        "outputTokens": 78
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 7409
+    },
+    {
+      "task": "checkout",
+      "format": "hosted-yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "093473f95930fb32cede7a3c8567e9da9399cc1a0430d1c84b5c5e22018bfd83",
+          "payload_tokens": 16320,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 23143,
+        "cachedInputTokens": 4736,
+        "outputTokens": 106
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 9056
+    },
+    {
+      "task": "write",
+      "format": "yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "404ca74059af5eb89ab58fccab4b3eeaed392f1efe050aa134a3673786d00d0c",
+          "payload_tokens": 3023,
+          "matched": true
+        },
+        {
+          "sha256": "f38a760acfa81584a12476b63228e1f41581130ea5faf66bc025f4e9c05de97a",
+          "payload_tokens": 2099,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 21892,
+        "cachedInputTokens": 4736,
+        "outputTokens": 147
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 9049
+    },
+    {
+      "task": "stale",
+      "format": "yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "46f78b96d95dad58c8134c130f29a56be66b6e6eb2f4bd4b4c06f97fc8db8a85",
+          "payload_tokens": 1216,
+          "matched": true
+        },
+        {
+          "sha256": "a0478f1fa07a3ea12b6af77ee532eca39b49f00fa73366983b1bc78b7f69e9de",
+          "payload_tokens": 2414,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 18572,
+        "cachedInputTokens": 9472,
+        "outputTokens": 107
+      },
+      "outcome": "Stale effect rejected, fresh value read, concurrent bytes preserved",
+      "elapsed_ms": 10355
+    },
+    {
+      "task": "checkout",
+      "format": "yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "093473f95930fb32cede7a3c8567e9da9399cc1a0430d1c84b5c5e22018bfd83",
+          "payload_tokens": 18077,
+          "matched": true
+        }
+      ],
+      "turns": 1,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 24900,
+        "cachedInputTokens": 4736,
+        "outputTokens": 115
+      },
+      "outcome": "Read current Configuration under the binding assignment policy",
+      "elapsed_ms": 8583
+    },
+    {
+      "task": "write",
+      "format": "hosted-yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "404ca74059af5eb89ab58fccab4b3eeaed392f1efe050aa134a3673786d00d0c",
+          "payload_tokens": 2327,
+          "matched": true
+        },
+        {
+          "sha256": "f38a760acfa81584a12476b63228e1f41581130ea5faf66bc025f4e9c05de97a",
+          "payload_tokens": 1541,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 19901,
+        "cachedInputTokens": 9472,
+        "outputTokens": 79
+      },
+      "outcome": "Configuration write committed and TOML value read back",
+      "elapsed_ms": 8488
+    },
+    {
+      "task": "defer",
+      "format": "yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "3cdcdcf20ee77017b9ff428a181e3f5ea49005b9b64eaea4564328dd12635264",
+          "payload_tokens": 3040,
+          "matched": true
+        },
+        {
+          "sha256": "bd73ba305c38e48cac8dcf50a440d865368b3fd13ac7b9fc2efe6c690292f893",
+          "payload_tokens": 2140,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 21919,
+        "cachedInputTokens": 4736,
+        "outputTokens": 79
+      },
+      "outcome": "Deferral selected, no operation invoked, configuration absent",
+      "elapsed_ms": 8230
+    },
+    {
+      "task": "defer",
+      "format": "hosted-yaml",
+      "trial": 1,
+      "steps": [
+        {
+          "sha256": "3cdcdcf20ee77017b9ff428a181e3f5ea49005b9b64eaea4564328dd12635264",
+          "payload_tokens": 2382,
+          "matched": true
+        },
+        {
+          "sha256": "bd73ba305c38e48cac8dcf50a440d865368b3fd13ac7b9fc2efe6c690292f893",
+          "payload_tokens": 1547,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 19984,
+        "cachedInputTokens": 4736,
+        "outputTokens": 53
+      },
+      "outcome": "Deferral selected, no operation invoked, configuration absent",
+      "elapsed_ms": 8580
+    },
+    {
+      "task": "defer",
+      "format": "hosted-yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "3cdcdcf20ee77017b9ff428a181e3f5ea49005b9b64eaea4564328dd12635264",
+          "payload_tokens": 2382,
+          "matched": true
+        },
+        {
+          "sha256": "bd73ba305c38e48cac8dcf50a440d865368b3fd13ac7b9fc2efe6c690292f893",
+          "payload_tokens": 1529,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 19966,
+        "cachedInputTokens": 4736,
+        "outputTokens": 53
+      },
+      "outcome": "Deferral selected, no operation invoked, configuration absent",
+      "elapsed_ms": 7068
+    },
+    {
+      "task": "defer",
+      "format": "yaml",
+      "trial": 2,
+      "steps": [
+        {
+          "sha256": "3cdcdcf20ee77017b9ff428a181e3f5ea49005b9b64eaea4564328dd12635264",
+          "payload_tokens": 3040,
+          "matched": true
+        },
+        {
+          "sha256": "bd73ba305c38e48cac8dcf50a440d865368b3fd13ac7b9fc2efe6c690292f893",
+          "payload_tokens": 2140,
+          "matched": true
+        }
+      ],
+      "turns": 2,
+      "retries": 0,
+      "success": true,
+      "usage": {
+        "inputTokens": 21880,
+        "cachedInputTokens": 9472,
+        "outputTokens": 79
+      },
+      "outcome": "Deferral selected, no operation invoked, configuration absent",
+      "elapsed_ms": 9277
+    }
+  ]
+}

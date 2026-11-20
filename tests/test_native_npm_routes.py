@@ -194,6 +194,8 @@ def test_packed_operating_projection_uses_exact_reference_without_host_runtime(p
     environment["PATH"] = ""
     script = """
 import {start, selectReference} from '@agentic-workspace/workspace-cli/operating';
+import {createAgentSession, renderAgentYaml} from '@agentic-workspace/workspace-cli/experimental/agent-view';
+if (typeof createAgentSession !== 'function' || typeof renderAgentYaml !== 'function') throw new Error('missing YAML adapter');
 const context = {target: process.argv[1], task: 'Inspect this repository'};
 const original = JSON.stringify(context);
 const view = start(context);
@@ -212,6 +214,9 @@ console.log(JSON.stringify(detail));
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["authority"] == "detail-only"
     assert (packed / "src/native/operating.d.mts").is_file()
+    assert (packed / "src/native/agent-view.d.mts").is_file()
+    help_result = subprocess.run([node, str(packed / "src/agent-yaml.mjs"), "--help"], capture_output=True, text=True, check=True)
+    assert "stdin" in help_result.stdout
     assert not (tmp_path / ".agentic-workspace").exists()
 
 

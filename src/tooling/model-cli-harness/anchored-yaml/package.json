@@ -1,0 +1,10 @@
+{
+  "name": "aw-anchored-yaml-prototype",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "dependencies": {
+    "js-tiktoken": "1.0.21",
+    "yaml": "2.9.1"
+  }
+}

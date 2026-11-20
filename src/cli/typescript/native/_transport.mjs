@@ -36,7 +36,7 @@ const coreBinary = () => {
   return candidate;
 };
 
-export function runNativeCli(args) {
+export function runNativeCli(args, { capture = false } = {}) {
   const core = coreBinary();
   const binary = join(dirname(core), process.platform === "win32" ? "agentic-workspace.exe" : "agentic-workspace");
   const manifestPath = join(nativeDirectory(), "artifact.json");
@@ -45,9 +45,15 @@ export function runNativeCli(args) {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     if (createHash("sha256").update(readFileSync(binary)).digest("hex") !== manifest.cli_sha256) throw new Error("paired native CLI digest mismatch");
   }
-  const result = spawnSync(toNamespacedPath(binary), args, {stdio: "inherit", windowsHide: true});
+  const result = spawnSync(toNamespacedPath(binary), args, {
+    stdio: capture ? ["inherit", "pipe", "pipe"] : "inherit",
+    encoding: "utf8",
+    maxBuffer: Infinity,
+    windowsHide: true,
+  });
   if (result.error) throw result.error;
-  return result.status ?? 1;
+  const status = result.status ?? 1;
+  return capture ? {status, stdout: result.stdout, stderr: result.stderr} : status;
 }
 
 export function request(payload) {

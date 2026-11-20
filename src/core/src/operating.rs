@@ -650,6 +650,13 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 .pointer_mut(selector.strip_prefix("/decision_packet").unwrap())
                 .unwrap();
             question["reference"] = item["reference"].clone();
+            let bounded_choice = question["choices"]
+                .as_array()
+                .is_some_and(|choices| !choices.is_empty());
+            if bounded_choice {
+                question["answer_input"] =
+                    json!("Set answer to one listed choices[].id value. Copy that value alone.");
+            }
             if !carried {
                 continue;
             }
@@ -657,16 +664,11 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             // immutable public-request identity is removed from model output.
             question["request_material"] = question["response_request"]["arguments"].clone();
             question.as_object_mut().unwrap().remove("response_request");
-            question["reference"] = item["reference"].clone();
-            if question["choices"]
-                .as_array()
-                .is_some_and(|v| !v.is_empty())
-            {
+            if bounded_choice {
                 // The public answer helper accepts exactly one returned choice.
                 // The full request schema mostly describes immutable material;
                 // it remains in exact detail and participates in admission.
                 question.as_object_mut().unwrap().remove("response_schema");
-                question["answer_input"] = json!("one returned choice id");
             }
         }
     }
