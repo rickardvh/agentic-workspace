@@ -4,7 +4,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:925b2686eeeabfa0d55534e81452a8edac71caafd40a477aaf7e9baeffcadb41`
+- Contract digest: `sha256:793ed4aea9ab0c8008aa4802a6d48a1f92e31da3fedf24a7396f8f44026afe57`
 - Program: `agentic-workspace`
 - Command count: 6
 
@@ -26,7 +26,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--target` | . | — | Repository target (default: current directory). |
 | `--task` | — | — | Current task text; semantics remain agent-owned. |
 | `--changed` | — | — | Changed paths; accepts multiple values and repetition. |
-| `--format` | json | json, text | Output format: setup defaults to text; machine commands use json. |
+| `--format` | — | json, yaml, text | Output format. Terminal output defaults to YAML, captured output to JSON, and setup to text. Overrides AGENTIC_WORKSPACE_OUTPUT_FORMAT. |
 | `--projection` | — | compact, full, carried | Compact executable decision (default), full detail, or view plus disposable exact carriage for a thin host. |
 | `--reference` | — | — | Exact immutable reference from carried output; --input supplies the machine-carried object. |
 | `--answer` | — | — | JSON answer for an exact decision reference, or an arguments object for an exact owner request reference. Preserves owner identity and prior carried answers; normal owner validation applies. |

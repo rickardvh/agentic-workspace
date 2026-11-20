@@ -9,6 +9,7 @@ import subprocess
 import tomllib
 
 import pytest
+import yaml
 from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -297,6 +298,7 @@ def test_human_setup_authorisation_preservation_and_recovery(tmp_path, shared_co
         return result
 
     proposal = json.loads(setup("--dry-run", "--format", "json").stdout)
+    assert yaml.safe_load(setup("--dry-run", "--format", "yaml").stdout) == proposal
     assert proposal["status"] == "authorization-required"
     assert "AGENTS.md" in proposal["updated"]
     assert not (tmp_path / ".agentic-workspace").exists()

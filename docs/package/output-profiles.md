@@ -55,17 +55,17 @@ context loss so needed material can be supplied again.
 
 ## Render one YAML format for an agent
 
-The npm CLI defaults to anchored YAML when both output streams go to a terminal
-and the renderer is available. Redirected or captured output defaults to JSON.
-Interactive `setup` defaults to its text prompt. Use Node 22.12 or later and
-install `yaml@2.9.1` alongside the npm package to enable YAML. Choose
+The CLI defaults to anchored YAML when both output streams go to a terminal.
+Redirected or captured output defaults to JSON. `setup` defaults to text. Choose
 `--format yaml` or `--format json` for a single call, or set
 `AGENTIC_WORKSPACE_OUTPUT_FORMAT` to `yaml` or `json` in the process environment.
 An explicit flag takes precedence.
 
 The selection applies to output, including structured errors and continuations.
-Requests passed through `--input` or `--answer` use JSON. The native CLI and
-language bindings use their existing formats.
+Requests passed through `--input` or `--answer` use JSON. The language bindings
+continue to return structured values through the core's JSON transport.
+Use `setup --dry-run` to inspect a proposal in a structured format, or `--yes`
+to explicitly authorize the proposed setup.
 
 ```sh
 agentic-workspace start --target . --task "Inspect current restrictions" --format yaml
@@ -74,11 +74,12 @@ agentic-workspace start --target . --task "Inspect current restrictions" --forma
 This CLI option preserves the full native response, including `carriage` when
 requested. If an agent should only see the model-facing view, keep the native
 JSON in the host and render it using the adapter below or the
-`agentic-workspace-yaml` filter. The filter consumes one complete JSON response
-on stdin. When piping from the native command, check its exit status separately.
+`agentic-workspace-yaml` filter. These optional npm utilities require Node 22.12
+or later and `yaml@2.9.1`. The filter consumes one complete JSON response on
+stdin. When piping from the CLI, check its exit status separately.
 
 ```sh
-agentic-workspace start --target . --task "Inspect current restrictions" | agentic-workspace-yaml
+agentic-workspace start --target . --task "Inspect current restrictions" --format json | agentic-workspace-yaml
 ```
 
 A Node host can also issue short selections through the experimental subpath. Give each independent conversation its own session. Pass original native JSON text so 64-bit integer precision survives. In this example `nativeStdout` is the result of a carried `start` call, `carriage` is its retained transport, and `askAgent` is the host's reader.

@@ -1,13 +1,59 @@
 use serde_json::{Value, json};
+mod output_yaml;
 mod setup;
-#[cfg(not(unix))]
-use std::io::Write;
 use std::{
     collections::BTreeSet,
     env, fs,
-    io::{self, Read},
+    io::{self, IsTerminal, Read, Seek, Write},
+    path::Path,
     process::{Command, Stdio},
 };
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum OutputFormat {
+    Json,
+    Text,
+    Yaml,
+}
+
+impl OutputFormat {
+    fn named(value: &str) -> Option<Self> {
+        match value {
+            "json" => Some(Self::Json),
+            "text" => Some(Self::Text),
+            "yaml" => Some(Self::Yaml),
+            _ => None,
+        }
+    }
+
+    fn select(args: &[String], preference: Option<&str>, terminal: bool) -> Result<Self, String> {
+        // Select the error renderer before validating argv. The command parser
+        // still owns option validation, including missing and duplicate flags.
+        for (index, arg) in args.iter().enumerate().skip(1) {
+            let value = if arg == "--format" {
+                args.get(index + 1).map(String::as_str)
+            } else if let Some(value) = arg.strip_prefix("--format=") {
+                Some(value)
+            } else {
+                continue;
+            };
+            return Ok(value.and_then(Self::named).unwrap_or(Self::Json));
+        }
+        if let Some(value) = preference.filter(|value| !value.is_empty()) {
+            return match Self::named(value) {
+                Some(format @ (Self::Json | Self::Yaml)) => Ok(format),
+                _ => Err("AGENTIC_WORKSPACE_OUTPUT_FORMAT must be json or yaml".into()),
+            };
+        }
+        Ok(if args.first().is_some_and(|name| name == "setup") {
+            Self::Text
+        } else if terminal {
+            Self::Yaml
+        } else {
+            Self::Json
+        })
+    }
+}
 
 fn declaration() -> Value {
     serde_json::from_str::<Value>(include_str!(
@@ -48,7 +94,6 @@ struct Parsed {
     values: Value,
     input_path: Option<String>,
     explicit: BTreeSet<String>,
-    format: String,
     material: Option<Value>,
 }
 
@@ -140,12 +185,9 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
     if command["input_required"] == true && input_path.is_none() {
         return Err("--input is required for this command".to_owned());
     }
-    let format = values
-        .remove("format")
-        .and_then(|v| v.as_str().map(str::to_owned))
-        .unwrap_or_else(|| "json".into());
+    let format = values.remove("format");
     if args[0] != "setup"
-        && (format != "json"
+        && (format == Some(json!("text"))
             || ["yes", "dry_run", "recover"]
                 .iter()
                 .any(|key| seen.contains(*key)))
@@ -199,7 +241,6 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
         values: Value::Object(values),
         input_path,
         explicit: seen,
-        format,
         material,
     }))
 }
@@ -307,23 +348,15 @@ fn require_invoke_context(present: impl Fn(&str) -> bool) -> Result<(), String> 
     ))
 }
 
-fn run() -> Result<(), (&'static str, String)> {
+fn run(args: &[String], format: OutputFormat) -> Result<(), (&'static str, String)> {
     let contract = declaration();
-    let args = env::args_os()
-        .skip(1)
-        .map(|argument| {
-            argument
-                .into_string()
-                .map_err(|_| ("invalid-cli-input", "arguments must be UTF-8".to_owned()))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let Some(mut parsed) = parse(&contract, &args).map_err(|error| ("invalid-cli-input", error))?
+    let Some(mut parsed) = parse(&contract, args).map_err(|error| ("invalid-cli-input", error))?
     else {
         println!("{}", help(&contract));
         return Ok(());
     };
     if parsed.command == "setup" {
-        return setup::run(parsed).map_err(|error| ("setup", error));
+        return setup::run(parsed, format).map_err(|error| ("setup", error));
     }
     let input = if let Some(path) = &parsed.input_path {
         let text = if path == "-" {
@@ -340,7 +373,7 @@ fn run() -> Result<(), (&'static str, String)> {
         Value::Null
     };
     carry_input(&contract, &mut parsed, input).map_err(|error| ("invalid-cli-input", error))?;
-    // The CLI owns only argv/JSON transport. Every semantic operation runs in
+    // Every semantic operation runs in
     // the same colocated executable used by the JSON/Python/Node adapters.
     let executable = env::current_exe().map_err(|error| ("core-location", error.to_string()))?;
     let core = executable.with_file_name(if cfg!(windows) {
@@ -348,21 +381,30 @@ fn run() -> Result<(), (&'static str, String)> {
     } else {
         "agentic-workspace-core"
     });
-    forward(&core, &json!({parsed.command: parsed.values}))
+    let payload = json!({parsed.command: parsed.values});
+    if format == OutputFormat::Yaml {
+        forward_yaml(&core, &payload)
+    } else {
+        forward(&core, &payload)
+    }
 }
 
-#[cfg(unix)]
-fn forward(core: &std::path::Path, payload: &Value) -> Result<(), (&'static str, String)> {
-    use std::io::{Seek, SeekFrom};
-    use std::os::unix::process::CommandExt;
+fn core_input(payload: &Value) -> Result<fs::File, (&'static str, String)> {
     // Anonymous regular input avoids pipe-capacity deadlock and argv exposure.
-    // exec keeps the same process identity and signal lifetime as the core.
     let mut input = tempfile::tempfile().map_err(|error| ("core-input", error.to_string()))?;
     serde_json::to_writer(&mut input, payload)
         .map_err(|error| ("core-input", error.to_string()))?;
     input
-        .seek(SeekFrom::Start(0))
+        .rewind()
         .map_err(|error| ("core-input", error.to_string()))?;
+    Ok(input)
+}
+
+#[cfg(unix)]
+fn forward(core: &Path, payload: &Value) -> Result<(), (&'static str, String)> {
+    use std::os::unix::process::CommandExt;
+    let input = core_input(payload)?;
+    // exec keeps the same process identity and signal lifetime as the core.
     let error = Command::new(core).stdin(Stdio::from(input)).exec();
     Err((
         "core-unavailable",
@@ -370,25 +412,25 @@ fn forward(core: &std::path::Path, payload: &Value) -> Result<(), (&'static str,
     ))
 }
 
+#[cfg(windows)]
+fn wrap_core(mut command: Command) -> process_wrap::std::CommandWrap {
+    use process_wrap::std::{CommandWrap, JobObject};
+    use std::os::windows::process::CommandExt;
+    command.creation_flags(0x08000000);
+    let mut wrapped = CommandWrap::from(command);
+    wrapped.wrap(JobObject);
+    wrapped
+}
+
 #[cfg(not(unix))]
-fn forward(core: &std::path::Path, payload: &Value) -> Result<(), (&'static str, String)> {
+fn forward(core: &Path, payload: &Value) -> Result<(), (&'static str, String)> {
     let mut command = Command::new(core);
     command
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
     #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000);
-    }
-    #[cfg(windows)]
-    let mut command = {
-        use process_wrap::std::{CommandWrap, JobObject};
-        let mut wrapped = CommandWrap::from(command);
-        wrapped.wrap(JobObject);
-        wrapped
-    };
+    let mut command = wrap_core(command);
     let mut child = command.spawn().map_err(|error| {
         (
             "core-unavailable",
@@ -420,10 +462,82 @@ fn forward(core: &std::path::Path, payload: &Value) -> Result<(), (&'static str,
     Ok(())
 }
 
+fn forward_yaml(core: &Path, payload: &Value) -> Result<(), (&'static str, String)> {
+    // Independent anonymous streams avoid deadlock and retain both the core's
+    // effect receipt and diagnostics until the process exits.
+    let stream_error = |error: io::Error| ("core-output", error.to_string());
+    let mut stdout = tempfile::tempfile().map_err(stream_error)?;
+    let mut stderr = tempfile::tempfile().map_err(stream_error)?;
+    let mut command = Command::new(core);
+    command
+        .stdin(core_input(payload)?)
+        .stdout(stdout.try_clone().map_err(stream_error)?)
+        .stderr(stderr.try_clone().map_err(stream_error)?);
+    #[cfg(windows)]
+    let mut command = wrap_core(command);
+    let mut child = command.spawn().map_err(|error| {
+        (
+            "core-unavailable",
+            format!("colocated core {}: {error}", core.display()),
+        )
+    })?;
+    let status = child.wait().map_err(|error| {
+        let _ = child.kill();
+        let _ = child.wait();
+        ("core-wait", error.to_string())
+    })?;
+    fn copy_response(file: &mut fs::File, mut destination: impl Write) -> io::Result<()> {
+        file.rewind()?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;
+        match serde_json::from_slice::<Value>(&bytes) {
+            Ok(value) => destination.write_all(output_yaml::render(&value).as_bytes()),
+            Err(_) => destination.write_all(&bytes),
+        }
+    }
+    copy_response(&mut stdout, io::stdout().lock()).map_err(stream_error)?;
+    copy_response(&mut stderr, io::stderr().lock()).map_err(stream_error)?;
+    if !status.success() {
+        std::process::exit(status.code().unwrap_or(2));
+    }
+    Ok(())
+}
+
+fn report_error(format: OutputFormat, code: &str, message: &str) -> ! {
+    let value = json!({"error": {"code": code, "message": message}});
+    if format == OutputFormat::Yaml {
+        eprint!("{}", output_yaml::render(&value));
+    } else {
+        eprintln!("{value}");
+    }
+    std::process::exit(2);
+}
+
 fn main() {
-    if let Err((code, message)) = run() {
-        eprintln!("{}", json!({"error": {"code": code, "message": message}}));
-        std::process::exit(2);
+    let args = env::args_os()
+        .skip(1)
+        .map(|arg| arg.into_string())
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap_or_else(|_| {
+            report_error(
+                OutputFormat::Json,
+                "invalid-cli-input",
+                "arguments must be UTF-8",
+            )
+        });
+    let preference = env::var("AGENTIC_WORKSPACE_OUTPUT_FORMAT").ok();
+    let format = if args.is_empty() || args.iter().any(|argument| argument == "--help") {
+        OutputFormat::Json
+    } else {
+        OutputFormat::select(
+            &args,
+            preference.as_deref(),
+            io::stdout().is_terminal() && io::stderr().is_terminal(),
+        )
+        .unwrap_or_else(|message| report_error(OutputFormat::Json, "invalid-cli-input", &message))
+    };
+    if let Err((code, message)) = run(&args, format) {
+        report_error(format, code, &message);
     }
 }
 
@@ -432,6 +546,20 @@ mod tests {
     use super::*;
     fn args(items: &[&str]) -> Vec<String> {
         items.iter().map(|item| (*item).to_owned()).collect()
+    }
+
+    #[test]
+    fn output_format_precedence_preserves_pipes_and_setup() {
+        let select = |argv, preference, terminal| {
+            OutputFormat::select(&args(argv), preference, terminal).unwrap()
+        };
+        assert!(select(&["start"], None, true) == OutputFormat::Yaml);
+        assert!(select(&["start"], None, false) == OutputFormat::Json);
+        assert!(select(&["setup"], None, true) == OutputFormat::Text);
+        assert!(select(&["start"], Some("json"), true) == OutputFormat::Json);
+        assert!(select(&["start"], Some("yaml"), false) == OutputFormat::Yaml);
+        assert!(select(&["start", "--format", "json"], Some("yaml"), true) == OutputFormat::Json);
+        assert!(select(&["start", "--format=yaml"], Some("invalid"), false) == OutputFormat::Yaml);
     }
 
     #[test]
@@ -559,7 +687,7 @@ mod tests {
             args(&["invoke"]),
             args(&["start", "--relevant", "true"]),
             args(&["start", "--target", ".", "--target", "other"]),
-            args(&["start", "--format", "yaml"]),
+            args(&["start", "--format", "text"]),
             args(&["start", "--changed"]),
             args(&["start", "--observation", "fact", "--need", "prerequisite"]),
             args(&["start", "--source", "a.txt"]),

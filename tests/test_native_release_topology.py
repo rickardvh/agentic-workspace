@@ -16,6 +16,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src/tooling/release"))
@@ -86,6 +87,26 @@ def test_isolated_python_owner_mutation_and_missing_core_rejection(wheel, tmp_pa
     target.mkdir()
     environment = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
     environment["PATH"] = ""
+    rendered = subprocess.run(
+        [
+            str(python),
+            "-I",
+            "-c",
+            "from agentic_workspace.cli import main; raise SystemExit(main())",
+            "start",
+            "--target",
+            str(target),
+            "--task",
+            "Inspect this consumer",
+            "--format",
+            "yaml",
+        ],
+        cwd=target,
+        env=environment,
+        capture_output=True,
+        check=True,
+    )
+    assert yaml.safe_load(rendered.stdout)["decision_packet"]["status"] == "direct"
     script = """
 import json
 from pathlib import Path
@@ -203,7 +224,16 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
         text=True,
     )
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout)["decision_packet"]["status"] == "direct"
+    expected = json.loads(result.stdout)
+    assert expected["decision_packet"]["status"] == "direct"
+    rendered = subprocess.run(
+        [node, str(package / "src/cli.mjs"), "start", "--target", str(consumer), "--task", "Inspect this consumer", "--format", "yaml"],
+        cwd=consumer,
+        env=environment,
+        capture_output=True,
+        check=True,
+    )
+    assert yaml.safe_load(rendered.stdout) == expected
     assert not (consumer / ".agentic-workspace").exists()
     native_dir = package / "src/native/bin"
     node_os = {"Windows": "win32", "Linux": "linux", "Darwin": "darwin"}[platform.system()]

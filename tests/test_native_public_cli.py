@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 from tests import native_artifact_consumers
 from tests.native_planning_fixtures import fixture_source
 
@@ -26,6 +27,31 @@ def test_native_help_matches_declared_command_inventory(native_cli: Path) -> Non
     for command in sorted(commands):
         parsed = subprocess.run([str(native_cli), command, "--help"], capture_output=True, text=True)
         assert parsed.returncode == 0, (command, parsed.stderr)
+
+
+def test_cli_yaml_preserves_carriage_and_native_error(tmp_path: Path, native_cli: Path) -> None:
+    env = {**os.environ, "PATH": ""}
+    env.pop("AGENTIC_WORKSPACE_OUTPUT_FORMAT", None)
+    context = [str(native_cli), "start", "--target", str(tmp_path), "--task", 'Read policy: "false"\néchéance', "--projection", "carried"]
+    native = subprocess.run(context, env=env, capture_output=True, check=True)
+    expected = json.loads(native.stdout)
+    assert expected["carriage"]["kind"] == "agentic-workspace/operating-carriage/v1"
+    exact = subprocess.run(
+        [*context, "--format=json"], env={**env, "AGENTIC_WORKSPACE_OUTPUT_FORMAT": "yaml"}, capture_output=True, check=True
+    )
+    assert exact.stdout == native.stdout
+    for args, options in ((["--format", "yaml"], env), ([], {**env, "AGENTIC_WORKSPACE_OUTPUT_FORMAT": "yaml"})):
+        rendered = subprocess.run([*context, *args], env=options, capture_output=True, check=True)
+        assert yaml.safe_load(rendered.stdout) == expected
+        assert re.search(rb" &[a-z]+\b", rendered.stdout)
+        assert re.search(rb" \*[a-z]+\b", rendered.stdout)
+    args = [str(native_cli), "start", "--target", str(tmp_path), "--input", "-"]
+    for payload in (b"{invalid json", b'{"target":".","task":"Read policy","unexpected_field":true}'):
+        json_error = subprocess.run(args, env=env, input=payload, capture_output=True)
+        yaml_error = subprocess.run([*args, "--format=yaml"], env=env, input=payload, capture_output=True)
+        assert yaml_error.returncode == json_error.returncode != 0
+        assert yaml_error.stdout == json_error.stdout == b""
+        assert yaml.safe_load(yaml_error.stderr) == json.loads(json_error.stderr)
 
 
 def test_native_request_shape_error_transport_is_bounded_and_value_free(tmp_path, shared_core_binary, native_cli):
@@ -187,8 +213,9 @@ def consume(
     installed = None if custom_core else native_artifact_consumers.CURRENT
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
-    if surface == "native":
-        command = [str(native), verb, "--format", "json"]
+    native_cli_surface = surface in {"native", "native-yaml"}
+    if native_cli_surface:
+        command = [str(native), verb, "--format", "yaml" if surface == "native-yaml" else "json"]
         for field in ("target", "task", "reference"):
             if field in context:
                 command += [f"--{field}", context[field]]
@@ -253,8 +280,8 @@ def consume(
     # Keep each scenario's host-tool contract. Native defaults to no lookup;
     # other adapters historically inherit Git/shell tools unless explicitly
     # restricted. Package isolation must not remove an owner's required tools.
-    effective_path = host_path if host_path is not None else ("" if surface == "native" else os.environ.get("PATH", ""))
-    environment = {**os.environ, "PATH": effective_path} if surface == "native" else None
+    effective_path = host_path if host_path is not None else ("" if native_cli_surface else os.environ.get("PATH", ""))
+    environment = {**os.environ, "PATH": effective_path} if native_cli_surface else None
     if installed:
         environment = {
             key: value
@@ -273,7 +300,7 @@ def consume(
         env=environment,
     )
     assert result.returncode == 0, result.stderr
-    decoded = json.loads(result.stdout)
+    decoded = yaml.safe_load(result.stdout) if surface == "native-yaml" else json.loads(result.stdout)
     if not allow_failure:
         assert decoded.get("status") not in {"rejected", "uncertain"}, json.dumps(decoded)
     return decoded
