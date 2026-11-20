@@ -13,14 +13,6 @@
   "engines": {
     "node": ">=20"
   },
-  "peerDependencies": {
-    "yaml": "2.9.1"
-  },
-  "peerDependenciesMeta": {
-    "yaml": {
-      "optional": true
-    }
-  },
   "private": true,
   "publishConfig": {
     "access": "public"

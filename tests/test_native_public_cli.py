@@ -54,6 +54,12 @@ def test_cli_yaml_preserves_carriage_and_native_error(tmp_path: Path, native_cli
         assert yaml.safe_load(yaml_error.stderr) == json.loads(json_error.stderr)
 
 
+def test_shared_yaml_flow_scalars_are_readable_by_pyyaml(shared_core_binary: Path) -> None:
+    values = ["Ready?", "https://example.org/path?q=1", ".Inf", "n", "colon: space", "a,b", "[value]"]
+    result = subprocess.run([str(shared_core_binary), "--render-yaml"], input=json.dumps(values).encode(), check=True, capture_output=True)
+    assert yaml.safe_load(result.stdout) == values
+
+
 def test_native_request_shape_error_transport_is_bounded_and_value_free(tmp_path, shared_core_binary, native_cli):
     context = {"target": str(tmp_path), "task": "Synthetic validation probe"}
     carried = consume("native", shared_core_binary, native_cli, {**context, "projection": "carried"})

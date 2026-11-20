@@ -51,3 +51,32 @@ test('nested repeats stay readable with the standard YAML alias limit', () => {
   const value = Array(15).fill(row)
   assert.deepEqual(parse(render(JSON.stringify(value))), value)
 })
+
+test('aliases shared evidence inside repeated records', () => {
+  const evidence = 'shared-evidence:' + 'ab'.repeat(32)
+  const first = { evidence, owner: 'configuration' }
+  const second = { evidence, owner: 'verification' }
+  const value = [first, second, first, second]
+  const yaml = render(JSON.stringify(value))
+  assert.equal(yaml.split(evidence).length - 1, 1)
+  assert.deepEqual(parse(yaml), value)
+})
+
+test('comparison rejects host carriage before presenting either arm', () => {
+  const wrapped = { view: { status: 'direct' }, carriage: { kind: 'agentic-workspace/operating-carriage/v1', secret: 'private' } }
+  const continuation = { effect_outcome: { status: 'committed' }, continuation: { status: 'current', result: wrapped } }
+  for (const raw of [wrapped, continuation]) {
+    const path = fileURLToPath(new URL('./render.mjs', import.meta.url))
+    const result = spawnSync(process.execPath, [path, 'node-rust'], { input: JSON.stringify(raw), encoding: 'utf8' })
+    assert.notEqual(result.status, 0)
+    assert.equal(result.stdout, '')
+    assert.match(result.stderr, /requires an exact, unwrapped model view/)
+  }
+})
+
+test('preserves prose, flow punctuation, special scalars and multiline whitespace', () => {
+  const values = ['a,b', 'a[b]', 'a # comment', 'a: b', '.NaN', '.INF', 'ON', 'n', '/path',
+    'first\nlast', '\nfirst  \n indented\n\n', '  first\nlast', 'first\n   \n', 'first\r\nlast']
+  const doc = [Object.fromEntries(values.map(key => [key, [key, key]])), ...values]
+  assert.deepEqual(parse(render(JSON.stringify(doc))), doc)
+})

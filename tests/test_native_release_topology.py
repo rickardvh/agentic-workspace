@@ -205,11 +205,10 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     package = consumer / "node_modules/@agentic-workspace/workspace-cli"
     metadata = json.loads((package / "package.json").read_text())
     assert set(metadata["exports"]) == {".", "./operating", "./experimental/agent-view"}
-    assert metadata["peerDependenciesMeta"]["yaml"]["optional"]
+    assert "yaml" not in metadata.get("peerDependencies", {})
     assert {p.name for p in (package / "src/native").glob("*.mjs")} == {
         "operating.mjs",
         "_transport.mjs",
-        "_agent-yaml.mjs",
         "agent-view.mjs",
     }
     assert not (package / "resources").exists()
@@ -221,7 +220,6 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
         cwd=consumer,
         env={**environment, "AGENTIC_WORKSPACE_OUTPUT_FORMAT": "yaml"},
         capture_output=True,
-        text=True,
     )
     assert result.returncode == 0, result.stderr
     expected = json.loads(result.stdout)
@@ -234,6 +232,21 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
         check=True,
     )
     assert yaml.safe_load(rendered.stdout) == expected
+    # A clean npm consumer gets byte-identical YAML from the packaged core.
+    filtered = subprocess.run(
+        [node, str(package / "src/agent-yaml.mjs")],
+        input=result.stdout,
+        cwd=consumer,
+        env=environment,
+        capture_output=True,
+    )
+    has_raw_json = subprocess.check_output([node, "-p", "typeof JSON.rawJSON"]).strip() == b"function"
+    if has_raw_json:
+        assert filtered.returncode == 0, filtered.stderr
+        assert filtered.stdout == rendered.stdout
+    else:
+        assert filtered.returncode == 2
+        assert b"requires Node 22.12" in filtered.stderr
     assert not (consumer / ".agentic-workspace").exists()
     native_dir = package / "src/native/bin"
     node_os = {"Windows": "win32", "Linux": "linux", "Darwin": "darwin"}[platform.system()]

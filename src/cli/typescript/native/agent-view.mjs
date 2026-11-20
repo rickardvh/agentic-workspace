@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto'
-import { anchored, jsonText, parseJSON } from './_agent-yaml.mjs'
+import { renderYaml } from './_transport.mjs'
 
 const digest = /sha256:[0-9a-f]{64}(?![0-9a-f])/g
 const idString = /^[A-Za-z0-9_:./#-]+$/
-const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value)
+const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value) && !JSON.isRawJSON(value)
 const rows = value => Array.isArray(value) ? value : []
 
 // The native response supplies the authoritative selectors. Owner material,
@@ -57,7 +57,14 @@ function unwrap(native) {
 }
 
 function modelView(raw) {
-  const view = unwrap(parseJSON(raw))
+  if (typeof raw !== 'string') throw new TypeError('Expected the original AW JSON text')
+  if (typeof JSON.rawJSON !== 'function') throw new TypeError('The YAML view requires Node 22.12 or later')
+  // Keep exact native number lexemes through host-only carriage and handle selection.
+  const view = unwrap(JSON.parse(raw, (_key, value, context) => {
+    if (typeof value !== 'number') return value
+    if (!Number.isFinite(value)) throw new RangeError('Number outside AW numeric range')
+    return JSON.rawJSON(context.source)
+  }))
   if (isRecord(view?.effect_outcome) && view.continuation?.status === 'current' && isRecord(view.continuation.result)) {
     try {
       view.continuation.result = unwrap(view.continuation.result)
@@ -70,11 +77,11 @@ function modelView(raw) {
   return view
 }
 
-export function renderAgentYaml(raw, yamlLibrary) {
-  return anchored(modelView(raw), yamlLibrary)
+export function renderAgentYaml(raw) {
+  return renderYaml(JSON.stringify(modelView(raw)))
 }
 
-export function createAgentSession(yamlLibrary) {
+export function createAgentSession() {
   let active
   return {
     clear() { active = undefined },
@@ -82,7 +89,7 @@ export function createAgentSession(yamlLibrary) {
       // Invalidate even if the successor is malformed or rendering fails.
       active = undefined
       const view = modelView(raw)
-      const literal = jsonText(view)
+      const literal = JSON.stringify(view)
       let prefix
       do { prefix = 'h_' + randomBytes(9).toString('base64url') + '.' } while (literal.includes(prefix))
       const symbols = new Map()
@@ -105,7 +112,7 @@ export function createAgentSession(yamlLibrary) {
       if (isRecord(view?.effect_outcome) && view.continuation?.status === 'current') {
         project(view.continuation.result, shorten, value => byValue.get(value))
       }
-      const yaml = anchored(view, yamlLibrary)
+      const yaml = renderYaml(JSON.stringify(view))
       active = byDisplay
       function lookup(handle, role) {
         const entry = byDisplay.get(handle)

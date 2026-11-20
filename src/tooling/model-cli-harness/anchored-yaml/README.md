@@ -1,6 +1,6 @@
 # Anchored YAML for AW responses
 
-The benchmark exercises the Node package's optional agent view. It displays one AW response as YAML 1.2, keeps the first occurrence of a repeated value in place, and reuses it through document-local aliases. Hosts can also issue short selections and retain exact native values. The [package guide](../../../../docs/package/output-profiles.md#render-one-yaml-format-for-an-agent) covers both entry points. The broader work is tracked in [AW #3957](https://github.com/rickardvh/agentic-workspace/issues/3957).
+The benchmark exercises the native Rust renderer through the Node package's optional agent view. It displays one AW response as YAML 1.2, keeps the first occurrence of a repeated value in place, and reuses it through document-local aliases. Hosts can also issue short selections and retain exact native values. The [package guide](../../../../docs/package/output-profiles.md#render-one-yaml-format-for-an-agent) covers both entry points. The broader work is tracked in [AW #3957](https://github.com/rickardvh/agentic-workspace/issues/3957).
 
 ## Try it
 
@@ -9,11 +9,28 @@ Run the filter from the AW source checkout with Node 22.12 or newer and the pair
 ```powershell
 $prototype = 'src/tooling/model-cli-harness/anchored-yaml'
 npm ci --prefix $prototype --ignore-scripts
-uv run python src/tooling/run_agentic_workspace.py start --target . --task "Inspect current restrictions" |
+uv run python src/tooling/run_agentic_workspace.py start --target . --task "Inspect current restrictions" --format json |
     node "$prototype/render.mjs"
 ```
 
-The current renderer considers repeated values of at least 24 UTF-16 code units in compact JSON, uses short alphabetic anchor names, and puts short scalar lists on one line. It checks expansion with the standard YAML parser before printing. Structures exceeding the parser's alias limit fall back to ordinary YAML. The filter preserves native 64-bit integers and negative zero. The benchmark-only `pair` mode retains compact JSON and the original 48-unit anchored layout as controls.
+The shared renderer considers repeated values of at least 24 bytes of compact JSON, uses short alphabetic anchors and permits nested aliases within the expansion limit. Further uses that would exceed the limit are written inline. The filter preserves native 64-bit integers and negative zero. The benchmark retains the historical Node implementation as a comparison control. `uv run python src/tooling/model-cli-harness/anchored-yaml/benchmark.py --compare-renderers` runs all four native workflows with known answers, verifies full-value round trips, and prints model-free payload token counts for each stage. `--compare json-yaml` retains the original 48-unit layout for reproducing the pilot.
+
+## Shared Rust renderer · 20 November 2026
+
+We captured seven compact responses while exercising four native workflows. Each renderer received the same JSON bytes for each stage. Counts use `o200k_base`, one presentation per stage. We used the former Rust renderer from `35ba8b4b5`, the historical full-value Node control and the new Rust renderer from `88bef786c`. An independent YAML parser recovered identical values from all three presentations. Paths, current repository state and source-bound references can change counts on a fresh run.
+
+| Workflow stage | Previous Rust | Node control | Shared Rust |
+| --- | ---: | ---: | ---: |
+| Checkout restrictions | 27,688 | 16,909 | 16,846 |
+| Write · authorize | 2,886 | 2,871 | 2,871 |
+| Write · select action | 2,551 | 2,051 | 2,051 |
+| Stale write · rejection | 1,287 | 1,180 | 1,180 |
+| Stale write · reentry | 2,311 | 2,293 | 2,291 |
+| Deferral · choose | 2,893 | 2,878 | 2,878 |
+| Deferral · stop | 2,546 | 2,041 | 2,041 |
+| **Total** | **42,162** | **30,223** | **30,158** |
+
+On this corpus the shared renderer used 28.5% fewer payload tokens than the previous native renderer. The package filter and CLI now use the same Rust implementation. The comparison counts displayed payload and verifies native workflow outcomes. It measures neither agent reasoning nor billing.
 
 ## Hosted selections · 20 November 2026
 

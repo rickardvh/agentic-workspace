@@ -65,9 +65,9 @@ def native_reply(host, actual):
 
 
 @lru_cache(maxsize=20)
-def render(raw):
+def render(raw, mode="pair"):
     result = subprocess.run(
-        ["node", str(HERE / "render.mjs"), "pair"], input=raw, capture_output=True, encoding="utf-8", timeout=90, check=True
+        ["node", str(HERE / "render.mjs"), mode], input=raw, capture_output=True, encoding="utf-8", timeout=90, check=True
     )
     return json.loads(result.stdout)
 
@@ -216,6 +216,7 @@ def main():
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--out", type=Path)
     mode.add_argument("--check", action="store_true", help="Exercise the native workflows and render both formats without model calls")
+    mode.add_argument("--compare-renderers", action="store_true", help="Count full-value Node and Rust YAML tokens on each native stage, without model calls")
     parser.add_argument("--repeats", type=int, default=2, choices=range(1, 11))
     parser.add_argument("--compare", choices=["json-yaml", "yaml-hosted"], default="json-yaml")
     args = parser.parse_args()
@@ -233,7 +234,7 @@ def main():
         },
     )
     factories = {"checkout": lambda _: checkout_route(checkout), "write": write_config, "stale": stale_config}
-    if args.compare == "yaml-hosted":
+    if args.compare_renderers or args.compare == "yaml-hosted":
         factories["defer"] = defer_config
     # Validate the scorer against a real known-good journey before spending
     # model tokens. In particular, a successful native read can return a
@@ -241,13 +242,19 @@ def main():
     for name, factory in factories.items():
         with (
             tempfile.TemporaryDirectory(prefix="aw-yaml-preflight-") as tmp,
-            hosted_reader() if "hosted-yaml" in arms else nullcontext() as host,
+            hosted_reader() if not args.compare_renderers and "hosted-yaml" in arms else nullcontext() as host,
         ):
             journey = factory(Path(tmp))
             _, view, answer = next(journey)
+            stage = 0
             while True:
                 raw = json.dumps(view, ensure_ascii=False, separators=(",", ":"))
-                render(raw)
+                if args.compare_renderers:
+                    stage += 1
+                    tokens = render(raw, "node-rust")["tokens"]
+                    print(f"{name} stage {stage}: Node {tokens['node']}, Rust {tokens['rust']} payload tokens")
+                else:
+                    render(raw)
                 if host:
                     import yaml
 
@@ -265,7 +272,7 @@ def main():
                 except StopIteration as done:
                     print(f"Preflight {name}: {done.value}", flush=True)
                     break
-    if args.check:
+    if args.check or args.compare_renderers:
         return
     result = {
         "model": MODEL,
