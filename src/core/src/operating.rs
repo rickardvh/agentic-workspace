@@ -2751,11 +2751,6 @@ mod tests {
                 "routes",
                 json!([{"selector":"/verification","reference":"b"}]),
             ),
-            ("selection", json!({"status":"required"})),
-            (
-                "selection",
-                json!({"status":"required","question":"Which other prerequisite applies?"}),
-            ),
             ("owner", json!("planning")),
             ("additional_evidence", json!({"source":"other"})),
         ] {
@@ -2763,6 +2758,12 @@ mod tests {
             other[key] = value;
             different.push(other);
         }
+        let mut first_required = row.clone();
+        first_required["selection"] =
+            json!({"status":"required","question":"Which request addresses this restriction?"});
+        let mut second_required = first_required.clone();
+        second_required["consequences"] = peer["consequences"].clone();
+        different.extend([first_required, second_required]);
         let mut unavailable = peer.clone();
         unavailable["status"] = json!("public-owner-route-unavailable");
         unavailable["routes"] = json!([]);
