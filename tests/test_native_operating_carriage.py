@@ -171,10 +171,7 @@ def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tm
             "reference": request["reference"],
             "answer": {"disposition": "satisfied", "reason": "Checked the result against all delivered rules.", "evidence_refs": []},
             "projection": "carried",
-            "available_sources": [
-                {k: r["source_material"][k] for k in ("reference", "revision", "extent", "selector", "content_revision")}
-                for r in first["view"]["decision_packet"]["material"]["scoped-instructions"]
-            ],
+            "delivered": first["view"]["delivery_refs"],
         }
     )
     packet = proposed["view"]["decision_packet"]
@@ -192,7 +189,8 @@ def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tm
     assert material["gaps"] == [] and material["claim_limits"]
     assert "binding" not in material and "response_request" not in question
     assert all("guidance" not in r for r in packet["material"]["scoped-instructions"])
-    assert all(r["delivery"]["status"] == "caller-held" for r in packet["material"]["scoped-instructions"])
+    assert all(r["delivery"]["status"] == "already-delivered" for r in packet["material"]["scoped-instructions"])
+    assert proposed["view"]["delivery_refs"] == first["view"]["delivery_refs"]
     # Exact detail remains available, without a full /verification read. It is
     # freshly source-bound and contains the actual instruction semantics.
     detail = call({"request": proposed["carriage"], "reference": material["proposal_detail"]["reference"]})

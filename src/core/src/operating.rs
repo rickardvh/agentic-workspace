@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use std::collections::{BTreeSet, HashMap};
 
 const CARRIAGE: &str = "agentic-workspace/operating-carriage/v1";
+const SOURCE_DELIVERY: &str = "agentic-workspace/source-delivery/v2";
 
 /// Diagnostics follow the explicitly carried target even on failed admission;
 /// this is no more authoritative than the ordinary caller-supplied target.
@@ -1589,7 +1590,9 @@ fn use_selected(
             return invoke_authorized_configuration(next, current, &answered, projection, detail);
         }
         next["projection"] = projection.clone();
-        return match operate_selected(next.clone(), false, detail) {
+        // Apply delivery only to the outer response, after the current owner
+        // result and any Assignment recovery have finished.
+        return match operate_current(next.clone(), false, detail) {
             Err(failure) if verification_transition && failure.2.is_some() => {
                 // Reject the stale envelopes, retaining the newly admitted
                 // Verification answer and unaffected peer answers. No previous
@@ -1600,7 +1603,7 @@ fn use_selected(
                         || (matches!(source, crate::AssignmentSourceChange::Comparison)
                             && r["request_kind"] == "assignment/judge-task-requirements/v1")
                 });
-                let mut recovered = operate_selected(next, false, detail)?;
+                let mut recovered = operate_current(next, false, detail)?;
                 let view = if projection == "carried" {
                     &mut recovered["view"]
                 } else {
@@ -1763,6 +1766,11 @@ fn operate_selected(
         .and_then(|c| c.get_mut("result"))
     {
         apply_delivery(continuation, &delivered, &available)?;
+        // Full output also mirrors the current packet at next_decision.
+        // Both views must describe that same source delivery.
+        if result["next_decision"].is_object() {
+            result["next_decision"] = result["continuation"]["result"]["decision_packet"].clone();
+        }
     }
     Ok(result)
 }
@@ -1813,7 +1821,7 @@ fn apply_delivery(
                     continue;
                 }
                 let reference = digest(
-                    &json!({"producer":delivery_producer(),"work":work,"owner":owner,"source":row}),
+                    &json!({"contract":SOURCE_DELIVERY,"work":work,"owner":owner,"source":row}),
                 )?;
                 // Small required text still arrives without a selector hop.
                 if row[field].as_str().unwrap().len() > 256 {
@@ -1835,13 +1843,6 @@ fn apply_delivery(
         view["delivery_refs"] = json!(refs);
     }
     Ok(())
-}
-
-fn delivery_producer() -> &'static str {
-    static REVISION: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        digest(&json!({"contract":"source-delivery/v1", "implementation":include_str!("operating.rs")})).unwrap()
-    });
-    &REVISION
 }
 
 fn operate_current(
@@ -3180,6 +3181,10 @@ mod tests {
                 "scoped-instructions":[{"guidance":"instruction".repeat(40)}]}}});
         let mut first = original.clone();
         apply_delivery(&mut first, &[], &[]).unwrap();
+        assert_eq!(
+            first["decision_packet"]["material"]["startup-adapter"]["delivery"]["reference"],
+            "sha256:8a1e672c06a23e524acb8b7740323ee45245a1e8d80bacf84db3ff7bea6e172f"
+        );
         let refs: Vec<String> = first["delivery_refs"]
             .as_array()
             .unwrap()

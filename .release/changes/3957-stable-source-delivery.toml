@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reuse exact source-delivery receipts across answers and unrelated changes to the Rust core."

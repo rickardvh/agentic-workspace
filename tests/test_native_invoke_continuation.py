@@ -1,5 +1,6 @@
 """Effect facts and directly usable continuations share the Rust public boundary."""
 
+import hashlib
 import json
 
 import pytest
@@ -14,11 +15,20 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
     from tests.native_instruction_support import _admit, _write
 
     guidance = "Review the configuration source after it changes."
-    _write(
+    source = _write(
         tmp_path,
         "configuration",
         "---\npaths: [.agentic-workspace/config.toml]\nchecks:\n  - run: echo configuration-reviewed\n---\n" + guidance,
     )
+    delivery = {}
+    if surface == "json" and projection == "full":
+        delivery["available_sources"] = [
+            {
+                "reference": source.relative_to(tmp_path).as_posix(),
+                "revision": "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest(),
+                "extent": "whole-source",
+            }
+        ]
     _admit(tmp_path)
     context = proposal(surface, shared_core_binary, native_cli, tmp_path)
     offered = consume(surface, shared_core_binary, native_cli, context | {"projection": "carried"})
@@ -42,6 +52,7 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
             "invocation": selected["carriage"],
             "reference": selected["view"]["decision_packet"]["primary_action"]["reference"],
             "projection": projection,
+            **delivery,
         },
     )
     assert result["effect_outcome"]["status"] == "committed"
@@ -57,11 +68,17 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
         {
             **continuation["reentry"]["context"],
             "projection": projection,
+            **delivery,
         },
     )
     assert continuation["result"] == fresh
     packet = fresh["view"]["decision_packet"] if projection == "carried" else fresh["decision_packet"]
-    assert guidance in json.dumps(packet["material"])
+    if delivery:
+        instruction = packet["material"]["scoped-instructions"][0]
+        assert instruction["delivery"]["status"] == "caller-held"
+        assert "guidance" not in instruction
+    else:
+        assert guidance in json.dumps(packet["material"])
     assert "configuration-reviewed" in json.dumps(packet)
     assert packet["primary_action"] is None  # Return control; no invented next mutation.
     if projection == "carried":
@@ -77,6 +94,8 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
         )
         assert detailed["value"]["cli_invoke"] == "aw-local"
     assert ("next_decision" in result) == (projection == "full")
+    if projection == "full":
+        assert result["next_decision"] == packet
     if surface == "json" and projection == "carried":
         # Explicit fixture trace: baseline asks the model to copy its exact
         # authorized action and issue post-effect entry. The host version only
