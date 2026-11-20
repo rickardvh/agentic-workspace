@@ -10,7 +10,6 @@ use sha2::{Digest, Sha256};
 use std::{
     io::{Read, Write},
     path::Path,
-    time::SystemTime,
 };
 
 const ROOT: &str = ".agentic-workspace/local/session-logging";
@@ -65,7 +64,7 @@ fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 fn now() -> String {
-    chrono::DateTime::<chrono::Utc>::from(SystemTime::now()).to_rfc3339()
+    crate::timestamps::format_utc(time::OffsetDateTime::now_utc()).expect("UTC clock is RFC3339")
 }
 fn random() -> Result<String, String> {
     let mut bytes = [0u8; 16];
