@@ -330,6 +330,23 @@ def test_workspace_runtime_entrypoint_stays_off_command_generation() -> None:
 
 def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheel: Path, tmp_path: Path) -> None:
     workspace_exe = _install_workspace_stack_venv(wheelhouse=[workspace_wheel], tmpdir_path=tmp_path)
+    empty = tmp_path / "version-probe"
+    empty.mkdir()
+    cargo_version = tomllib.loads((WORKSPACE_ROOT / "src/cli/rust/Cargo.toml").read_text(encoding="utf-8"))["package"]["version"]
+    env = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
+    env["AGENTIC_WORKSPACE_OUTPUT_FORMAT"] = "yaml"
+    reported = subprocess.run(
+        [str(workspace_exe), "--version"],
+        cwd=empty,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert reported.returncode == 0, reported.stderr
+    assert reported.stdout == f"agentic-workspace {cargo_version}\n"
+    assert not reported.stderr
+    assert list(empty.iterdir()) == []
     for module in ("agentic_workspace_memory", "agentic_workspace_planning", "agentic_workspace_verification"):
         assert _venv_site_package_entry_names(tmp_path / ".venv", module) == []
     assert _venv_site_package_entry_names(tmp_path / ".venv", "command_generation") == []

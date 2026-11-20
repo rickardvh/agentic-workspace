@@ -66,6 +66,8 @@ def render_cli_catalogue() -> str:
         lines.append(
             f"| `{option['flag']}` | {_escape(option.get('default'))} | {_escape(option.get('choices'))} | {_escape(option['description'])} |"
         )
+    version_flag = manifest["version_flag"]
+    lines.append(f"| `{version_flag['flag']}` | — | — | {_escape(version_flag['description'])} Run it without a command. |")
     lines.extend(
         [
             "",

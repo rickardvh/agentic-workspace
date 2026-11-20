@@ -95,6 +95,12 @@ fn help(contract: &Value) -> String {
         "  {}  Show this help",
         contract["help_flag"].as_str().unwrap()
     ));
+    let version_flag = &contract["version_flag"];
+    lines.push(format!(
+        "  {}  {}",
+        version_flag["flag"].as_str().unwrap(),
+        version_flag["description"].as_str().unwrap()
+    ));
     lines.join("\n")
 }
 
@@ -378,11 +384,14 @@ fn require_invoke_context(present: impl Fn(&str) -> bool) -> Result<(), String> 
     ))
 }
 
-fn run(args: &[String], format: OutputFormat) -> Result<(), (&'static str, String)> {
-    let contract = declaration();
-    let Some(mut parsed) = parse(&contract, args).map_err(|error| ("invalid-cli-input", error))?
+fn run(
+    contract: &Value,
+    args: &[String],
+    format: OutputFormat,
+) -> Result<(), (&'static str, String)> {
+    let Some(mut parsed) = parse(contract, args).map_err(|error| ("invalid-cli-input", error))?
     else {
-        println!("{}", help(&contract));
+        println!("{}", help(contract));
         return Ok(());
     };
     if parsed.command == "setup" {
@@ -402,7 +411,7 @@ fn run(args: &[String], format: OutputFormat) -> Result<(), (&'static str, Strin
     } else {
         Value::Null
     };
-    carry_input(&contract, &mut parsed, input).map_err(|error| ("invalid-cli-input", error))?;
+    carry_input(contract, &mut parsed, input).map_err(|error| ("invalid-cli-input", error))?;
     // The colocated core owns the operation and formats its own response in the
     // same process, so selecting YAML has no effect on signal handling.
     let core = paired_core().map_err(|error| ("core-location", error.to_string()))?;
@@ -550,6 +559,15 @@ fn main() {
                 "arguments must be UTF-8",
             )
         });
+    let contract = declaration();
+    if args == [contract["version_flag"]["flag"].as_str().unwrap()] {
+        println!(
+            "{} {}",
+            contract["executable"].as_str().unwrap(),
+            env!("CARGO_PKG_VERSION")
+        );
+        return;
+    }
     let preference = env::var("AGENTIC_WORKSPACE_OUTPUT_FORMAT").ok();
     let format = if args.is_empty() || args.iter().any(|argument| argument == "--help") {
         OutputFormat::Json
@@ -561,7 +579,7 @@ fn main() {
         )
         .unwrap_or_else(|message| report_error(OutputFormat::Json, "invalid-cli-input", &message))
     };
-    if let Err((code, message)) = run(&args, format) {
+    if let Err((code, message)) = run(&contract, &args, format) {
         report_error(format, code, &message);
     }
 }

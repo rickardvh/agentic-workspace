@@ -210,6 +210,10 @@
   "native_cli": {
     "executable": "agentic-workspace",
     "help_flag": "--help",
+    "version_flag": {
+      "flag": "--version",
+      "description": "Show the version of the invoked native executable."
+    },
     "commands": [
       {
         "name": "setup",

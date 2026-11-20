@@ -11,6 +11,11 @@ protects the documented entrypoints and transport behaviour below. Current owner
 requests/results travel with the installed runtime; serialisation alone does not
 make their internal fields stable across package versions.
 
+Run `agentic-workspace --version` to print the invoked executable's version as
+one line of text. The native CLI uses SemVer spelling, so a development build
+prints `agentic-workspace 0.0.0-dev.0` even when the Python distribution is
+`0.0.0.dev0`.
+
 The CLI owns argument parsing, JSON transport, rendering and exit codes. Its
 public command and option declarations come from `source_decision_contract.json`:
 
