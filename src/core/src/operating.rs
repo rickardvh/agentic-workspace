@@ -2,6 +2,7 @@
 use crate::{CoreError, digest, native_frontier::Resolution, native_public};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::collections::{BTreeSet, HashMap};
 
 const CARRIAGE: &str = "agentic-workspace/operating-carriage/v1";
 
@@ -595,6 +596,73 @@ fn same_pending_action(pending: &Value, invocation: &Value) -> bool {
     pending == &Value::Object(proposal)
 }
 
+// A binding occasion can point into this response only when filtering its
+// visible blockers reproduces the entire owner signal, including order.
+fn compact_binding_occasions(activation: &mut Value, blockers: &Value) {
+    if activation["kind"] != "agentic-workspace/activation/v1" {
+        return;
+    }
+    let (Some(candidates), Some(blockers)) = (
+        activation
+            .get_mut("candidates")
+            .and_then(Value::as_array_mut),
+        blockers.as_array(),
+    ) else {
+        return;
+    };
+    for candidate in candidates {
+        let occasion = &candidate["occasion"];
+        let Some(binding) = occasion["binding"].as_array() else {
+            continue;
+        };
+        if binding.is_empty() || occasion.as_object().is_none_or(|o| o.len() != 1) {
+            continue;
+        }
+        let owners: Option<BTreeSet<_>> = binding.iter().map(|b| b["owner"].as_str()).collect();
+        let Some(owners) = owners else { continue };
+        if blockers
+            .iter()
+            .filter(|b| b["owner"].as_str().is_some_and(|o| owners.contains(o)))
+            .eq(binding)
+        {
+            candidate["occasion"] = json!({"from":"/decision_packet/blockers","owners":owners});
+        }
+    }
+}
+
+// Only an exact owner nomination can be shared. With selection-required
+// recovery the agent must still judge applicability for each restriction.
+fn group_recovery_routes(recoveries: Vec<Value>) -> Vec<Value> {
+    if recoveries.len() < 2 {
+        return recoveries;
+    }
+    let mut routes: Vec<Value> = Vec::new();
+    let mut seen = HashMap::<String, usize>::new();
+    for mut row in recoveries {
+        if row["status"] == "current-owner-route"
+            && row["selection"]["status"] == "owner-nominated"
+            && row["consequences"]
+                .as_array()
+                .is_some_and(|cs| cs.iter().all(|c| c["consequence_id"].is_string()))
+        {
+            let Value::Array(members) = std::mem::take(&mut row["consequences"]) else {
+                unreachable!("checked consequence array")
+            };
+            let index = *seen.entry(row.to_string()).or_insert(routes.len());
+            if let Some(group) = routes.get_mut(index) {
+                group["consequences"]
+                    .as_array_mut()
+                    .unwrap()
+                    .extend(members);
+                continue;
+            }
+            row["consequences"] = Value::Array(members);
+        }
+        routes.push(row);
+    }
+    routes
+}
+
 fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreError> {
     if !full["decision_packet"].is_object() {
         return Ok(full.clone()); // Compatibility/recovery is already bounded.
@@ -909,7 +977,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         result["material"] = material.clone();
     }
     if let Some(activation) = full.get("activation") {
-        result["activation"] = activation.clone();
+        let mut activation = activation.clone();
+        compact_binding_occasions(&mut activation, &result["decision_packet"]["blockers"]);
+        result["activation"] = activation;
     }
     let retention = &full["memory"]["terminal_retention"];
     if matches!(
@@ -945,7 +1015,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let recovery = consequence_recovery(full, context)?;
     if !recovery.is_empty() {
         reconcile_restriction_routes(&mut result, &recovery);
-        result["consequence_recovery"] = json!(recovery);
+        result["consequence_recovery"] = Value::Array(group_recovery_routes(recovery));
     }
     // A selected leaf already establishes which procedure is useful. Keep its
     // exact refs visible so compact consumers need no discovery/detail hop.
@@ -2638,6 +2708,77 @@ mod tests {
             "owner-resolution-unavailable"
         );
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn compact_activation_links_only_complete_equal_owner_selections() {
+        let a = json!({"owner":"verification","code":"a","affects":["claim:done"],"basis":{"new":"source fact"}});
+        let b = json!({"owner":"verification","code":"b","affects":["effect:publish"]});
+        let c = json!({"owner":"planning","code":"c"});
+        let d = json!({"owner":"configuration","code":"d"});
+        let blockers = json!([a, c, d, b]);
+        let occasions = [
+            json!({"binding":[a,c,b]}),
+            json!({"binding":[a]}), // same owner has another restriction
+            json!({"binding":[b,a]}),
+            json!({"binding":[a,b],"additional_evidence":"must survive"}),
+            json!({"binding":[{"owner":"planning","code":"c","basis":"different"}]}),
+            json!({"material":{"kind":"need","summary":"Inspect the source"}}),
+        ];
+        let candidates: Vec<_> = occasions.iter().map(|v| json!({"occasion":v})).collect();
+        let mut activation =
+            json!({"kind":"agentic-workspace/activation/v1","candidates":candidates});
+        compact_binding_occasions(&mut activation, &blockers);
+        assert_eq!(
+            activation["candidates"][0]["occasion"],
+            json!({"from":"/decision_packet/blockers","owners":["planning","verification"]})
+        );
+        for (i, original) in occasions.iter().enumerate().skip(1) {
+            assert_eq!(&activation["candidates"][i]["occasion"], original);
+        }
+    }
+
+    #[test]
+    fn compact_recovery_groups_only_identical_available_route_instructions() {
+        let row = json!({"owner":"verification","status":"current-owner-route","routes":[{"selector":"/verification","reference":"a"}],
+            "selection":{"status":"owner-nominated"},
+            "consequences":[{"consequence_id":"a","affects":["claim:done"]}]});
+        let mut peer = row.clone();
+        peer["consequences"] = json!([{"consequence_id":"b","affects":["effect:publish"]}]);
+        let mut different = Vec::new();
+        for (key, value) in [
+            (
+                "routes",
+                json!([{"selector":"/verification","reference":"b"}]),
+            ),
+            ("owner", json!("planning")),
+            ("additional_evidence", json!({"source":"other"})),
+        ] {
+            let mut other = peer.clone();
+            other[key] = value;
+            different.push(other);
+        }
+        let mut first_required = row.clone();
+        first_required["selection"] =
+            json!({"status":"required","question":"Which request addresses this restriction?"});
+        let mut second_required = first_required.clone();
+        second_required["consequences"] = peer["consequences"].clone();
+        different.extend([first_required, second_required]);
+        let mut unavailable = peer.clone();
+        unavailable["status"] = json!("public-owner-route-unavailable");
+        unavailable["routes"] = json!([]);
+        different.extend([unavailable.clone(), unavailable]);
+        let mut input = vec![row.clone()];
+        input.extend(different.clone());
+        input.push(peer.clone());
+        let result = group_recovery_routes(input);
+        let mut expected = row;
+        expected["consequences"]
+            .as_array_mut()
+            .unwrap()
+            .push(peer["consequences"][0].clone());
+        assert_eq!(result[0], expected);
+        assert_eq!(result[1..], different);
     }
 
     #[test]
