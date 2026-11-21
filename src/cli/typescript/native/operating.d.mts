@@ -1,3 +1,4 @@
+// Generated from source_decision_contract.json. Regenerate with make render-schema-reference.
 /** JSON transport declarations, not an executable owner or validation model. */
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };

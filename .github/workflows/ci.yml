@@ -109,6 +109,7 @@ jobs:
         run: |
           cargo check --locked --workspace --all-targets
           cargo fmt --all -- --check
+          uv run python src/tooling/generate/generate_contract_catalogues.py --check
           make lint-workspace
           make typecheck-nosync
       - name: Run compact public integration guard
