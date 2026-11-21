@@ -41,7 +41,7 @@ routes. Re-enter with the actual changed paths or claim request when assessing
 the claim. Scope uncertainty and requirements that affect planning, such as
 independent review, remain visible.
 
-When entry offers `review_planning`, open its exact reference before editing
+When entry or re-entry offers `review_planning`, open its exact reference before editing
 to check whether the planned work matches a declared review requirement. The
 detail lists path-based review declarations with settled current applicability.
 Requirements with unresolved applicability remain visible in the decision

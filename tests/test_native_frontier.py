@@ -218,12 +218,20 @@ def test_review_planning_discloses_path_only_requirements_before_editing(tmp_pat
     assert requirement["source_requirement"]["review_owner"] == "independent-maintainer"
     assert requirement["source_requirement"]["applies_to_paths"] == ["src/settings.py"]
 
-    outside = call(**context, changed=["docs/setup.md"])
-    assert not any(r["code"].startswith("assurance:timeout:") for r in outside["decision_packet"]["blockers"])
-    changed = call(**context, changed=["src/settings.py"])
+    outside = call(**context, changed=["docs/setup.md"], projection="carried")
+    resumed_view = outside["view"]
+    assert not any(r["code"].startswith("assurance:timeout:") for r in resumed_view["decision_packet"]["blockers"])
+    resumed_reference = resumed_view["review_planning"]["reference"]
+    assert resumed_reference == resumed_view["detail_refs"][path]
+    resumed_detail = call(request=outside["carriage"], reference=resumed_reference)
+    assert resumed_detail["value"]["requirements"] == [requirement]
+
+    changed_paths = ["docs/setup.md", "src/settings.py"]
+    changed = call(**context, changed=changed_paths)
+    assert "review_planning" not in changed
     restriction = next(r for r in changed["decision_packet"]["blockers"] if r["code"] == "assurance:timeout:applicable")
     assert "claim:claim-work-complete" in restriction["affects"]
-    observed = call(**context, changed=["src/settings.py"], reference=changed["detail_refs"][path])
+    observed = call(**context, changed=changed_paths, reference=changed["detail_refs"][path])
     assert observed["value"]["requirements"][0]["status"] == "applicable"
     assert observed["value"]["requirements"][0]["matched_paths"] == ["src/settings.py"]
 

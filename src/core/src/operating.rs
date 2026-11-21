@@ -822,8 +822,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             "Use /configuration/effective for effective policy, payload drift and blockers. /configuration also includes every installed payload observation."
         );
     }
-    if context["changed"].as_array().is_some_and(Vec::is_empty)
-        && let Some(reference) = result["detail_refs"].get(REVIEW_PLANNING_DETAIL)
+    if let Some(reference) = result["detail_refs"].get(REVIEW_PLANNING_DETAIL)
         && crate::assurance_applicability::review_path_requirements(
             &full["verification"]["assurance_applicability"],
         )
