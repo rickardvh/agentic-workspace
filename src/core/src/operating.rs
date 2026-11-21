@@ -10,6 +10,7 @@ const MAX_DELIVERY_REFS: usize = 256;
 const CONFIGURATION_DETAIL: &str = "/configuration";
 const EFFECTIVE_CONFIGURATION_DETAIL: &str = "/configuration/effective";
 const PAYLOAD_OBSERVATION_DETAIL: &str = "/configuration/payload/observation";
+const REVIEW_PLANNING_DETAIL: &str = "/verification/review_planning";
 
 /// Diagnostics follow the explicitly carried target even on failed admission;
 /// this is no more authoritative than the ordinary caller-supplied target.
@@ -312,6 +313,14 @@ fn entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
             "/verification/claim_review/proposal",
             &descriptor,
         )?);
+    }
+    let assurance = &full["verification"]["assurance_applicability"];
+    if crate::assurance_applicability::review_path_requirements(assurance)
+        .next()
+        .is_some()
+    {
+        let descriptor = json!({"kind":"agentic-workspace/lazy-owner-detail/v1","revision":assurance["revision"]});
+        result.push(entry(context, REVIEW_PLANNING_DETAIL, &descriptor)?);
     }
     if full["decision_packet"]["primary_action"].is_null() {
         for (index, action) in full["decision_packet"]["ready_actions"]
@@ -812,6 +821,16 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         result["configuration_read"] = json!(
             "Use /configuration/effective for effective policy, payload drift and blockers. /configuration also includes every installed payload observation."
         );
+    }
+    if context["changed"].as_array().is_some_and(Vec::is_empty)
+        && let Some(reference) = result["detail_refs"].get(REVIEW_PLANNING_DETAIL)
+        && crate::assurance_applicability::review_path_requirements(
+            &full["verification"]["assurance_applicability"],
+        )
+        .any(|row| row["status"] == "not-applicable")
+    {
+        result["review_planning"] = json!({"reference":reference,
+            "use":"Before editing, check whether the work you plan matches a declared review requirement. Arrange matching review before dependent work. Current applicability and evidence use actual work."});
     }
     let mut claim_details = std::collections::BTreeSet::new();
     if context["request"].is_null()
@@ -1680,6 +1699,16 @@ fn use_selected(
                 );
             }
             (selector, value)
+        }
+        (REVIEW_PLANNING_DETAIL, None) => {
+            let assurance = &current["verification"]["assurance_applicability"];
+            let requirements = crate::assurance_applicability::review_path_requirements(assurance)
+                .collect::<Vec<_>>();
+            (
+                selector,
+                json!({"revision":assurance["revision"],"requirements":requirements,
+                    "use":"Each source_requirement gives the declared scope. Status describes current work. Check the declaration against planned work before editing."}),
+            )
         }
         _ if lazy => (
             selector,

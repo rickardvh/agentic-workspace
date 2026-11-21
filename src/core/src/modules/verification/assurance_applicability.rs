@@ -11,6 +11,29 @@ fn strings(value: &Value) -> Vec<&str> {
         .filter_map(Value::as_str)
         .collect()
 }
+/// Path-based review declarations with settled applicability to current work.
+/// This includes scopes that may match a file the agent plans to edit.
+pub(crate) fn review_path_requirements(assurance: &Value) -> impl Iterator<Item = &Value> {
+    assurance["requirements"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|row| {
+            row["source_requirement"]["review_owner"].is_string()
+                && row["source_requirement"]["applies_to_paths"]
+                    .as_array()
+                    .is_some_and(|paths| !paths.is_empty())
+                && matches!(
+                    row["status"].as_str(),
+                    Some("applicable" | "not-applicable")
+                )
+                && matches!(
+                    row["force"].as_str(),
+                    Some("blocking" | "required-before-closeout")
+                )
+        })
+}
+
 pub(crate) fn schema() -> Value {
     serde_json::from_str(include_str!(
         "../../../contracts/schemas/assurance_applicability.schema.json"

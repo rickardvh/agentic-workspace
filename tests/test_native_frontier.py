@@ -178,3 +178,58 @@ def test_frontier_expansion_detail_currentness_and_disposable_carriage(tmp_path,
     assert measurements[1]["full_bytes"] > measurements[0]["full_bytes"] + 50000
     print({"frontier_measurements": measurements, "empty_carriage_bytes": size(empty["carriage"])})
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+def test_review_planning_discloses_path_only_requirements_before_editing(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Update the connection timeout"}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {"projection": "compact", **extra})
+
+    assert "review_planning" not in call(**context)
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    policy = (
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        '[assurance.requirements.timeout]\nlevel="high"\nforce="required-before-closeout"\n'
+        'review_owner="independent-maintainer"\napplies_to_paths=["src/settings.py"]\n'
+        '[assurance.requirements.tests]\nlevel="high"\nforce="required-before-closeout"\n'
+        'required_evidence=["test-result"]\napplies_to_paths=["src/settings.py"]\n'
+        '[assurance.requirements.legacy]\nlevel="high"\nforce="required-before-closeout"\n'
+        'review_owner="independent-agent"\napplies_to_task_markers=["legacy semantic scope"]\n'
+        'applies_to_paths=["src/legacy.py"]\n'
+    )
+    manifest.write_text(policy, encoding="utf-8")
+    initial = call(**context, projection="carried")
+    cue = initial["view"]["review_planning"]
+    path = "/verification/review_planning"
+    assert cue["reference"] == initial["view"]["detail_refs"][path]
+    assert not any(r["code"].startswith("assurance:timeout:") for r in initial["view"]["decision_packet"]["blockers"])
+    assert any(r["code"] == "assurance:legacy:unresolved" for r in initial["view"]["decision_packet"]["blockers"])
+
+    ref = {"reference": cue["reference"]}
+    detail = call(request=initial["carriage"], **ref)
+    assert detail == call(**context, **ref)
+    assert detail["authority"] == "detail-only"
+    assert detail["selector"] == path
+    (requirement,) = detail["value"]["requirements"]
+    assert requirement["id"] == "timeout"
+    assert requirement["status"] == "not-applicable"
+    assert requirement["source_requirement"]["review_owner"] == "independent-maintainer"
+    assert requirement["source_requirement"]["applies_to_paths"] == ["src/settings.py"]
+
+    outside = call(**context, changed=["docs/setup.md"])
+    assert not any(r["code"].startswith("assurance:timeout:") for r in outside["decision_packet"]["blockers"])
+    changed = call(**context, changed=["src/settings.py"])
+    restriction = next(r for r in changed["decision_packet"]["blockers"] if r["code"] == "assurance:timeout:applicable")
+    assert "claim:claim-work-complete" in restriction["affects"]
+    observed = call(**context, changed=["src/settings.py"], reference=changed["detail_refs"][path])
+    assert observed["value"]["requirements"][0]["status"] == "applicable"
+    assert observed["value"]["requirements"][0]["matched_paths"] == ["src/settings.py"]
+
+    manifest.write_text(policy.replace("independent-maintainer", "release-maintainer"), encoding="utf-8")
+    with pytest.raises(AssertionError, match="stale"):
+        call(request=initial["carriage"], **ref)
+    fresh = call(**context)
+    selection = call(**context, reference=fresh["review_planning"]["reference"])
+    assert selection["value"]["requirements"][0]["source_requirement"]["review_owner"] == "release-maintainer"
