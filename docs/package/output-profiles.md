@@ -41,6 +41,15 @@ routes. Re-enter with the actual changed paths or claim request when assessing
 the claim. Scope uncertainty and requirements that affect planning, such as
 independent review, remain visible.
 
+When entry or re-entry offers `review_planning`, open its exact reference before editing
+to check whether the planned work matches a declared review requirement. The
+detail lists path-based review declarations with settled current applicability.
+Requirements with unresolved applicability remain visible in the decision
+packet. Read the declared scope when planning a change. A status based
+on current changed paths can differ once the planned file changes. Arrange
+matching review before dependent work and re-enter with the actual changed
+paths when assessing completion.
+
 When an activation candidate uses `occasion.from: /decision_packet/blockers`,
 filter the displayed list by `occasion.owners` in order. When it uses
 `occasion.from: /decision_packet`, open `occasion.reference` and filter the
