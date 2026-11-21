@@ -12,6 +12,7 @@ CLI_PATH = Path("src/core/contracts/source_decision_contract.json")
 SURFACES_PATH = Path("src/core/contracts/workspace_surfaces.json")
 CLI_OUTPUT = Path("docs/reference/cli-catalogue.md")
 SURFACES_OUTPUT = Path("docs/reference/installed-surface-catalogue.md")
+TYPESCRIPT_DECLARATIONS = Path("src/cli/typescript/native/operating.d.mts")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -161,16 +162,17 @@ def _write_or_check(path: Path, content: str, *, check: bool) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate current-value contract catalogues.")
-    parser.add_argument("--check", action="store_true", help="Fail when generated catalogues are stale.")
+    parser = argparse.ArgumentParser(description="Generate contract catalogues and TypeScript declarations.")
+    parser.add_argument("--check", action="store_true", help="Fail when a generated contract output is stale.")
     args = parser.parse_args()
     outputs = {
         CLI_OUTPUT: render_cli_catalogue(),
         SURFACES_OUTPUT: render_surface_catalogue(),
+        TYPESCRIPT_DECLARATIONS: _load(CLI_PATH)["language_facade"]["typescript_declarations"],
     }
     stale = [path for path, content in outputs.items() if not _write_or_check(path, content, check=args.check)]
     if stale:
-        print("stale generated contract catalogue(s): " + ", ".join(path.as_posix() for path in stale), file=sys.stderr)
+        print("stale generated contract output(s): " + ", ".join(path.as_posix() for path in stale), file=sys.stderr)
         return 1
     print("[ok] generated contract catalogues" if args.check else "[generated] contract catalogues")
     return 0

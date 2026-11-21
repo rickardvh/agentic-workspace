@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Generate the npm operating declarations from the current language facade contract and check their freshness before release."
