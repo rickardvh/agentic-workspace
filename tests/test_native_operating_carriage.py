@@ -16,8 +16,8 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def proposal(surface, binary, native, root):
-    context = {"target": str(root), "task": "Set the configured invocation"}
+def proposal(surface, binary, native, root, task="Set the configured invocation"):
+    context = {"target": str(root), "task": task}
     initial = consume(surface, binary, native, context)
     initial = consume(surface, binary, native, {**context, "request": initial["configuration_write"]["creation_discovery_request"]})
     request = next(r for r in initial["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "workspace.cli_invoke")
@@ -30,7 +30,155 @@ def size(value):
     return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode())
 
 
-def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("projection", ["compact", "carried"])
+def test_invoke_current_configuration_answer_commits_once(tmp_path, shared_core_binary, native_cli, projection):
+    context = proposal("json", shared_core_binary, native_cli, tmp_path)
+    source = tmp_path / ".agentic-workspace/config.toml"
+
+    def call(value):
+        return consume("json", shared_core_binary, native_cli, value)
+
+    result = call({**context, "projection": projection})
+    view = result["view"] if projection == "carried" else result
+    question = view["decision_packet"]["decision_request"]
+    authorization = {"reference": question["reference"], "answer": "authorize-write"}
+    if projection == "carried":
+        effect = {"invocation": result["carriage"], **authorization}
+        preparation = {"request": result["carriage"], **authorization}
+    else:
+        effect = {**view["reentry"], **authorization}
+        preparation = effect
+    assert call({**preparation, "projection": "compact"})["decision_packet"]["primary_action"]["operation_id"] == "configuration.write"
+    assert (
+        call({**preparation, "answer": "defer", "projection": "compact"})["decision_packet"]["primary_action"]["operation_id"]
+        == "configuration.defer-choice"
+    )
+    assert not source.exists()
+
+    def invoke(value):
+        command = [str(native_cli), "invoke", "--format", "json", "--input", "-"]
+        if projection == "compact":
+            command += ["--reference", value["reference"], "--answer", json.dumps(value["answer"])]
+            value = {k: v for k, v in value.items() if k not in {"reference", "answer"}}
+        completed = subprocess.run(
+            command,
+            input=json.dumps(value),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(completed.stdout)
+
+    assert invoke({**effect, "answer": "defer"})["effect_outcome"]["status"] == "rejected-before-effect"
+    assert not source.exists()
+    source.parent.mkdir(exist_ok=True)
+    source.write_bytes(b'[workspace]\ncli_invoke = "maintainer-aw"\n')
+    concurrent = source.read_bytes()
+    assert invoke(effect)["effect_outcome"]["status"] == "rejected-before-effect"
+    assert source.read_bytes() == concurrent
+    source.unlink()
+    other = proposal("json", shared_core_binary, native_cli, tmp_path, "Another task with the identical edit")
+    other_question = call({**other, "projection": "compact"})["decision_packet"]["decision_request"]
+    written = invoke(effect)
+    assert written["effect_outcome"]["status"] == "committed"
+    assert 'cli_invoke = "aw-local"' in source.read_text()
+    current = source.read_bytes()
+    assert invoke(effect)["effect_outcome"]["status"] == "rejected-before-effect"
+    assert source.read_bytes() == current
+    source.write_bytes(concurrent)
+    fresh = call({**context, "request": None, "projection": "compact"})
+    detail = call({**fresh["reentry"], "reference": fresh["detail_refs"]["/configuration_write"]})["value"]
+    request = detail["inspect_write_request"]
+    args = question["request_material"] if projection == "carried" else question["response_request"]["arguments"]
+    request["arguments"] = {
+        "source": args["source"],
+        "proposal_revision": args["proposal_revision"],
+        "post_revision": question["material"]["post_revision"],
+    }
+    verified = call({**fresh["reentry"], "request": request, "projection": "compact"})["configuration_write_outcome"]
+    assert verified["status"] == "committed"
+    assert verified["source_current"] is False
+    assert verified["receipt"] == written["custody"]["committed"]
+    assert other_question["material"]["post_revision"] == request["arguments"]["post_revision"]
+    assert other_question["response_request"]["arguments"]["proposal_revision"] == request["arguments"]["proposal_revision"]
+    other_entry = call({**other, "request": None, "projection": "compact"})
+    other_detail = call({**other_entry["reentry"], "reference": other_entry["detail_refs"]["/configuration_write"]})["value"]
+    other_request = {**other_detail["inspect_write_request"], "arguments": request["arguments"].copy()}
+    unproven = call({**other_entry["reentry"], "request": other_request, "projection": "compact"})["configuration_write_outcome"]
+    assert unproven["status"] == "not-established"
+    assert "receipt" not in unproven
+    request["arguments"]["proposal_revision"] = "sha256:" + "0" * 64
+    unproven = call({**fresh["reentry"], "request": request, "projection": "compact"})["configuration_write_outcome"]
+    assert unproven["status"] == "not-established"
+    assert "receipt" not in unproven
+    assert source.read_bytes() == concurrent
+
+
+def test_claim_summary_keeps_early_review_and_current_obligations(tmp_path, shared_core_binary, native_cli):
+    config = tmp_path / ".agentic-workspace/config.toml"
+    manifest = config.parent / "verification/manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    config.write_text("[assurance]\nstrict_closeout=true\n")
+    manifest.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        '[assurance.requirements.review]\nlevel="high"\nforce="required-before-closeout"\n'
+        'review_owner="independent-agent"\napplies_to_task_markers=["different scope"]\n'
+    )
+    context = {"target": str(tmp_path), "task": "Inspect the repository"}
+
+    def call(value):
+        return consume("json", shared_core_binary, native_cli, value)
+
+    view = call({**context, "projection": "compact"})
+    packet = view["decision_packet"]
+    assert any(b["code"] == "assurance:review:unresolved" for b in packet["blockers"])
+    assert not any(b["code"] == "strict-closeout-judgment-required" for b in packet["blockers"])
+    later = packet["later_claim_requirements"]
+    assert set(later["by_claim"]) == {"claim:complete", "claim:claim-work-complete", "claim:claim-slice-complete"}
+    opened = call({**view["reentry"], "reference": later["reference"]})
+    exact = next(b for b in opened["value"]["blockers"] if b["code"] == "strict-closeout-judgment-required")
+    assert exact["basis"]["reference"] == "effective-assurance-policy#strict_closeout"
+    assert any(
+        r["routes"]
+        for r in opened["consequence_recovery"]
+        if any(member["consequence_id"] == exact["consequence_id"] for member in r["consequences"])
+    )
+    (tmp_path / "result.txt").write_text("result")
+    later_task = call({**context, "changed": ["result.txt"], "projection": "compact"})
+    assert any(b["code"] == exact["code"] for b in later_task["decision_packet"]["blockers"])
+
+    carried_context = {**context, "changed": ["result.txt"], "projection": "carried"}
+    ordinary = call(carried_context)
+    labelled = call({**carried_context, "short_restrictions": True})
+    identities = labelled["carriage"]["restriction_refs"]
+    assert identities and labelled["carriage"]["envelopes"] == ordinary["carriage"]["envelopes"]
+    view = labelled["view"]
+    assert "restriction_refs" not in view
+    blockers = copy.deepcopy(view["decision_packet"]["blockers"])
+    for blocker in blockers:
+        identity = identities[blocker["consequence_id"]]
+        blocker["consequence_id"] = identity["consequence_id"]
+        if "revision" in identity:
+            blocker["revision"] = identity["revision"]
+        for field in ("declaration_revision", "binding_revision"):
+            if field in identity:
+                blocker["basis"][field] = identity[field]
+    assert blockers == ordinary["view"]["decision_packet"]["blockers"]
+    recovery = copy.deepcopy(view["consequence_recovery"])
+    for group in recovery:
+        for member in group["consequences"]:
+            member["consequence_id"] = identities[member["consequence_id"]]["consequence_id"]
+    assert recovery == ordinary["view"]["consequence_recovery"]
+    reopened = call({"request": labelled["carriage"], "reference": view["detail_refs"]["/decision_packet"]})
+    assert reopened["value"]["blockers"] == blockers
+    with pytest.raises(AssertionError, match="unknown or ambiguous carried reference"):
+        call({"request": labelled["carriage"], "reference": next(iter(identities))})
+    disabled = call({"request": labelled["carriage"], "projection": "carried", "short_restrictions": False})
+    assert disabled == ordinary
+
+
+@pytest.mark.parametrize("reuse_delivery", [False, True])
+def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tmp_path, shared_core_binary, native_cli, reuse_delivery):
     """A non-primary claim question is sufficient without whole-owner detail."""
     result = tmp_path / "result.txt"
     result.write_text("bounded resulting source")
@@ -45,7 +193,8 @@ def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tm
     def call(value):
         return consume("json", shared_core_binary, native_cli, value)
 
-    first = call({**context, "projection": "carried"})
+    first = call({**context, "projection": "carried", "reuse_delivery": reuse_delivery})
+    receipts = first["carriage"]["delivery_refs"] if reuse_delivery else first["view"]["delivery_refs"]
     request = call({"request": first["carriage"], "reference": "owner:request:verification:verification/review-claim/v1"})
     proposed = call(
         {
@@ -53,10 +202,7 @@ def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tm
             "reference": request["reference"],
             "answer": {"disposition": "satisfied", "reason": "Checked the result against all delivered rules.", "evidence_refs": []},
             "projection": "carried",
-            "available_sources": [
-                {k: r["source_material"][k] for k in ("reference", "revision", "extent", "selector", "content_revision")}
-                for r in first["view"]["decision_packet"]["material"]["scoped-instructions"]
-            ],
+            **({} if reuse_delivery else {"delivered": receipts}),
         }
     )
     packet = proposed["view"]["decision_packet"]
@@ -74,7 +220,12 @@ def test_source_rich_pending_claim_has_bounded_material_and_exact_peer_answer(tm
     assert material["gaps"] == [] and material["claim_limits"]
     assert "binding" not in material and "response_request" not in question
     assert all("guidance" not in r for r in packet["material"]["scoped-instructions"])
-    assert all(r["delivery"]["status"] == "caller-held" for r in packet["material"]["scoped-instructions"])
+    assert all(r["delivery"]["status"] == "already-delivered" for r in packet["material"]["scoped-instructions"])
+    if reuse_delivery:
+        assert "delivery_refs" not in proposed["view"]
+        assert proposed["carriage"]["delivery_refs"] == receipts
+    else:
+        assert proposed["view"]["delivery_refs"] == receipts
     # Exact detail remains available, without a full /verification read. It is
     # freshly source-bound and contains the actual instruction semantics.
     detail = call({"request": proposed["carriage"], "reference": material["proposal_detail"]["reference"]})
@@ -672,3 +823,54 @@ def test_cli_delivery_flags_distinguish_array_input_from_source_drift(tmp_path, 
     drift = packet(*flags)["decision_packet"]["material"]["startup-adapter"]
     assert drift["delivery"]["status"] == "included"
     assert drift["text"] == text + "Read the new instruction.\n"
+
+
+def test_carried_delivery_rechecks_sources_and_resets_for_a_new_reader(tmp_path, native_cli):
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    source = tmp_path / "AGENTS.md"
+    original = "Read the current project policy.\n" * 20
+    source.write_bytes(original.encode())
+    context = {"target": str(tmp_path), "task": "Inspect policy", "projection": "carried"}
+
+    def run(**value):
+        return subprocess.run(
+            [str(native_cli), "start", "--format", "json", "--input", "-"],
+            input=json.dumps(value),
+            capture_output=True,
+            text=True,
+        )
+
+    def call(**value):
+        result = run(**value)
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout)
+
+    def startup(result):
+        return result["view"]["decision_packet"]["material"]["startup-adapter"]
+
+    first = call(**context, reuse_delivery=True)
+    assert startup(first)["text"] == original
+    assert first["carriage"]["delivery_refs"] == [startup(first)["delivery"]["reference"]]
+    assert "delivery_refs" not in first["view"]
+    repeated = call(request=first["carriage"], projection="carried")
+    assert startup(repeated)["delivery"]["status"] == "already-delivered"
+    assert "text" not in startup(repeated)
+    assert repeated["view"]["decision_packet"]["blockers"] == first["view"]["decision_packet"]["blockers"]
+    assert source.read_bytes() == original.encode()
+    bad_cache = {**first["carriage"], "delivery_refs": {"invalid": []}}
+    assert startup(call(request=bad_cache, projection="carried"))["text"] == original
+    mismatch = run(request=first["carriage"], task="Different task", projection="carried")
+    assert mismatch.returncode == 2
+    assert "carriage work context changed" in json.loads(mismatch.stderr)["error"]["message"]
+
+    reset = call(request=repeated["carriage"], projection="carried", reuse_delivery=False)
+    assert startup(reset)["text"] == original
+    assert "delivery_refs" not in reset["carriage"]
+
+    source.write_bytes((original + "Current source changed.\n").encode())
+    drift = call(request=repeated["carriage"], projection="carried")
+    assert startup(drift)["text"].endswith("Current source changed.\n")
+    assert drift["carriage"]["delivery_refs"] != repeated["carriage"]["delivery_refs"]
+    assert startup(drift)["delivery"]["status"] == "included"

@@ -11,6 +11,8 @@ export interface WorkContext {
   maintenance?: "configuration";
   projection?: Projection;
   delivered?: string[];
+  reuse_delivery?: boolean;
+  short_restrictions?: boolean;
   available_sources?: { reference: string; revision: string; extent: string; selector?: string; content_revision?: string }[];
 }
 export interface StartInput extends WorkContext {
@@ -22,6 +24,8 @@ export interface StartInput extends WorkContext {
 export interface InvokeInput extends WorkContext {
   invocation?: Json;
   reference?: string;
+  /** Execute the exact current workspace.cli_invoke question with its reference. */
+  answer?: "authorize-write";
 }
 /** Results retain the exact Rust shape, including unknown owner contributions. */
 export function start(context: StartInput): JsonObject;

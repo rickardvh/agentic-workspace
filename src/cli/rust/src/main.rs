@@ -291,6 +291,9 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, mut input: Value) -> Resul
     let field = command["input_field"].as_str().unwrap();
     if command["accepts_input_envelope"] == true
         && (input.get(field).is_some()
+            || (parsed.command == "invoke"
+                && input.get("target").is_some()
+                && (input.get("reference").is_some() || parsed.values.get("reference").is_some()))
             || (parsed.command == "start"
                 && ((input.get("kind").is_none() && input.get("target").is_some())
                     || input.get("material").is_some()
@@ -307,7 +310,7 @@ fn carry_input(contract: &Value, parsed: &mut Parsed, mut input: Value) -> Resul
             if !parsed.explicit.contains(key) {
                 continue;
             }
-            if parsed.command == "start"
+            if matches!(parsed.command.as_str(), "start" | "invoke")
                 && matches!(key.as_str(), "reference" | "answer")
                 && input.get(key).is_none()
             {

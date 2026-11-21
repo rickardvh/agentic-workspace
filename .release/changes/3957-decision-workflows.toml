@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Resolve shared Verification applicability once, summarize owner-designated closeout detail on direct entry, and execute a current workspace.cli_invoke proposal with one explicit Configuration decision."

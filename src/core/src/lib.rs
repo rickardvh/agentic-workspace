@@ -311,6 +311,8 @@ struct BlockerInput {
     owner: Option<String>,
     recovery: Option<String>,
     #[serde(default)]
+    disclose_at_claim: bool,
+    #[serde(default)]
     affects: Vec<String>,
 }
 
@@ -559,6 +561,8 @@ struct NormalizedBlocker {
     affects: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     recovery: Option<String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    disclose_at_claim: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1403,7 +1407,13 @@ fn normalize_blocker(
         &format!("{owner}.blockers[{index}].affects"),
     )?;
     let recovery = input.recovery.filter(|value| !value.trim().is_empty());
-    let identity = json!({"code": code, "message": message, "owner": blocker_owner, "revision": revision, "affects": affected, "recovery": recovery, "basis":basis});
+    let disclose_at_claim = input.disclose_at_claim
+        && !affected.is_empty()
+        && affected.iter().all(|scope| scope.starts_with("claim:"));
+    let mut identity = json!({"code": code, "message": message, "owner": blocker_owner, "revision": revision, "affects": affected, "recovery": recovery, "basis":basis});
+    if disclose_at_claim {
+        identity["disclose_at_claim"] = json!(true);
+    }
     Ok(NormalizedBlocker {
         basis,
         resolution: if recovery.is_some() {
@@ -1424,6 +1434,7 @@ fn normalize_blocker(
         revision: revision.to_owned(),
         affects: serde_json::from_value(identity["affects"].clone()).expect("affects are strings"),
         recovery,
+        disclose_at_claim,
     })
 }
 

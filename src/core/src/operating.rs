@@ -5,6 +5,8 @@ use serde_json::{Value, json};
 use std::collections::{BTreeSet, HashMap};
 
 const CARRIAGE: &str = "agentic-workspace/operating-carriage/v1";
+const SOURCE_DELIVERY: &str = "agentic-workspace/source-delivery/v2";
+const MAX_DELIVERY_REFS: usize = 256;
 
 /// Diagnostics follow the explicitly carried target even on failed admission;
 /// this is no more authoritative than the ordinary caller-supplied target.
@@ -428,6 +430,7 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
         }
     }
     let mut recoveries = Vec::new();
+    let mut owner_details = None;
     let requests = request_entries(full, context)?;
     for blocker in full["decision_packet"]["blockers"]
         .as_array()
@@ -477,8 +480,13 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
                 }
                 if has_request(value, owner) {
                     let selector = format!("/{}", key.replace('~', "~0").replace('/', "~1"));
-                    let selected = entries(full, context)?
-                        .into_iter()
+                    if owner_details.is_none() {
+                        owner_details = Some(entries(full, context)?);
+                    }
+                    let selected = owner_details
+                        .as_ref()
+                        .unwrap()
+                        .iter()
                         .find(|e| e["selector"] == selector)
                         .unwrap();
                     routes.push(json!({"selector":selector,"reference":selected["reference"]}));
@@ -598,7 +606,7 @@ fn same_pending_action(pending: &Value, invocation: &Value) -> bool {
 
 // A binding occasion can point into this response only when filtering its
 // visible blockers reproduces the entire owner signal, including order.
-fn compact_binding_occasions(activation: &mut Value, blockers: &Value) {
+fn compact_binding_occasions(activation: &mut Value, blockers: &Value, detail: Option<&Value>) {
     if activation["kind"] != "agentic-workspace/activation/v1" {
         return;
     }
@@ -625,7 +633,11 @@ fn compact_binding_occasions(activation: &mut Value, blockers: &Value) {
             .filter(|b| b["owner"].as_str().is_some_and(|o| owners.contains(o)))
             .eq(binding)
         {
-            candidate["occasion"] = json!({"from":"/decision_packet/blockers","owners":owners});
+            candidate["occasion"] = if let Some(reference) = detail {
+                json!({"from":"/decision_packet","selector":"/blockers","reference":reference,"owners":owners})
+            } else {
+                json!({"from":"/decision_packet/blockers","owners":owners})
+            };
         }
     }
 }
@@ -722,8 +734,13 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 .as_array()
                 .is_some_and(|choices| !choices.is_empty());
             if bounded_choice {
-                question["answer_input"] =
-                    json!("Set answer to one listed choices[].id value. Copy that value alone.");
+                question["answer_input"] = if config_cli_write_question(question) {
+                    json!(
+                        "Answer with one choices[].id. Use start to prepare or defer. Use invoke with authorize-write to execute this exact change now."
+                    )
+                } else {
+                    json!("Set answer to one listed choices[].id value. Copy that value alone.")
+                };
             }
             if !carried {
                 continue;
@@ -782,8 +799,38 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":context,
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    let mut claim_details = std::collections::BTreeSet::new();
+    if context["request"].is_null()
+        && context["changed"].as_array().is_some_and(Vec::is_empty)
+        && full["decision_packet"]["status"] == "direct"
+        && let Some(blockers) = result["decision_packet"]["blockers"].as_array_mut()
+    {
+        let mut by_claim = std::collections::BTreeMap::<String, Vec<Value>>::new();
+        blockers.retain(|blocker| {
+            if blocker["disclose_at_claim"] != true {
+                return true;
+            }
+            claim_details.insert(blocker["consequence_id"].as_str().unwrap().to_owned());
+            for claim in blocker["affects"].as_array().unwrap() {
+                by_claim
+                    .entry(claim.as_str().unwrap().to_owned())
+                    .or_default()
+                    .push(json!({"owner":blocker["owner"],"reason":blocker["message"]}));
+            }
+            false
+        });
+        if !by_claim.is_empty() {
+            result["decision_packet"]["later_claim_requirements"] = json!({
+                "by_claim":by_claim, "reference":result["detail_refs"]["/decision_packet"],
+                "use":"Reobserve before making an affected claim. This reference opens all current source bases and recovery routes."
+            });
+        }
+    }
     if let Some(continuation) = full.get("non_aw_continuation") {
         result["non_aw_continuation"] = continuation.clone();
+    }
+    if let Some(outcome) = full["configuration_write"].get("write_outcome") {
+        result["configuration_write_outcome"] = outcome.clone();
     }
     if let Some(assignment) = assignment_question(full, context)? {
         result["assignment_context"] = assignment;
@@ -978,7 +1025,18 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     }
     if let Some(activation) = full.get("activation") {
         let mut activation = activation.clone();
-        compact_binding_occasions(&mut activation, &result["decision_packet"]["blockers"]);
+        compact_binding_occasions(
+            &mut activation,
+            &result["decision_packet"]["blockers"],
+            None,
+        );
+        if !claim_details.is_empty() {
+            compact_binding_occasions(
+                &mut activation,
+                &full["decision_packet"]["blockers"],
+                Some(&result["detail_refs"]["/decision_packet"]),
+            );
+        }
         result["activation"] = activation;
     }
     let retention = &full["memory"]["terminal_retention"];
@@ -1015,7 +1073,15 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let recovery = consequence_recovery(full, context)?;
     if !recovery.is_empty() {
         reconcile_restriction_routes(&mut result, &recovery);
-        result["consequence_recovery"] = Value::Array(group_recovery_routes(recovery));
+        let visible = recovery
+            .into_iter()
+            .filter(|row| {
+                row["consequences"][0]["consequence_id"]
+                    .as_str()
+                    .is_none_or(|id| !claim_details.contains(id))
+            })
+            .collect();
+        result["consequence_recovery"] = Value::Array(group_recovery_routes(visible));
     }
     // A selected leaf already establishes which procedure is useful. Keep its
     // exact refs visible so compact consumers need no discovery/detail hop.
@@ -1438,24 +1504,38 @@ fn use_selected(
     } else {
         current.pointer(selector) != Some(&selected_entry["envelope"])
     } {
+        if invoking && answer.is_some() {
+            return Err(error(
+                "Configuration question is no longer current. Resolve fresh work and inspect /configuration_write for the prior outcome before considering another write.",
+            ));
+        }
         return Err(error("operating reference stale or not owner-issued"));
     }
     if invoking {
-        if !action_selector(selector) || answer.is_some() {
-            return Err(error(
-                "invoke requires an exact owner-issued action reference without answer",
+        if answer.is_none() {
+            if !action_selector(selector) {
+                return Err(error(
+                    "invoke requires an exact owner-issued action reference",
+                ));
+            }
+            let mut execution = context;
+            execution.as_object_mut().unwrap().remove("request");
+            execution["invocation"] = selected_entry["envelope"].clone();
+            return Ok(project_invocation(
+                native_public::invoke_selected(execution, &resolution(projection, detail)),
+                projection,
+                detail,
             ));
         }
-        let mut execution = context;
-        execution.as_object_mut().unwrap().remove("request");
-        execution["invocation"] = selected_entry["envelope"].clone();
-        // Native admission reobserves the execution snapshot; the reference is
-        // only immutable transport and never a grant.
-        return Ok(project_invocation(
-            native_public::invoke_selected(execution, &resolution(projection, detail)),
-            projection,
-            detail,
-        ));
+        let question = &selected_entry["envelope"];
+        if selector != "/decision_packet/decision_request"
+            || !config_cli_write_question(question)
+            || answer.as_ref() != Some(&json!("authorize-write"))
+        {
+            return Err(error(
+                "only the current workspace.cli_invoke Configuration question accepts invoke with the authorize-write answer; use start to prepare or defer",
+            ));
+        }
     }
     if (decision_selector(selector) && answer.is_some())
         || (selector.starts_with("request:") && answer.is_some())
@@ -1504,10 +1584,16 @@ fn use_selected(
             answered["request_kind"].as_str(),
             Some("verification/assurance-applicability/v1" | "verification/strategy/v1")
         );
-        requests.push(answered);
+        requests.push(answered.clone());
         next["request"] = json!(requests);
+        if invoking {
+            let current = native_public::start_selected(next.clone(), &Resolution::Frontier(None))?;
+            return invoke_authorized_configuration(next, current, &answered, projection, detail);
+        }
         next["projection"] = projection.clone();
-        return match operate_selected(next.clone(), false, detail) {
+        // Apply delivery only to the outer response, after the current owner
+        // result and any Assignment recovery have finished.
+        return match operate_current(next.clone(), false, detail) {
             Err(failure) if verification_transition && failure.2.is_some() => {
                 // Reject the stale envelopes, retaining the newly admitted
                 // Verification answer and unaffected peer answers. No previous
@@ -1518,7 +1604,7 @@ fn use_selected(
                         || (matches!(source, crate::AssignmentSourceChange::Comparison)
                             && r["request_kind"] == "assignment/judge-task-requirements/v1")
                 });
-                let mut recovered = operate_selected(next, false, detail)?;
+                let mut recovered = operate_current(next, false, detail)?;
                 let view = if projection == "carried" {
                     &mut recovered["view"]
                 } else {
@@ -1544,10 +1630,55 @@ fn use_selected(
     // restriction routes from that same current surface after validating it.
     let recovery = consequence_recovery(&current, &context)?;
     reconcile_restriction_routes(&mut result["value"], &recovery);
+    if selector == "/decision_packet" && !recovery.is_empty() {
+        result["consequence_recovery"] = json!(group_recovery_routes(recovery));
+    }
     if selector.starts_with("request:") {
         attach_request_answer(&mut result, &current, &context, &selected_entry);
     }
     Ok(result)
+}
+
+fn invoke_authorized_configuration(
+    mut next: Value,
+    current: Value,
+    answered: &Value,
+    projection: &Value,
+    detail: Option<Option<&str>>,
+) -> Result<Value, CoreError> {
+    let action = &current["decision_packet"]["primary_action"];
+    if action["source_owner"] != "configuration"
+        || action["operation_id"] != "configuration.write"
+        || &action["arguments"]["request"] != answered
+        || current["decision_packet"]["ready_actions"]
+            .as_array()
+            .map(Vec::len)
+            != Some(1)
+    {
+        let mut rejected = native_public::rejected_invocation(
+            &next,
+            "Configuration authorization did not produce a unique matching action. Inspect the current decision before invoking.",
+        );
+        rejected["continuation_status"] = json!("current");
+        rejected["continuation"]["status"] = json!("current");
+        rejected["continuation"]["context"] = next.clone();
+        rejected["continuation"]["result"] = project_start(current, next, projection)?;
+        return Ok(rejected);
+    }
+    next.as_object_mut().unwrap().remove("request");
+    next["invocation"] = action.clone();
+    Ok(project_invocation(
+        native_public::invoke_selected(next, &resolution(projection, detail)),
+        projection,
+        detail,
+    ))
+}
+
+fn config_cli_write_question(question: &Value) -> bool {
+    question["owner"] == "configuration"
+        && question["id"] == "configuration-write-authorization"
+        && question["response_request"]["request_kind"] == "configuration/edit-source/v1"
+        && question["response_request"]["arguments"]["key"] == "workspace.cli_invoke"
 }
 
 /// Shared by JSON and all thin consumers. References and the optional carrier
@@ -1560,6 +1691,10 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     match operate(value.clone(), true) {
         Ok(result) => Ok(result),
         Err(failure) => {
+            let mut message = failure.to_string();
+            if value["answer"] == "authorize-write" && value["reference"].is_string() {
+                message.push_str(" Start fresh and open /configuration_write to inspect the original proposal's outcome before considering another write.");
+            }
             let mut context = value.clone();
             if value["invocation"]["kind"] == CARRIAGE {
                 context = value["invocation"]["context"].clone();
@@ -1571,10 +1706,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                     }
                 }
             }
-            Ok(native_public::rejected_invocation(
-                &context,
-                &failure.to_string(),
-            ))
+            Ok(native_public::rejected_invocation(&context, &message))
         }
     }
 }
@@ -1597,16 +1729,47 @@ fn selected_owner(reference: &Value) -> Option<&str> {
         .next()
         .and_then(|owner| owner.split('/').next())
 }
+fn presentation_option(value: &mut Value, field: &str) -> Result<Option<bool>, CoreError> {
+    value
+        .as_object_mut()
+        .and_then(|v| v.remove(field))
+        .map(|v| {
+            v.as_bool()
+                .ok_or_else(|| error(&format!("{field} must be a boolean")))
+        })
+        .transpose()
+}
+
 fn operate_selected(
     mut value: Value,
     invoking: bool,
     detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
+    let reuse_delivery = presentation_option(&mut value, "reuse_delivery")?;
+    let short_restrictions = presentation_option(&mut value, "short_restrictions")?;
+    let field = if invoking { "invocation" } else { "request" };
+    let mut inherited_labels = false;
+    let remembered = if value[field]["kind"] == CARRIAGE {
+        let carriage = value[field].as_object_mut().unwrap();
+        inherited_labels = carriage.remove("restriction_refs").is_some();
+        carriage.remove("delivery_refs")
+    } else {
+        None
+    };
+    let reuse_delivery = reuse_delivery.unwrap_or(remembered.is_some());
+    let short_restrictions = short_restrictions.unwrap_or(inherited_labels);
     let delivered = value.as_object_mut().and_then(|v| v.remove("delivered"));
-    let delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
+    let mut delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
         .map_err(|_| error("delivered must be an array of exact source delivery refs"))?;
-    if delivered.len() > 256 {
+    if delivered.len() > MAX_DELIVERY_REFS {
         return Err(error("source delivery refs exceed bounded carriage"));
+    }
+    if reuse_delivery
+        && let Some(refs) =
+            remembered.filter(|v| v.as_array().is_some_and(|a| a.len() <= MAX_DELIVERY_REFS))
+        && let Ok(refs) = serde_json::from_value::<Vec<String>>(refs)
+    {
+        delivered.extend(refs);
     }
     let available = value
         .as_object_mut()
@@ -1629,27 +1792,159 @@ fn operate_selected(
         ));
     }
     let mut result = operate_current(value, invoking, detail)?;
-    apply_delivery(&mut result, &delivered, &available)?;
+    apply_delivery(&mut result, &delivered, &available, reuse_delivery)?;
+    if short_restrictions {
+        label_carried_restrictions(&mut result);
+    }
     if let Some(continuation) = result
         .get_mut("continuation")
         .and_then(|c| c.get_mut("result"))
     {
-        apply_delivery(continuation, &delivered, &available)?;
+        apply_delivery(continuation, &delivered, &available, reuse_delivery)?;
+        if short_restrictions {
+            let labels = label_carried_restrictions(continuation);
+            for path in [
+                "/setup_result/remaining_gaps",
+                "/configuration_behavior/remaining_restrictions",
+            ] {
+                if let Some(rows) = result.pointer_mut(path) {
+                    label_restriction_rows(rows, &labels);
+                }
+            }
+        }
+        // Full output also mirrors the current packet at next_decision.
+        // Both views must describe that same source delivery.
+        if result["next_decision"].is_object() {
+            result["next_decision"] = result["continuation"]["result"]["decision_packet"].clone();
+        }
     }
     Ok(result)
+}
+
+// Only native validation identities move to carriage. Source identity, scope,
+// reason, and any additional owner material stay in the displayed record.
+const CARRIED_RESTRICTION_FIELDS: [(&str, &str); 3] = [
+    ("revision", ""),
+    ("binding_revision", "/basis"),
+    ("declaration_revision", "/basis"),
+];
+
+struct RestrictionLabel {
+    display: String,
+    exact: Value,
+}
+
+fn label_carried_restrictions(result: &mut Value) -> HashMap<String, RestrictionLabel> {
+    let mut labels = HashMap::new();
+    if result["carriage"]["kind"] != CARRIAGE {
+        return labels;
+    }
+    let view = &mut result["view"];
+    for blocker in view["decision_packet"]["blockers"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        let Some(id) = blocker["consequence_id"]
+            .as_str()
+            .filter(|id| id.starts_with("blocker:"))
+        else {
+            continue;
+        };
+        let display = format!("restriction-{}", labels.len() + 1);
+        labels.entry(id.to_owned()).or_insert_with(|| {
+            let mut exact = json!({"consequence_id":id});
+            for (field, parent) in CARRIED_RESTRICTION_FIELDS {
+                if let Some(value) = blocker.pointer(parent).and_then(|v| v.get(field))
+                    && value.as_str().is_some_and(|v| {
+                        v.len() == 71
+                            && v.strip_prefix("sha256:")
+                                .is_some_and(|hash| hash.bytes().all(|b| b.is_ascii_hexdigit()))
+                    })
+                {
+                    exact[field] = value.clone();
+                }
+            }
+            RestrictionLabel { display, exact }
+        });
+    }
+    if let Some(rows) = view.pointer_mut("/decision_packet/blockers") {
+        label_restriction_rows(rows, &labels);
+    }
+    if let Some(ids) = view
+        .pointer_mut("/decision_packet/request_resolution/consequence_ids")
+        .and_then(Value::as_array_mut)
+    {
+        for id in ids {
+            if let Some(label) = id.as_str().and_then(|id| labels.get(id)) {
+                *id = json!(label.display);
+            }
+        }
+    }
+    for group in view
+        .get_mut("consequence_recovery")
+        .and_then(Value::as_array_mut)
+        .into_iter()
+        .flatten()
+    {
+        if let Some(rows) = group.get_mut("consequences") {
+            label_restriction_rows(rows, &labels);
+        }
+    }
+    for candidate in view
+        .pointer_mut("/activation/candidates")
+        .and_then(Value::as_array_mut)
+        .into_iter()
+        .flatten()
+    {
+        if let Some(rows) = candidate.pointer_mut("/occasion/binding") {
+            label_restriction_rows(rows, &labels);
+        }
+    }
+    if !labels.is_empty() {
+        view["decision_packet"]["restriction_labels"] = json!(
+            "Labels relate blockers to recovery in this response. Select recovery with its exact route reference."
+        );
+    }
+    result["carriage"]["restriction_refs"] = Value::Object(
+        labels
+            .values()
+            .map(|entry| (entry.display.clone(), entry.exact.clone()))
+            .collect(),
+    );
+    labels
+}
+
+fn label_restriction_rows(rows: &mut Value, labels: &HashMap<String, RestrictionLabel>) {
+    for row in rows.as_array_mut().into_iter().flatten() {
+        let Some(label) = row["consequence_id"].as_str().and_then(|id| labels.get(id)) else {
+            continue;
+        };
+        row["consequence_id"] = json!(label.display);
+        for (field, parent) in CARRIED_RESTRICTION_FIELDS {
+            if let Some(exact) = label.exact.get(field)
+                && let Some(record) = row.pointer_mut(parent).and_then(Value::as_object_mut)
+                && record.get(field) == Some(exact)
+            {
+                record.remove(field);
+            }
+        }
+    }
 }
 
 fn apply_delivery(
     result: &mut Value,
     delivered: &[String],
     available: &[SourceAvailability],
+    reuse_delivery: bool,
 ) -> Result<(), CoreError> {
     // Delivery is caller-local presentation state only. All owner resolution,
     // restriction, action admission and reference checks have already occurred.
+    let carried_delivery = reuse_delivery && result["carriage"]["kind"] == CARRIAGE;
     let view = if result.get("view").is_some() {
         &mut result["view"]
     } else {
-        result
+        &mut *result
     };
     let work = view["decision_packet"]["semantic_task_routes"]["task_identity"].clone();
     let mut refs = Vec::new();
@@ -1685,7 +1980,7 @@ fn apply_delivery(
                     continue;
                 }
                 let reference = digest(
-                    &json!({"producer":delivery_producer(),"work":work,"owner":owner,"source":row}),
+                    &json!({"contract":SOURCE_DELIVERY,"work":work,"owner":owner,"source":row}),
                 )?;
                 // Small required text still arrives without a selector hop.
                 if row[field].as_str().unwrap().len() > 256 {
@@ -1703,17 +1998,13 @@ fn apply_delivery(
             }
         }
     }
-    if !refs.is_empty() {
+    if carried_delivery {
+        refs.truncate(MAX_DELIVERY_REFS);
+        result["carriage"]["delivery_refs"] = json!(refs);
+    } else if !refs.is_empty() {
         view["delivery_refs"] = json!(refs);
     }
     Ok(())
-}
-
-fn delivery_producer() -> &'static str {
-    static REVISION: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        digest(&json!({"contract":"source-delivery/v1", "implementation":include_str!("operating.rs")})).unwrap()
-    });
-    &REVISION
 }
 
 fn operate_current(
@@ -1765,7 +2056,9 @@ fn operate_current(
         context["request"] = json!(requests);
         value = context;
     }
-    if let Some(mut selected) = selected {
+    let refresh = !invoking && selected.is_none() && value[field]["kind"] == CARRIAGE;
+    if refresh || selected.is_some() {
+        let mut selected = selected.unwrap_or(Value::Null);
         if let Some(identity) = selected.as_str().and_then(|s| s.strip_prefix("owner:")) {
             let parts: Vec<_> = identity.splitn(3, ':').collect();
             if parts.len() != 3 {
@@ -1819,6 +2112,16 @@ fn operate_current(
                 {
                     return Err(error("carriage work context changed"));
                 }
+            }
+            if refresh {
+                if answer.is_some() {
+                    return Err(error("answer requires exact operating reference"));
+                }
+                let current = native_public::start_selected(
+                    carrier.context.clone(),
+                    &resolution(&projection, detail),
+                )?;
+                return project_start(current, carrier.context, &projection);
             }
             // Optional requests are lazy, not copied into every carrier. Resolve
             // them against the carried work (including prior answers), exactly
@@ -1884,8 +2187,8 @@ fn operate_current(
             // also owns committed replay and uncertain-effect recovery. A fresh
             // pre-effect start may no longer return the original action after
             // it committed; do not replace that disposition with a lookup error.
-            if invoking {
-                if !action_selector(selector) || answer.is_some() {
+            if invoking && answer.is_none() {
+                if !action_selector(selector) {
                     return Err(error(
                         "invoke requires an exact carried action without answer",
                     ));
@@ -1953,7 +2256,13 @@ fn operate_current(
         {
             return Ok(recovery);
         }
-        let selected_entry = select_entry(&current, &context, &selected)?;
+        let selected_entry = select_entry(&current, &context, &selected).map_err(|failure| {
+            if invoking && answer.is_some() {
+                error("Configuration question is no longer current. Resolve fresh work and inspect /configuration_write for the prior outcome before considering another write.")
+            } else {
+                failure
+            }
+        })?;
         return use_selected(
             context,
             current,
@@ -2728,7 +3037,7 @@ mod tests {
         let candidates: Vec<_> = occasions.iter().map(|v| json!({"occasion":v})).collect();
         let mut activation =
             json!({"kind":"agentic-workspace/activation/v1","candidates":candidates});
-        compact_binding_occasions(&mut activation, &blockers);
+        compact_binding_occasions(&mut activation, &blockers, None);
         assert_eq!(
             activation["candidates"][0]["occasion"],
             json!({"from":"/decision_packet/blockers","owners":["planning","verification"]})
@@ -2736,6 +3045,98 @@ mod tests {
         for (i, original) in occasions.iter().enumerate().skip(1) {
             assert_eq!(&activation["candidates"][i]["occasion"], original);
         }
+        let mut filtered = json!({"kind":"agentic-workspace/activation/v1","candidates":[
+            {"occasion":{"binding":[a,b]}},{"occasion":{"binding":[c]}}
+        ]});
+        compact_binding_occasions(&mut filtered, &json!([c, d, b]), None);
+        compact_binding_occasions(&mut filtered, &blockers, Some(&json!("exact-packet")));
+        assert_eq!(
+            filtered["candidates"][0]["occasion"],
+            json!({"from":"/decision_packet","selector":"/blockers","reference":"exact-packet","owners":["verification"]})
+        );
+        assert_eq!(
+            filtered["candidates"][1]["occasion"],
+            json!({"from":"/decision_packet/blockers","owners":["planning"]})
+        );
+    }
+
+    #[test]
+    fn configuration_authorization_yields_competing_actions_without_effect() {
+        let answered = json!({"request_kind":"configuration/edit-source/v1",
+            "arguments":{"key":"workspace.cli_invoke","answer":"authorize-write"}});
+        let write = json!({"source_owner":"configuration","operation_id":"configuration.write",
+            "arguments":{"request":answered}});
+        let peer = json!({"source_owner":"planning","operation_id":"planning.update"});
+        let prepared = json!({"decision_packet":{
+            "status":"actionable","ready_actions":[write,peer],"primary_action":null
+        }});
+        let next = json!({"target":std::env::temp_dir(),"task":"Set invocation",
+            "changed":[],"request":[answered]});
+        for projection in [json!("compact"), json!("carried")] {
+            let result = invoke_authorized_configuration(
+                next.clone(),
+                prepared.clone(),
+                &answered,
+                &projection,
+                None,
+            )
+            .unwrap();
+            assert_eq!(result["effect_outcome"]["status"], "rejected-before-effect");
+            assert_eq!(result["effects"], json!([]));
+            assert_eq!(result["continuation_status"], "current");
+            assert_eq!(result["continuation"]["status"], "current");
+            assert_eq!(result["continuation"]["retry_effect"], false);
+            let projected = &result["continuation"]["result"];
+            let view = if projection == "carried" {
+                assert!(projected["carriage"].is_object());
+                &projected["view"]
+            } else {
+                projected
+            };
+            assert_eq!(
+                view["decision_packet"]["ready_actions"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                2
+            );
+        }
+    }
+
+    #[test]
+    fn carried_labels_relate_current_restrictions_without_inventing_fields() {
+        let current = "blocker:verification:current";
+        let unrelated = "blocker:verification:other";
+        let mut result = json!({
+            "carriage":{"kind":CARRIAGE},
+            "view":{"decision_packet":{
+                "blockers":[{"consequence_id":current,"basis":{"reference":"policy","binding_revision":"owner-format"}}],
+                "request_resolution":{"consequence_ids":[current,unrelated]}
+            },"activation":{"candidates":[{"occasion":{"binding":[{"consequence_id":current}]}}]}}
+        });
+        label_carried_restrictions(&mut result);
+        let view = &result["view"];
+        let blocker = &view["decision_packet"]["blockers"][0];
+        let label = blocker["consequence_id"].as_str().unwrap();
+        assert_eq!(
+            result["carriage"]["restriction_refs"][label]["consequence_id"],
+            current
+        );
+        assert_eq!(
+            view["decision_packet"]["request_resolution"]["consequence_ids"],
+            json!([label, unrelated])
+        );
+        assert_eq!(
+            view["activation"]["candidates"][0]["occasion"]["binding"][0]["consequence_id"],
+            label
+        );
+        assert_eq!(blocker["basis"]["binding_revision"], "owner-format");
+        assert!(view.get("consequence_recovery").is_none());
+
+        let inactive = json!({"status":"inactive"});
+        let mut result = json!({"carriage":{"kind":CARRIAGE}, "view":inactive});
+        label_carried_restrictions(&mut result);
+        assert_eq!(result["view"], inactive);
     }
 
     #[test]
@@ -2989,7 +3390,11 @@ mod tests {
             "material":{"startup-adapter":{"text":"policy".repeat(60)},
                 "scoped-instructions":[{"guidance":"instruction".repeat(40)}]}}});
         let mut first = original.clone();
-        apply_delivery(&mut first, &[], &[]).unwrap();
+        apply_delivery(&mut first, &[], &[], false).unwrap();
+        assert_eq!(
+            first["decision_packet"]["material"]["startup-adapter"]["delivery"]["reference"],
+            "sha256:8a1e672c06a23e524acb8b7740323ee45245a1e8d80bacf84db3ff7bea6e172f"
+        );
         let refs: Vec<String> = first["delivery_refs"]
             .as_array()
             .unwrap()
@@ -2997,7 +3402,7 @@ mod tests {
             .map(|r| r.as_str().unwrap().to_owned())
             .collect();
         let mut repeated = original.clone();
-        apply_delivery(&mut repeated, &refs, &[]).unwrap();
+        apply_delivery(&mut repeated, &refs, &[], false).unwrap();
         for key in ["status", "primary_action", "blockers", "claim_boundary"] {
             assert_eq!(
                 repeated["decision_packet"][key],
@@ -3010,7 +3415,7 @@ mod tests {
                 .is_none()
         );
         let mut forged = original.clone();
-        apply_delivery(&mut forged, &["forged".into()], &[]).unwrap();
+        apply_delivery(&mut forged, &["forged".into()], &[], false).unwrap();
         assert_eq!(
             forged["decision_packet"]["material"],
             first["decision_packet"]["material"]
@@ -3021,7 +3426,7 @@ mod tests {
         ] {
             let mut changed = original.clone();
             *changed.pointer_mut(pointer).unwrap() = json!("new work or source".repeat(40));
-            apply_delivery(&mut changed, &refs, &[]).unwrap();
+            apply_delivery(&mut changed, &refs, &[], false).unwrap();
             assert!(
                 changed["decision_packet"]["material"]["startup-adapter"]
                     .get("text")

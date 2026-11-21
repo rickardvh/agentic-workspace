@@ -32,17 +32,35 @@ weaker set of checks.
 
 ## Find a restriction and its recovery
 
-Compact and carried views keep each restriction in `decision_packet.blockers`.
-When an activation candidate's `occasion.from` is `/decision_packet/blockers`,
-its trigger is every blocker in that list whose `owner` appears in
-`occasion.owners`, in the order shown. The same response supplies each blocker's
-message, affected scope and source basis. The `/activation` detail reference
-returns the expanded candidate if needed.
+Compact and carried views keep restrictions that can change the current
+decision in `decision_packet.blockers`. On direct entry before any changed
+paths or selected request, `later_claim_requirements` can summarize
+owner-designated closeout restrictions by claim. Open its exact reference
+with the same context for the complete current packet, source bases and recovery
+routes. Re-enter with the actual changed paths or claim request when assessing
+the claim. Scope uncertainty and requirements that affect planning, such as
+independent review, remain visible.
+
+When an activation candidate uses `occasion.from: /decision_packet/blockers`,
+filter the displayed list by `occasion.owners` in order. When it uses
+`occasion.from: /decision_packet`, open `occasion.reference` and filter the
+list at `occasion.selector` in the returned value. The `/activation` detail
+reference also returns the expanded candidate.
 
 Look up a blocker's `consequence_id` in `consequence_recovery[].consequences`.
 Restrictions share a row only when the owner nominated the same exact routes
 and all recovery instructions agree. Each member retains its own affected scope.
 Routes that require a scope judgment appear separately for each restriction.
+
+Hosts using `projection: "carried"` can set `short_restrictions: true`.
+The view then uses local labels to match blockers to recovery within each
+response. It keeps each blocker’s owner, reason, affected scope, source
+reference and source revision. The full consequence identity and any moved
+validation digests are in `carriage.restriction_refs`, indexed by the label.
+Open the exact `/decision_packet` detail for the full current restrictions.
+Use the route's exact reference to select recovery. Labels have no selection
+authority. Later carried responses inherit the option unless the caller
+specifies `short_restrictions: false`.
 
 ## Read one returned detail
 
@@ -68,6 +86,22 @@ envelope or API request. Receipt reuse suppresses unchanged source prose after
 current source checks. Requirements still apply and delivery carries no evidence
 of satisfaction. Clear caller-held receipts after context loss so needed material
 can be supplied again.
+
+A host presenting the carried view to one continuing reader can set
+`reuse_delivery: true` on its first carried request. AW places the exact
+receipts in `carriage.delivery_refs`. Passing that carriage to the next
+`start` or `invoke` reuses them after current source checks. An exact
+selection uses its usual reference. To refresh the same work without
+selecting anything, pass the carriage as `request` to `start` with
+`projection: "carried"`.
+
+Pass the carriage to a continuing reader after delivering its view. For a new
+reader, a failed presentation, or context loss, refresh with
+`projection: "carried"` and `reuse_delivery: false`. Deliver that view and
+replace the previous carriage with the one just returned. A detail lookup
+does not return a replacement carriage. You can also start with explicit work
+context. Carriage retains up to 256 current receipts and grants no action or
+evidence authority.
 
 ## Render one YAML format for an agent
 

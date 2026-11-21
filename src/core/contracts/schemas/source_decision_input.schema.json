@@ -1309,6 +1309,10 @@
         "message": {"type": "string", "minLength": 1},
         "owner": {"type": "string", "minLength": 1},
         "recovery": {"type": "string", "minLength": 1},
+        "disclose_at_claim": {
+          "type": "boolean",
+          "description": "The owner can summarize the reason for a claim-only closeout restriction during direct entry. Full detail and current admission remain available."
+        },
         "affects": {"$ref": "#/$defs/affects"}
       },
       "required": ["code", "message", "affects"]
