@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add a focused effective Configuration read and exact single-file payload observation lookup alongside the full inventory."

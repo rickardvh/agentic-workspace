@@ -77,6 +77,32 @@ task record or a transferable permission. Only its `view` belongs in model
 context; the host retains and submits the exact `carriage` through the supported
 helpers.
 
+### Read effective Configuration or inspect the payload
+
+Open `detail_refs["/configuration/effective"]` to inspect the effective policy,
+source revisions, payload conformance, gaps and blockers. The view keeps the
+observations for affected paths and counts healthy observations whose individual
+revisions are deferred.
+
+For one installed file, pass the effective detail's exact `reference` and
+`payload_path` with the same `reentry` fields or original `carriage` as
+`request`. Use the file's exact repository-relative path as listed in the
+package, including forward slashes. For example, add these fields to the JSON
+sent to `start --input -`.
+
+```json
+{
+  "reference": "<exact reference from /configuration/effective>",
+  "payload_path": ".agentic-workspace/skills/workspace-startup/SKILL.md"
+}
+```
+
+The result identifies the current payload revision and returns that file's
+observation, including a missing or unreadable status when applicable. Open
+`payload.inventory_reference` or the entry's `detail_refs["/configuration"]`
+for the full inventory. After relevant changes, resolve a fresh entry to
+obtain current references.
+
 ## Avoid repeating source prose
 
 A continuing caller can return individual values from `delivery_refs`, for
