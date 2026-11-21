@@ -19,6 +19,8 @@ export interface StartInput extends WorkContext {
   /** Native-carried read-only setup job selection; submit the returned input unchanged. */
   setup?: JsonObject;
   reference?: string;
+  /** Read one exact repository-relative payload observation via the effective Configuration reference. */
+  payload_path?: string;
   answer?: Json;
 }
 export interface InvokeInput extends WorkContext {
@@ -36,6 +38,6 @@ export interface ResourceInput extends WorkContext {
   request: JsonObject;
 }
 export function resources(context: ResourceInput): JsonObject;
-export function selectReference(context: WorkContext, reference: string, answer?: Json): JsonObject;
+export function selectReference(context: WorkContext & Pick<StartInput, "payload_path">, reference: string, answer?: Json): JsonObject;
 export function answerCarried(carriage: JsonObject, reference: string, answer: Json): JsonObject;
 export function invokeCarried(carriage: JsonObject, reference: string): JsonObject;

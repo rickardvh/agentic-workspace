@@ -4,6 +4,7 @@ use crate::{CoreError, digest};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+use std::collections::HashSet;
 use std::path::Path;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -139,6 +140,39 @@ pub(crate) fn desired(target: &Path, path: &str) -> Result<Vec<u8>, CoreError> {
         return Ok(current);
     }
     Ok(rendered.into_bytes())
+}
+
+pub(crate) fn defer_healthy_observations(payload: &mut Value) -> Option<usize> {
+    let fields = payload.as_object_mut()?;
+    let mut observations = fields.remove("observations")?;
+    let gaps: HashSet<_> = fields
+        .get("gaps")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|gap| gap["path"].as_str())
+        .collect();
+    let rows = observations
+        .as_array_mut()
+        .expect("native observation array");
+    let total = rows.len();
+    rows.retain(|row| {
+        !row.as_object().is_some_and(|fields| fields.len() == 2)
+            || !row["revision"].is_string()
+            || row["path"].as_str().is_none_or(|path| gaps.contains(path))
+    });
+    let deferred = total - rows.len();
+    fields.insert("observations".into(), observations);
+    Some(deferred)
+}
+
+pub(crate) fn observation(payload: &Value, path: &str) -> Option<Value> {
+    // The caller supplies a roster key. Only native observation ever reads files.
+    let row = payload["observations"]
+        .as_array()?
+        .iter()
+        .find(|row| row["path"].as_str() == Some(path))?;
+    Some(json!({"payload_revision":payload["revision"],"observation":row}))
 }
 
 pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {

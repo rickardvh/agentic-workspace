@@ -1,11 +1,113 @@
 """Lazy construction is measured in Rust; this checks its public transport/currentness."""
 
+import hashlib
 import json
+import subprocess
 from time import perf_counter
 
 import pytest
+import yaml
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+def test_configuration_detail_defers_only_healthy_payload_observations(tmp_path, native_cli):
+    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
+    subprocess.run([str(native_cli), "setup", "--target", str(tmp_path), "--yes"], capture_output=True, check=True)
+    workspace = tmp_path / ".agentic-workspace"
+    (workspace / "config.toml").write_text(
+        '[workspace]\ncli_invoke="aw-local"\n[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n'
+    )
+    context = {"target": str(tmp_path), "task": "Inspect policy and installed payload"}
+
+    def run(data, *, format="json", verb="start", check=True):
+        result = subprocess.run(
+            [str(native_cli), verb, "--input", "-", "--format", format],
+            input=json.dumps(data),
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+        )
+        if not check:
+            assert result.returncode == 2 and not result.stdout
+            return json.loads(result.stderr)["error"]["message"]
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout) if format == "json" else yaml.safe_load(result.stdout)
+
+    def details(entry):
+        return entry["detail_refs"]["/configuration/effective"], entry["detail_refs"]["/configuration"]
+
+    entry = run(context)
+    effective, inventory = details(entry)
+    pristine = run(context | {"reference": effective})["value"]["payload"]
+    assert pristine["status"] == "satisfied"
+    assert pristine["observations"] == [] and pristine["unchanged_observation_count"] > 2
+    assert pristine["inventory_reference"] == inventory
+
+    changed = ".agentic-workspace/skills/workspace-change-design/references/dependencies.md"
+    missing = ".agentic-workspace/skills/workspace-startup/references/constraints.md"
+    healthy = ".agentic-workspace/skills/workspace-startup/references/evidence.md"
+    changed_bytes = (tmp_path / changed).read_bytes() + b"\nLocal drift.\n"
+    (tmp_path / changed).write_bytes(changed_bytes)
+    (tmp_path / missing).unlink()
+    entry = run(context | {"projection": "carried"})
+    effective, inventory = details(entry["view"])
+    carried = {"request": entry["carriage"]}
+    full = run(carried | {"reference": inventory})
+    focus = run(carried | {"reference": effective})
+    assert focus["selector"] == "/configuration/effective"
+    exact = full["value"]
+    projected = focus["value"]
+    assert projected["cli_invoke"] == "aw-local"
+    assert {k: v for k, v in projected.items() if k != "payload"} == {k: v for k, v in exact.items() if k != "payload"}
+    payload = projected["payload"]
+    for field in ("policy", "current_policy", "status", "revision", "gaps", "blockers"):
+        assert payload[field] == exact["payload"][field]
+    assert payload["status"] == "unresolved" and payload["blockers"][0]["affects"] == ["task"]
+    assert {gap["path"] for gap in payload["gaps"]} == {changed, missing}
+    assert {r["path"]: r for r in payload["observations"]} == {
+        changed: {"path": changed, "revision": "sha256:" + hashlib.sha256(changed_bytes).hexdigest()},
+        missing: {"path": missing, "status": "missing"},
+    }
+    assert payload["unchanged_observation_count"] == len(exact["payload"]["observations"]) - 2
+    assert run(context | {"reference": payload["inventory_reference"]}) == full
+
+    def lookup(path):
+        return carried | {"reference": effective, "payload_path": path}
+
+    selected = run(lookup(healthy))
+    assert selected["selector"] == "/configuration/payload/observation"
+    assert selected["authority"] == "detail-only"
+    assert selected["value"] == {
+        "payload_revision": payload["revision"],
+        "observation": {
+            "path": healthy,
+            "revision": "sha256:" + hashlib.sha256((tmp_path / healthy).read_bytes()).hexdigest(),
+        },
+    }
+    assert run(lookup(healthy), format="yaml") == selected
+    assert run(lookup(missing))["value"]["observation"] == {"path": missing, "status": "missing"}
+    assert "absent from" in run(lookup("../outside"), check=False)
+    assert "read-only start" in run(lookup(healthy) | {"reference": inventory}, check=False)
+    assert "read-only start" in run(context | lookup(healthy) | {"answer": {}}, check=False)
+    rejected = run(
+        context | {"invocation": entry["carriage"], "reference": effective, "payload_path": healthy, "changed": []},
+        verb="invoke",
+    )
+    assert rejected["effect_outcome"]["status"] == "rejected-before-effect"
+    assert rejected["effects"] == []
+    assert "read-only start" in rejected["error"]["message"]
+    old_carriage = entry["carriage"].copy()
+    old_carriage["envelopes"] = [r for r in old_carriage["envelopes"] if r["reference"] != effective]
+    assert run({"request": old_carriage, "reference": inventory}) == full
+
+    # Any payload source change invalidates the earlier observation, including a
+    # change to a different file than the one the caller selects.
+    (tmp_path / changed).write_bytes(changed_bytes + b"More drift.\n")
+    assert "stale" in run(lookup(healthy), check=False)
+    assert "stale" in run(context | {"reference": effective}, check=False)
+    refreshed, _ = details(run(context))
+    assert run(context | {"reference": refreshed, "payload_path": healthy})["value"]["observation"] == selected["value"]["observation"]
 
 
 def test_frontier_expansion_detail_currentness_and_disposable_carriage(tmp_path, shared_core_binary, native_cli):

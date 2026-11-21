@@ -7,6 +7,9 @@ use std::collections::{BTreeSet, HashMap};
 const CARRIAGE: &str = "agentic-workspace/operating-carriage/v1";
 const SOURCE_DELIVERY: &str = "agentic-workspace/source-delivery/v2";
 const MAX_DELIVERY_REFS: usize = 256;
+const CONFIGURATION_DETAIL: &str = "/configuration";
+const EFFECTIVE_CONFIGURATION_DETAIL: &str = "/configuration/effective";
+const PAYLOAD_OBSERVATION_DETAIL: &str = "/configuration/payload/observation";
 
 /// Diagnostics follow the explicitly carried target even on failed admission;
 /// this is no more authoritative than the ordinary caller-supplied target.
@@ -338,6 +341,9 @@ fn entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
         let descriptor =
             json!({"kind":"agentic-workspace/lazy-owner-detail/v1","revision":revision});
         result.push(entry(context, &selector, &descriptor)?);
+        if selector == CONFIGURATION_DETAIL && value.get("payload").is_some() {
+            result.push(entry(context, EFFECTIVE_CONFIGURATION_DETAIL, &descriptor)?);
+        }
     }
     Ok(result)
 }
@@ -799,6 +805,14 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":context,
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    if result["detail_refs"]
+        .get(EFFECTIVE_CONFIGURATION_DETAIL)
+        .is_some()
+    {
+        result["configuration_read"] = json!(
+            "Use /configuration/effective for effective policy, payload drift and blockers. /configuration also includes every installed payload observation."
+        );
+    }
     let mut claim_details = std::collections::BTreeSet::new();
     if context["request"].is_null()
         && context["changed"].as_array().is_some_and(Vec::is_empty)
@@ -1485,15 +1499,25 @@ fn attach_request_answer(result: &mut Value, full: &Value, context: &Value, sele
     result["next_step"] = step;
 }
 
+#[derive(Default)]
+struct SelectionInput {
+    answer: Option<Value>,
+    payload_path: Option<String>,
+}
+
 fn use_selected(
     context: Value,
     current: Value,
     selected_entry: Value,
-    answer: Option<Value>,
+    input: SelectionInput,
     invoking: bool,
     projection: &Value,
     detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
+    let SelectionInput {
+        answer,
+        payload_path,
+    } = input;
     let selector = selected_entry["selector"]
         .as_str()
         .ok_or_else(|| error("invalid selector"))?;
@@ -1625,7 +1649,45 @@ fn use_selected(
             "detail selection does not accept answers or invoke actions",
         ));
     }
-    let mut result = json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"});
+    let (selector, value) = match (selector, payload_path) {
+        (EFFECTIVE_CONFIGURATION_DETAIL, Some(path)) => {
+            let observation =
+                crate::native_payload::observation(&current["configuration"]["payload"], &path)
+                    .ok_or_else(|| {
+                        error(
+                            "payload_path is absent from the current payload observation inventory",
+                        )
+                    })?;
+            (PAYLOAD_OBSERVATION_DETAIL, observation)
+        }
+        (_, Some(_)) => {
+            return Err(error(
+                "payload_path needs the current /configuration/effective reference",
+            ));
+        }
+        (EFFECTIVE_CONFIGURATION_DETAIL, None) => {
+            let mut value = current["configuration"].clone();
+            let payload = &mut value["payload"];
+            if let Some(count) = crate::native_payload::defer_healthy_observations(payload) {
+                payload["unchanged_observation_count"] = json!(count);
+                payload["inventory_reference"] = json!(reference(
+                    &context,
+                    CONFIGURATION_DETAIL,
+                    &selected_entry["envelope"],
+                )?);
+                payload["observation_lookup"] = json!(
+                    "For one file, start with this response's reference, the same work context or carriage, and payload_path set to the exact repository-relative path in JSON input."
+                );
+            }
+            (selector, value)
+        }
+        _ if lazy => (
+            selector,
+            current.pointer(selector).cloned().unwrap_or(Value::Null),
+        ),
+        _ => (selector, selected_entry["envelope"].clone()),
+    };
+    let mut result = json!({"reference":selected,"selector":selector,"value":value,"currentness":"reobserved","authority":"detail-only"});
     // Detail identities remain bound to the owner's source observation. Report
     // restriction routes from that same current surface after validating it.
     let recovery = consequence_recovery(&current, &context)?;
@@ -2012,7 +2074,7 @@ fn operate_current(
     invoking: bool,
     detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
-    let (projection, selected, answer) = {
+    let (projection, selected, answer, payload_path) = {
         let object = value
             .as_object_mut()
             .ok_or_else(|| error("expected operating input object"))?;
@@ -2020,11 +2082,36 @@ fn operate_current(
             object.remove("projection").unwrap_or(json!("compact")),
             object.remove("reference"),
             object.remove("answer"),
+            object.remove("payload_path"),
         )
     };
     if ![json!("compact"), json!("full"), json!("carried")].contains(&projection) {
         return Err(error("unknown operating projection"));
     }
+    let payload_path = if let Some(path) = payload_path {
+        let selector = selected
+            .as_ref()
+            .and_then(Value::as_str)
+            .and_then(|s| s.strip_prefix("detail:"))
+            .and_then(|s| s.split_once(':'))
+            .map(|(selector, _)| selector);
+        if invoking
+            || selector != EFFECTIVE_CONFIGURATION_DETAIL.strip_prefix('/')
+            || answer.is_some()
+            || value.get("setup").is_some()
+        {
+            return Err(error(
+                "payload_path needs a read-only start with the current /configuration/effective reference",
+            ));
+        }
+        let path = path
+            .as_str()
+            .filter(|path| !path.is_empty() && path.len() <= 4096)
+            .ok_or_else(|| error("payload_path must be a nonempty repository-relative path"))?;
+        Some(path.to_owned())
+    } else {
+        None
+    };
     let field = if invoking { "invocation" } else { "request" };
     if let Some(setup) = value.as_object_mut().unwrap().remove("setup") {
         if invoking {
@@ -2157,7 +2244,10 @@ fn operate_current(
                     carrier.context,
                     current,
                     selected_entry,
-                    answer,
+                    SelectionInput {
+                        answer,
+                        payload_path,
+                    },
                     false,
                     &projection,
                     detail,
@@ -2214,7 +2304,10 @@ fn operate_current(
                 carrier.context,
                 current,
                 selected_entry,
-                answer,
+                SelectionInput {
+                    answer,
+                    payload_path,
+                },
                 invoking,
                 &projection,
                 detail,
@@ -2267,7 +2360,10 @@ fn operate_current(
             context,
             current,
             selected_entry,
-            answer,
+            SelectionInput {
+                answer,
+                payload_path,
+            },
             invoking,
             &projection,
             detail,
@@ -2963,7 +3059,7 @@ mod tests {
             context.clone(),
             full.clone(),
             entry,
-            None,
+            SelectionInput::default(),
             false,
             &json!("compact"),
             None,
