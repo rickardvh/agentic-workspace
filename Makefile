@@ -241,6 +241,7 @@ test-nosync: test-workspace test-source-maintenance
 test: sync-all test-nosync
 
 lint-workspace: markdownlint-workspace
+	@$(COMPACT_RUN) --label "generated contracts" -- uv run python src/tooling/generate/generate_contract_catalogues.py --check
 	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
 	@cargo fmt --all -- --check
 	@cargo clippy --locked --workspace --all-targets -- -D warnings
