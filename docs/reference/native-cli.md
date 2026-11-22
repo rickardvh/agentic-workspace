@@ -79,9 +79,10 @@ When local safety or an applicable Verification protocol calls for manual PR
 review, `start` exposes `manual_review` in compact output and
 `verification.manual_review` in full output. Answer the returned request with the
 canonical hosted `pull_request` URL, such as
-`https://forge.example/owner/project/pull/17`. Use its repository-qualified path
-ending in the numeric PR ID. AW normalises host case and trailing slashes, then observes the local Git commit
-and separates pending review from current implementation and evidence gaps.
+`https://forge.example/owner/project/pull/17`. Use the forge's repository-qualified
+pull or merge request path ending in the numeric ID. AW normalises host case,
+default ports and trailing slashes, then observes the local Git commit and
+separates pending review from current implementation and evidence gaps.
 The PR reference is caller supplied. The checkout observation does not verify a
 hosted PR's current head.
 

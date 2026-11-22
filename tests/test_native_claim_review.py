@@ -43,7 +43,12 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
         return git("rev-parse", "HEAD")
 
     git("init", "-q")
-    git("add", "a.txt", manifest.relative_to(tmp_path).as_posix())
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "visible.rs").write_text("Visible selected input")
+    (src / "sparse.rs").write_text("Sparse selected input")
+    (src / "notes.md").write_text("Ignored by the selected pattern")
+    git("add", "a.txt", "src", manifest.relative_to(tmp_path).as_posix())
     revision = commit("Exact reviewed subject")
 
     def call(**extra):
@@ -113,11 +118,29 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     assert without_proof["handoff_status"] == "external-approval-reported"
     assert "Resolve the listed implementation or evidence gaps" in without_proof["next_step"]
     alternate_spelling = copy.deepcopy(selected_pr)
-    alternate_spelling["arguments"]["pull_request"] = "HTTPS://EXAMPLE.invalid/owner/repo/pull/17/"
+    alternate_spelling["arguments"]["pull_request"] = "HTTPS://EXAMPLE.invalid:443/owner/repo/pull/17/"
     assert call(request=alternate_spelling)["verification"]["manual_review"]["recorded_report"]["reference"] == f"{pr}#review-1"
-    alternate_spelling["arguments"]["pull_request"] = "pr:17"
-    with pytest.raises(AssertionError, match="repository-qualified"):
-        call(request=alternate_spelling)
+    for invalid_pr in ("pr:17", "https://example.invalid/owner/repo/actions/17", "https://example.invalid:abc/owner/repo/pull/17"):
+        alternate_spelling["arguments"]["pull_request"] = invalid_pr
+        with pytest.raises(AssertionError, match="repository-qualified"):
+            call(request=alternate_spelling)
+
+    glob_scope = ["a.txt", "src/*.rs"]
+    glob_request = call(changed=glob_scope)["verification"]["manual_review"]["request"]
+    glob_request["arguments"]["pull_request"] = pr
+    git("update-index", "--skip-worktree", "src/notes.md")
+    (src / "notes.md").unlink()
+    assert not git("status", "--porcelain", "--untracked-files=no")
+    assert call(changed=glob_scope, request=glob_request)["verification"]["manual_review"]["review_status"] == "recorded-externally"
+    git("update-index", "--skip-worktree", "src/sparse.rs")
+    (src / "sparse.rs").unlink()
+    assert not git("status", "--porcelain", "--untracked-files=no")
+    sparse_glob = call(changed=glob_scope, request=glob_request)["verification"]["manual_review"]
+    assert sparse_glob["recording_status"] == "unavailable"
+    assert sparse_glob["review_status"] == "currentness-unverified"
+    for filename in ("src/notes.md", "src/sparse.rs"):
+        git("update-index", "--no-skip-worktree", filename)
+        git("restore", "--", filename)
 
     conflict = call(request=report("rejected", 1))
     assert conflict["verification"]["manual_review"]["recording_status"] == "conflict"

@@ -64,6 +64,9 @@ fn has_uncommitted_inputs(
     target: &Path,
     changed: &[String],
 ) -> Result<bool, CoreError> {
+    if changed.is_empty() {
+        return Ok(false);
+    }
     let mut paths = crate::native_source_reconciliation::scope_files(root, changed)?;
     // A selector-shaped name can also be an actual file, such as [id].tsx.
     paths.extend(
@@ -73,9 +76,8 @@ fn has_uncommitted_inputs(
             .cloned(),
     );
     let mut present = BTreeSet::new();
-    let mut absent = BTreeSet::new();
     for path in &paths {
-        match root.symlink_metadata(&path) {
+        match root.symlink_metadata(path) {
             Ok(metadata) if metadata.is_dir() => {
                 return Err(err(
                     "Select concrete changed files or a bounded file pattern to compare with the reviewed commit",
@@ -84,21 +86,35 @@ fn has_uncommitted_inputs(
             Ok(_) => {
                 present.insert(index_path(path));
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                absent.insert(index_path(path));
-            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => return Err(err(error)),
         }
     }
-    if paths.is_empty() {
-        return Ok(false);
-    }
+    // Enumerate tracked candidates from the original selectors as a sparse checkout
+    // can omit entries from filesystem discovery. Git only selects literal roots.
+    let roots: BTreeSet<_> = changed
+        .iter()
+        .map(|selector| {
+            let prefix = selector.split(['*', '?', '[']).next().unwrap();
+            if prefix == selector {
+                prefix
+            } else {
+                prefix
+                    .rsplit_once('/')
+                    .map_or("", |(directory, _)| directory)
+            }
+        })
+        .collect();
     let magic = if cfg!(windows) {
         ":(literal,icase)"
     } else {
         ":(literal)"
     };
-    let specs: Vec<_> = paths.iter().map(|path| format!("{magic}{path}")).collect();
+    let specs: Vec<_> = if roots.contains("") {
+        Vec::new()
+    } else {
+        roots.iter().map(|root| format!("{magic}{root}")).collect()
+    };
     if specs
         .iter()
         .map(|spec| spec.encode_utf16().count() + 3)
@@ -128,24 +144,37 @@ fn has_uncommitted_inputs(
             "Git could not compare the selected source paths with the index",
         ));
     }
+    let selected: BTreeSet<_> = paths.iter().map(|path| index_path(path)).collect();
+    let mut untracked = present.clone();
     for row in entries
         .split(|byte| *byte == 0)
         .filter(|row| !row.is_empty())
     {
-        let Some(path) = row.strip_prefix(b"H ") else {
+        let Some(path) = row.get(2..).filter(|_| row[1] == b' ') else {
+            return Err(err("Git returned an unrecognised index entry"));
+        };
+        let path = std::str::from_utf8(path).map_err(err)?;
+        let key = index_path(path);
+        if !selected.contains(&key)
+            && !changed
+                .iter()
+                .any(|selector| native_verification::matches(selector, path))
+        {
+            continue;
+        }
+        if row[0] != b'H' {
             return Err(err(
                 "Git index flags prevent verifying changes to selected inputs. Inspect assume-unchanged, skip-worktree, or conflicted entries before reobserving the checkout.",
             ));
-        };
-        let path = index_path(std::str::from_utf8(path).map_err(err)?);
-        if absent.contains(&path) {
+        }
+        if !present.contains(&key) {
             return Err(err(
                 "A selected tracked input is missing from the checkout; restore it or review the committed deletion.",
             ));
         }
-        present.remove(&path);
+        untracked.remove(&key);
     }
-    Ok(!present.is_empty())
+    Ok(!untracked.is_empty())
 }
 
 fn index_path(path: &str) -> String {
@@ -207,12 +236,14 @@ fn path(pull_request: &str) -> Result<String, CoreError> {
 fn canonical_pr(reference: &str) -> Result<String, CoreError> {
     let invalid = || {
         err(
-            "Use a repository-qualified HTTP(S) pull request URL ending with its numeric ID, without an account, query, fragment or percent-encoded path.",
+            "Use a repository-qualified HTTP(S) pull or merge request URL ending with its numeric ID, without an account, query, fragment or percent-encoded path.",
         )
     };
     if reference.len() > 1024
         || reference.contains(['@', '?', '#', '%', '\\'])
-        || reference.chars().any(char::is_control)
+        || reference
+            .chars()
+            .any(|ch| ch.is_control() || ch.is_whitespace())
     {
         return Err(invalid());
     }
@@ -221,29 +252,81 @@ fn canonical_pr(reference: &str) -> Result<String, CoreError> {
     if !matches!(scheme.as_str(), "http" | "https") {
         return Err(invalid());
     }
-    let (host, path) = rest.split_once('/').ok_or_else(invalid)?;
+    let (authority, path) = rest.split_once('/').ok_or_else(invalid)?;
+    let default_port = if scheme == "https" { 443 } else { 80 };
+    let authority = canonical_authority(authority, default_port).ok_or_else(invalid)?;
     let (repository_and_route, id) = path
         .trim_end_matches('/')
         .rsplit_once('/')
         .ok_or_else(invalid)?;
+    if !id.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(invalid());
+    }
     let id = id
         .parse::<u64>()
         .ok()
         .filter(|id| *id != 0)
         .ok_or_else(invalid)?;
     let components: Vec<_> = repository_and_route.split('/').collect();
-    if host.is_empty()
-        || components.len() < 3
+    if components.len() < 3
         || components
             .iter()
             .any(|part| matches!(*part, "" | "." | ".."))
+        || !matches!(
+            components.last(),
+            Some(
+                &("pull"
+                    | "pulls"
+                    | "pullrequest"
+                    | "pullrequests"
+                    | "pull-requests"
+                    | "merge_requests"
+                    | "merge-requests")
+            )
+        )
     {
         return Err(invalid());
     }
     Ok(format!(
-        "{scheme}://{}/{repository_and_route}/{id}",
-        host.to_ascii_lowercase()
+        "{scheme}://{authority}/{repository_and_route}/{id}"
     ))
+}
+
+fn canonical_authority(authority: &str, default_port: u16) -> Option<String> {
+    let (mut host, port) = if let Some(address) = authority.strip_prefix('[') {
+        let (address, suffix) = address.split_once(']')?;
+        let address = address.parse::<std::net::Ipv6Addr>().ok()?;
+        (format!("[{address}]"), suffix)
+    } else {
+        let (host, suffix) = authority
+            .find(':')
+            .map_or((authority, ""), |i| authority.split_at(i));
+        let host = host.strip_suffix('.').unwrap_or(host);
+        let valid_host = host.split('.').all(|label| {
+            let valid_end = |byte: &u8| byte.is_ascii_alphanumeric();
+            let label = label.as_bytes();
+            label.first().is_some_and(valid_end)
+                && label.last().is_some_and(valid_end)
+                && label
+                    .iter()
+                    .all(|b| b.is_ascii_alphanumeric() || *b == b'-')
+        });
+        if !valid_host {
+            return None;
+        }
+        (host.to_ascii_lowercase(), suffix)
+    };
+    if !port.is_empty() {
+        let port = port.strip_prefix(':')?;
+        if !port.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+        let port = port.parse::<u16>().ok().filter(|port| *port != 0)?;
+        if port != default_port {
+            host.push_str(&format!(":{port}"));
+        }
+    }
+    Some(host)
 }
 
 fn record_shape(record: &Value) -> bool {
