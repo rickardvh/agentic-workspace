@@ -11,6 +11,8 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     io::Write,
     path::Path,
+    process::Command,
+    time::Duration,
 };
 
 pub(crate) const REQUEST: &str = "verification/reconcile-sources/v1";
@@ -85,21 +87,317 @@ fn observe(
 // Reobserve the applicable declared path set, including newly created files.
 // No prior AW event stream or comprehensive caller change list is freshness.
 pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<String>, CoreError> {
+    discover_scope(root, patterns, &[], &[], &[])
+}
+
+fn excluded(path: &str, exclusions: &[String]) -> bool {
+    ancestors(path).any(|path| matches_scope(exclusions, path))
+}
+
+fn ancestors(path: &str) -> impl Iterator<Item = &str> {
+    std::iter::successors(Some(path), |path| path.rsplit_once('/').map(|(dir, _)| dir))
+}
+
+fn prune_discovery(
+    path: &str,
+    exclusions: &[String],
+    submodule: Option<&str>,
+    directory_scope: Option<&[String]>,
+) -> Result<bool, CoreError> {
+    if exclusions.is_empty() {
+        return Ok(false);
+    }
+    let mut matches = ancestors(path).filter(|path| matches_scope(exclusions, path));
+    let Some(submodule) = submodule else {
+        return Ok(matches.next().is_some());
+    };
+    if let Some(nested) =
+        matches.find(|candidate| within(candidate, submodule) && !within(submodule, candidate))
+    {
+        if directory_scope.is_some_and(|patterns| !subtree_intersects(path, patterns)) {
+            return Ok(true);
+        }
+        return Err(err(format!(
+            "source reconciliation cannot apply reconcile_exclude to {nested} inside tracked submodule {submodule} from the enclosing Git index. Narrow this relation to the intended source paths, or reconcile the submodule as its own workspace."
+        )));
+    }
+    Ok(false)
+}
+
+fn matches_scope(patterns: &[String], path: &str) -> bool {
+    patterns
+        .iter()
+        .any(|pattern| crate::native_verification::matches(pattern, path))
+}
+
+fn private_scope(path: &str) -> bool {
+    path.split('/').any(|part| part == ".git")
+        || [".agentic-workspace/local", ".agentic-workspace/proof"]
+            .iter()
+            .any(|prefix| {
+                path == *prefix
+                    || path
+                        .strip_prefix(prefix)
+                        .is_some_and(|p| p.starts_with('/'))
+            })
+}
+
+fn discovery_root(pattern: &str) -> Option<&str> {
+    let prefix = crate::instruction_applicability::literal_prefix(pattern);
+    (prefix != pattern).then(|| prefix.rsplit_once('/').map_or("", |(dir, _)| dir))
+}
+
+fn index_scope(patterns: &[String]) -> BTreeSet<&str> {
+    let scope: BTreeSet<_> = patterns
+        .iter()
+        .filter_map(|pattern| discovery_root(pattern))
+        .collect();
+    if scope.contains("") {
+        BTreeSet::from([""])
+    } else {
+        scope
+    }
+}
+
+fn within(path: &str, directory: &str) -> bool {
+    #[cfg(windows)]
+    let (path, directory) = (&*path.to_lowercase(), &*directory.to_lowercase());
+    directory.is_empty()
+        || path == directory
+        || path
+            .strip_prefix(directory)
+            .is_some_and(|tail| tail.starts_with('/'))
+}
+
+struct IndexedPath {
+    path: String,
+    gitlink: bool,
+}
+
+fn index_queries(scope: &BTreeSet<&str>) -> Vec<Vec<String>> {
+    if scope.contains("") {
+        return vec![Vec::new()];
+    }
+    let case = if cfg!(windows) { ",icase" } else { "" };
+    let literal = |path: &str| format!(":(literal{case}){path}");
+    let mut queries = vec![scope.iter().map(|path| literal(path)).collect()];
+    let mut ancestors = BTreeMap::<usize, BTreeSet<&str>>::new();
+    for root in scope {
+        let mut path = *root;
+        while let Some((parent, _)) = path.rsplit_once('/') {
+            // A root already being queried covers this ancestor.
+            if scope.iter().any(|dir| within(parent, dir)) {
+                break;
+            }
+            ancestors
+                .entry(parent.split('/').count())
+                .or_default()
+                .insert(parent);
+            path = parent;
+        }
+    }
+    // Exclude descendants of each ancestor without excluding the separately
+    // selected subtree. Different depths cannot share a negative pathspec.
+    for parents in ancestors.into_values() {
+        let mut specs = Vec::new();
+        for parent in parents {
+            let mut escaped = String::new();
+            for ch in parent.chars() {
+                if matches!(ch, '*' | '?' | '[' | ']' | '\\') {
+                    escaped.push('\\');
+                }
+                escaped.push(ch);
+            }
+            specs.push(literal(parent));
+            specs.push(format!(":(exclude,glob{case}){escaped}/**"));
+        }
+        queries.push(specs);
+    }
+    queries
+}
+
+fn tracked_paths(target: &Path, scope: &BTreeSet<&str>) -> Result<Vec<IndexedPath>, CoreError> {
+    let failure = |reason: &str| {
+        err(format!(
+            "source reconciliation cannot apply reconcile_exclude without a bounded observation of tracked paths ({reason}). Restore Git index observation or narrow this relation's declared discovery scope before retrying."
+        ))
+    };
+    let queries = index_queries(scope);
+    if queries.iter().any(|specs| {
+        specs
+            .iter()
+            .map(|path| path.encode_utf16().count() + 3)
+            .sum::<usize>()
+            > 12_000
+    }) {
+        return Err(failure("Git pathspec bound exceeded"));
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let mut remaining_bytes = 8 * 1024 * 1024;
+    let mut paths = BTreeMap::new();
+    for specs in queries {
+        let remaining_time = deadline.saturating_duration_since(std::time::Instant::now());
+        if remaining_time.is_zero() {
+            return Err(failure("Git index observation timed out"));
+        }
+        let mut command = Command::new("git");
+        command
+            .arg("-C")
+            .arg(target)
+            .args([
+                "-c",
+                "core.fsmonitor=false",
+                "ls-files",
+                "--stage",
+                "-z",
+                "--",
+            ])
+            .args(specs)
+            .env("GIT_OPTIONAL_LOCKS", "0")
+            .env("GIT_LITERAL_PATHSPECS", "0")
+            .env("GIT_GLOB_PATHSPECS", "0")
+            .env("GIT_NOGLOB_PATHSPECS", "0")
+            .env("GIT_ICASE_PATHSPECS", "0")
+            .env_remove("GIT_INDEX_FILE")
+            .env_remove("GIT_DIR")
+            .env_remove("GIT_COMMON_DIR")
+            .env_remove("GIT_WORK_TREE");
+        let (status, output) = crate::native_verification::bounded_git_output_with_limit(
+            &mut command,
+            remaining_time,
+            remaining_bytes,
+        )
+        .map_err(|reason| failure(&reason))?;
+        if !status.success() {
+            return Err(failure("git ls-files failed"));
+        }
+        remaining_bytes -= output.len();
+        let output = std::str::from_utf8(&output).map_err(|_| failure("non-UTF-8 index path"))?;
+        for row in output.split_terminator('\0') {
+            let (header, path) = row
+                .split_once('\t')
+                .ok_or_else(|| failure("invalid index entry"))?;
+            let gitlink = header.starts_with("160000 ");
+            paths
+                .entry(path.to_owned())
+                .and_modify(|value| *value |= gitlink)
+                .or_insert(gitlink);
+        }
+    }
+    Ok(paths
+        .into_iter()
+        .map(|(path, gitlink)| IndexedPath { path, gitlink })
+        .collect())
+}
+
+fn subtree_intersects(path: &str, patterns: &[String]) -> bool {
+    let mut prefix = String::new();
+    for character in path.chars() {
+        match character {
+            '*' => prefix.push_str("[*]"),
+            '?' => prefix.push_str("[?]"),
+            '[' => prefix.push_str("[[]"),
+            other => prefix.push(other),
+        }
+    }
+    prefix.push_str("/*");
+    patterns
+        .iter()
+        .any(|pattern| crate::instruction_applicability::patterns_overlap(pattern, &prefix))
+}
+
+fn discover_scope(
+    root: &Dir,
+    patterns: &[String],
+    exclusions: &[String],
+    tracked: &[IndexedPath],
+    explicit: &[String],
+) -> Result<BTreeSet<String>, CoreError> {
     const ENTRY_LIMIT: usize = 4096;
+    let over_budget = |directory: &str| {
+        err(format!(
+            "source reconciliation scope exceeds bounded discovery: limit {ENTRY_LIMIT} directory entries, \
+             directory {directory:?}, patterns {:?} ({} total). No complete scope was produced; \
+             narrow the owner's declared discovery scope. No larger-budget override is supported.",
+            &patterns[..patterns.len().min(8)],
+            patterns.len()
+        ))
+    };
     let mut paths = BTreeSet::new();
     let mut visited = BTreeSet::new();
     let mut pending = Vec::new();
     for pattern in patterns {
-        let prefix = pattern.split(['*', '?', '[']).next().unwrap();
-        if prefix == pattern {
-            crate::decision_source::relative(prefix)?;
-            paths.insert(prefix.to_owned());
-        } else {
-            let directory = prefix.rsplit_once('/').map(|(p, _)| p).unwrap_or("");
+        if let Some(directory) = discovery_root(pattern) {
             pending.push(directory.to_owned());
+        } else {
+            crate::decision_source::relative(pattern)?;
+            paths.insert(pattern.clone());
+        }
+    }
+    // The enclosing index records a gitlink, not the submodule's files. Keep
+    // ordinary confined discovery inside that tracked tree. If pruning hides
+    // the route to it, start there directly without walking disposable siblings.
+    let submodules: Vec<_> = tracked
+        .iter()
+        .filter(|entry| entry.gitlink && subtree_intersects(&entry.path, patterns))
+        .map(|entry| entry.path.as_str())
+        .collect();
+    let containing_submodule =
+        |path: &str| submodules.iter().copied().find(|root| within(path, root));
+    for &submodule in &submodules {
+        if excluded(submodule, exclusions) && pending.iter().any(|root| within(submodule, root)) {
+            pending.push(submodule.to_owned());
         }
     }
     let mut count = 0;
+    // Recover governed tracked files from the index when we prune an output tree.
+    // Other indexed paths can still mask governed descendants if replaced by a directory.
+    for IndexedPath { path, gitlink } in tracked {
+        if *gitlink || private_scope(path) || !excluded(path, exclusions) {
+            continue;
+        }
+        let matched = matches_scope(patterns, path);
+        if !matched
+            && !pending
+                .iter()
+                .any(|root| within(path, root) || within(root, path))
+        {
+            continue;
+        }
+        crate::decision_source::relative(path)?;
+        if matched {
+            count += 1;
+            if count > ENTRY_LIMIT {
+                return Err(over_budget(path));
+            }
+        }
+        match root.symlink_metadata(path) {
+            Ok(metadata)
+                if metadata.is_dir() && (matched || subtree_intersects(path, patterns)) =>
+            {
+                return Err(err(format!(
+                    "source reconciliation exclusion would prune tracked directory {path}; revise reconcile_exclude"
+                )));
+            }
+            Ok(_) if matched => {
+                paths.insert(path.clone());
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(err(error)),
+        }
+    }
+    // The caller may explicitly name a matching ignored file, including a
+    // deletion. Exclusions only apply to what the discovery walk infers.
+    for path in explicit {
+        if crate::instruction_applicability::literal_prefix(path) == path
+            && !private_scope(path)
+            && excluded(path, exclusions)
+            && matches_scope(patterns, path)
+        {
+            paths.insert(path.clone());
+        }
+    }
     while let Some(directory) = pending.pop() {
         if !visited.insert(directory.clone()) {
             continue;
@@ -112,6 +410,14 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
                 &format!("{directory}/.aw-scope-confinement"),
                 crate::dependency_binding::MAX_OBSERVATION_BYTES,
             )?;
+            if prune_discovery(
+                &directory,
+                exclusions,
+                containing_submodule(&directory),
+                Some(patterns),
+            )? {
+                continue;
+            }
         }
         let entries = match root.read_dir(if directory.is_empty() {
             "."
@@ -125,50 +431,36 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
         for entry in entries {
             count += 1;
             if count > ENTRY_LIMIT {
-                return Err(err(format!(
-                    "source reconciliation scope exceeds bounded discovery: limit {ENTRY_LIMIT} directory entries, \
-                     directory {directory:?}, patterns {:?} ({} total). No complete scope was produced; \
-                     narrow the owner's declared discovery scope. No larger-budget override is supported.",
-                    &patterns[..patterns.len().min(8)],
-                    patterns.len()
-                )));
+                return Err(over_budget(&directory));
             }
             let entry = entry.map_err(err)?;
             let name = entry
                 .file_name()
                 .into_string()
                 .map_err(|_| err("scope filename must be UTF-8"))?;
-            if name == ".git" {
-                continue;
-            }
             let path = if directory.is_empty() {
                 name
             } else {
                 format!("{directory}/{name}")
             };
-            if path.starts_with(".agentic-workspace/local/")
-                || path == ".agentic-workspace/local"
-                || path.starts_with(".agentic-workspace/proof/")
-                || path == ".agentic-workspace/proof"
-            {
+            if private_scope(&path) {
                 continue;
             }
             let meta = root.symlink_metadata(&path).map_err(err)?;
-            #[cfg(windows)]
-            let linked = {
-                use cap_std::fs::MetadataExt;
-                meta.file_attributes() & 0x400 != 0
-            };
-            #[cfg(not(windows))]
-            let linked = meta.is_symlink();
-            if linked {
+            if crate::native_routes::linked(&meta) {
                 return Err(err("source reconciliation cannot traverse a linked scope"));
             }
             if meta.is_dir() {
-                pending.push(path);
-            } else if patterns
-                .iter()
-                .any(|p| crate::native_verification::matches(p, &path))
+                if !prune_discovery(
+                    &path,
+                    exclusions,
+                    containing_submodule(&path),
+                    Some(patterns),
+                )? {
+                    pending.push(path);
+                }
+            } else if matches_scope(patterns, &path)
+                && !prune_discovery(&path, exclusions, containing_submodule(&path), None)?
             {
                 paths.insert(path);
             }
@@ -379,8 +671,16 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
 
 #[derive(Clone, Copy)]
 pub(crate) struct Context<'a> {
-    pub subject: Option<&'a Value>,
+    pub changed: &'a [String],
     pub executing: bool,
+}
+
+type TrackedPathCache = BTreeMap<BTreeSet<String>, Result<Vec<IndexedPath>, CoreError>>;
+
+#[derive(Default)]
+struct Observations {
+    sources: RefCell<BTreeMap<String, Value>>,
+    tracked: RefCell<TrackedPathCache>,
 }
 
 pub(crate) fn view(
@@ -392,7 +692,7 @@ pub(crate) fn view(
     request: Option<&Value>,
     context: Context<'_>,
 ) -> Result<Value, CoreError> {
-    let observations = RefCell::new(BTreeMap::new());
+    let observations = Observations::default();
     let mut relations = Vec::new();
     let mut ordinary = instructions.clone();
     ordinary["sources"] = json!(
@@ -474,7 +774,7 @@ pub(crate) fn view(
     }
     output["relations"] = json!(outputs.iter().map(|v| {
         let mut relation = json!({"relation_id":v["relation_id"],"status":v["status"],"coverage":v["coverage"],"obligations":v["obligations"]});
-        for field in ["reason", "unavailable_sources"] {
+        for field in ["reason", "unavailable_sources", "discovery_exclusions"] {
             if let Some(value) = v.get(field) { relation[field] = value.clone(); }
         }
         relation
@@ -485,17 +785,19 @@ pub(crate) fn view(
 fn relation_view(
     target: &Path,
     work: &Value,
-    inputs: (&Value, &RefCell<BTreeMap<String, Value>>),
+    inputs: (&Value, &Observations),
     configuration: &Value,
     contract: &Value,
     request: Option<&Value>,
     context: Context<'_>,
 ) -> Result<Value, CoreError> {
-    let (instructions, observations) = inputs;
+    let (instructions, observed) = inputs;
+    let observations = &observed.sources;
     let mut view = json!({"status":"not-required","obligations":[],"requests":[],"action":null,"decisions":[]});
     let mut sources = BTreeMap::new();
     let mut dependencies = BTreeMap::new();
     let mut declarations = Vec::new();
+    let mut exclusions = BTreeSet::new();
     let mut scope = BTreeSet::new();
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for row in instructions["sources"].as_array().into_iter().flatten() {
@@ -515,19 +817,46 @@ fn relation_view(
         // Admission is checked afresh; its transport (for example a Git
         // commit pointer) is not semantic evidence. The exact declaration
         // content below binds its requirements and authority.
-        declarations.push(json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"relation_kind":row["relation_kind"],"sources":refs,"paths":row["metadata"]["paths"]}));
+        let mut declaration = json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"relation_kind":row["relation_kind"],"sources":refs,"paths":row["metadata"]["paths"]});
+        let excluded = if row["binding_admission"]["status"] == "current" {
+            strings(&row["metadata"]["reconcile_exclude"])
+        } else {
+            Vec::new()
+        };
+        if !excluded.is_empty() {
+            declaration["reconcile_exclude"] = json!(excluded);
+            exclusions.extend(excluded.iter().cloned());
+        }
+        declarations.push(declaration);
         let patterns = strings(&row["metadata"]["paths"]);
         let global = ["**".to_owned()];
-        let observed = scope_files(
-            &root,
-            if patterns.is_empty() {
-                // Global really means global, including discovery after opaque entry.
-                &global
-            } else {
-                &patterns
-            },
-        );
-        match observed {
+        // Global really means global, including discovery after opaque entry.
+        let patterns = if patterns.is_empty() {
+            &global[..]
+        } else {
+            &patterns[..]
+        };
+        let tracked_scope = index_scope(patterns);
+        let discovered = if excluded.is_empty() || tracked_scope.is_empty() {
+            scope_files(&root, patterns)
+        } else {
+            observed
+                .tracked
+                .borrow_mut()
+                .entry(
+                    tracked_scope
+                        .iter()
+                        .map(|root| (*root).to_owned())
+                        .collect(),
+                )
+                .or_insert_with(|| tracked_paths(target, &tracked_scope))
+                .as_ref()
+                .map_err(Clone::clone)
+                .and_then(|tracked| {
+                    discover_scope(&root, patterns, &excluded, tracked, context.changed)
+                })
+        };
+        match discovered {
             Ok(paths) => scope.extend(paths),
             Err(error) => {
                 if request.is_some() {
@@ -536,6 +865,9 @@ fn relation_view(
                 view["status"] = json!("scope-observation-required");
                 view["obligations"] = json!(sources.keys().collect::<Vec<_>>());
                 view["reason"] = json!(error.to_string());
+                if !exclusions.is_empty() {
+                    view["discovery_exclusions"] = json!(exclusions);
+                }
                 return Ok(view);
             }
         }
@@ -613,19 +945,23 @@ fn relation_view(
         .unwrap()
     });
     binding["producer_revision"] = json!(&*PRODUCER);
-    grouped_view(
+    let mut result = grouped_view(
         Inputs {
             target,
             work,
             instructions,
-            observations,
+            observations: observed,
             configuration,
             contract,
         },
         request,
         context,
         binding,
-    )
+    )?;
+    if !exclusions.is_empty() {
+        result["discovery_exclusions"] = json!(exclusions);
+    }
+    Ok(result)
 }
 
 fn bind_authority(binding: &mut Value, configuration: &Value) {
@@ -663,7 +999,7 @@ struct Inputs<'a> {
     target: &'a Path,
     work: &'a Value,
     instructions: &'a Value,
-    observations: &'a RefCell<BTreeMap<String, Value>>,
+    observations: &'a Observations,
     configuration: &'a Value,
     contract: &'a Value,
 }
@@ -962,7 +1298,7 @@ fn group_view(
         configuration,
         contract,
     } = inputs;
-    let Context { subject, executing } = context;
+    let executing = context.executing;
     let sources = binding["sources"].as_object().unwrap();
     let mut view = json!({"status":"unassessed","obligations":sources.keys().collect::<Vec<_>>(),"requests":[],"action":null,"decisions":[]});
     let revision = digest(&binding)?;
@@ -1140,7 +1476,7 @@ fn group_view(
                     configuration,
                     contract,
                     Some(&authorized),
-                    Context { subject, executing },
+                    context,
                 );
             }
             view["status"] = json!("bounded-domain-judgment-required");

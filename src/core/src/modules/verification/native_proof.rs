@@ -348,10 +348,14 @@ pub(crate) fn select_mode(
         match runtime(target, &semantic_strategy) {
             Ok(value) => value,
             Err(error) if !strategy["execution"].is_null() => {
-                return Ok(
-                    json!({"status":"blocked","reason":"proof-execution-capability-unavailable","recovery":{"kind":"capability-gap","human_answer_allowed":false,
+                let diagnostic = error.to_string();
+                let recovery = crate::proof_executor::index_mode_budget_recovery(&diagnostic)
+                    .unwrap_or_else(|| json!({"kind":"capability-gap","human_answer_allowed":false,
                         "detail":"The selected proof cannot run with its configured isolation. Supply any named missing declared source inputs in the snapshot and runtime/Git prerequisites in the immutable image, or prepare the Linux Docker daemon, then select the proof again. Human approval cannot supply this capability.",
-                        "diagnostic":error.to_string()},"choices":available}),
+                        "diagnostic":diagnostic}));
+                return Ok(
+                    json!({"status":"blocked","reason":"proof-execution-capability-unavailable",
+                        "recovery":recovery,"choices":available}),
                 );
             }
             Err(error) => return Err(error),

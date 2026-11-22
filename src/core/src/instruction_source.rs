@@ -53,6 +53,7 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
                 "read",
                 "reconcile",
                 "governed_by",
+                "reconcile_exclude",
                 "use",
                 "checks",
                 "protect",
@@ -61,6 +62,9 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
                 || !seen.insert(field)
             {
                 return None;
+            }
+            if field == "reconcile_exclude" {
+                result[field] = json!([]);
             }
             let rest = rest.trim();
             if rest.is_empty() {
@@ -110,6 +114,9 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
             if matches!(field, "reconcile" | "governed_by")
                 && (relative(value).is_err() || value.contains(['*', '?', '[', ']']))
             {
+                return None;
+            }
+            if field == "reconcile_exclude" && relative(value).is_err() {
                 return None;
             }
             if field == "routes" {

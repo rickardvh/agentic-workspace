@@ -17,6 +17,9 @@ use std::{
 const MAX_BYTES: usize = 128 * 1024 * 1024;
 const MAX_FILES: usize = 20000;
 const MAX_SCAN_ENTRIES: usize = 50000;
+const MAX_INDEX_MODE_BATCHES: usize = 192;
+const INDEX_MODE_BATCH_LIMIT_EXCEEDED: &str = "proof-snapshot-index-mode-batch-limit-exceeded";
+const INDEX_MODE_OBSERVATION_TIMED_OUT: &str = "proof-snapshot-index-mode-observation-timed-out";
 pub(crate) const KIND: &str = "docker-readonly-source-v1";
 pub(crate) fn missing_declaration_recovery() -> Value {
     json!({"kind":"capability-gap","cause":"missing-executor-declaration","human_answer_allowed":false,
@@ -25,6 +28,24 @@ pub(crate) fn missing_declaration_recovery() -> Value {
             "kind":KIND,"required_fields":["kind","inputs"]},
         "next_action":{"kind":"configure-executor","reselect_request":"verification/execute-selected/v1"},
         "detail":"Declare [execution] in .agentic-workspace/verification/manifest.toml with kind = \"docker-readonly-source-v1\" and explicit bounded inputs for the selected command, then configure an immutable image and reselect verification/execute-selected/v1. Local [proof_execution].image only overrides an already declared executor; it does not enable one. Docker/runtime checks were not performed. Source protection remains enforced; human approval cannot supply the execution boundary."})
+}
+pub(crate) fn index_mode_budget_recovery(diagnostic: &str) -> Option<Value> {
+    let (limit, host_recovery) = match diagnostic {
+        INDEX_MODE_BATCH_LIMIT_EXCEEDED => (
+            format!("needs more than {MAX_INDEX_MODE_BATCHES} Git index-mode query batches"),
+            "",
+        ),
+        INDEX_MODE_OBSERVATION_TIMED_OUT => (
+            "exhausted its shared time budget for Git index-mode queries".to_owned(),
+            " If the scope is already minimal, check local Git index responsiveness and resolve any contention before retrying with the same inputs.",
+        ),
+        _ => return None,
+    };
+    Some(
+        json!({"kind":"capability-gap","cause":"windows-index-mode-budget-exhausted",
+        "human_answer_allowed":false,"diagnostic":diagnostic,
+        "detail":format!("The Windows proof snapshot {limit}. Narrow execution.inputs to the files the selected command needs, preserving every required input, then select the proof again.{host_recovery} No selected command ran.")}),
+    )
 }
 pub(crate) fn configuration(target: &Path) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
@@ -422,12 +443,19 @@ fn indexed_modes_for_paths(
             ]
         })));
     }
-    let deadline = Instant::now() + Duration::from_secs(5);
+    if queries.len() > MAX_INDEX_MODE_BATCHES {
+        return Err(err(INDEX_MODE_BATCH_LIMIT_EXCEEDED));
+    }
+    // Each additional subprocess incurs startup, index-read and polling costs.
+    // Keep one shared deadline, allowing at most 24.1 seconds for 192 batches.
+    let budget = Duration::from_secs(5)
+        + Duration::from_millis(100) * queries.len().saturating_sub(1) as u32;
+    let deadline = Instant::now() + budget;
     let mut modes = BTreeMap::new();
     for specs in queries {
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
-            return Err(err("proof-snapshot-index-mode-observation-timed-out"));
+            return Err(err(INDEX_MODE_OBSERVATION_TIMED_OUT));
         }
         let mut command = Command::new("git");
         command
@@ -452,7 +480,13 @@ fn indexed_modes_for_paths(
             remaining,
             8 * 1024 * 1024,
         )
-        .map_err(err)?;
+        .map_err(|reason| {
+            if reason == "git-observation-timeout" {
+                err(INDEX_MODE_OBSERVATION_TIMED_OUT)
+            } else {
+                err(reason)
+            }
+        })?;
         if !status.success() {
             return Err(err(
                 "proof-snapshot-index-mode-unavailable: Windows requires an observable Git index; preserve source and restore Git access",
