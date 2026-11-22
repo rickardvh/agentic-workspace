@@ -140,12 +140,20 @@ def stack(tmp_path, monkeypatch):
     )
 
 
-def test_windows_mode_admission_uses_exact_pr_and_push_changes(stack):
+@pytest.mark.parametrize(
+    "proof_path",
+    [
+        "src/core/src/modules/verification/proof_executor.rs",
+        "src/core/src/modules/verification/native_proof.rs",
+        "tests/test_native_proof_producer.py",
+    ],
+)
+def test_windows_mode_admission_uses_exact_pr_and_push_changes(stack, proof_path):
     root, git, event, *_ = stack
     assert checker.proof_mode_scope(root, event, "pull_request") == "unrelated"
     base = event["pull_request"]["head"]["sha"]
-    owner = root / "src/core/src/modules/verification/proof_executor.rs"
-    owner.parent.mkdir(parents=True)
+    owner = root / proof_path
+    owner.parent.mkdir(parents=True, exist_ok=True)
     owner.write_text("mode owner changed\n")
     git("add", ".")
     git("commit", "-qm", "mode change")
