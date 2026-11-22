@@ -921,6 +921,44 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
     assert relations[".agentic-workspace/instructions/other.md"]["status"] == "current"
 
 
+def test_excluded_index_entries_only_charge_governed_discovery(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_public_cli import pin_instructions
+
+    context = repository(tmp_path)
+    (tmp_path / ".agentic-workspace/instructions/feature.md").write_text(
+        "---\npaths: [src/**/*.rs]\ngoverned_by: [docs/guide.md]\n"
+        "reconcile_exclude: [src/cache]\n---\nReview the Rust sources.\n"
+    )
+    pin_instructions(tmp_path)
+    ordinary = "src/lib/current.rs"
+    cached = "src/cache/retained.rs"
+    context["changed"] = [ordinary]
+    for source in (ordinary, cached):
+        path = tmp_path / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("governed source")
+    cache = tmp_path / "src/cache"
+    for index in range(4097):
+        (cache / f"output-{index:04}.json").write_text("{}")
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run([*git, "add", "src/cache"], check=True, capture_output=True)
+
+    def owner():
+        return consume("json", shared_core_binary, native_cli, context)["verification"]["source_reconciliation"]
+
+    observed = owner()
+    assert "proposal" in observed, observed.get("reason")
+    assert set(observed["proposal"]["work_postimages"]) == {ordinary, cached}
+
+    replaced = cache / "output-0000.json"
+    replaced.unlink()
+    replaced.mkdir()
+    (replaced / "nested.rs").write_text("governed source under a replaced index entry")
+    conflicting = owner()
+    assert conflicting["status"] == "scope-observation-required"
+    assert "tracked directory src/cache/output-0000.json" in conflicting["reason"]
+
+
 @pytest.mark.parametrize(
     "case",
     ["excluded-root", "submodule", "submodule-root", "disjoint-submodule", "unmatched-file", "nested-exclusion"],

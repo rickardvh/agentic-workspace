@@ -350,8 +350,8 @@ fn discover_scope(
         }
     }
     let mut count = 0;
-    // Recover tracked files directly from the index when we prune an output
-    // tree. Walking to find them would count all of the incidental output too.
+    // Recover governed tracked files from the index when we prune an output tree.
+    // Other indexed paths can still mask governed descendants if replaced by a directory.
     for IndexedPath { path, gitlink } in tracked {
         if *gitlink || private_scope(path) || !excluded(path, exclusions) {
             continue;
@@ -365,12 +365,16 @@ fn discover_scope(
             continue;
         }
         crate::decision_source::relative(path)?;
-        count += 1;
-        if count > ENTRY_LIMIT {
-            return Err(over_budget(path));
+        if matched {
+            count += 1;
+            if count > ENTRY_LIMIT {
+                return Err(over_budget(path));
+            }
         }
         match root.symlink_metadata(path) {
-            Ok(metadata) if metadata.is_dir() => {
+            Ok(metadata)
+                if metadata.is_dir() && (matched || subtree_intersects(path, patterns)) =>
+            {
                 return Err(err(format!(
                     "source reconciliation exclusion would prune tracked directory {path}; revise reconcile_exclude"
                 )));
@@ -671,10 +675,12 @@ pub(crate) struct Context<'a> {
     pub executing: bool,
 }
 
+type TrackedPathCache = BTreeMap<BTreeSet<String>, Result<Vec<IndexedPath>, CoreError>>;
+
 #[derive(Default)]
 struct Observations {
     sources: RefCell<BTreeMap<String, Value>>,
-    tracked: RefCell<BTreeMap<BTreeSet<String>, Result<Vec<IndexedPath>, CoreError>>>,
+    tracked: RefCell<TrackedPathCache>,
 }
 
 pub(crate) fn view(
