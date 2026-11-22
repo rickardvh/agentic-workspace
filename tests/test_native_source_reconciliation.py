@@ -868,7 +868,8 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
         "src/.tool-cache/explicit.bin",
         "src/generated.txt",
     }
-    for path in retained | {"other/main.txt", "src/.tool-cache/output.bin"}:
+    output_path = "src/.tool-cache/part].json"
+    for path in retained | {"other/main.txt", output_path}:
         (tmp_path / path).write_text("fixture source or output")
     git = ["git", "-C", str(tmp_path)]
     subprocess.run([*git, "add", "-f", "src/__pycache__/tracked.txt"], check=True, capture_output=True)
@@ -892,16 +893,16 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
     for index in range(4097):
         (tmp_path / f"src/__pycache__/generated-{index:04}.pyc").write_bytes(b"cache")
     (tmp_path / "src/__pycache__/generated-0000.pyc").write_bytes(b"changed cache")
-    output = tmp_path / "src/.tool-cache/output.bin"
+    output = tmp_path / output_path
     output.write_bytes(b"changed tool output")
     assert all(relation["status"] == "current" for relation in owner()["relations"])
 
-    context["changed"].append("src/.tool-cache/output.bin")
+    context["changed"].append(output_path)
     explicit = owner()
     assert explicit["coverage"]["total"] == len(retained) + 1
-    assert set(explicit["proposal"]["work_postimages"]) == {"src/.tool-cache/output.bin"}
+    assert set(explicit["proposal"]["work_postimages"]) == {output_path}
     output.unlink()
-    assert owner()["proposal"]["work_postimages"]["src/.tool-cache/output.bin"]["status"] == "absent"
+    assert owner()["proposal"]["work_postimages"][output_path]["status"] == "absent"
     context["changed"].pop()
     assert owner()["status"] == "current"
 
@@ -918,6 +919,51 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
     assert crowded["status"] == "scope-observation-required"
     assert "4096" in crowded["reason"] and "narrow" in crowded["reason"]
     assert relations[".agentic-workspace/instructions/other.md"]["status"] == "current"
+
+
+@pytest.mark.parametrize("case", ["excluded-root", "submodule"])
+def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared_core_binary, native_cli, case):
+    from tests.test_native_public_cli import pin_instructions
+
+    context = repository(tmp_path)
+    pattern = "src/cache/*.pyc" if case == "excluded-root" else "src/*.rs"
+    rule = tmp_path / ".agentic-workspace/instructions/feature.md"
+    rule.write_text(
+        f"---\npaths: [{pattern}]\ngoverned_by: [docs/guide.md]\n"
+        "reconcile_exclude: [src/cache]\n---\nReview the inferred scope.\n"
+    )
+    cache = tmp_path / "src/cache"
+    cache.mkdir()
+    changed = "src/cache/user-selected.pyc" if case == "excluded-root" else "src/current.rs"
+    (tmp_path / changed).write_text("explicit source")
+    context["changed"] = [changed]
+    pin = pin_instructions(tmp_path)
+    git = ["git", "-C", str(tmp_path)]
+    if case == "submodule":
+        (cache / "vendor").mkdir()
+        (cache / "vendor/lib.rs").write_text("potential governed source")
+        subprocess.run(
+            [*git, "update-index", "--add", "--cacheinfo", f"160000,{pin},src/cache/vendor"],
+            check=True,
+            capture_output=True,
+        )
+    else:
+        for number in range(4097):
+            (cache / f"output-{number:04}.pyc").write_bytes(b"cache")
+        # An unrelated part of the index exceeds the observer's byte limit.
+        # The reconciliation rule only needs tracked paths from src.
+        blob = subprocess.check_output([*git, "rev-parse", "HEAD:src/feature.txt"], text=True).strip()
+        prefix = "unrelated/" + ("x" * 200 + "/") * 16
+        entries = "".join(f"100644 {blob}\t{prefix}{index:04}\n" for index in range(2700))
+        subprocess.run([*git, "update-index", "--index-info"], input=entries.encode(), check=True, capture_output=True)
+        assert len(subprocess.check_output([*git, "ls-files", "--stage", "-z"])) > 8 * 1024 * 1024
+
+    result = consume("json", shared_core_binary, native_cli, context)["verification"]["source_reconciliation"]
+    if case == "submodule":
+        assert result["status"] == "scope-observation-required"
+        assert "src/cache/vendor" in result["reason"] and not result["requests"]
+    else:
+        assert set(result["proposal"]["work_postimages"]) == {changed}
 
 
 def test_current_group_projection_ignores_history_and_preserves_missing_evidence(tmp_path, shared_core_binary, native_cli):

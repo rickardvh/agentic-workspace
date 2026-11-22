@@ -1358,7 +1358,6 @@ fn resolve_selected(
             &contract,
             verification_request(crate::native_source_reconciliation::REQUEST),
             crate::native_source_reconciliation::Context {
-                subject,
                 changed: &input.changed,
                 executing: executing
                     && input.invocation.as_ref().is_some_and(|i| {

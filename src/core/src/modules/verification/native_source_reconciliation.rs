@@ -7,7 +7,7 @@ use cap_std::{
 };
 use serde_json::{Value, json};
 use std::{
-    cell::{OnceCell, RefCell},
+    cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     io::Write,
     path::Path,
@@ -113,7 +113,68 @@ fn private_scope(path: &str) -> bool {
             })
 }
 
-fn tracked_paths(target: &Path) -> Result<Vec<String>, CoreError> {
+fn discovery_root(pattern: &str) -> Option<&str> {
+    let prefix = pattern.split(['*', '?', '[']).next().unwrap();
+    (prefix != pattern).then(|| prefix.rsplit_once('/').map_or("", |(dir, _)| dir))
+}
+
+fn index_scope(patterns: &[String]) -> BTreeSet<&str> {
+    // The first component keeps ancestors of a discovery root visible, even
+    // when the root starts under a gitlink and Git indexes only the gitlink.
+    let scope: BTreeSet<_> = patterns
+        .iter()
+        .filter_map(|pattern| discovery_root(pattern))
+        .map(|dir| dir.split('/').next().unwrap())
+        .collect();
+    if scope.contains("") {
+        BTreeSet::from([""])
+    } else {
+        scope
+    }
+}
+
+fn within(path: &str, directory: &str) -> bool {
+    #[cfg(windows)]
+    let (path, directory) = (&*path.to_lowercase(), &*directory.to_lowercase());
+    directory.is_empty()
+        || path == directory
+        || path
+            .strip_prefix(directory)
+            .is_some_and(|tail| tail.starts_with('/'))
+}
+
+struct IndexedPath {
+    path: String,
+    gitlink: bool,
+}
+
+fn tracked_paths(target: &Path, scope: &BTreeSet<&str>) -> Result<Vec<IndexedPath>, CoreError> {
+    let failure = |reason: &str| {
+        err(format!(
+            "source reconciliation cannot apply reconcile_exclude without a bounded observation of tracked paths ({reason}). Restore Git index observation or narrow this relation's declared discovery scope before retrying."
+        ))
+    };
+    let pathspecs = if scope.contains("") {
+        Vec::new()
+    } else {
+        let magic = if cfg!(windows) {
+            ":(literal,icase)"
+        } else {
+            ":(literal)"
+        };
+        scope
+            .iter()
+            .map(|root| format!("{magic}{root}"))
+            .collect::<Vec<_>>()
+    };
+    if pathspecs
+        .iter()
+        .map(|path| path.encode_utf16().count() + 3)
+        .sum::<usize>()
+        > 12_000
+    {
+        return Err(failure("Git pathspec bound exceeded"));
+    }
     let mut command = Command::new("git");
     command
         .arg("-C")
@@ -122,20 +183,20 @@ fn tracked_paths(target: &Path) -> Result<Vec<String>, CoreError> {
             "-c",
             "core.fsmonitor=false",
             "ls-files",
-            "--cached",
+            "--stage",
             "-z",
             "--",
         ])
+        .args(pathspecs)
         .env("GIT_OPTIONAL_LOCKS", "0")
+        .env("GIT_LITERAL_PATHSPECS", "0")
+        .env("GIT_GLOB_PATHSPECS", "0")
+        .env("GIT_NOGLOB_PATHSPECS", "0")
+        .env("GIT_ICASE_PATHSPECS", "0")
         .env_remove("GIT_INDEX_FILE")
         .env_remove("GIT_DIR")
         .env_remove("GIT_COMMON_DIR")
         .env_remove("GIT_WORK_TREE");
-    let failure = |reason: &str| {
-        err(format!(
-            "source reconciliation cannot apply reconcile_exclude without a bounded observation of tracked paths ({reason}). Restore Git index observation or revise this relation's declared exclusions before retrying."
-        ))
-    };
     let (status, output) = crate::native_verification::bounded_git_output_with_limit(
         &mut command,
         Duration::from_secs(5),
@@ -146,14 +207,44 @@ fn tracked_paths(target: &Path) -> Result<Vec<String>, CoreError> {
         return Err(failure("git ls-files failed"));
     }
     let output = std::str::from_utf8(&output).map_err(|_| failure("non-UTF-8 index path"))?;
-    Ok(output.split_terminator('\0').map(str::to_owned).collect())
+    let mut paths = BTreeMap::new();
+    for row in output.split_terminator('\0') {
+        let (header, path) = row
+            .split_once('\t')
+            .ok_or_else(|| failure("invalid index entry"))?;
+        let gitlink = header.starts_with("160000 ");
+        paths
+            .entry(path.to_owned())
+            .and_modify(|value| *value |= gitlink)
+            .or_insert(gitlink);
+    }
+    Ok(paths
+        .into_iter()
+        .map(|(path, gitlink)| IndexedPath { path, gitlink })
+        .collect())
+}
+
+fn subtree_intersects(path: &str, patterns: &[String]) -> bool {
+    let mut prefix = String::new();
+    for character in path.chars() {
+        match character {
+            '*' => prefix.push_str("[*]"),
+            '?' => prefix.push_str("[?]"),
+            '[' => prefix.push_str("[[]"),
+            other => prefix.push(other),
+        }
+    }
+    prefix.push_str("/*");
+    patterns
+        .iter()
+        .any(|pattern| crate::instruction_applicability::patterns_overlap(pattern, &prefix))
 }
 
 fn discover_scope(
     root: &Dir,
     patterns: &[String],
     exclusions: &[String],
-    tracked: &[String],
+    tracked: &[IndexedPath],
     explicit: &[String],
 ) -> Result<BTreeSet<String>, CoreError> {
     const ENTRY_LIMIT: usize = 4096;
@@ -170,20 +261,38 @@ fn discover_scope(
     let mut visited = BTreeSet::new();
     let mut pending = Vec::new();
     for pattern in patterns {
-        let prefix = pattern.split(['*', '?', '[']).next().unwrap();
-        if prefix == pattern {
-            crate::decision_source::relative(prefix)?;
-            paths.insert(prefix.to_owned());
-        } else {
-            let directory = prefix.rsplit_once('/').map(|(p, _)| p).unwrap_or("");
+        if let Some(directory) = discovery_root(pattern) {
             pending.push(directory.to_owned());
+        } else {
+            crate::decision_source::relative(pattern)?;
+            paths.insert(pattern.clone());
         }
     }
     let mut count = 0;
     // Recover tracked files directly from the index when we prune an output
     // tree. Walking to find them would count all of the incidental output too.
-    for path in tracked {
-        if private_scope(path) || !excluded(path, exclusions) || !matches_scope(patterns, path) {
+    for IndexedPath { path, gitlink } in tracked {
+        if private_scope(path) {
+            continue;
+        }
+        let pruned = excluded(path, exclusions);
+        if *gitlink
+            && subtree_intersects(path, patterns)
+            && (pruned || subtree_intersects(path, exclusions))
+        {
+            return Err(err(format!(
+                "source reconciliation cannot apply exclusions across tracked submodule {path}; revise reconcile_exclude to preserve governed sources inside it"
+            )));
+        }
+        if !pruned {
+            continue;
+        }
+        let matched = matches_scope(patterns, path);
+        if !matched
+            && !pending
+                .iter()
+                .any(|root| within(path, root) || within(root, path))
+        {
             continue;
         }
         crate::decision_source::relative(path)?;
@@ -197,9 +306,10 @@ fn discover_scope(
                     "source reconciliation exclusion would prune tracked directory {path}; revise reconcile_exclude"
                 )));
             }
-            Ok(_) => {
+            Ok(_) if matched => {
                 paths.insert(path.clone());
             }
+            Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => return Err(err(error)),
         }
@@ -207,7 +317,7 @@ fn discover_scope(
     // The caller may explicitly name a matching ignored file, including a
     // deletion. Exclusions only apply to what the discovery walk infers.
     for path in explicit {
-        if !path.contains(['*', '?', '[', ']'])
+        if !path.contains(['*', '?', '['])
             && !private_scope(path)
             && excluded(path, exclusions)
             && matches_scope(patterns, path)
@@ -227,6 +337,9 @@ fn discover_scope(
                 &format!("{directory}/.aw-scope-confinement"),
                 crate::dependency_binding::MAX_OBSERVATION_BYTES,
             )?;
+            if excluded(&directory, exclusions) {
+                continue;
+            }
         }
         let entries = match root.read_dir(if directory.is_empty() {
             "."
@@ -474,7 +587,6 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
 
 #[derive(Clone, Copy)]
 pub(crate) struct Context<'a> {
-    pub subject: Option<&'a Value>,
     pub changed: &'a [String],
     pub executing: bool,
 }
@@ -482,7 +594,7 @@ pub(crate) struct Context<'a> {
 #[derive(Default)]
 struct Observations {
     sources: RefCell<BTreeMap<String, Value>>,
-    tracked: OnceCell<Result<Vec<String>, CoreError>>,
+    tracked: RefCell<BTreeMap<BTreeSet<String>, Result<Vec<IndexedPath>, CoreError>>>,
 }
 
 pub(crate) fn view(
@@ -638,12 +750,20 @@ fn relation_view(
         } else {
             &patterns[..]
         };
-        let discovered = if excluded.is_empty() {
+        let tracked_scope = index_scope(patterns);
+        let discovered = if excluded.is_empty() || tracked_scope.is_empty() {
             scope_files(&root, patterns)
         } else {
             observed
                 .tracked
-                .get_or_init(|| tracked_paths(target))
+                .borrow_mut()
+                .entry(
+                    tracked_scope
+                        .iter()
+                        .map(|root| (*root).to_owned())
+                        .collect(),
+                )
+                .or_insert_with(|| tracked_paths(target, &tracked_scope))
                 .as_ref()
                 .map_err(Clone::clone)
                 .and_then(|tracked| {
