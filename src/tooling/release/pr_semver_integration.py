@@ -25,7 +25,9 @@ ADMISSION_FILE = "semver-admission.json"
 MAX_ARTIFACT_BYTES = 1024 * 1024
 WINDOWS_MODE_INPUTS = {
     "src/core/src/modules/verification/proof_executor.rs",
+    "src/core/src/modules/verification/native_proof.rs",
     "src/core/src/modules/verification/native_verification.rs",
+    "tests/test_native_proof_producer.py",
     "Cargo.toml",
     "Cargo.lock",
     "src/core/Cargo.toml",
