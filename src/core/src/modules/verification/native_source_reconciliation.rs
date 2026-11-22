@@ -7,10 +7,12 @@ use cap_std::{
 };
 use serde_json::{Value, json};
 use std::{
-    cell::RefCell,
+    cell::{OnceCell, RefCell},
     collections::{BTreeMap, BTreeSet},
     io::Write,
     path::Path,
+    process::Command,
+    time::Duration,
 };
 
 pub(crate) const REQUEST: &str = "verification/reconcile-sources/v1";
@@ -85,7 +87,85 @@ fn observe(
 // Reobserve the applicable declared path set, including newly created files.
 // No prior AW event stream or comprehensive caller change list is freshness.
 pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<String>, CoreError> {
+    discover_scope(root, patterns, &[], &[], &[])
+}
+
+fn excluded(path: &str, exclusions: &[String]) -> bool {
+    std::iter::successors(Some(path), |path| path.rsplit_once('/').map(|(dir, _)| dir))
+        .any(|path| matches_scope(exclusions, path))
+}
+
+fn matches_scope(patterns: &[String], path: &str) -> bool {
+    patterns
+        .iter()
+        .any(|pattern| crate::native_verification::matches(pattern, path))
+}
+
+fn private_scope(path: &str) -> bool {
+    path.split('/').any(|part| part == ".git")
+        || [".agentic-workspace/local", ".agentic-workspace/proof"]
+            .iter()
+            .any(|prefix| {
+                path == *prefix
+                    || path
+                        .strip_prefix(prefix)
+                        .is_some_and(|p| p.starts_with('/'))
+            })
+}
+
+fn tracked_paths(target: &Path) -> Result<Vec<String>, CoreError> {
+    let mut command = Command::new("git");
+    command
+        .arg("-C")
+        .arg(target)
+        .args([
+            "-c",
+            "core.fsmonitor=false",
+            "ls-files",
+            "--cached",
+            "-z",
+            "--",
+        ])
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_COMMON_DIR")
+        .env_remove("GIT_WORK_TREE");
+    let failure = |reason: &str| {
+        err(format!(
+            "source reconciliation cannot apply reconcile_exclude without a bounded observation of tracked paths ({reason}). Restore Git index observation or revise this relation's declared exclusions before retrying."
+        ))
+    };
+    let (status, output) = crate::native_verification::bounded_git_output_with_limit(
+        &mut command,
+        Duration::from_secs(5),
+        8 * 1024 * 1024,
+    )
+    .map_err(|reason| failure(&reason))?;
+    if !status.success() {
+        return Err(failure("git ls-files failed"));
+    }
+    let output = std::str::from_utf8(&output).map_err(|_| failure("non-UTF-8 index path"))?;
+    Ok(output.split_terminator('\0').map(str::to_owned).collect())
+}
+
+fn discover_scope(
+    root: &Dir,
+    patterns: &[String],
+    exclusions: &[String],
+    tracked: &[String],
+    explicit: &[String],
+) -> Result<BTreeSet<String>, CoreError> {
     const ENTRY_LIMIT: usize = 4096;
+    let over_budget = |directory: &str| {
+        err(format!(
+            "source reconciliation scope exceeds bounded discovery: limit {ENTRY_LIMIT} directory entries, \
+             directory {directory:?}, patterns {:?} ({} total). No complete scope was produced; \
+             narrow the owner's declared discovery scope. No larger-budget override is supported.",
+            &patterns[..patterns.len().min(8)],
+            patterns.len()
+        ))
+    };
     let mut paths = BTreeSet::new();
     let mut visited = BTreeSet::new();
     let mut pending = Vec::new();
@@ -100,6 +180,41 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
         }
     }
     let mut count = 0;
+    // Recover tracked files directly from the index when we prune an output
+    // tree. Walking to find them would count all of the incidental output too.
+    for path in tracked {
+        if private_scope(path) || !excluded(path, exclusions) || !matches_scope(patterns, path) {
+            continue;
+        }
+        crate::decision_source::relative(path)?;
+        count += 1;
+        if count > ENTRY_LIMIT {
+            return Err(over_budget(path));
+        }
+        match root.symlink_metadata(path) {
+            Ok(metadata) if metadata.is_dir() => {
+                return Err(err(format!(
+                    "source reconciliation exclusion would prune tracked directory {path}; revise reconcile_exclude"
+                )));
+            }
+            Ok(_) => {
+                paths.insert(path.clone());
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(err(error)),
+        }
+    }
+    // The caller may explicitly name a matching ignored file, including a
+    // deletion. Exclusions only apply to what the discovery walk infers.
+    for path in explicit {
+        if !path.contains(['*', '?', '[', ']'])
+            && !private_scope(path)
+            && excluded(path, exclusions)
+            && matches_scope(patterns, path)
+        {
+            paths.insert(path.clone());
+        }
+    }
     while let Some(directory) = pending.pop() {
         if !visited.insert(directory.clone()) {
             continue;
@@ -125,51 +240,31 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
         for entry in entries {
             count += 1;
             if count > ENTRY_LIMIT {
-                return Err(err(format!(
-                    "source reconciliation scope exceeds bounded discovery: limit {ENTRY_LIMIT} directory entries, \
-                     directory {directory:?}, patterns {:?} ({} total). No complete scope was produced; \
-                     narrow the owner's declared discovery scope. No larger-budget override is supported.",
-                    &patterns[..patterns.len().min(8)],
-                    patterns.len()
-                )));
+                return Err(over_budget(&directory));
             }
             let entry = entry.map_err(err)?;
             let name = entry
                 .file_name()
                 .into_string()
                 .map_err(|_| err("scope filename must be UTF-8"))?;
-            if name == ".git" {
-                continue;
-            }
             let path = if directory.is_empty() {
                 name
             } else {
                 format!("{directory}/{name}")
             };
-            if path.starts_with(".agentic-workspace/local/")
-                || path == ".agentic-workspace/local"
-                || path.starts_with(".agentic-workspace/proof/")
-                || path == ".agentic-workspace/proof"
-            {
+            if private_scope(&path) {
                 continue;
             }
             let meta = root.symlink_metadata(&path).map_err(err)?;
-            #[cfg(windows)]
-            let linked = {
-                use cap_std::fs::MetadataExt;
-                meta.file_attributes() & 0x400 != 0
-            };
-            #[cfg(not(windows))]
-            let linked = meta.is_symlink();
-            if linked {
+            if crate::native_routes::linked(&meta) {
                 return Err(err("source reconciliation cannot traverse a linked scope"));
+            }
+            if matches_scope(exclusions, &path) {
+                continue;
             }
             if meta.is_dir() {
                 pending.push(path);
-            } else if patterns
-                .iter()
-                .any(|p| crate::native_verification::matches(p, &path))
-            {
+            } else if matches_scope(patterns, &path) {
                 paths.insert(path);
             }
         }
@@ -380,7 +475,14 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
 #[derive(Clone, Copy)]
 pub(crate) struct Context<'a> {
     pub subject: Option<&'a Value>,
+    pub changed: &'a [String],
     pub executing: bool,
+}
+
+#[derive(Default)]
+struct Observations {
+    sources: RefCell<BTreeMap<String, Value>>,
+    tracked: OnceCell<Result<Vec<String>, CoreError>>,
 }
 
 pub(crate) fn view(
@@ -392,7 +494,7 @@ pub(crate) fn view(
     request: Option<&Value>,
     context: Context<'_>,
 ) -> Result<Value, CoreError> {
-    let observations = RefCell::new(BTreeMap::new());
+    let observations = Observations::default();
     let mut relations = Vec::new();
     let mut ordinary = instructions.clone();
     ordinary["sources"] = json!(
@@ -474,7 +576,7 @@ pub(crate) fn view(
     }
     output["relations"] = json!(outputs.iter().map(|v| {
         let mut relation = json!({"relation_id":v["relation_id"],"status":v["status"],"coverage":v["coverage"],"obligations":v["obligations"]});
-        for field in ["reason", "unavailable_sources"] {
+        for field in ["reason", "unavailable_sources", "discovery_exclusions"] {
             if let Some(value) = v.get(field) { relation[field] = value.clone(); }
         }
         relation
@@ -485,17 +587,19 @@ pub(crate) fn view(
 fn relation_view(
     target: &Path,
     work: &Value,
-    inputs: (&Value, &RefCell<BTreeMap<String, Value>>),
+    inputs: (&Value, &Observations),
     configuration: &Value,
     contract: &Value,
     request: Option<&Value>,
     context: Context<'_>,
 ) -> Result<Value, CoreError> {
-    let (instructions, observations) = inputs;
+    let (instructions, observed) = inputs;
+    let observations = &observed.sources;
     let mut view = json!({"status":"not-required","obligations":[],"requests":[],"action":null,"decisions":[]});
     let mut sources = BTreeMap::new();
     let mut dependencies = BTreeMap::new();
     let mut declarations = Vec::new();
+    let mut exclusions = BTreeSet::new();
     let mut scope = BTreeSet::new();
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for row in instructions["sources"].as_array().into_iter().flatten() {
@@ -515,19 +619,38 @@ fn relation_view(
         // Admission is checked afresh; its transport (for example a Git
         // commit pointer) is not semantic evidence. The exact declaration
         // content below binds its requirements and authority.
-        declarations.push(json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"relation_kind":row["relation_kind"],"sources":refs,"paths":row["metadata"]["paths"]}));
+        let mut declaration = json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"relation_kind":row["relation_kind"],"sources":refs,"paths":row["metadata"]["paths"]});
+        let excluded = if row["binding_admission"]["status"] == "current" {
+            strings(&row["metadata"]["reconcile_exclude"])
+        } else {
+            Vec::new()
+        };
+        if !excluded.is_empty() {
+            declaration["reconcile_exclude"] = json!(excluded);
+            exclusions.extend(excluded.iter().cloned());
+        }
+        declarations.push(declaration);
         let patterns = strings(&row["metadata"]["paths"]);
         let global = ["**".to_owned()];
-        let observed = scope_files(
-            &root,
-            if patterns.is_empty() {
-                // Global really means global, including discovery after opaque entry.
-                &global
-            } else {
-                &patterns
-            },
-        );
-        match observed {
+        // Global really means global, including discovery after opaque entry.
+        let patterns = if patterns.is_empty() {
+            &global[..]
+        } else {
+            &patterns[..]
+        };
+        let discovered = if excluded.is_empty() {
+            scope_files(&root, patterns)
+        } else {
+            observed
+                .tracked
+                .get_or_init(|| tracked_paths(target))
+                .as_ref()
+                .map_err(Clone::clone)
+                .and_then(|tracked| {
+                    discover_scope(&root, patterns, &excluded, tracked, context.changed)
+                })
+        };
+        match discovered {
             Ok(paths) => scope.extend(paths),
             Err(error) => {
                 if request.is_some() {
@@ -536,6 +659,9 @@ fn relation_view(
                 view["status"] = json!("scope-observation-required");
                 view["obligations"] = json!(sources.keys().collect::<Vec<_>>());
                 view["reason"] = json!(error.to_string());
+                if !exclusions.is_empty() {
+                    view["discovery_exclusions"] = json!(exclusions);
+                }
                 return Ok(view);
             }
         }
@@ -613,19 +739,23 @@ fn relation_view(
         .unwrap()
     });
     binding["producer_revision"] = json!(&*PRODUCER);
-    grouped_view(
+    let mut result = grouped_view(
         Inputs {
             target,
             work,
             instructions,
-            observations,
+            observations: observed,
             configuration,
             contract,
         },
         request,
         context,
         binding,
-    )
+    )?;
+    if !exclusions.is_empty() {
+        result["discovery_exclusions"] = json!(exclusions);
+    }
+    Ok(result)
 }
 
 fn bind_authority(binding: &mut Value, configuration: &Value) {
@@ -663,7 +793,7 @@ struct Inputs<'a> {
     target: &'a Path,
     work: &'a Value,
     instructions: &'a Value,
-    observations: &'a RefCell<BTreeMap<String, Value>>,
+    observations: &'a Observations,
     configuration: &'a Value,
     contract: &'a Value,
 }
@@ -962,7 +1092,7 @@ fn group_view(
         configuration,
         contract,
     } = inputs;
-    let Context { subject, executing } = context;
+    let executing = context.executing;
     let sources = binding["sources"].as_object().unwrap();
     let mut view = json!({"status":"unassessed","obligations":sources.keys().collect::<Vec<_>>(),"requests":[],"action":null,"decisions":[]});
     let revision = digest(&binding)?;
@@ -1140,7 +1270,7 @@ fn group_view(
                     configuration,
                     contract,
                     Some(&authorized),
-                    Context { subject, executing },
+                    context,
                 );
             }
             view["status"] = json!("bounded-domain-judgment-required");

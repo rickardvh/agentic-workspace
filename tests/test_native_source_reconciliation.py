@@ -845,6 +845,81 @@ def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
 
 
+def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_public_cli import pin_instructions
+
+    context = repository(tmp_path)
+    rules = tmp_path / ".agentic-workspace/instructions"
+    (rules / "feature.md").write_text(
+        "---\npaths: [src/**, src/.tool-cache/explicit.bin]\n"
+        "governed_by: [docs/guide.md]\n"
+        "reconcile_exclude: [src/__pycache__, src/.tool-cache]\n"
+        "---\nReview the feature sources.\n"
+    )
+    (rules / "other.md").write_text(
+        "---\npaths: [other/**]\ngoverned_by: [docs/context.md]\n---\nReview separate work.\n"
+    )
+    (tmp_path / ".gitignore").write_text("__pycache__/\n.tool-cache/\ngenerated.txt\n")
+    for directory in ["src/__pycache__", "src/.tool-cache", "other"]:
+        (tmp_path / directory).mkdir()
+    retained = {
+        "src/feature.txt",
+        "src/__pycache__/tracked.txt",
+        "src/.tool-cache/explicit.bin",
+        "src/generated.txt",
+    }
+    for path in retained | {"other/main.txt", "src/.tool-cache/output.bin"}:
+        (tmp_path / path).write_text("fixture source or output")
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run([*git, "add", "-f", "src/__pycache__/tracked.txt"], check=True, capture_output=True)
+    pin_instructions(tmp_path)
+    context["changed"] = ["src/feature.txt", "other/main.txt"]
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    def owner():
+        return call()["verification"]["source_reconciliation"]
+
+    first = owner()
+    assert set(first["proposal"]["work_postimages"]) == retained
+    assert set(first["discovery_exclusions"]) == {"src/__pycache__", "src/.tool-cache"}
+    for _ in range(2):
+        action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+        assert call({"invocation": action})["status"] == "applied"
+    assert owner()["status"] == "current"
+
+    for index in range(4097):
+        (tmp_path / f"src/__pycache__/generated-{index:04}.pyc").write_bytes(b"cache")
+    (tmp_path / "src/__pycache__/generated-0000.pyc").write_bytes(b"changed cache")
+    output = tmp_path / "src/.tool-cache/output.bin"
+    output.write_bytes(b"changed tool output")
+    assert all(relation["status"] == "current" for relation in owner()["relations"])
+
+    context["changed"].append("src/.tool-cache/output.bin")
+    explicit = owner()
+    assert explicit["coverage"]["total"] == len(retained) + 1
+    assert set(explicit["proposal"]["work_postimages"]) == {"src/.tool-cache/output.bin"}
+    output.unlink()
+    assert owner()["proposal"]["work_postimages"]["src/.tool-cache/output.bin"]["status"] == "absent"
+    context["changed"].pop()
+    assert owner()["status"] == "current"
+
+    (tmp_path / "src/generated.txt").write_text("changed intentional generated source")
+    changed = owner()
+    assert changed["status"] != "current"
+    assert changed["coverage"]["total"] == len(retained)
+    assert "src/generated.txt" in changed["proposal"]["work_postimages"]
+
+    for index in range(4097):
+        (tmp_path / f"src/in-scope-{index:04}.txt").write_text("governed source")
+    relations = {relation["relation_id"]: relation for relation in owner()["relations"]}
+    crowded = relations[".agentic-workspace/instructions/feature.md"]
+    assert crowded["status"] == "scope-observation-required"
+    assert "4096" in crowded["reason"] and "narrow" in crowded["reason"]
+    assert relations[".agentic-workspace/instructions/other.md"]["status"] == "current"
+
+
 def test_current_group_projection_ignores_history_and_preserves_missing_evidence(tmp_path, shared_core_binary, native_cli):
     import json
 

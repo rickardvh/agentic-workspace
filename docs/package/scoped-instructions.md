@@ -46,6 +46,11 @@ of the affected adapters. When the contract changes, inspect the returned groups
 until every current consumer is covered. An adapter that is still correct needs
 no artificial edit. `read` alone supplies context without that obligation.
 
+If a broad scope also contains disposable output, add `reconcile_exclude` to
+the admitted rule and name the files or directories to skip during discovery.
+Tracked files and exact inputs remain in scope, and Git ignore rules alone leave
+source membership unchanged.
+
 Inspect matching and unrelated work after publication. The matching work should
 receive the rule and its applicable requirements; unrelated work should not.
 A successful write does not prove consistency, run a declared check or show that
@@ -54,8 +59,7 @@ an agent followed the rule.
 ## Look up syntax and maintain the rule
 
 The installed [Markdown reference](../../.agentic-workspace/skills/workspace-instruction-authoring/references/format.md)
-defines all eight supported fields: `paths`, `routes`, `read`, `governed_by`,
-`reconcile`, `use`, `checks` and `protect`. It explains their combinations, exact
+defines the supported fields, including `reconcile_exclude`. It explains their combinations, exact
 list/check forms and limits. This is constrained front matter, not arbitrary YAML.
 Add only the consequences the requested rule needs; name the repository's actual
 checks and governing sources.

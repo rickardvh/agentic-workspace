@@ -15,7 +15,7 @@ bytes; its source argument is at most 256 characters.
 Without front matter, the entire Markdown body is global guidance. It does not
 automatically become enforced policy. Optional front matter starts on the first
 line with exactly `---` and ends with another line containing exactly `---`.
-Only the eight fields below are supported, each at most once. Blank lines and
+Only the fields below are supported, each at most once. Blank lines and
 whole-line comments starting with `#` are accepted within front matter.
 
 Each field takes an inline comma-separated list, or a block list:
@@ -70,6 +70,7 @@ be narrowly scoped. Neither placement grants additional authority.
 | `read` | Deliver named repository resources as context for matching work. Reading alone creates no governance or proof obligation. |
 | `governed_by` | Name governing files once and deliver their context. Verification requires current coverage of the instruction's consumer scope; source changes require reconsideration, not automatic consumer edits. |
 | `reconcile` | Require a current Verification judgement of resulting work against named sources. Do not duplicate their policy or rewrite every consumer merely to record a judgement. |
+| `reconcile_exclude` | Exclude disposable files or directory trees from inferred reconciliation for this rule. Applicable tracked files, exact `paths` and explicitly named changed files remain in scope. |
 | `use` | Prefer an existing skill resolved by its registered skill identifier or exact semantic route (optionally prefixed with `skill:`). An unresolved skill is a gap; preference is not execution, mandatory selection or permission. |
 | `checks` | Require current evidence for the repository's real commands or declared requirements through Verification. Declaration is not execution or successful evidence. |
 | `protect` | Restrict affected writes matching repository-relative patterns through current authority. It grants no writes elsewhere and does not promise a host-wide sandbox. |
@@ -81,6 +82,16 @@ additionally require exact canonical relative file references: no glob character
 The parser's acceptance of a `read` entry is not proof that its resource resolves;
 inspect returned context and diagnostics. Use exact file references for ordinary
 context. `protect` uses the same pattern matching as `paths`.
+
+Use `reconcile_exclude` on an admitted `reconcile` or `governed_by` rule when
+its broad path scope contains disposable output. The exclusions use the same
+repository-relative matching as `paths`, with canonical path components.
+Match the directory itself to avoid walking its contents. For example, with
+`paths: [src/**]`, use
+`reconcile_exclude: [src/__pycache__, src/*/__pycache__, src/.tool-cache]`.
+Git ignore rules alone leave source membership unchanged. Retain intentional
+generated source outside the exclusion or name it in an exact path. Verification
+requires a bounded Git index read to preserve tracked files in excluded trees.
 
 For `checks`, inline or block strings name requirements; `requirement:<id>` refers
 to a real repository Verification declaration. Only a block entry beginning with
