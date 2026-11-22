@@ -94,6 +94,9 @@ generated source outside the exclusion or name it in an exact path. Verification
 requires a bounded Git index read to preserve tracked files in excluded trees.
 For tracked submodules, Verification retains ordinary confined discovery of
 matching source even when an exclusion matches the submodule or its ancestors.
+An exclusion encountered inside a tracked submodule blocks that relation with
+its exact path. Narrow the parent rule to intended source paths or reconcile
+the submodule as its own workspace, whose Git index can identify tracked files.
 
 For `checks`, inline or block strings name requirements; `requirement:<id>` refers
 to a real repository Verification declaration. Only a block entry beginning with

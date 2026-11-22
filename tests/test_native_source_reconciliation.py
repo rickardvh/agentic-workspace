@@ -921,7 +921,9 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
     assert relations[".agentic-workspace/instructions/other.md"]["status"] == "current"
 
 
-@pytest.mark.parametrize("case", ["excluded-root", "submodule", "submodule-root", "disjoint-submodule"])
+@pytest.mark.parametrize(
+    "case", ["excluded-root", "submodule", "submodule-root", "disjoint-submodule", "nested-exclusion"]
+)
 def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared_core_binary, native_cli, case):
     from tests.test_native_public_cli import pin_instructions
 
@@ -934,6 +936,11 @@ def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared
             "src/cache/vendor/api/**, src/service/**",
             "src/cache/vendor/scratch, src/service/cache",
             "src/service/current.rs",
+        ),
+        "nested-exclusion": (
+            "src/cache/vendor/**",
+            "src/cache/vendor/__pycache__",
+            "src/cache/vendor/api/current.rs",
         ),
     }[case]
     rule = tmp_path / ".agentic-workspace/instructions/feature.md"
@@ -958,6 +965,10 @@ def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared
             check=True,
             capture_output=True,
         )
+        if case == "nested-exclusion":
+            output = tmp_path / "src/cache/vendor/__pycache__/output.pyc"
+            output.parent.mkdir()
+            output.write_bytes(b"cache")
     else:
         for number in range(4097):
             (changed_path.parent / f"output-{number:04}.pyc").write_bytes(b"cache")
@@ -970,7 +981,13 @@ def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared
         assert len(subprocess.check_output([*git, "ls-files", "--stage", "-z"])) > 8 * 1024 * 1024
 
     result = consume("json", shared_core_binary, native_cli, context)["verification"]["source_reconciliation"]
-    assert set(result["proposal"]["work_postimages"]) == expected
+    if case == "nested-exclusion":
+        assert result["status"] == "scope-observation-required"
+        assert not result["requests"]
+        assert "src/cache/vendor/__pycache__" in result["reason"]
+        assert "reconcile the submodule as its own workspace" in result["reason"]
+    else:
+        assert set(result["proposal"]["work_postimages"]) == expected
 
 
 def test_current_group_projection_ignores_history_and_preserves_missing_evidence(tmp_path, shared_core_binary, native_cli):

@@ -91,8 +91,33 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
 }
 
 fn excluded(path: &str, exclusions: &[String]) -> bool {
+    ancestors(path).any(|path| matches_scope(exclusions, path))
+}
+
+fn ancestors(path: &str) -> impl Iterator<Item = &str> {
     std::iter::successors(Some(path), |path| path.rsplit_once('/').map(|(dir, _)| dir))
-        .any(|path| matches_scope(exclusions, path))
+}
+
+fn prune_discovery(
+    path: &str,
+    exclusions: &[String],
+    submodule: Option<&str>,
+) -> Result<bool, CoreError> {
+    if exclusions.is_empty() {
+        return Ok(false);
+    }
+    let mut matches = ancestors(path).filter(|path| matches_scope(exclusions, path));
+    let Some(submodule) = submodule else {
+        return Ok(matches.next().is_some());
+    };
+    if let Some(nested) =
+        matches.find(|candidate| within(candidate, submodule) && !within(submodule, candidate))
+    {
+        return Err(err(format!(
+            "source reconciliation cannot apply reconcile_exclude to {nested} inside tracked submodule {submodule} from the enclosing Git index. Narrow this relation to the intended source paths, or reconcile the submodule as its own workspace."
+        )));
+    }
+    Ok(false)
 }
 
 fn matches_scope(patterns: &[String], path: &str) -> bool {
@@ -313,7 +338,8 @@ fn discover_scope(
         .filter(|entry| entry.gitlink && subtree_intersects(&entry.path, patterns))
         .map(|entry| entry.path.as_str())
         .collect();
-    let inside_submodule = |path: &str| submodules.iter().any(|root| within(path, root));
+    let containing_submodule =
+        |path: &str| submodules.iter().copied().find(|root| within(path, root));
     for &submodule in &submodules {
         if excluded(submodule, exclusions) && pending.iter().any(|root| within(submodule, root)) {
             pending.push(submodule.to_owned());
@@ -376,7 +402,7 @@ fn discover_scope(
                 &format!("{directory}/.aw-scope-confinement"),
                 crate::dependency_binding::MAX_OBSERVATION_BYTES,
             )?;
-            if excluded(&directory, exclusions) && !inside_submodule(&directory) {
+            if prune_discovery(&directory, exclusions, containing_submodule(&directory))? {
                 continue;
             }
         }
@@ -411,7 +437,7 @@ fn discover_scope(
             if crate::native_routes::linked(&meta) {
                 return Err(err("source reconciliation cannot traverse a linked scope"));
             }
-            if matches_scope(exclusions, &path) && !inside_submodule(&path) {
+            if prune_discovery(&path, exclusions, containing_submodule(&path))? {
                 continue;
             }
             if meta.is_dir() {
