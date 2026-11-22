@@ -876,6 +876,81 @@ def test_native_isolated_proof_preserves_executable_intent_and_mode_freshness(tm
     assert failed["value"]["process"]["status"] == "failed", failed
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows Git index-mode query budgets")
+def test_native_isolated_proof_selects_large_windows_source_or_reports_its_batch_limit(
+    tmp_path, shared_core_binary, native_cli, monkeypatch
+):
+    image = subprocess.run(
+        ["docker", "image", "inspect", "ubuntu:24.04", "--format", "{{.Id}}"],
+        capture_output=True,
+        text=True,
+    ) if shutil.which("docker") else None
+    if image is None or image.returncode:
+        if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
+            pytest.fail(image.stderr if image is not None else "Required Docker proof executor is unavailable")
+        pytest.skip("Docker executor integration requires the ubuntu:24.04 fixture image")
+
+    context = fixture(tmp_path)
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    base_manifest = (
+        manifest.read_text().split("commands=")[0]
+        + 'commands=["test -f a.txt"]\n'
+        + '[proof_routes.check.execution_prerequisites]\nsource_inputs=["a.txt"]\n'
+        + '[execution]\nkind="docker-readonly-source-v1"\nimage='
+        + json.dumps(image.stdout.strip())
+        + "\n"
+    )
+
+    def git(*args, **kwargs):
+        return subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True, **kwargs)
+
+    git("init", "-q")
+    blob = git("hash-object", "-w", "a.txt").stdout.decode("ascii").strip()
+    entries = [f"100644 {blob}\ta.txt\n"]
+    for scope, groups in [("required", 100), ("extra", 60)]:
+        for group in range(groups):
+            directory = tmp_path / "generated" / scope / f"{group:03d}"
+            directory.mkdir(parents=True)
+            for n in range(100):
+                path = directory / f"localization-catalog-{'message-' * 13}{n:03d}.json"
+                path.write_bytes(b"{}\n")
+                entries.append(f"100644 {blob}\t{path.relative_to(tmp_path).as_posix()}\n")
+    git("update-index", "--index-info", input="".join(entries).encode("ascii"))
+    index = tmp_path / ".git/index"
+    before = index.read_bytes()
+
+    def select(inputs):
+        manifest.write_text(base_manifest + "inputs=" + json.dumps(inputs) + "\n")
+        def call(extra):
+            return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+        request = call({})["verification"]["execution_requests"][0]
+        assert request["id"] == "verification/execute-selected/v1"
+        return call({"request": request})
+
+    trace = tmp_path / "git-trace.jsonl"
+    monkeypatch.setenv("GIT_TRACE2_EVENT", trace.as_posix())
+    selected = select(["a.txt", "generated/required"])
+    assert selected["verification"]["execution"]["status"] == "selected"
+    assert selected["decision_packet"]["primary_action"]["operation_id"] == "proof.report"
+    queries = [
+        event for line in trace.read_text(encoding="utf-8").splitlines()
+        if (event := json.loads(line))["event"] == "start"
+        and "ls-files" in event["argv"] and "--stage" in event["argv"]
+    ]
+    assert len(queries) > 1
+
+    refused = select(["a.txt", "generated"])
+    assert refused["verification"]["execution"]["status"] == "blocked"
+    recovery = refused["verification"]["execution"]["recovery"]
+    assert recovery["cause"] == "windows-index-mode-budget-exhausted"
+    assert recovery["diagnostic"] == "proof-snapshot-index-mode-batch-limit-exceeded"
+    assert "execution.inputs" in recovery["detail"]
+    assert not refused["decision_packet"]["primary_action"]
+    assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+    assert index.read_bytes() == before
+
+
 def test_native_missing_executor_is_a_capability_gap_not_a_human_choice(tmp_path, shared_core_binary, native_cli):
     context = fixture(tmp_path)
     manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
