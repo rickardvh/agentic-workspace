@@ -180,6 +180,7 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
         for checkout_present in (True, False):
             if not checkout_present:
                 dependency.rename(tmp_path / "dependency-away")
+                dependency.mkdir()
             assert not git("status", "--porcelain", "--untracked-files=no", "--ignore-submodules=none")
             for source in ("vendor/dependency/api/*.rs", "vendor/dependency/api/source.rs"):
                 dependency_scope = ["a.txt", source]
