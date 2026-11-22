@@ -48,6 +48,7 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     (src / "visible.rs").write_text("Visible selected input")
     (src / "sparse.rs").write_text("Sparse selected input")
     (src / "notes.md").write_text("Ignored by the selected pattern")
+    (src / "[id].tsx").write_text("Literal input whose name resembles a selector")
     git("add", "a.txt", "src", manifest.relative_to(tmp_path).as_posix())
     revision = commit("Exact reviewed subject")
 
@@ -138,9 +139,19 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     sparse_glob = call(changed=glob_scope, request=glob_request)["verification"]["manual_review"]
     assert sparse_glob["recording_status"] == "unavailable"
     assert sparse_glob["review_status"] == "currentness-unverified"
-    for filename in ("src/notes.md", "src/sparse.rs"):
+
+    literal_scope = ["a.txt", "src/[id].tsx"]
+    literal_request = call(changed=literal_scope)["verification"]["manual_review"]["request"]
+    literal_request["arguments"]["pull_request"] = pr
+    assert call(changed=literal_scope, request=literal_request)["verification"]["manual_review"]["review_status"] == "recorded-externally"
+    git("update-index", "--skip-worktree", "src/[id].tsx")
+    (src / "[id].tsx").unlink()
+    assert not git("status", "--porcelain", "--untracked-files=no")
+    sparse_literal = call(changed=literal_scope, request=literal_request)["verification"]["manual_review"]
+    assert sparse_literal["review_status"] == "currentness-unverified"
+    for filename in ("src/notes.md", "src/sparse.rs", "src/[id].tsx"):
         git("update-index", "--no-skip-worktree", filename)
-        git("restore", "--", filename)
+        git("restore", "--", f":(literal){filename}")
 
     conflict = call(request=report("rejected", 1))
     assert conflict["verification"]["manual_review"]["recording_status"] == "conflict"

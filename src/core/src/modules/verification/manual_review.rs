@@ -144,7 +144,7 @@ fn has_uncommitted_inputs(
             "Git could not compare the selected source paths with the index",
         ));
     }
-    let selected: BTreeSet<_> = paths.iter().map(|path| index_path(path)).collect();
+    let literal_selections: BTreeSet<_> = changed.iter().map(|path| index_path(path)).collect();
     let mut untracked = present.clone();
     for row in entries
         .split(|byte| *byte == 0)
@@ -155,7 +155,7 @@ fn has_uncommitted_inputs(
         };
         let path = std::str::from_utf8(path).map_err(err)?;
         let key = index_path(path);
-        if !selected.contains(&key)
+        if !literal_selections.contains(&key)
             && !changed
                 .iter()
                 .any(|selector| native_verification::matches(selector, path))
