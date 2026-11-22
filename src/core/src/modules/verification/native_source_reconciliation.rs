@@ -87,7 +87,14 @@ fn observe(
 // Reobserve the applicable declared path set, including newly created files.
 // No prior AW event stream or comprehensive caller change list is freshness.
 pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<String>, CoreError> {
-    discover_scope(root, patterns, &[], &[], &[])
+    discover_scope(root, patterns, &[], &[], &[], DiscoveryBudget::Traversal)
+}
+
+pub(crate) fn selected_scope_files(
+    root: &Dir,
+    patterns: &[String],
+) -> Result<BTreeSet<String>, CoreError> {
+    discover_scope(root, patterns, &[], &[], &[], DiscoveryBudget::Selection)
 }
 
 fn excluded(path: &str, exclusions: &[String]) -> bool {
@@ -174,7 +181,7 @@ struct IndexedPath {
     gitlink: bool,
 }
 
-fn index_queries(scope: &BTreeSet<&str>) -> Vec<Vec<String>> {
+pub(crate) fn index_queries(scope: &BTreeSet<&str>) -> Vec<Vec<String>> {
     if scope.contains("") {
         return vec![Vec::new()];
     }
@@ -290,7 +297,7 @@ fn tracked_paths(target: &Path, scope: &BTreeSet<&str>) -> Result<Vec<IndexedPat
         .collect())
 }
 
-fn subtree_intersects(path: &str, patterns: &[String]) -> bool {
+pub(crate) fn subtree_intersects(path: &str, patterns: &[String]) -> bool {
     let mut prefix = String::new();
     for character in path.chars() {
         match character {
@@ -306,15 +313,39 @@ fn subtree_intersects(path: &str, patterns: &[String]) -> bool {
         .any(|pattern| crate::instruction_applicability::patterns_overlap(pattern, &prefix))
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DiscoveryBudget {
+    Traversal,
+    Selection,
+}
+
 fn discover_scope(
     root: &Dir,
     patterns: &[String],
     exclusions: &[String],
     tracked: &[IndexedPath],
     explicit: &[String],
+    budget: DiscoveryBudget,
 ) -> Result<BTreeSet<String>, CoreError> {
     const ENTRY_LIMIT: usize = 4096;
+    const SELECTION_SCAN_LIMIT: usize = 65_536;
+    let check_selection = budget == DiscoveryBudget::Selection;
+    let walk_limit = if check_selection {
+        SELECTION_SCAN_LIMIT
+    } else {
+        ENTRY_LIMIT
+    };
+    let selection_over_budget = || {
+        err(format!(
+            "Selected checkout inputs exceed the {ENTRY_LIMIT} file limit. Narrow the changed paths to compare them with the reviewed commit."
+        ))
+    };
     let over_budget = |directory: &str| {
+        if check_selection {
+            return err(format!(
+                "Checkout observation exceeded its {walk_limit} entry scan bound at {directory:?}. Narrow the changed paths to compare them with the reviewed commit."
+            ));
+        }
         err(format!(
             "source reconciliation scope exceeds bounded discovery: limit {ENTRY_LIMIT} directory entries, \
              directory {directory:?}, patterns {:?} ({} total). No complete scope was produced; \
@@ -329,10 +360,22 @@ fn discover_scope(
     for pattern in patterns {
         if let Some(directory) = discovery_root(pattern) {
             pending.push(directory.to_owned());
+            if check_selection
+                && root
+                    .symlink_metadata(pattern)
+                    .is_ok_and(|meta| meta.is_file())
+            {
+                // A selector can also name a literal file such as [id].tsx.
+                crate::decision_source::relative(pattern)?;
+                paths.insert(pattern.clone());
+            }
         } else {
             crate::decision_source::relative(pattern)?;
             paths.insert(pattern.clone());
         }
+    }
+    if check_selection && paths.len() > ENTRY_LIMIT {
+        return Err(selection_over_budget());
     }
     // The enclosing index records a gitlink, not the submodule's files. Keep
     // ordinary confined discovery inside that tracked tree. If pruning hides
@@ -430,7 +473,7 @@ fn discover_scope(
         };
         for entry in entries {
             count += 1;
-            if count > ENTRY_LIMIT {
+            if count > walk_limit {
                 return Err(over_budget(&directory));
             }
             let entry = entry.map_err(err)?;
@@ -451,18 +494,23 @@ fn discover_scope(
                 return Err(err("source reconciliation cannot traverse a linked scope"));
             }
             if meta.is_dir() {
-                if !prune_discovery(
-                    &path,
-                    exclusions,
-                    containing_submodule(&path),
-                    Some(patterns),
-                )? {
+                if (!check_selection || subtree_intersects(&path, patterns))
+                    && !prune_discovery(
+                        &path,
+                        exclusions,
+                        containing_submodule(&path),
+                        Some(patterns),
+                    )?
+                {
                     pending.push(path);
                 }
             } else if matches_scope(patterns, &path)
                 && !prune_discovery(&path, exclusions, containing_submodule(&path), None)?
             {
                 paths.insert(path);
+                if check_selection && paths.len() > ENTRY_LIMIT {
+                    return Err(selection_over_budget());
+                }
             }
         }
     }
@@ -853,7 +901,14 @@ fn relation_view(
                 .as_ref()
                 .map_err(Clone::clone)
                 .and_then(|tracked| {
-                    discover_scope(&root, patterns, &excluded, tracked, context.changed)
+                    discover_scope(
+                        &root,
+                        patterns,
+                        &excluded,
+                        tracked,
+                        context.changed,
+                        DiscoveryBudget::Traversal,
+                    )
                 })
         };
         match discovered {

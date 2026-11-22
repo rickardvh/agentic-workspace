@@ -987,6 +987,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
     crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
     crate::current_evidence::extend_contract(&mut contract["owners"][0])?;
+    crate::manual_review::extend_contract(&mut contract["owners"][0]);
     contract["restriction_authorities"][0]["affects"]
         .as_array_mut()
         .unwrap()
@@ -1929,7 +1930,9 @@ pub(crate) fn view_with_applicability(
         // producer requirements retain their own authority; passing commands
         // cannot attest arbitrary prose, a reviewer or source reconciliation.
         if labels.is_some_and(|labels| !labels.is_empty())
-            || (profile.is_none() && source.get("measurement").is_none())
+            || (profile.is_none()
+                && source.get("measurement").is_none()
+                && source.get("review_owner").is_none())
         {
             missing.push("required-evidence-not-admitted");
         }

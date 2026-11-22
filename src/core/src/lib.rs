@@ -16,6 +16,8 @@ pub mod independent_owner;
 pub mod instruction_applicability;
 pub mod instruction_source;
 pub mod maintainer_logging;
+#[path = "modules/verification/manual_review.rs"]
+mod manual_review;
 mod native_activation;
 mod native_adoption;
 mod native_candidate_skill;
@@ -2526,7 +2528,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
                     .map(move |id| (owner, capability, id))
             })
             .filter(|(_, _, id)| {
-                id.as_str() != native_plugin_exposure::OP
+                !matches!(id.as_str(), native_plugin_exposure::OP | manual_review::OP)
                     || available_actions
                         .iter()
                         .any(|action| action.action.operation_id == id.as_str())

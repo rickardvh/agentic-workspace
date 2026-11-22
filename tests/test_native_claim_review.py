@@ -16,6 +16,336 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+@pytest.mark.parametrize("policy", ["local", "protocol", "assurance-owner", "protocol-owner"])
+def test_manual_review_records_external_result_without_admitting_review(tmp_path, shared_core_binary, native_cli, policy):
+    from tests.test_native_proof_producer import fixture
+
+    context = fixture(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    manifest = workspace / "verification/manifest.toml"
+    if policy == "local":
+        (workspace / "config.local.toml").write_text("[safety]\nrequires_human_verification_on_pr=true\n")
+    if policy in {"protocol", "protocol-owner"}:
+        field = "manual_required=true" if policy == "protocol" else 'review_owner="repo-maintainer"'
+        manifest.write_text(manifest.read_text().replace("[protocols.check]\n", f"[protocols.check]\n{field}\n"))
+    if policy != "protocol-owner":
+        with manifest.open("a") as stream:
+            stream.write(
+                '\n[assurance.requirements.external_check]\n'
+                'level="medium"\nforce="required-before-closeout"\n'
+                'blocking_claims=["claim-work-complete"]\napplies_to_paths=["a.txt"]\n'
+                'review_owner="repo-maintainer"\n'
+            )
+
+    def git(*args, checkout=tmp_path):
+        return subprocess.check_output(["git", "-C", str(checkout), *args], text=True).strip()
+
+    def commit(message):
+        git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", message)
+        return git("rev-parse", "HEAD")
+
+    git("init", "-q")
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "visible.rs").write_text("Visible selected input")
+    (src / "sparse.rs").write_text("Sparse selected input")
+    (src / "notes.md").write_text("Ignored by the selected pattern")
+    (src / "[id].tsx").write_text("Literal input whose name resembles a selector")
+    (src / "lib").mkdir()
+    (src / "lib/current.rs").write_text("Nested selected input")
+    (tmp_path / ".gitignore").write_text("__pycache__/\n")
+    git("add", "a.txt", "src", ".gitignore", manifest.relative_to(tmp_path).as_posix())
+    dependency = tmp_path / "vendor/dependency"
+    if policy == "local":
+        (dependency / "api").mkdir(parents=True)
+        (dependency / "api/source.rs").write_text("Source committed in the dependency index")
+        git("init", "-q", checkout=dependency)
+        git("add", "api/source.rs", checkout=dependency)
+        git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Dependency source", checkout=dependency)
+        child_revision = git("rev-parse", "HEAD", checkout=dependency)
+        git("update-index", "--add", "--cacheinfo", f"160000,{child_revision},vendor/dependency")
+    revision = commit("Exact reviewed subject")
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    initial = call(projection="compact")
+    assert initial["manual_review"]["recording_status"] == "subject-required"
+    pr = "https://example.invalid/owner/repo/pull/17"
+    # The compact request is the ordinary semantic entry, not a test-only command.
+    step = initial["manual_review"]["request"]
+    inspected = call(reference=step["reference"], answer={"pull_request": pr}, projection="full")
+    assert inspected["verification"]["manual_review"]["handoff_status"] == "work-not-ready"
+    assert inspected["verification"]["manual_review"]["checkout"]["revision"] == revision
+    selected_pr = inspected["verification"]["manual_review"]["request"]
+
+    offered = call()["verification"]["execution_requests"][0]
+    proof = call(invocation=call(request=offered)["decision_packet"]["primary_action"])
+    evidence_ref = proof["value"]["publication"]["reference"]
+    claim_request = call()["verification"]["claim_review"]["request"]
+    claim_request["arguments"].update(disposition="satisfied", reason="Compared the current proof with the task.", evidence_refs=[evidence_ref])
+    proposed = call(request=claim_request)
+    confirmation = next(
+        d["response_request"] for d in proposed["decision_packet"]["pending_consequences"]["decisions"]
+        if d["id"] == "verification-claim-review"
+    )
+    confirmation["arguments"]["answer"] = "confirm"
+    ready = call(request=[confirmation, selected_pr])
+    manual = ready["verification"]["manual_review"]
+    assert manual["handoff_status"] == "ready-for-maintainer-review", manual
+    assert manual["reviewers"] == ["repo-maintainer"]
+    assert evidence_ref in manual["evidence_refs"]
+
+    def report(disposition, ref, *, previous=None):
+        request = copy.deepcopy(selected_pr)
+        fields = {"reference": f"{pr}#review-{ref}", "reviewed_revision": revision, "disposition": disposition}
+        if previous is not None:
+            fields["supersedes"] = f"{pr}#review-{previous}"
+        request["arguments"]["report"] = fields
+        return request
+
+    approval = report("approved", 1)
+    forged = copy.deepcopy(approval)
+    forged["arguments"]["report"]["human_provenance"] = "verified"
+    with pytest.raises(AssertionError, match="violate input_schema"):
+        call(request=forged)
+    record = call(request=[confirmation, approval])["decision_packet"]["primary_action"]
+    assert record["operation_id"] == "verification.record-manual-pr-review"
+    published = call(invocation=record)
+    assert published["status"] == "applied"
+    assert published["value"]["completion_authority"] is False
+    assert published["value"]["reviewer_provenance"] == "unverified"
+    continuation = published["continuation"]["result"]["verification"]["manual_review"]
+    assert continuation["review_status"] == "recorded-externally"
+    assert evidence_ref in continuation["evidence_refs"]
+    assert continuation["implementation_gaps"] == []
+    after = call(request=[confirmation, selected_pr])
+    assert after["verification"]["manual_review"]["handoff_status"] == "external-approval-reported"
+    blockers = {row["code"] for row in after["decision_packet"]["blockers"]}
+    if policy == "local":
+        assert "local-human-review-required" in blockers
+    else:
+        assert "local-human-review-required" not in blockers
+    if policy == "protocol":
+        assert after["verification"]["claim_review"]["gaps"] == ["required-review-producer:check"]
+    if policy in {"protocol", "protocol-owner"}:
+        assert "protocol-review-required:check" in blockers
+    if policy == "protocol-owner":
+        assert after["verification"]["claim_review"]["status"] == "current"
+        assert after["verification"]["assurance_owner_gaps"] == []
+    else:
+        assert after["verification"]["assurance_owner_gaps"][0]["missing_admissions"] == ["required-reviewer-result-not-admitted"]
+        assert "assurance:external_check:applicable" in blockers
+    assert call(invocation=record)["status"] == "unchanged"
+    assert call(request=approval)["verification"]["manual_review"]["recording_status"] == "already-recorded"
+    without_proof = call(request=selected_pr)["verification"]["manual_review"]
+    assert without_proof["handoff_status"] == "external-approval-reported"
+    assert "Resolve the listed implementation or evidence gaps" in without_proof["next_step"]
+    alternate_spelling = copy.deepcopy(selected_pr)
+    alternate_spelling["arguments"]["pull_request"] = "HTTPS://EXAMPLE.invalid:443/owner/repo/pull/17/"
+    assert call(request=alternate_spelling)["verification"]["manual_review"]["recorded_report"]["reference"] == f"{pr}#review-1"
+    for invalid_pr in ("pr:17", "https://example.invalid/owner/repo/actions/17", "https://example.invalid:abc/owner/repo/pull/17"):
+        alternate_spelling["arguments"]["pull_request"] = invalid_pr
+        with pytest.raises(AssertionError, match="repository-qualified"):
+            call(request=alternate_spelling)
+
+    glob_scope = ["a.txt", "src/*.rs"]
+    glob_request = call(changed=glob_scope)["verification"]["manual_review"]["request"]
+    glob_request["arguments"]["pull_request"] = pr
+    git("update-index", "--skip-worktree", "src/notes.md")
+    (src / "notes.md").unlink()
+    assert not git("status", "--porcelain", "--untracked-files=no")
+    assert call(changed=glob_scope, request=glob_request)["verification"]["manual_review"]["review_status"] == "recorded-externally"
+    git("update-index", "--skip-worktree", "src/sparse.rs")
+    (src / "sparse.rs").unlink()
+    assert not git("status", "--porcelain", "--untracked-files=no")
+    sparse_glob = call(changed=glob_scope, request=glob_request)["verification"]["manual_review"]
+    assert sparse_glob["recording_status"] == "unavailable"
+    assert sparse_glob["review_status"] == "currentness-unverified"
+
+    literal_scope = ["a.txt", "src/[id].tsx"]
+    literal_request = call(changed=literal_scope)["verification"]["manual_review"]["request"]
+    literal_request["arguments"]["pull_request"] = pr
+    assert call(changed=literal_scope, request=literal_request)["verification"]["manual_review"]["review_status"] == "recorded-externally"
+    git("update-index", "--skip-worktree", "src/[id].tsx")
+    (src / "[id].tsx").unlink()
+    assert not git("status", "--porcelain", "--untracked-files=no")
+    sparse_literal = call(changed=literal_scope, request=literal_request)["verification"]["manual_review"]
+    assert sparse_literal["review_status"] == "currentness-unverified"
+    for filename in ("src/notes.md", "src/sparse.rs", "src/[id].tsx"):
+        git("update-index", "--no-skip-worktree", filename)
+        git("restore", "--", f":(literal){filename}")
+
+    if policy == "local":
+        for checkout_present in (True, False):
+            if not checkout_present:
+                dependency.rename(tmp_path / "dependency-away")
+                dependency.mkdir()
+            assert not git("status", "--porcelain", "--untracked-files=no", "--ignore-submodules=none")
+            for source in ("vendor/dependency/api/*.rs", "vendor/dependency/api/source.rs"):
+                dependency_scope = ["a.txt", source]
+                request = call(changed=dependency_scope)["verification"]["manual_review"]["request"]
+                request["arguments"]["pull_request"] = pr
+                result = call(changed=dependency_scope, request=request)["verification"]["manual_review"]
+                assert result["review_status"] == "currentness-unverified"
+                assert 'submodule "vendor/dependency"' in result["detail"]
+
+        generated_scope = ["a.txt", "src/**/*.rs"]
+        generated_request = call(changed=generated_scope)["verification"]["manual_review"]["request"]
+        generated_request["arguments"]["pull_request"] = pr
+        cache = src / "__pycache__"
+        cache.mkdir()
+        for index in range(4097):
+            (cache / f"generated-{index:04}.pyc").write_bytes(b"cache")
+
+        def generated_review():
+            return call(changed=generated_scope, request=generated_request)["verification"]["manual_review"]
+
+        observed = generated_review()
+        assert observed["review_status"] == "recorded-externally", observed.get("detail")
+        selected = cache / "new.rs"
+        selected.write_text("selected input outside the commit")
+        assert git("check-ignore", "src/__pycache__/new.rs")
+        pending = generated_review()
+        assert pending["checkout"]["uncommitted_inputs"] is True
+        assert pending["review_status"] == "stale"
+        selected.unlink()
+        assert generated_review()["review_status"] == "recorded-externally"
+
+        for output in cache.glob("*.pyc"):
+            output.rename(output.with_suffix(".rs"))
+        too_many_selected = generated_review()
+        assert too_many_selected["review_status"] == "currentness-unverified"
+        assert "4096" in too_many_selected["detail"]
+
+    conflict = call(request=report("rejected", 1))
+    assert conflict["verification"]["manual_review"]["recording_status"] == "conflict"
+    assert not conflict["decision_packet"]["primary_action"]
+    changes = call(request=report("changes-requested", 2, previous=1))["decision_packet"]["primary_action"]
+    assert call(invocation=changes)["status"] == "applied"
+    assert call(request=selected_pr)["verification"]["manual_review"]["handoff_status"] == "external-changes-requested"
+    rejection = call(request=report("rejected", 3, previous=2))["decision_packet"]["primary_action"]
+    assert call(invocation=rejection)["status"] == "applied"
+    assert call(request=selected_pr)["verification"]["manual_review"]["handoff_status"] == "external-rejection-reported"
+
+    another_pr = copy.deepcopy(selected_pr)
+    another_pr["arguments"]["pull_request"] = "https://example.invalid/owner/repo/pull/18"
+    assert call(request=another_pr)["verification"]["manual_review"]["review_status"] == "pending"
+    (tmp_path / "generated.txt").write_text("Selected input outside the reviewed commit")
+    scope = ["a.txt", "generated.txt"]
+    including_untracked = call(changed=scope)["verification"]["manual_review"]["request"]
+    including_untracked["arguments"]["pull_request"] = pr
+    uncommitted = call(changed=scope, request=including_untracked)["verification"]["manual_review"]
+    assert uncommitted["checkout"]["uncommitted_inputs"] is True
+    assert uncommitted["review_status"] == "stale"
+    (tmp_path / "a.txt").write_text("Pending tracked change")
+    assert call(request=selected_pr)["verification"]["manual_review"]["review_status"] == "stale"
+    git("update-index", "--assume-unchanged", "a.txt")
+    assert not git("status", "--porcelain", "--untracked-files=no")
+    masked = call(request=selected_pr)["verification"]["manual_review"]
+    assert masked["recording_status"] == "unavailable"
+    assert masked["review_status"] == "currentness-unverified"
+    git("update-index", "--no-assume-unchanged", "a.txt")
+    git("update-index", "--skip-worktree", "a.txt")
+    (tmp_path / "a.txt").unlink()
+    sparse = call(request=selected_pr)["verification"]["manual_review"]
+    assert sparse["review_status"] in {"stale", "currentness-unverified"}
+    (tmp_path / "a.txt").write_text("Pending tracked change")
+    git("update-index", "--no-skip-worktree", "a.txt")
+    git("add", "a.txt")
+    next_revision = commit("Revised subject")
+    stale = call(request=selected_pr)["verification"]["manual_review"]
+    assert stale["checkout"]["revision"] == next_revision
+    assert stale["recorded_report"]["reviewed_revision"] == revision
+    assert stale["review_status"] == "stale"
+    wrong = call(request=report("approved", 4))
+    assert wrong["verification"]["manual_review"]["recording_status"] == "subject-differs"
+    assert not wrong["decision_packet"]["primary_action"]
+    renewed = report("approved", 4)
+    renewed["arguments"]["report"]["reviewed_revision"] = next_revision
+    newer_action = call(request=renewed)["decision_packet"]["primary_action"]
+    assert call(invocation=newer_action)["status"] == "applied"
+    git("checkout", "--detach", revision)
+    returned = call(request=selected_pr)["verification"]["manual_review"]
+    assert returned["review_status"] == "recorded-externally"
+    assert returned["recorded_report"]["reference"] == f"{pr}#review-3"
+    assert call(request=report("approved", 5))["verification"]["manual_review"]["recording_status"] == "conflict"
+    superseding = call(request=report("approved", 5, previous=3))["decision_packet"]["primary_action"]
+    assert call(invocation=superseding)["status"] == "applied"
+
+
+def test_manual_review_keeps_non_manual_policy_and_reports_missing_checkout(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_proof_producer import fixture
+
+    context = fixture(tmp_path)
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra})
+
+    assert "manual_review" not in call()["verification"]
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    original = manifest.read_text()
+    manifest.write_text(original.replace("[protocols.check]\n", '[protocols.check]\nindependent_required=true\nreview_owner="independent-maintainer"\n'))
+    independent = call()
+    assert "manual_review" not in independent["verification"]
+    assert any(row["code"] == "protocol-review-required:check" for row in independent["decision_packet"]["blockers"])
+    manifest.write_text(
+        original + '\n[assurance.requirements.external_check]\n'
+        'level="medium"\nforce="required-before-closeout"\n'
+        'blocking_claims=["claim-work-complete"]\napplies_to_paths=["docs/**"]\n'
+        'review_owner="repo-maintainer"\n'
+    )
+    assert "manual_review" not in call()["verification"]
+    manifest.write_text(original)
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text("[safety]\nrequires_human_verification_on_pr=true\n")
+    request = call()["verification"]["manual_review"]["request"]
+    request["arguments"]["pull_request"] = "https://example.invalid/owner/repo/pull/17"
+    missing = call(request=request)
+    assert missing["verification"]["manual_review"]["handoff_status"] == "recording-unavailable"
+    assert not missing["decision_packet"]["primary_action"]
+
+
+@pytest.mark.parametrize("protected_scope", ["docs/**", "a.txt"])
+def test_manual_review_record_respects_scoped_protection(tmp_path, shared_core_binary, native_cli, protected_scope):
+    from tests.test_native_proof_producer import fixture
+    from tests.test_native_public_cli import pin_instructions
+
+    context = fixture(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    instructions = workspace / "instructions"
+    instructions.mkdir()
+    (instructions / "protect.md").write_text(
+        f"---\npaths: [{protected_scope}]\nprotect: [.agentic-workspace/local/manual-pr-reviews/**]\n"
+        "---\nPreserve local review storage in this scope.\n"
+    )
+    (workspace / "config.local.toml").write_text("[safety]\nrequires_human_verification_on_pr=true\n")
+    subprocess.run(["git", "-C", str(tmp_path), "init", "-q"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "a.txt"], check=True, capture_output=True)
+    revision = pin_instructions(tmp_path)
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    request = call()["verification"]["manual_review"]["request"]
+    pr = "https://example.invalid/owner/repo/pull/17"
+    request["arguments"] = {
+        "pull_request": pr,
+        "report": {"reference": f"{pr}#review-1", "reviewed_revision": revision, "disposition": "approved"},
+    }
+    proposed = call(request=request)
+    action = proposed["decision_packet"]["primary_action"]
+    if protected_scope == "a.txt":
+        assert not action
+        assert any(
+            row["code"].endswith(":protected-manual-review-write")
+            for row in proposed["decision_packet"]["blockers"]
+        )
+        assert not (workspace / "local/manual-pr-reviews").exists()
+    else:
+        assert action["operation_id"] == "verification.record-manual-pr-review"
+        assert call(invocation=action)["status"] == "applied"
+
+
 def test_claim_result_scope_is_distinct_from_instruction_applicability(tmp_path, shared_core_binary, native_cli):
     instruction = tmp_path / ".agentic-workspace/instructions/broad.md"
     instruction.parent.mkdir(parents=True)

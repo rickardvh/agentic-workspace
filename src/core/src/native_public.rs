@@ -289,6 +289,7 @@ fn resolve_selected(
                 && i["operation_id"] != crate::native_source_reconciliation::OP
                 && i["operation_id"] != crate::current_evidence::OP
                 && i["operation_id"] != crate::current_evidence::RECOVERY
+                && i["operation_id"] != crate::manual_review::OP
                 && !(i["operation_id"] == "planning.update"
                     && (i["arguments"]["consumed_return"].is_object()
                         || i["arguments"]["retained_handoff"].is_object()))
@@ -1493,6 +1494,41 @@ fn resolve_selected(
         {
             verification["current_evidence"] = standing;
         }
+        if let Some(mut review) = crate::manual_review::view(
+            target,
+            (&work, &input.changed),
+            &configuration,
+            &verification,
+            &contract,
+            verification_request(crate::manual_review::REQUEST),
+            executing,
+        )? {
+            if let Some(mut action) = review.as_object_mut().unwrap().remove("action") {
+                action["source_requests"].as_array_mut().unwrap().extend(
+                    requests
+                        .iter()
+                        .filter(|request| {
+                            request["owner"] == "verification"
+                                && matches!(
+                                    request["request_kind"].as_str(),
+                                    Some(
+                                        "verification/claim/v1"
+                                            | "verification/strategy/v1"
+                                            | "verification/assurance-applicability/v1"
+                                            | crate::native_claim_review::REQUEST
+                                    )
+                                )
+                        })
+                        .cloned(),
+                );
+                verification["contribution"]["actions"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(action);
+                verification["contribution"]["settled"] = json!(false);
+            }
+            verification["manual_review"] = review;
+        }
     }
     contributions.push(verification["contribution"].clone());
     let manual_state = crate::native_manual::state(target, &input.task, &input.changed)?;
@@ -1871,6 +1907,7 @@ fn resolve_selected(
                             | crate::native_proof_retention::RECOVERY
                             | crate::current_evidence::OP
                             | crate::current_evidence::RECOVERY
+                            | crate::manual_review::OP
                             | "configuration.write"
                             | "configuration.recover-write"
                             | "configuration.defer-choice"
@@ -2029,6 +2066,7 @@ fn resolve_selected(
         )?;
     }
     planning["current_owner"] = planning_detail;
+    crate::manual_review::finalize(&mut verification, &decision);
     let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
 
     resources.as_object_mut().unwrap().remove("contribution");
@@ -2732,6 +2770,19 @@ fn finish_invocation(
                         context["request"] = request;
                         return start_selected(context.clone(), &progress.resolution);
                     }
+                    if invocation["operation_id"] == crate::manual_review::OP {
+                        let mut sources = invocation["source_requests"].clone();
+                        for source in sources.as_array_mut().unwrap() {
+                            if source["request_kind"] == crate::manual_review::REQUEST {
+                                source["arguments"]
+                                    .as_object_mut()
+                                    .unwrap()
+                                    .remove("report");
+                            }
+                        }
+                        context["request"] = sources;
+                        return start_selected(context.clone(), &progress.resolution);
+                    }
                     if let Some(request) = crate::native_memory_candidates::publication_completion(
                         &current["memory"]["candidates"],
                         invocation,
@@ -2862,6 +2913,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != crate::native_source_reconciliation::OP
         && invocation["operation_id"] != crate::current_evidence::OP
         && invocation["operation_id"] != crate::current_evidence::RECOVERY
+        && invocation["operation_id"] != crate::manual_review::OP
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -2925,6 +2977,20 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 Ok(())
             },
         )?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
+    }
+    if invocation["operation_id"] == crate::manual_review::OP {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        progress.entered_effect_owner = true;
+        let executed = crate::manual_review::execute(&target, invocation, || {
+            let fresh = resolve(&input, &target, true)?;
+            crate::admit_invocation_value(
+                json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+            )?;
+            Ok(())
+        })?;
         return finish_invocation(&input, &target, invocation, &executed, progress);
     }
     if invocation["operation_id"] == crate::native_source_reconciliation::OP {
