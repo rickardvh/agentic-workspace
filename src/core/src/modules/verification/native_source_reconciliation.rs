@@ -102,6 +102,7 @@ fn prune_discovery(
     path: &str,
     exclusions: &[String],
     submodule: Option<&str>,
+    directory_scope: Option<&[String]>,
 ) -> Result<bool, CoreError> {
     if exclusions.is_empty() {
         return Ok(false);
@@ -113,6 +114,9 @@ fn prune_discovery(
     if let Some(nested) =
         matches.find(|candidate| within(candidate, submodule) && !within(submodule, candidate))
     {
+        if directory_scope.is_some_and(|patterns| !subtree_intersects(path, patterns)) {
+            return Ok(true);
+        }
         return Err(err(format!(
             "source reconciliation cannot apply reconcile_exclude to {nested} inside tracked submodule {submodule} from the enclosing Git index. Narrow this relation to the intended source paths, or reconcile the submodule as its own workspace."
         )));
@@ -402,7 +406,12 @@ fn discover_scope(
                 &format!("{directory}/.aw-scope-confinement"),
                 crate::dependency_binding::MAX_OBSERVATION_BYTES,
             )?;
-            if prune_discovery(&directory, exclusions, containing_submodule(&directory))? {
+            if prune_discovery(
+                &directory,
+                exclusions,
+                containing_submodule(&directory),
+                Some(patterns),
+            )? {
                 continue;
             }
         }
@@ -437,12 +446,18 @@ fn discover_scope(
             if crate::native_routes::linked(&meta) {
                 return Err(err("source reconciliation cannot traverse a linked scope"));
             }
-            if prune_discovery(&path, exclusions, containing_submodule(&path))? {
-                continue;
-            }
             if meta.is_dir() {
-                pending.push(path);
-            } else if matches_scope(patterns, &path) {
+                if !prune_discovery(
+                    &path,
+                    exclusions,
+                    containing_submodule(&path),
+                    Some(patterns),
+                )? {
+                    pending.push(path);
+                }
+            } else if matches_scope(patterns, &path)
+                && !prune_discovery(&path, exclusions, containing_submodule(&path), None)?
+            {
                 paths.insert(path);
             }
         }

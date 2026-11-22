@@ -922,7 +922,8 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
 
 
 @pytest.mark.parametrize(
-    "case", ["excluded-root", "submodule", "submodule-root", "disjoint-submodule", "nested-exclusion"]
+    "case",
+    ["excluded-root", "submodule", "submodule-root", "disjoint-submodule", "unmatched-file", "nested-exclusion"],
 )
 def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared_core_binary, native_cli, case):
     from tests.test_native_public_cli import pin_instructions
@@ -940,6 +941,11 @@ def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared
         "nested-exclusion": (
             "src/cache/vendor/**",
             "src/cache/vendor/__pycache__",
+            "src/cache/vendor/api/current.rs",
+        ),
+        "unmatched-file": (
+            "src/cache/vendor/*.rs",
+            "src/cache/vendor/build.json",
             "src/cache/vendor/api/current.rs",
         ),
     }[case]
@@ -969,6 +975,8 @@ def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared
             output = tmp_path / "src/cache/vendor/__pycache__/output.pyc"
             output.parent.mkdir()
             output.write_bytes(b"cache")
+        if case == "unmatched-file":
+            (tmp_path / "src/cache/vendor/build.json").write_text("outside the governed source selector")
     else:
         for number in range(4097):
             (changed_path.parent / f"output-{number:04}.pyc").write_bytes(b"cache")
