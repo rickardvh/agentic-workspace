@@ -35,7 +35,9 @@ On Windows, Verification reads Git's index for executable modes using up to
 100 milliseconds per additional batch, up to 24.1 seconds. If either limit is
 exceeded, selection reports a Windows index-mode budget gap before the proof
 can run. Review `execution.inputs` for a narrower scope that still covers every
-dependency of the selected command, then select the proof again.
+dependency of the selected command, then select the proof again. If the smallest
+valid scope still times out, check how quickly local Git can read the index and
+resolve any contention before retrying with the same inputs.
 
 A stopped staging container receives the snapshot in a new private Docker
 volume. It never runs repository code. The proof mounts that volume read-only,

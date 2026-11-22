@@ -63,6 +63,15 @@ jobs:
       - name: Verify indexed modes and Windows snapshot confinement
         run: |
           cargo test --locked -p agentic-workspace-core proof_executor::tests::
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.13'
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+      - name: Verify Windows proof selection budget refusals
+        run: |
+          uv run --locked pytest -q tests/test_native_proof_producer.py::test_native_isolated_proof_windows_index_query_errors "tests/test_native_proof_producer.py::test_native_isolated_proof_windows_mode_batches[limit]"
   merge-sufficiency:
     name: Merge proof
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch'

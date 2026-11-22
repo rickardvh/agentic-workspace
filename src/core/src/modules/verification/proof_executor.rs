@@ -30,19 +30,21 @@ pub(crate) fn missing_declaration_recovery() -> Value {
         "detail":"Declare [execution] in .agentic-workspace/verification/manifest.toml with kind = \"docker-readonly-source-v1\" and explicit bounded inputs for the selected command, then configure an immutable image and reselect verification/execute-selected/v1. Local [proof_execution].image only overrides an already declared executor; it does not enable one. Docker/runtime checks were not performed. Source protection remains enforced; human approval cannot supply the execution boundary."})
 }
 pub(crate) fn index_mode_budget_recovery(diagnostic: &str) -> Option<Value> {
-    let limit = match diagnostic {
-        INDEX_MODE_BATCH_LIMIT_EXCEEDED => {
-            format!("needs more than {MAX_INDEX_MODE_BATCHES} Git index-mode query batches")
-        }
-        INDEX_MODE_OBSERVATION_TIMED_OUT => {
-            "exhausted its shared time budget for Git index-mode queries".to_owned()
-        }
+    let (limit, host_recovery) = match diagnostic {
+        INDEX_MODE_BATCH_LIMIT_EXCEEDED => (
+            format!("needs more than {MAX_INDEX_MODE_BATCHES} Git index-mode query batches"),
+            "",
+        ),
+        INDEX_MODE_OBSERVATION_TIMED_OUT => (
+            "exhausted its shared time budget for Git index-mode queries".to_owned(),
+            " If the scope is already minimal, check local Git index responsiveness and resolve any contention before retrying with the same inputs.",
+        ),
         _ => return None,
     };
     Some(
         json!({"kind":"capability-gap","cause":"windows-index-mode-budget-exhausted",
         "human_answer_allowed":false,"diagnostic":diagnostic,
-        "detail":format!("The Windows proof snapshot {limit}. Narrow execution.inputs to the files the selected command needs, preserving every required input, then select the proof again. No selected command ran.")}),
+        "detail":format!("The Windows proof snapshot {limit}. Narrow execution.inputs to the files the selected command needs, preserving every required input, then select the proof again.{host_recovery} No selected command ran.")}),
     )
 }
 pub(crate) fn configuration(target: &Path) -> Result<Value, CoreError> {

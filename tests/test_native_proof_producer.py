@@ -876,79 +876,153 @@ def test_native_isolated_proof_preserves_executable_intent_and_mode_freshness(tm
     assert failed["value"]["process"]["status"] == "failed", failed
 
 
-@pytest.mark.skipif(os.name != "nt", reason="Windows Git index-mode query budgets")
-def test_native_isolated_proof_selects_large_windows_source_or_reports_its_batch_limit(
-    tmp_path, shared_core_binary, native_cli, monkeypatch
-):
-    image = subprocess.run(
-        ["docker", "image", "inspect", "ubuntu:24.04", "--format", "{{.Id}}"],
-        capture_output=True,
-        text=True,
-    ) if shutil.which("docker") else None
-    if image is None or image.returncode:
-        if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
-            pytest.fail(image.stderr if image is not None else "Required Docker proof executor is unavailable")
-        pytest.skip("Docker executor integration requires the ubuntu:24.04 fixture image")
-
-    context = fixture(tmp_path)
-    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    base_manifest = (
+def windows_index_mode_fixture(root, image, inputs):
+    context = fixture(root)
+    manifest = root / ".agentic-workspace/verification/manifest.toml"
+    manifest.write_text(
         manifest.read_text().split("commands=")[0]
         + 'commands=["test -f a.txt"]\n'
         + '[proof_routes.check.execution_prerequisites]\nsource_inputs=["a.txt"]\n'
         + '[execution]\nkind="docker-readonly-source-v1"\nimage='
-        + json.dumps(image.stdout.strip())
+        + json.dumps(image)
+        + "\ninputs="
+        + json.dumps(inputs)
         + "\n"
     )
+    return context
+
+
+def select_windows_index_modes(context, shared_core_binary, native_cli, host_path):
+    initial = consume("native", shared_core_binary, native_cli, context, host_path=host_path)
+    request = initial["verification"]["execution_requests"][0]
+    assert request["id"] == "verification/execute-selected/v1"
+    return consume("native", shared_core_binary, native_cli, {**context, "request": request}, host_path=host_path)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Git index-mode query budgets")
+@pytest.mark.parametrize("case", ["selection", "limit"])
+def test_native_isolated_proof_windows_mode_batches(tmp_path, shared_core_binary, native_cli, monkeypatch, case):
+    image_id = "sha256:" + "0" * 64
+    if case == "selection":
+        if not shutil.which("docker"):
+            if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
+                pytest.fail("Required Docker proof executor is unavailable")
+            pytest.skip("Docker executor integration requires Docker")
+        image = subprocess.run(
+            ["docker", "image", "inspect", "ubuntu:24.04", "--format", "{{.Id}}"], capture_output=True, text=True
+        )
+        if image.returncode:
+            if os.environ.get("AW_REQUIRE_PROOF_EXECUTOR"):
+                pytest.fail(image.stderr)
+            pytest.skip("Docker executor integration requires the ubuntu:24.04 fixture image")
+        image_id = image.stdout.strip()
+
+    context = windows_index_mode_fixture(tmp_path, image_id, ["a.txt", "generated"])
 
     def git(*args, **kwargs):
         return subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True, **kwargs)
 
     git("init", "-q")
-    blob = git("hash-object", "-w", "a.txt").stdout.decode("ascii").strip()
-    entries = [f"100644 {blob}\ta.txt\n"]
-    for scope, groups in [("required", 100), ("extra", 60)]:
-        for group in range(groups):
-            directory = tmp_path / "generated" / scope / f"{group:03d}"
-            directory.mkdir(parents=True)
-            for n in range(100):
-                path = directory / f"localization-catalog-{'message-' * 13}{n:03d}.json"
-                path.write_bytes(b"{}\n")
-                entries.append(f"100644 {blob}\t{path.relative_to(tmp_path).as_posix()}\n")
+    git("add", "a.txt")
+    contents = b"{}\n"
+    blob = git("hash-object", "-w", "--stdin", input=contents).stdout.decode("ascii").strip()
+    entries = []
+    file_prefix = "localization-catalog-" + "message-" * 13
+    for group in range(100 if case == "selection" else 160):
+        directory = tmp_path / "generated" / f"{group:03d}"
+        directory.mkdir(parents=True)
+        for n in range(100):
+            path = directory / f"{file_prefix}{n:03d}.json"
+            path.write_bytes(contents)
+            entries.append(f"100644 {blob}\t{path.relative_to(tmp_path).as_posix()}\n")
     git("update-index", "--index-info", input="".join(entries).encode("ascii"))
     index = tmp_path / ".git/index"
     before = index.read_bytes()
-
-    def select(inputs):
-        manifest.write_text(base_manifest + "inputs=" + json.dumps(inputs) + "\n")
-        def call(extra):
-            return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
-
-        request = call({})["verification"]["execution_requests"][0]
-        assert request["id"] == "verification/execute-selected/v1"
-        return call({"request": request})
-
     trace = tmp_path / "git-trace.jsonl"
-    monkeypatch.setenv("GIT_TRACE2_EVENT", trace.as_posix())
-    selected = select(["a.txt", "generated/required"])
-    assert selected["verification"]["execution"]["status"] == "selected"
-    assert selected["decision_packet"]["primary_action"]["operation_id"] == "proof.report"
-    queries = [
-        event for line in trace.read_text(encoding="utf-8").splitlines()
-        if (event := json.loads(line))["event"] == "start"
-        and "ls-files" in event["argv"] and "--stage" in event["argv"]
-    ]
-    assert len(queries) > 1
+    if case == "selection":
+        monkeypatch.setenv("GIT_TRACE2_EVENT", trace.as_posix())
 
-    refused = select(["a.txt", "generated"])
-    assert refused["verification"]["execution"]["status"] == "blocked"
-    recovery = refused["verification"]["execution"]["recovery"]
-    assert recovery["cause"] == "windows-index-mode-budget-exhausted"
-    assert recovery["diagnostic"] == "proof-snapshot-index-mode-batch-limit-exceeded"
-    assert "execution.inputs" in recovery["detail"]
-    assert not refused["decision_packet"]["primary_action"]
+    result = select_windows_index_modes(context, shared_core_binary, native_cli, os.environ["PATH"])
+    execution = result["verification"]["execution"]
+    action = result["decision_packet"]["primary_action"]
     assert not (tmp_path / ".agentic-workspace/local/effects").exists()
     assert index.read_bytes() == before
+    if case == "limit":
+        assert execution["status"] == "blocked"
+        assert execution["recovery"]["cause"] == "windows-index-mode-budget-exhausted"
+        assert execution["recovery"]["diagnostic"] == "proof-snapshot-index-mode-batch-limit-exceeded"
+        assert "execution.inputs" in execution["recovery"]["detail"]
+        assert not action
+        return
+
+    assert execution["status"] == "selected"
+    assert action["operation_id"] == "proof.report"
+    queries = []
+    for line in trace.read_text(encoding="utf-8").splitlines():
+        event = json.loads(line)
+        if event["event"] == "start" and "ls-files" in event["argv"] and "--stage" in event["argv"]:
+            if any(arg.startswith(":(literal)generated/") and arg.endswith(".json") for arg in event["argv"]):
+                queries.append(event["argv"])
+    sentinel = f"generated/099/{file_prefix}099.json"
+    assert any(f":(literal){sentinel}" in specs for specs in queries[1:])
+
+    git("update-index", "--chmod=+x", sentinel)
+    changed = select_windows_index_modes(context, shared_core_binary, native_cli, os.environ["PATH"])
+    new_action = changed["decision_packet"]["primary_action"]
+    assert new_action["operation_id"] == "proof.report"
+    old_executor = action["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]
+    new_executor = new_action["arguments"]["selection"]["proof_subject"]["runtime"]["executor"]
+    assert old_executor["source_revision"] != new_executor["source_revision"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Git index-mode diagnostics")
+def test_native_isolated_proof_windows_index_query_errors(tmp_path, shared_core_binary, native_cli, monkeypatch):
+    context = windows_index_mode_fixture(tmp_path, "sha256:" + "0" * 64, ["a.txt"])
+    git = shutil.which("git")
+    assert git is not None
+    subprocess.run([git, "-C", str(tmp_path), "init", "-q"], check=True, capture_output=True)
+    shim = tmp_path / "shim"
+    shim.mkdir()
+    source = shim / "git.rs"
+    # Forward ordinary Git reads. Inject faults only into the actual index-mode query.
+    source.write_text(
+        """
+use std::{env, ffi::OsStr, process::{Command, exit}, thread, time::Duration};
+
+fn main() {
+    let args: Vec<_> = env::args_os().skip(1).collect();
+    if args.iter().any(|arg| arg == OsStr::new("ls-files"))
+        && args.iter().any(|arg| arg == OsStr::new("--stage"))
+    {
+        if env::var_os("AW_TEST_GIT_INDEX_QUERY").unwrap() == OsStr::new("timeout") {
+            thread::sleep(Duration::from_secs(30));
+        }
+        exit(1);
+    }
+    let status = Command::new(env::var_os("AW_TEST_REAL_GIT").unwrap()).args(args).status().unwrap();
+    exit(status.code().unwrap_or(1));
+}
+""",
+        encoding="utf-8",
+    )
+    subprocess.run(["rustc", str(source), "-o", str(shim / "git.exe")], check=True, capture_output=True)
+    host_path = os.pathsep.join([str(shim), os.environ["PATH"]])
+    monkeypatch.setenv("AW_TEST_REAL_GIT", git)
+    for fault in ("timeout", "nonzero"):
+        monkeypatch.setenv("AW_TEST_GIT_INDEX_QUERY", fault)
+        result = select_windows_index_modes(context, shared_core_binary, native_cli, host_path)
+        execution = result["verification"]["execution"]
+        assert execution["status"] == "blocked"
+        assert not result["decision_packet"]["primary_action"]
+        recovery = execution["recovery"]
+        if fault == "timeout":
+            assert recovery["cause"] == "windows-index-mode-budget-exhausted"
+            assert recovery["diagnostic"] == "proof-snapshot-index-mode-observation-timed-out"
+            assert "same inputs" in recovery["detail"]
+        else:
+            assert recovery.get("cause") != "windows-index-mode-budget-exhausted"
+            assert recovery["diagnostic"].startswith("proof-snapshot-index-mode-unavailable:")
+    assert not (tmp_path / ".agentic-workspace/local/effects").exists()
 
 
 def test_native_missing_executor_is_a_capability_gap_not_a_human_choice(tmp_path, shared_core_binary, native_cli):
