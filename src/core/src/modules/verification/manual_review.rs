@@ -1,11 +1,19 @@
 //! Checkout-local records of reported external review. No review authority is admitted.
-use crate::{CoreError, current_projection, digest, native_planning, native_verification};
+use crate::{
+    CoreError, current_projection, digest, native_planning, native_source_reconciliation,
+    native_verification,
+};
 use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions},
 };
 use serde_json::{Value, json};
-use std::{collections::BTreeSet, path::Path, process::Command, time::Duration};
+use std::{
+    collections::BTreeSet,
+    path::Path,
+    process::Command,
+    time::{Duration, Instant},
+};
 
 pub(crate) const REQUEST: &str = "verification/manual-pr-review/v1";
 pub(crate) const OP: &str = "verification.record-manual-pr-review";
@@ -67,7 +75,7 @@ fn has_uncommitted_inputs(
     if changed.is_empty() {
         return Ok(false);
     }
-    let paths = crate::native_source_reconciliation::selected_scope_files(root, changed)?;
+    let paths = native_source_reconciliation::selected_scope_files(root, changed)?;
     let mut present = BTreeSet::new();
     for path in &paths {
         match root.symlink_metadata(path) {
@@ -83,8 +91,8 @@ fn has_uncommitted_inputs(
             Err(error) => return Err(err(error)),
         }
     }
-    // Enumerate tracked candidates from the original selectors as a sparse checkout
-    // can omit entries from filesystem discovery. Git only selects literal roots.
+    // A sparse checkout can omit entries from filesystem discovery. Include
+    // exact ancestors of literal query roots so a gitlink cannot hide a root.
     let roots: BTreeSet<_> = changed
         .iter()
         .map(|selector| {
@@ -98,78 +106,92 @@ fn has_uncommitted_inputs(
             }
         })
         .collect();
-    let magic = if cfg!(windows) {
-        ":(literal,icase)"
-    } else {
-        ":(literal)"
-    };
-    let specs: Vec<_> = if roots.contains("") {
-        Vec::new()
-    } else {
-        roots.iter().map(|root| format!("{magic}{root}")).collect()
-    };
-    if specs
-        .iter()
-        .map(|spec| spec.encode_utf16().count() + 3)
-        .sum::<usize>()
-        > 12_000
-    {
+    let queries = native_source_reconciliation::index_queries(&roots);
+    if queries.iter().any(|specs| {
+        specs
+            .iter()
+            .map(|spec| spec.encode_utf16().count() + 3)
+            .sum::<usize>()
+            > 12_000
+    }) {
         return Err(err(
             "Narrow changed paths to compare them with the reviewed commit within the Git query bound",
         ));
     }
-    let mut command = git(target);
-    command
-        .args(["ls-files", "--cached", "-v", "-z", "--"])
-        .args(specs)
-        .env("GIT_LITERAL_PATHSPECS", "0")
-        .env("GIT_GLOB_PATHSPECS", "0")
-        .env("GIT_NOGLOB_PATHSPECS", "0")
-        .env("GIT_ICASE_PATHSPECS", "0");
-    let (status, entries) = native_verification::bounded_git_output_with_limit(
-        &mut command,
-        Duration::from_secs(3),
-        8 * 1024 * 1024,
-    )
-    .map_err(|reason| {
+    let unavailable = |reason: &str| {
         err(format!(
             "Git could not compare selected inputs ({reason}). Narrow the changed paths or restore checkout observation."
         ))
-    })?;
-    if !status.success() {
-        return Err(err(
-            "Git could not compare the selected source paths with the index",
-        ));
-    }
+    };
     let literal_selections: BTreeSet<_> = changed.iter().map(|path| index_path(path)).collect();
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let mut remaining_bytes = 8 * 1024 * 1024;
     let mut untracked = present.clone();
-    for row in entries
-        .split(|byte| *byte == 0)
-        .filter(|row| !row.is_empty())
-    {
-        let Some(path) = row.get(2..).filter(|_| row[1] == b' ') else {
-            return Err(err("Git returned an unrecognised index entry"));
-        };
-        let path = std::str::from_utf8(path).map_err(err)?;
-        let key = index_path(path);
-        if !literal_selections.contains(&key)
-            && !changed
-                .iter()
-                .any(|selector| native_verification::matches(selector, path))
-        {
-            continue;
+    for specs in queries {
+        let remaining_time = deadline.saturating_duration_since(Instant::now());
+        if remaining_time.is_zero() {
+            return Err(unavailable("index observation timed out"));
         }
-        if row[0] != b'H' {
-            return Err(err(
-                "Git index flags prevent verifying changes to selected inputs. Inspect assume-unchanged, skip-worktree, or conflicted entries before reobserving the checkout.",
-            ));
+        let mut command = git(target);
+        command
+            .args(["ls-files", "--cached", "--stage", "-v", "-z", "--"])
+            .args(specs)
+            .env("GIT_LITERAL_PATHSPECS", "0")
+            .env("GIT_GLOB_PATHSPECS", "0")
+            .env("GIT_NOGLOB_PATHSPECS", "0")
+            .env("GIT_ICASE_PATHSPECS", "0");
+        let (status, entries) = native_verification::bounded_git_output_with_limit(
+            &mut command,
+            remaining_time,
+            remaining_bytes,
+        )
+        .map_err(|reason| unavailable(&reason))?;
+        if !status.success() {
+            return Err(unavailable("git ls-files failed"));
         }
-        if !present.contains(&key) {
-            return Err(err(
-                "A selected tracked input is missing from the checkout; restore it or review the committed deletion.",
-            ));
+        remaining_bytes -= entries.len();
+        let entries = std::str::from_utf8(&entries).map_err(err)?;
+        for row in entries.split_terminator('\0') {
+            let (header, path) = row
+                .split_once('\t')
+                .ok_or_else(|| unavailable("unrecognised index entry"))?;
+            let (tag, stage) = header
+                .split_once(' ')
+                .ok_or_else(|| unavailable("unrecognised index entry"))?;
+            let key = index_path(path);
+            let selected = literal_selections.contains(&key)
+                || changed
+                    .iter()
+                    .any(|selector| native_verification::matches(selector, path));
+            if stage.starts_with("160000 ") {
+                let prefix = format!("{key}/");
+                if selected
+                    || literal_selections
+                        .iter()
+                        .any(|item| item.starts_with(&prefix))
+                    || native_source_reconciliation::subtree_intersects(path, changed)
+                {
+                    return Err(err(format!(
+                        "The enclosing Git index cannot verify selected inputs in submodule {path:?}. Inspect those inputs in the submodule checkout before comparing the external review."
+                    )));
+                }
+                continue;
+            }
+            if !selected {
+                continue;
+            }
+            if tag != "H" {
+                return Err(err(
+                    "Git index flags prevent verifying changes to selected inputs. Inspect assume-unchanged, skip-worktree, or conflicted entries before reobserving the checkout.",
+                ));
+            }
+            if !present.contains(&key) {
+                return Err(err(
+                    "A selected tracked input is missing from the checkout; restore it or review the committed deletion.",
+                ));
+            }
+            untracked.remove(&key);
         }
-        untracked.remove(&key);
     }
     Ok(!untracked.is_empty())
 }

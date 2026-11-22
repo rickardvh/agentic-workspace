@@ -37,8 +37,8 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
                 'review_owner="repo-maintainer"\n'
             )
 
-    def git(*args):
-        return subprocess.check_output(["git", "-C", str(tmp_path), *args], text=True).strip()
+    def git(*args, checkout=tmp_path):
+        return subprocess.check_output(["git", "-C", str(checkout), *args], text=True).strip()
 
     def commit(message):
         git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", message)
@@ -55,6 +55,15 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     (src / "lib/current.rs").write_text("Nested selected input")
     (tmp_path / ".gitignore").write_text("__pycache__/\n")
     git("add", "a.txt", "src", ".gitignore", manifest.relative_to(tmp_path).as_posix())
+    dependency = tmp_path / "vendor/dependency"
+    if policy == "local":
+        (dependency / "api").mkdir(parents=True)
+        (dependency / "api/source.rs").write_text("Source committed in the dependency index")
+        git("init", "-q", checkout=dependency)
+        git("add", "api/source.rs", checkout=dependency)
+        git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Dependency source", checkout=dependency)
+        child_revision = git("rev-parse", "HEAD", checkout=dependency)
+        git("update-index", "--add", "--cacheinfo", f"160000,{child_revision},vendor/dependency")
     revision = commit("Exact reviewed subject")
 
     def call(**extra):
@@ -168,6 +177,18 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
         git("restore", "--", f":(literal){filename}")
 
     if policy == "local":
+        for checkout_present in (True, False):
+            if not checkout_present:
+                dependency.rename(tmp_path / "dependency-away")
+            assert not git("status", "--porcelain", "--untracked-files=no", "--ignore-submodules=none")
+            for source in ("vendor/dependency/api/*.rs", "vendor/dependency/api/source.rs"):
+                dependency_scope = ["a.txt", source]
+                request = call(changed=dependency_scope)["verification"]["manual_review"]["request"]
+                request["arguments"]["pull_request"] = pr
+                result = call(changed=dependency_scope, request=request)["verification"]["manual_review"]
+                assert result["review_status"] == "currentness-unverified"
+                assert 'submodule "vendor/dependency"' in result["detail"]
+
         generated_scope = ["a.txt", "src/**/*.rs"]
         generated_request = call(changed=generated_scope)["verification"]["manual_review"]["request"]
         generated_request["arguments"]["pull_request"] = pr

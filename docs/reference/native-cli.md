@@ -102,8 +102,9 @@ A different checkout commit, pending tracked changes or selected uncommitted
 inputs make the recorded review stale for the current work. Files that match the
 changed selectors count even when Git ignores them. Unrelated output does not
 consume the selected file limit. The checkout scan has a separate observation
-bound. Exceeding a bound or encountering Git flags that hide selected inputs
-makes currentness unverified. The repository owns
+bound. Exceeding a bound, encountering Git flags that hide selected inputs, or
+selecting inputs in a submodule that the enclosing index cannot verify makes
+currentness unverified. The repository owns
 approval, and AW marks the review provenance as unverified. The record leaves
 human-verification and reviewer-admission restrictions in force.
 

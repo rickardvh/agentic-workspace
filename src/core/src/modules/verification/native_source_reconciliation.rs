@@ -181,7 +181,7 @@ struct IndexedPath {
     gitlink: bool,
 }
 
-fn index_queries(scope: &BTreeSet<&str>) -> Vec<Vec<String>> {
+pub(crate) fn index_queries(scope: &BTreeSet<&str>) -> Vec<Vec<String>> {
     if scope.contains("") {
         return vec![Vec::new()];
     }
@@ -297,7 +297,7 @@ fn tracked_paths(target: &Path, scope: &BTreeSet<&str>) -> Result<Vec<IndexedPat
         .collect())
 }
 
-fn subtree_intersects(path: &str, patterns: &[String]) -> bool {
+pub(crate) fn subtree_intersects(path: &str, patterns: &[String]) -> bool {
     let mut prefix = String::new();
     for character in path.chars() {
         match character {
