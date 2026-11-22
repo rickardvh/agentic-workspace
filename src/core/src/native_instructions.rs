@@ -86,6 +86,7 @@ pub(crate) fn resolve_with_targets(
         "claim:complete",
         "effect:planning-state",
         "effect:proof-execution",
+        "effect:manual-review-record",
         "effect:memory-state",
         "effect:decision-source",
         "effect:configuration-source",
@@ -383,6 +384,30 @@ pub fn restrict_pending(
                 })
             {
                 additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-instruction-write", "Current protection forbids this instruction publication; source authority cannot waive another restriction.", vec![format!("effect:{}",if action["source_owner"]=="configuration"{"configuration-source"}else if action["source_owner"]=="system-intent"{"system-intent-source"}else{"instruction-source"})]));
+            }
+        }
+    }
+    for action in pending
+        .iter()
+        .filter(|action| action["operation_id"] == crate::manual_review::OP)
+    {
+        let writes = crate::manual_review::write_scope(action)?;
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            if source["valid"] == true
+                && applicability(metadata, &[], route, &[])?["route_applies"] == true
+                && strings(&metadata["protect"]).iter().any(|pattern| {
+                    writes
+                        .iter()
+                        .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                })
+            {
+                additions.push(blocker(
+                    source["source"]["reference"].as_str().unwrap(),
+                    "protected-manual-review-write",
+                    "Current source protection forbids writing this manual review record.",
+                    vec!["effect:manual-review-record".into()],
+                ));
             }
         }
     }

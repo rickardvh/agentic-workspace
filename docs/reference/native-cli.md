@@ -73,6 +73,30 @@ owner quiescence or process success as completion. See
 Unsupported transport/result classes remain explicit gaps. Semantic judgement,
 independent review and human approval retain their own authority.
 
+### Manual pull request review
+
+When local safety or an applicable Verification protocol calls for manual PR
+review, `start` exposes `manual_review` in compact output and
+`verification.manual_review` in full output. Answer the returned request with the
+repository-qualified `pull_request` reference. AW observes the local Git commit
+and separates pending review from current implementation and evidence gaps.
+The PR reference is caller supplied. The checkout observation does not verify a
+hosted PR's current head.
+
+Review through the repository's usual process. To retain the outcome, answer the
+request with the same `pull_request` and a `report` containing the external
+`reference`, the exact `reviewed_revision` and a `disposition` of `approved`,
+`changes-requested` or `rejected`. Invoke the offered record action. For a new
+result on the same commit, supply a distinct external reference and set
+`report.supersedes` to the current external review reference. An exact repeat
+reuses the existing record.
+
+The record is local to this checkout. Select the same PR again to read it.
+A different checkout commit, pending tracked changes or selected uncommitted
+inputs make the recorded review stale for the current work. The repository owns approval, and AW marks
+the review provenance as unverified. The record leaves human-verification and
+reviewer-admission restrictions in force.
+
 `tests/test_native_public_cli.py` and existing native owner scenarios exercise
 fresh native/JSON/Python/TypeScript consumers, real former/current sources,
 currentness, exact replay and claim-sensitive negatives. Exhaustive artefact mode

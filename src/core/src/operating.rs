@@ -907,6 +907,21 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
         result["planning_context"] = planning;
     }
     let verification = &full["verification"];
+    if let Some(view) = verification.get("manual_review") {
+        let mut review = view.clone();
+        let request = &view["request"];
+        let selector = format!("request:verification:{}", digest(request)?);
+        let mut answer_shape = request["arguments"].clone();
+        if let Some(revision) = view["checkout"]["revision"].as_str() {
+            answer_shape["report"] = json!({"reference":"<external review reference>",
+                "reviewed_revision":revision,"disposition":"<approved, changes-requested, or rejected>"});
+        }
+        review["request"] = json!({
+            "reference":reference(context, &selector, request)?,
+            "answer_shape":answer_shape,
+            "use":"Send current reentry with this reference and the repository-qualified pull_request. To record an external outcome, include report with reference, reviewed_revision and disposition. Invoke the offered local record action."});
+        result["manual_review"] = review;
+    }
     let claim = &verification["claim_review"];
     if claim["status"] == "not-requested"
         && verification["evidence"]
