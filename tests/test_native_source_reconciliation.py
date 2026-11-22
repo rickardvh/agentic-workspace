@@ -851,7 +851,7 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
     context = repository(tmp_path)
     rules = tmp_path / ".agentic-workspace/instructions"
     (rules / "feature.md").write_text(
-        "---\npaths: [src/**, src/.tool-cache/explicit.bin]\n"
+        "---\npaths: [src/**, src/.tool-cache/explicit[.bin]\n"
         "governed_by: [docs/guide.md]\n"
         "reconcile_exclude: [src/__pycache__, src/.tool-cache]\n"
         "---\nReview the feature sources.\n"
@@ -865,10 +865,10 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
     retained = {
         "src/feature.txt",
         "src/__pycache__/tracked.txt",
-        "src/.tool-cache/explicit.bin",
+        "src/.tool-cache/explicit[.bin",
         "src/generated.txt",
     }
-    output_path = "src/.tool-cache/part].json"
+    output_path = "src/.tool-cache/part[.json"
     for path in retained | {"other/main.txt", output_path}:
         (tmp_path / path).write_text("fixture source or output")
     git = ["git", "-C", str(tmp_path)]
@@ -921,27 +921,38 @@ def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_pa
     assert relations[".agentic-workspace/instructions/other.md"]["status"] == "current"
 
 
-@pytest.mark.parametrize("case", ["excluded-root", "submodule"])
+@pytest.mark.parametrize("case", ["excluded-root", "submodule", "submodule-root", "disjoint-submodule"])
 def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared_core_binary, native_cli, case):
     from tests.test_native_public_cli import pin_instructions
 
     context = repository(tmp_path)
-    pattern = "src/cache/*.pyc" if case == "excluded-root" else "src/*.rs"
+    patterns, exclusions, changed = {
+        "excluded-root": ("src/service-a/cache/*.pyc", "src/service-a/cache", "src/service-a/cache/user-selected.pyc"),
+        "submodule": ("src/*.rs", "src/cache", "src/current.rs"),
+        "submodule-root": ("src/cache/vendor/api/**", "src/cache", "src/cache/vendor/api/current.rs"),
+        "disjoint-submodule": (
+            "src/cache/vendor/api/**, src/service/**",
+            "src/cache/vendor/scratch, src/service/cache",
+            "src/service/current.rs",
+        ),
+    }[case]
     rule = tmp_path / ".agentic-workspace/instructions/feature.md"
     rule.write_text(
-        f"---\npaths: [{pattern}]\ngoverned_by: [docs/guide.md]\n"
-        "reconcile_exclude: [src/cache]\n---\nReview the inferred scope.\n"
+        f"---\npaths: [{patterns}]\ngoverned_by: [docs/guide.md]\n"
+        f"reconcile_exclude: [{exclusions}]\n---\nReview the inferred scope.\n"
     )
-    cache = tmp_path / "src/cache"
-    cache.mkdir()
-    changed = "src/cache/user-selected.pyc" if case == "excluded-root" else "src/current.rs"
-    (tmp_path / changed).write_text("explicit source")
+    changed_path = tmp_path / changed
+    changed_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path.write_text("explicit source")
     context["changed"] = [changed]
     pin = pin_instructions(tmp_path)
     git = ["git", "-C", str(tmp_path)]
-    if case == "submodule":
-        (cache / "vendor").mkdir()
-        (cache / "vendor/lib.rs").write_text("potential governed source")
+    expected = {changed}
+    if case != "excluded-root":
+        library = "src/cache/vendor/api/lib.rs"
+        (tmp_path / library).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / library).write_text("governed submodule source")
+        expected.add(library)
         subprocess.run(
             [*git, "update-index", "--add", "--cacheinfo", f"160000,{pin},src/cache/vendor"],
             check=True,
@@ -949,21 +960,17 @@ def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared
         )
     else:
         for number in range(4097):
-            (cache / f"output-{number:04}.pyc").write_bytes(b"cache")
+            (changed_path.parent / f"output-{number:04}.pyc").write_bytes(b"cache")
         # An unrelated part of the index exceeds the observer's byte limit.
-        # The reconciliation rule only needs tracked paths from src.
+        # The rule queries only service-a's cache subtree and its exact ancestors.
         blob = subprocess.check_output([*git, "rev-parse", "HEAD:src/feature.txt"], text=True).strip()
-        prefix = "unrelated/" + ("x" * 200 + "/") * 16
+        prefix = "src/service-b/" + ("x" * 200 + "/") * 16
         entries = "".join(f"100644 {blob}\t{prefix}{index:04}\n" for index in range(2700))
         subprocess.run([*git, "update-index", "--index-info"], input=entries.encode(), check=True, capture_output=True)
         assert len(subprocess.check_output([*git, "ls-files", "--stage", "-z"])) > 8 * 1024 * 1024
 
     result = consume("json", shared_core_binary, native_cli, context)["verification"]["source_reconciliation"]
-    if case == "submodule":
-        assert result["status"] == "scope-observation-required"
-        assert "src/cache/vendor" in result["reason"] and not result["requests"]
-    else:
-        assert set(result["proposal"]["work_postimages"]) == {changed}
+    assert set(result["proposal"]["work_postimages"]) == expected
 
 
 def test_current_group_projection_ignores_history_and_preserves_missing_evidence(tmp_path, shared_core_binary, native_cli):

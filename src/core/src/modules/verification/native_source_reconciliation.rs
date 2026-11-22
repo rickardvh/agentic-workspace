@@ -114,17 +114,14 @@ fn private_scope(path: &str) -> bool {
 }
 
 fn discovery_root(pattern: &str) -> Option<&str> {
-    let prefix = pattern.split(['*', '?', '[']).next().unwrap();
+    let prefix = crate::instruction_applicability::literal_prefix(pattern);
     (prefix != pattern).then(|| prefix.rsplit_once('/').map_or("", |(dir, _)| dir))
 }
 
 fn index_scope(patterns: &[String]) -> BTreeSet<&str> {
-    // The first component keeps ancestors of a discovery root visible, even
-    // when the root starts under a gitlink and Git indexes only the gitlink.
     let scope: BTreeSet<_> = patterns
         .iter()
         .filter_map(|pattern| discovery_root(pattern))
-        .map(|dir| dir.split('/').next().unwrap())
         .collect();
     if scope.contains("") {
         BTreeSet::from([""])
@@ -148,75 +145,115 @@ struct IndexedPath {
     gitlink: bool,
 }
 
+fn index_queries(scope: &BTreeSet<&str>) -> Vec<Vec<String>> {
+    if scope.contains("") {
+        return vec![Vec::new()];
+    }
+    let case = if cfg!(windows) { ",icase" } else { "" };
+    let literal = |path: &str| format!(":(literal{case}){path}");
+    let mut queries = vec![scope.iter().map(|path| literal(path)).collect()];
+    let mut ancestors = BTreeMap::<usize, BTreeSet<&str>>::new();
+    for root in scope {
+        let mut path = *root;
+        while let Some((parent, _)) = path.rsplit_once('/') {
+            // A root already being queried covers this ancestor.
+            if scope.iter().any(|dir| within(parent, dir)) {
+                break;
+            }
+            ancestors
+                .entry(parent.split('/').count())
+                .or_default()
+                .insert(parent);
+            path = parent;
+        }
+    }
+    // Exclude descendants of each ancestor without excluding the separately
+    // selected subtree. Different depths cannot share a negative pathspec.
+    for parents in ancestors.into_values() {
+        let mut specs = Vec::new();
+        for parent in parents {
+            let mut escaped = String::new();
+            for ch in parent.chars() {
+                if matches!(ch, '*' | '?' | '[' | ']' | '\\') {
+                    escaped.push('\\');
+                }
+                escaped.push(ch);
+            }
+            specs.push(literal(parent));
+            specs.push(format!(":(exclude,glob{case}){escaped}/**"));
+        }
+        queries.push(specs);
+    }
+    queries
+}
+
 fn tracked_paths(target: &Path, scope: &BTreeSet<&str>) -> Result<Vec<IndexedPath>, CoreError> {
     let failure = |reason: &str| {
         err(format!(
             "source reconciliation cannot apply reconcile_exclude without a bounded observation of tracked paths ({reason}). Restore Git index observation or narrow this relation's declared discovery scope before retrying."
         ))
     };
-    let pathspecs = if scope.contains("") {
-        Vec::new()
-    } else {
-        let magic = if cfg!(windows) {
-            ":(literal,icase)"
-        } else {
-            ":(literal)"
-        };
-        scope
+    let queries = index_queries(scope);
+    if queries.iter().any(|specs| {
+        specs
             .iter()
-            .map(|root| format!("{magic}{root}"))
-            .collect::<Vec<_>>()
-    };
-    if pathspecs
-        .iter()
-        .map(|path| path.encode_utf16().count() + 3)
-        .sum::<usize>()
-        > 12_000
-    {
+            .map(|path| path.encode_utf16().count() + 3)
+            .sum::<usize>()
+            > 12_000
+    }) {
         return Err(failure("Git pathspec bound exceeded"));
     }
-    let mut command = Command::new("git");
-    command
-        .arg("-C")
-        .arg(target)
-        .args([
-            "-c",
-            "core.fsmonitor=false",
-            "ls-files",
-            "--stage",
-            "-z",
-            "--",
-        ])
-        .args(pathspecs)
-        .env("GIT_OPTIONAL_LOCKS", "0")
-        .env("GIT_LITERAL_PATHSPECS", "0")
-        .env("GIT_GLOB_PATHSPECS", "0")
-        .env("GIT_NOGLOB_PATHSPECS", "0")
-        .env("GIT_ICASE_PATHSPECS", "0")
-        .env_remove("GIT_INDEX_FILE")
-        .env_remove("GIT_DIR")
-        .env_remove("GIT_COMMON_DIR")
-        .env_remove("GIT_WORK_TREE");
-    let (status, output) = crate::native_verification::bounded_git_output_with_limit(
-        &mut command,
-        Duration::from_secs(5),
-        8 * 1024 * 1024,
-    )
-    .map_err(|reason| failure(&reason))?;
-    if !status.success() {
-        return Err(failure("git ls-files failed"));
-    }
-    let output = std::str::from_utf8(&output).map_err(|_| failure("non-UTF-8 index path"))?;
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let mut remaining_bytes = 8 * 1024 * 1024;
     let mut paths = BTreeMap::new();
-    for row in output.split_terminator('\0') {
-        let (header, path) = row
-            .split_once('\t')
-            .ok_or_else(|| failure("invalid index entry"))?;
-        let gitlink = header.starts_with("160000 ");
-        paths
-            .entry(path.to_owned())
-            .and_modify(|value| *value |= gitlink)
-            .or_insert(gitlink);
+    for specs in queries {
+        let remaining_time = deadline.saturating_duration_since(std::time::Instant::now());
+        if remaining_time.is_zero() {
+            return Err(failure("Git index observation timed out"));
+        }
+        let mut command = Command::new("git");
+        command
+            .arg("-C")
+            .arg(target)
+            .args([
+                "-c",
+                "core.fsmonitor=false",
+                "ls-files",
+                "--stage",
+                "-z",
+                "--",
+            ])
+            .args(specs)
+            .env("GIT_OPTIONAL_LOCKS", "0")
+            .env("GIT_LITERAL_PATHSPECS", "0")
+            .env("GIT_GLOB_PATHSPECS", "0")
+            .env("GIT_NOGLOB_PATHSPECS", "0")
+            .env("GIT_ICASE_PATHSPECS", "0")
+            .env_remove("GIT_INDEX_FILE")
+            .env_remove("GIT_DIR")
+            .env_remove("GIT_COMMON_DIR")
+            .env_remove("GIT_WORK_TREE");
+        let (status, output) = crate::native_verification::bounded_git_output_with_limit(
+            &mut command,
+            remaining_time,
+            remaining_bytes,
+        )
+        .map_err(|reason| failure(&reason))?;
+        if !status.success() {
+            return Err(failure("git ls-files failed"));
+        }
+        remaining_bytes -= output.len();
+        let output = std::str::from_utf8(&output).map_err(|_| failure("non-UTF-8 index path"))?;
+        for row in output.split_terminator('\0') {
+            let (header, path) = row
+                .split_once('\t')
+                .ok_or_else(|| failure("invalid index entry"))?;
+            let gitlink = header.starts_with("160000 ");
+            paths
+                .entry(path.to_owned())
+                .and_modify(|value| *value |= gitlink)
+                .or_insert(gitlink);
+        }
     }
     Ok(paths
         .into_iter()
@@ -268,23 +305,25 @@ fn discover_scope(
             paths.insert(pattern.clone());
         }
     }
+    // The enclosing index records a gitlink, not the submodule's files. Keep
+    // ordinary confined discovery inside that tracked tree. If pruning hides
+    // the route to it, start there directly without walking disposable siblings.
+    let submodules: Vec<_> = tracked
+        .iter()
+        .filter(|entry| entry.gitlink && subtree_intersects(&entry.path, patterns))
+        .map(|entry| entry.path.as_str())
+        .collect();
+    let inside_submodule = |path: &str| submodules.iter().any(|root| within(path, root));
+    for &submodule in &submodules {
+        if excluded(submodule, exclusions) && pending.iter().any(|root| within(submodule, root)) {
+            pending.push(submodule.to_owned());
+        }
+    }
     let mut count = 0;
     // Recover tracked files directly from the index when we prune an output
     // tree. Walking to find them would count all of the incidental output too.
     for IndexedPath { path, gitlink } in tracked {
-        if private_scope(path) {
-            continue;
-        }
-        let pruned = excluded(path, exclusions);
-        if *gitlink
-            && subtree_intersects(path, patterns)
-            && (pruned || subtree_intersects(path, exclusions))
-        {
-            return Err(err(format!(
-                "source reconciliation cannot apply exclusions across tracked submodule {path}; revise reconcile_exclude to preserve governed sources inside it"
-            )));
-        }
-        if !pruned {
+        if *gitlink || private_scope(path) || !excluded(path, exclusions) {
             continue;
         }
         let matched = matches_scope(patterns, path);
@@ -317,7 +356,7 @@ fn discover_scope(
     // The caller may explicitly name a matching ignored file, including a
     // deletion. Exclusions only apply to what the discovery walk infers.
     for path in explicit {
-        if !path.contains(['*', '?', '['])
+        if crate::instruction_applicability::literal_prefix(path) == path
             && !private_scope(path)
             && excluded(path, exclusions)
             && matches_scope(patterns, path)
@@ -337,7 +376,7 @@ fn discover_scope(
                 &format!("{directory}/.aw-scope-confinement"),
                 crate::dependency_binding::MAX_OBSERVATION_BYTES,
             )?;
-            if excluded(&directory, exclusions) {
+            if excluded(&directory, exclusions) && !inside_submodule(&directory) {
                 continue;
             }
         }
@@ -372,7 +411,7 @@ fn discover_scope(
             if crate::native_routes::linked(&meta) {
                 return Err(err("source reconciliation cannot traverse a linked scope"));
             }
-            if matches_scope(exclusions, &path) {
+            if matches_scope(exclusions, &path) && !inside_submodule(&path) {
                 continue;
             }
             if meta.is_dir() {

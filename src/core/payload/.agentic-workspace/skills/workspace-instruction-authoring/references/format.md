@@ -92,8 +92,8 @@ Match the directory itself to avoid walking its contents. For example, with
 Git ignore rules alone leave source membership unchanged. Retain intentional
 generated source outside the exclusion or name it in an exact path. Verification
 requires a bounded Git index read to preserve tracked files in excluded trees.
-If an exclusion could hide governed source inside a tracked submodule, refine
-the exclusion before retrying.
+For tracked submodules, Verification retains ordinary confined discovery of
+matching source even when an exclusion matches the submodule or its ancestors.
 
 For `checks`, inline or block strings name requirements; `requirement:<id>` refers
 to a real repository Verification declaration. Only a block entry beginning with
