@@ -5,7 +5,7 @@ use cap_std::{
     fs::{Dir, OpenOptions},
 };
 use serde_json::{Value, json};
-use std::{path::Path, process::Command, time::Duration};
+use std::{collections::BTreeSet, path::Path, process::Command, time::Duration};
 
 pub(crate) const REQUEST: &str = "verification/manual-pr-review/v1";
 pub(crate) const OP: &str = "verification.record-manual-pr-review";
@@ -64,20 +64,33 @@ fn has_uncommitted_inputs(
     target: &Path,
     changed: &[String],
 ) -> Result<bool, CoreError> {
-    let mut specs = Vec::new();
-    for path in crate::native_source_reconciliation::scope_files(root, changed)? {
+    let mut paths = crate::native_source_reconciliation::scope_files(root, changed)?;
+    // A selector-shaped name can also be an actual file, such as [id].tsx.
+    paths.extend(
+        changed
+            .iter()
+            .filter(|path| root.symlink_metadata(path).is_ok_and(|meta| meta.is_file()))
+            .cloned(),
+    );
+    let mut present = BTreeSet::new();
+    let mut absent = BTreeSet::new();
+    for path in &paths {
         match root.symlink_metadata(&path) {
             Ok(metadata) if metadata.is_dir() => {
                 return Err(err(
                     "Select concrete changed files or a bounded file pattern to compare with the reviewed commit",
                 ));
             }
-            Ok(_) => specs.push(path),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Ok(_) => {
+                present.insert(index_path(path));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                absent.insert(index_path(path));
+            }
             Err(error) => return Err(err(error)),
         }
     }
-    if specs.is_empty() {
+    if paths.is_empty() {
         return Ok(false);
     }
     let magic = if cfg!(windows) {
@@ -85,7 +98,7 @@ fn has_uncommitted_inputs(
     } else {
         ":(literal)"
     };
-    let specs: Vec<_> = specs.iter().map(|path| format!("{magic}{path}")).collect();
+    let specs: Vec<_> = paths.iter().map(|path| format!("{magic}{path}")).collect();
     if specs
         .iter()
         .map(|spec| spec.encode_utf16().count() + 3)
@@ -98,24 +111,48 @@ fn has_uncommitted_inputs(
     }
     let mut command = git(target);
     command
-        .args(["ls-files", "--cached", "--error-unmatch", "-z", "--"])
+        .args(["ls-files", "--cached", "-v", "-z", "--"])
         .args(specs)
         .env("GIT_LITERAL_PATHSPECS", "0")
         .env("GIT_GLOB_PATHSPECS", "0")
         .env("GIT_NOGLOB_PATHSPECS", "0")
         .env("GIT_ICASE_PATHSPECS", "0");
-    let (status, _) = native_verification::bounded_git_output_with_limit(
+    let (status, entries) = native_verification::bounded_git_output_with_limit(
         &mut command,
         Duration::from_secs(3),
         64 * 1024,
     )
     .map_err(err)?;
-    match status.code() {
-        Some(0) => Ok(false),
-        Some(1) => Ok(true),
-        _ => Err(err(
+    if !status.success() {
+        return Err(err(
             "Git could not compare the selected source paths with the index",
-        )),
+        ));
+    }
+    for row in entries
+        .split(|byte| *byte == 0)
+        .filter(|row| !row.is_empty())
+    {
+        let Some(path) = row.strip_prefix(b"H ") else {
+            return Err(err(
+                "Git index flags prevent verifying changes to selected inputs. Inspect assume-unchanged, skip-worktree, or conflicted entries before reobserving the checkout.",
+            ));
+        };
+        let path = index_path(std::str::from_utf8(path).map_err(err)?);
+        if absent.contains(&path) {
+            return Err(err(
+                "A selected tracked input is missing from the checkout; restore it or review the committed deletion.",
+            ));
+        }
+        present.remove(&path);
+    }
+    Ok(!present.is_empty())
+}
+
+fn index_path(path: &str) -> String {
+    if cfg!(windows) {
+        path.to_lowercase()
+    } else {
+        path.to_owned()
     }
 }
 
@@ -167,6 +204,48 @@ fn path(pull_request: &str) -> Result<String, CoreError> {
     Ok(format!("{STORE}/{}.json", &identity[7..]))
 }
 
+fn canonical_pr(reference: &str) -> Result<String, CoreError> {
+    let invalid = || {
+        err(
+            "Use a repository-qualified HTTP(S) pull request URL ending with its numeric ID, without an account, query, fragment or percent-encoded path.",
+        )
+    };
+    if reference.len() > 1024
+        || reference.contains(['@', '?', '#', '%', '\\'])
+        || reference.chars().any(char::is_control)
+    {
+        return Err(invalid());
+    }
+    let (scheme, rest) = reference.split_once("://").ok_or_else(invalid)?;
+    let scheme = scheme.to_ascii_lowercase();
+    if !matches!(scheme.as_str(), "http" | "https") {
+        return Err(invalid());
+    }
+    let (host, path) = rest.split_once('/').ok_or_else(invalid)?;
+    let (repository_and_route, id) = path
+        .trim_end_matches('/')
+        .rsplit_once('/')
+        .ok_or_else(invalid)?;
+    let id = id
+        .parse::<u64>()
+        .ok()
+        .filter(|id| *id != 0)
+        .ok_or_else(invalid)?;
+    let components: Vec<_> = repository_and_route.split('/').collect();
+    if host.is_empty()
+        || components.len() < 3
+        || components
+            .iter()
+            .any(|part| matches!(*part, "" | "." | ".."))
+    {
+        return Err(invalid());
+    }
+    Ok(format!(
+        "{scheme}://{}/{repository_and_route}/{id}",
+        host.to_ascii_lowercase()
+    ))
+}
+
 fn record_shape(record: &Value) -> bool {
     let strings = |field: &str| {
         record[field]
@@ -210,6 +289,14 @@ fn latest(state: &Value) -> Option<&Value> {
         .and_then(|records| records.last())
 }
 
+fn latest_at<'a>(state: &'a Value, revision: &Value) -> Option<&'a Value> {
+    state["records"]
+        .as_array()?
+        .iter()
+        .rev()
+        .find(|entry| &entry["reviewed_revision"] == revision)
+}
+
 fn submission(state: &Value, report: &Value) -> Result<bool, &'static str> {
     let records = state["records"].as_array().unwrap();
     if let Some(prior) = records
@@ -227,17 +314,14 @@ fn submission(state: &Value, report: &Value) -> Result<bool, &'static str> {
             )
         };
     }
-    if let Some(prior) = records.last() {
-        if (prior["reviewed_revision"] == report["reviewed_revision"]
-            || !report["supersedes"].is_null())
-            && prior["reference"] != report["supersedes"]
-        {
+    if let Some(prior) = latest_at(state, &report["reviewed_revision"]) {
+        if prior["reference"] != report["supersedes"] {
             return Err(
                 "To replace the reported result for this revision, supply the current external review reference in supersedes.",
             );
         }
     } else if !report["supersedes"].is_null() {
-        return Err("There is no existing report to supersede.");
+        return Err("There is no existing report for this revision to supersede.");
     }
     if records.len() == MAX_REPORTS {
         return Err("The checkout-local review record has reached its history limit.");
@@ -317,6 +401,8 @@ pub(crate) fn view(
         "task_identity":work,"arguments":{"pull_request":"<repository-qualified PR reference>"}});
     let mut view = json!({"kind":RESULT,"reviewers":reviewers,"evidence_refs":evidence,
         "manual_protocols":manual_protocols.iter().map(|(id,_)| id.as_str()).collect::<Vec<_>>(),
+        "manual_only_protocols":manual_protocols.iter().filter(|(_, row)| row["independent_required"] != true)
+            .map(|(id,_)| id.as_str()).collect::<Vec<_>>(),
         "review_status":"pending","recording_status":"subject-required","reviewer_provenance":"unverified",
         "approval_authority":"repository","completion_authority":false,"request":template});
     let Some(request) = request else {
@@ -326,10 +412,7 @@ pub(crate) fn view(
         json!({"request":request,"current_work":work,"capability_contract":contract}),
     )?;
     let arguments = &request["arguments"];
-    let pull_request = arguments["pull_request"].as_str().unwrap();
-    if pull_request.len() > 1024 {
-        return Err(err("Pull request reference exceeds its byte limit"));
-    }
+    let pull_request = canonical_pr(arguments["pull_request"].as_str().unwrap())?;
     template["arguments"] = arguments.clone();
     if template != *request {
         return Err(err(
@@ -340,7 +423,7 @@ pub(crate) fn view(
     view["request"] = template;
     view["pull_request"] = json!(pull_request);
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let state = match state(&root, pull_request) {
+    let state = match state(&root, &pull_request) {
         Ok(value) => value,
         Err(error) => {
             view["recording_status"] = json!("unavailable");
@@ -348,8 +431,8 @@ pub(crate) fn view(
             return Ok(Some(view));
         }
     };
-    let prior = latest(&state);
-    if let Some(record) = prior {
+    let latest_report = latest(&state);
+    if let Some(record) = latest_report {
         view["recorded_report"] = record.clone();
     }
     let observed = match checkout(&root, target, changed) {
@@ -357,7 +440,7 @@ pub(crate) fn view(
         Err(error) => {
             view["recording_status"] = json!("unavailable");
             view["detail"] = json!(error.to_string());
-            if prior.is_some() {
+            if latest_report.is_some() {
                 view["review_status"] = json!("currentness-unverified");
             }
             return Ok(Some(view));
@@ -365,7 +448,8 @@ pub(crate) fn view(
     };
     view["checkout"] = observed.clone();
     view["recording_status"] = json!("available");
-    if let Some(record) = prior {
+    if let Some(record) = latest_at(&state, &observed["revision"]).or(latest_report) {
+        view["recorded_report"] = record.clone();
         view["review_status"] = json!(if record["reviewed_revision"] != observed["revision"]
             || dirty(&observed)
         {
@@ -407,6 +491,29 @@ pub(crate) fn finalize(verification: &mut Value, decision: &Value) {
     let Some(view) = verification.get("manual_review") else {
         return;
     };
+    let claim = &verification["claim_review"];
+    let pending_manual_gaps: std::collections::BTreeSet<_> = view["manual_only_protocols"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .map(|id| format!("required-review-producer:{id}"))
+        .collect();
+    let manual_producer_only = claim["status"] == "insufficient"
+        && claim["claim"]["judgment"] == "satisfied"
+        && claim["gaps"].as_array().is_some_and(|gaps| {
+            !gaps.is_empty()
+                && gaps.iter().all(|gap| {
+                    gap.as_str()
+                        .is_some_and(|code| pending_manual_gaps.contains(code))
+                })
+        });
+    let semantic_marker_only = verification["evidence_gaps"]
+        .as_array()
+        .is_some_and(|gaps| {
+            gaps.iter()
+                .all(|gap| gap == "current-task-claim-judgment-not-admitted")
+        });
     let reviewer_only: Vec<_> = verification["assurance_owner_gaps"]
         .as_array()
         .into_iter()
@@ -435,16 +542,21 @@ pub(crate) fn finalize(verification: &mut Value, decision: &Value) {
             .any(|scope| {
                 scope == "task" || scope.starts_with("claim:") || scope == "effect:proof-execution"
             });
+        let pending_manual_claim = manual_producer_only
+            && (code == "strict-closeout-judgment-required"
+                || (code == "verification-evidence-unresolved" && semantic_marker_only));
         if relevant
             && code != "local-human-review-required"
             && !reviewer_only.iter().any(|entry| entry == code)
             && !selected_protocol
+            && !pending_manual_claim
         {
             gaps.push(json!({"code":code,"message":blocker["message"]}));
         }
     }
-    let claim = &verification["claim_review"];
-    if claim["status"] != "current" || claim["claim"]["judgment"] != "satisfied" {
+    if !manual_producer_only
+        && (claim["status"] != "current" || claim["claim"]["judgment"] != "satisfied")
+    {
         gaps.push(json!({"code":"work-readiness-unconfirmed","message":"Establish that the current implementation and evidence satisfy the requested result."}));
     }
     let clean = view["checkout"].is_object() && !dirty(&view["checkout"]);
@@ -462,6 +574,10 @@ pub(crate) fn finalize(verification: &mut Value, decision: &Value) {
             Some("rejected") => (
                 "external-rejection-reported",
                 "Use the external rejection to resolve the repository's next step.",
+            ),
+            _ if !gaps.is_empty() => (
+                "external-approval-reported",
+                "Approval reported externally. Reviewer provenance unverified by AW. Resolve the listed implementation or evidence gaps before repository closeout.",
             ),
             _ => (
                 "external-approval-reported",

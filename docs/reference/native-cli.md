@@ -78,7 +78,9 @@ independent review and human approval retain their own authority.
 When local safety or an applicable Verification protocol calls for manual PR
 review, `start` exposes `manual_review` in compact output and
 `verification.manual_review` in full output. Answer the returned request with the
-repository-qualified `pull_request` reference. AW observes the local Git commit
+canonical hosted `pull_request` URL, such as
+`https://forge.example/owner/project/pull/17`. Use its repository-qualified path
+ending in the numeric PR ID. AW normalises host case and trailing slashes, then observes the local Git commit
 and separates pending review from current implementation and evidence gaps.
 The PR reference is caller supplied. The checkout observation does not verify a
 hosted PR's current head.
@@ -93,9 +95,10 @@ reuses the existing record.
 
 The record is local to this checkout. Select the same PR again to read it.
 A different checkout commit, pending tracked changes or selected uncommitted
-inputs make the recorded review stale for the current work. The repository owns approval, and AW marks
-the review provenance as unverified. The record leaves human-verification and
-reviewer-admission restrictions in force.
+inputs make the recorded review stale for the current work. Git flags that can
+hide changes to selected inputs make currentness unverified. The repository owns
+approval, and AW marks the review provenance as unverified. The record leaves
+human-verification and reviewer-admission restrictions in force.
 
 `tests/test_native_public_cli.py` and existing native owner scenarios exercise
 fresh native/JSON/Python/TypeScript consumers, real former/current sources,

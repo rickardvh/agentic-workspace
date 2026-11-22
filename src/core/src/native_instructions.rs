@@ -394,8 +394,16 @@ pub fn restrict_pending(
         let writes = crate::manual_review::write_scope(action)?;
         for source in view["sources"].as_array().into_iter().flatten() {
             let metadata = &source["metadata"];
+            let paths = strings(&metadata["paths"]);
             if source["valid"] == true
                 && applicability(metadata, &[], route, &[])?["route_applies"] == true
+                && (source["applicable"] == true
+                    || paths.is_empty()
+                    || paths.iter().any(|pattern| {
+                        writes
+                            .iter()
+                            .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                    }))
                 && strings(&metadata["protect"]).iter().any(|pattern| {
                     writes
                         .iter()

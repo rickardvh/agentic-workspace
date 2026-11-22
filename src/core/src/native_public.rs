@@ -2771,23 +2771,17 @@ fn finish_invocation(
                         return start_selected(context.clone(), &progress.resolution);
                     }
                     if invocation["operation_id"] == crate::manual_review::OP {
-                        if let Some(source) =
-                            invocation["source_requests"]
-                                .as_array()
-                                .and_then(|requests| {
-                                    requests.iter().find(|request| {
-                                        request["request_kind"] == crate::manual_review::REQUEST
-                                    })
-                                })
-                        {
-                            let mut request = source.clone();
-                            request["arguments"]
-                                .as_object_mut()
-                                .unwrap()
-                                .remove("report");
-                            context["request"] = json!([request]);
-                            return start_selected(context.clone(), &progress.resolution);
+                        let mut sources = invocation["source_requests"].clone();
+                        for source in sources.as_array_mut().unwrap() {
+                            if source["request_kind"] == crate::manual_review::REQUEST {
+                                source["arguments"]
+                                    .as_object_mut()
+                                    .unwrap()
+                                    .remove("report");
+                            }
                         }
+                        context["request"] = sources;
+                        return start_selected(context.clone(), &progress.resolution);
                     }
                     if let Some(request) = crate::native_memory_candidates::publication_completion(
                         &current["memory"]["candidates"],
