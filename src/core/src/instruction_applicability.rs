@@ -12,6 +12,31 @@ enum Token {
     Class(bool, Vec<(char, char)>),
 }
 
+fn class_end(chars: &[char], start: usize) -> Option<usize> {
+    let mut end = start;
+    if chars.get(end) == Some(&'!') {
+        end += 1;
+    }
+    if chars.get(end) == Some(&']') {
+        end += 1;
+    }
+    chars
+        .get(end..)?
+        .iter()
+        .position(|ch| *ch == ']')
+        .map(|offset| end + offset)
+}
+
+pub(crate) fn literal_prefix(pattern: &str) -> &str {
+    let chars: Vec<char> = pattern.chars().collect();
+    for (index, (offset, ch)) in pattern.char_indices().enumerate() {
+        if matches!(ch, '*' | '?') || (ch == '[' && class_end(&chars, index + 1).is_some()) {
+            return &pattern[..offset];
+        }
+    }
+    pattern
+}
+
 /// Python fnmatch path semantics: stars span separators, bracket classes use
 /// ranges and ! negation, and unmatched '[' is literal. Match host normcase.
 fn tokens(pattern: &str) -> Vec<Token> {
@@ -26,19 +51,7 @@ fn tokens(pattern: &str) -> Vec<Token> {
             '?' => Token::Any,
             '[' => {
                 let start = i + 1;
-                let mut end = start;
-                if chars.get(end) == Some(&'!') {
-                    end += 1;
-                }
-                if chars.get(end) == Some(&']') {
-                    end += 1;
-                }
-                while end < chars.len() && chars[end] != ']' {
-                    end += 1;
-                }
-                if end == chars.len() {
-                    Token::Literal('[')
-                } else {
+                if let Some(end) = class_end(&chars, start) {
                     let negated = chars.get(start) == Some(&'!');
                     let mut j = start + usize::from(negated);
                     let mut ranges = Vec::new();
@@ -53,6 +66,8 @@ fn tokens(pattern: &str) -> Vec<Token> {
                     }
                     i = end;
                     Token::Class(negated, ranges)
+                } else {
+                    Token::Literal('[')
                 }
             }
             literal => Token::Literal(literal),

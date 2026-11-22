@@ -845,6 +845,197 @@ def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
 
 
+def test_inferred_reconciliation_excludes_only_declared_disposable_output(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_public_cli import pin_instructions
+
+    context = repository(tmp_path)
+    rules = tmp_path / ".agentic-workspace/instructions"
+    (rules / "feature.md").write_text(
+        "---\npaths: [src/**, src/.tool-cache/explicit[.bin]\n"
+        "governed_by: [docs/guide.md]\n"
+        "reconcile_exclude: [src/__pycache__, src/.tool-cache]\n"
+        "---\nReview the feature sources.\n"
+    )
+    (rules / "other.md").write_text(
+        "---\npaths: [other/**]\ngoverned_by: [docs/context.md]\n---\nReview separate work.\n"
+    )
+    (tmp_path / ".gitignore").write_text("__pycache__/\n.tool-cache/\ngenerated.txt\n")
+    for directory in ["src/__pycache__", "src/.tool-cache", "other"]:
+        (tmp_path / directory).mkdir()
+    retained = {
+        "src/feature.txt",
+        "src/__pycache__/tracked.txt",
+        "src/.tool-cache/explicit[.bin",
+        "src/generated.txt",
+    }
+    output_path = "src/.tool-cache/part[.json"
+    for path in retained | {"other/main.txt", output_path}:
+        (tmp_path / path).write_text("fixture source or output")
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run([*git, "add", "-f", "src/__pycache__/tracked.txt"], check=True, capture_output=True)
+    pin_instructions(tmp_path)
+    context["changed"] = ["src/feature.txt", "other/main.txt"]
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    def owner():
+        return call()["verification"]["source_reconciliation"]
+
+    first = owner()
+    assert set(first["proposal"]["work_postimages"]) == retained
+    assert set(first["discovery_exclusions"]) == {"src/__pycache__", "src/.tool-cache"}
+    for _ in range(2):
+        action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+        assert call({"invocation": action})["status"] == "applied"
+    assert owner()["status"] == "current"
+
+    for index in range(4097):
+        (tmp_path / f"src/__pycache__/generated-{index:04}.pyc").write_bytes(b"cache")
+    (tmp_path / "src/__pycache__/generated-0000.pyc").write_bytes(b"changed cache")
+    output = tmp_path / output_path
+    output.write_bytes(b"changed tool output")
+    assert all(relation["status"] == "current" for relation in owner()["relations"])
+
+    context["changed"].append(output_path)
+    explicit = owner()
+    assert explicit["coverage"]["total"] == len(retained) + 1
+    assert set(explicit["proposal"]["work_postimages"]) == {output_path}
+    output.unlink()
+    assert owner()["proposal"]["work_postimages"][output_path]["status"] == "absent"
+    context["changed"].pop()
+    assert owner()["status"] == "current"
+
+    (tmp_path / "src/generated.txt").write_text("changed intentional generated source")
+    changed = owner()
+    assert changed["status"] != "current"
+    assert changed["coverage"]["total"] == len(retained)
+    assert "src/generated.txt" in changed["proposal"]["work_postimages"]
+
+    for index in range(4097):
+        (tmp_path / f"src/in-scope-{index:04}.txt").write_text("governed source")
+    relations = {relation["relation_id"]: relation for relation in owner()["relations"]}
+    crowded = relations[".agentic-workspace/instructions/feature.md"]
+    assert crowded["status"] == "scope-observation-required"
+    assert "4096" in crowded["reason"] and "narrow" in crowded["reason"]
+    assert relations[".agentic-workspace/instructions/other.md"]["status"] == "current"
+
+
+def test_excluded_index_entries_only_charge_governed_discovery(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_public_cli import pin_instructions
+
+    context = repository(tmp_path)
+    (tmp_path / ".agentic-workspace/instructions/feature.md").write_text(
+        "---\npaths: [src/**/*.rs]\ngoverned_by: [docs/guide.md]\n"
+        "reconcile_exclude: [src/cache]\n---\nReview the Rust sources.\n"
+    )
+    pin_instructions(tmp_path)
+    ordinary = "src/lib/current.rs"
+    cached = "src/cache/retained.rs"
+    context["changed"] = [ordinary]
+    for source in (ordinary, cached):
+        path = tmp_path / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("governed source")
+    cache = tmp_path / "src/cache"
+    for index in range(4097):
+        (cache / f"output-{index:04}.json").write_text("{}")
+    git = ["git", "-C", str(tmp_path)]
+    subprocess.run([*git, "add", "src/cache"], check=True, capture_output=True)
+
+    def owner():
+        return consume("json", shared_core_binary, native_cli, context)["verification"]["source_reconciliation"]
+
+    observed = owner()
+    assert "proposal" in observed, observed.get("reason")
+    assert set(observed["proposal"]["work_postimages"]) == {ordinary, cached}
+
+    replaced = cache / "output-0000.json"
+    replaced.unlink()
+    replaced.mkdir()
+    (replaced / "nested.rs").write_text("governed source under a replaced index entry")
+    conflicting = owner()
+    assert conflicting["status"] == "scope-observation-required"
+    assert "tracked directory src/cache/output-0000.json" in conflicting["reason"]
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["excluded-root", "submodule", "submodule-root", "disjoint-submodule", "unmatched-file", "nested-exclusion"],
+)
+def test_inferred_reconciliation_preserves_scoped_git_authority(tmp_path, shared_core_binary, native_cli, case):
+    from tests.test_native_public_cli import pin_instructions
+
+    context = repository(tmp_path)
+    patterns, exclusions, changed = {
+        "excluded-root": ("src/service-a/cache/*.pyc", "src/service-a/cache", "src/service-a/cache/user-selected.pyc"),
+        "submodule": ("src/*.rs", "src/cache", "src/current.rs"),
+        "submodule-root": ("src/cache/vendor/api/**", "src/cache", "src/cache/vendor/api/current.rs"),
+        "disjoint-submodule": (
+            "src/cache/vendor/api/**, src/service/**",
+            "src/cache/vendor/scratch, src/service/cache",
+            "src/service/current.rs",
+        ),
+        "nested-exclusion": (
+            "src/cache/vendor/**",
+            "src/cache/vendor/__pycache__",
+            "src/cache/vendor/api/current.rs",
+        ),
+        "unmatched-file": (
+            "src/cache/vendor/*.rs",
+            "src/cache/vendor/build.json",
+            "src/cache/vendor/api/current.rs",
+        ),
+    }[case]
+    rule = tmp_path / ".agentic-workspace/instructions/feature.md"
+    rule.write_text(
+        f"---\npaths: [{patterns}]\ngoverned_by: [docs/guide.md]\n"
+        f"reconcile_exclude: [{exclusions}]\n---\nReview the inferred scope.\n"
+    )
+    changed_path = tmp_path / changed
+    changed_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path.write_text("explicit source")
+    context["changed"] = [changed]
+    pin = pin_instructions(tmp_path)
+    git = ["git", "-C", str(tmp_path)]
+    expected = {changed}
+    if case != "excluded-root":
+        library = "src/cache/vendor/api/lib.rs"
+        (tmp_path / library).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / library).write_text("governed submodule source")
+        expected.add(library)
+        subprocess.run(
+            [*git, "update-index", "--add", "--cacheinfo", f"160000,{pin},src/cache/vendor"],
+            check=True,
+            capture_output=True,
+        )
+        if case == "nested-exclusion":
+            output = tmp_path / "src/cache/vendor/__pycache__/output.pyc"
+            output.parent.mkdir()
+            output.write_bytes(b"cache")
+        if case == "unmatched-file":
+            (tmp_path / "src/cache/vendor/build.json").write_text("outside the governed source selector")
+    else:
+        for number in range(4097):
+            (changed_path.parent / f"output-{number:04}.pyc").write_bytes(b"cache")
+        # An unrelated part of the index exceeds the observer's byte limit.
+        # The rule queries only service-a's cache subtree and its exact ancestors.
+        blob = subprocess.check_output([*git, "rev-parse", "HEAD:src/feature.txt"], text=True).strip()
+        prefix = "src/service-b/" + ("x" * 200 + "/") * 16
+        entries = "".join(f"100644 {blob}\t{prefix}{index:04}\n" for index in range(2700))
+        subprocess.run([*git, "update-index", "--index-info"], input=entries.encode(), check=True, capture_output=True)
+        assert len(subprocess.check_output([*git, "ls-files", "--stage", "-z"])) > 8 * 1024 * 1024
+
+    result = consume("json", shared_core_binary, native_cli, context)["verification"]["source_reconciliation"]
+    if case == "nested-exclusion":
+        assert result["status"] == "scope-observation-required"
+        assert not result["requests"]
+        assert "src/cache/vendor/__pycache__" in result["reason"]
+        assert "reconcile the submodule as its own workspace" in result["reason"]
+    else:
+        assert set(result["proposal"]["work_postimages"]) == expected
+
+
 def test_current_group_projection_ignores_history_and_preserves_missing_evidence(tmp_path, shared_core_binary, native_cli):
     import json
 

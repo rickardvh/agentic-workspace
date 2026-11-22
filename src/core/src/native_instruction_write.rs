@@ -268,6 +268,7 @@ pub(crate) fn view(
                     "checks",
                     "reconcile",
                     "governed_by",
+                    "reconcile_exclude",
                 ]
                 .iter()
                 .any(|key| old["metadata"][key] != new["metadata"][key])
