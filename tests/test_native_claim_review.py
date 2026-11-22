@@ -16,7 +16,7 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-@pytest.mark.parametrize("policy", ["local", "protocol"])
+@pytest.mark.parametrize("policy", ["local", "protocol", "assurance-owner", "protocol-owner"])
 def test_manual_review_records_external_result_without_admitting_review(tmp_path, shared_core_binary, native_cli, policy):
     from tests.test_native_proof_producer import fixture
 
@@ -25,15 +25,17 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     manifest = workspace / "verification/manifest.toml"
     if policy == "local":
         (workspace / "config.local.toml").write_text("[safety]\nrequires_human_verification_on_pr=true\n")
-    else:
-        manifest.write_text(manifest.read_text().replace("[protocols.check]\n", "[protocols.check]\nmanual_required=true\n"))
-    with manifest.open("a") as stream:
-        stream.write(
-            '\n[assurance.requirements.external_check]\n'
-            'level="medium"\nforce="required-before-closeout"\n'
-            'blocking_claims=["claim-work-complete"]\napplies_to_paths=["a.txt"]\n'
-            'review_owner="repo-maintainer"\n'
-        )
+    if policy in {"protocol", "protocol-owner"}:
+        field = "manual_required=true" if policy == "protocol" else 'review_owner="repo-maintainer"'
+        manifest.write_text(manifest.read_text().replace("[protocols.check]\n", f"[protocols.check]\n{field}\n"))
+    if policy != "protocol-owner":
+        with manifest.open("a") as stream:
+            stream.write(
+                '\n[assurance.requirements.external_check]\n'
+                'level="medium"\nforce="required-before-closeout"\n'
+                'blocking_claims=["claim-work-complete"]\napplies_to_paths=["a.txt"]\n'
+                'review_owner="repo-maintainer"\n'
+            )
 
     def git(*args):
         return subprocess.check_output(["git", "-C", str(tmp_path), *args], text=True).strip()
@@ -49,7 +51,10 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     (src / "sparse.rs").write_text("Sparse selected input")
     (src / "notes.md").write_text("Ignored by the selected pattern")
     (src / "[id].tsx").write_text("Literal input whose name resembles a selector")
-    git("add", "a.txt", "src", manifest.relative_to(tmp_path).as_posix())
+    (src / "lib").mkdir()
+    (src / "lib/current.rs").write_text("Nested selected input")
+    (tmp_path / ".gitignore").write_text("__pycache__/\n")
+    git("add", "a.txt", "src", ".gitignore", manifest.relative_to(tmp_path).as_posix())
     revision = commit("Exact reviewed subject")
 
     def call(**extra):
@@ -107,12 +112,21 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     assert continuation["implementation_gaps"] == []
     after = call(request=[confirmation, selected_pr])
     assert after["verification"]["manual_review"]["handoff_status"] == "external-approval-reported"
+    blockers = {row["code"] for row in after["decision_packet"]["blockers"]}
     if policy == "local":
-        assert any(row["code"] == "local-human-review-required" for row in after["decision_packet"]["blockers"])
+        assert "local-human-review-required" in blockers
     else:
+        assert "local-human-review-required" not in blockers
+    if policy == "protocol":
         assert after["verification"]["claim_review"]["gaps"] == ["required-review-producer:check"]
-        assert any(row["code"] == "protocol-review-required:check" for row in after["decision_packet"]["blockers"])
-    assert after["verification"]["assurance_owner_gaps"][0]["missing_admissions"] == ["required-reviewer-result-not-admitted"]
+    if policy in {"protocol", "protocol-owner"}:
+        assert "protocol-review-required:check" in blockers
+    if policy == "protocol-owner":
+        assert after["verification"]["claim_review"]["status"] == "current"
+        assert after["verification"]["assurance_owner_gaps"] == []
+    else:
+        assert after["verification"]["assurance_owner_gaps"][0]["missing_admissions"] == ["required-reviewer-result-not-admitted"]
+        assert "assurance:external_check:applicable" in blockers
     assert call(invocation=record)["status"] == "unchanged"
     assert call(request=approval)["verification"]["manual_review"]["recording_status"] == "already-recorded"
     without_proof = call(request=selected_pr)["verification"]["manual_review"]
@@ -152,6 +166,35 @@ def test_manual_review_records_external_result_without_admitting_review(tmp_path
     for filename in ("src/notes.md", "src/sparse.rs", "src/[id].tsx"):
         git("update-index", "--no-skip-worktree", filename)
         git("restore", "--", f":(literal){filename}")
+
+    if policy == "local":
+        generated_scope = ["a.txt", "src/**/*.rs"]
+        generated_request = call(changed=generated_scope)["verification"]["manual_review"]["request"]
+        generated_request["arguments"]["pull_request"] = pr
+        cache = src / "__pycache__"
+        cache.mkdir()
+        for index in range(4097):
+            (cache / f"generated-{index:04}.pyc").write_bytes(b"cache")
+
+        def generated_review():
+            return call(changed=generated_scope, request=generated_request)["verification"]["manual_review"]
+
+        observed = generated_review()
+        assert observed["review_status"] == "recorded-externally", observed.get("detail")
+        selected = cache / "new.rs"
+        selected.write_text("selected input outside the commit")
+        assert git("check-ignore", "src/__pycache__/new.rs")
+        pending = generated_review()
+        assert pending["checkout"]["uncommitted_inputs"] is True
+        assert pending["review_status"] == "stale"
+        selected.unlink()
+        assert generated_review()["review_status"] == "recorded-externally"
+
+        for output in cache.glob("*.pyc"):
+            output.rename(output.with_suffix(".rs"))
+        too_many_selected = generated_review()
+        assert too_many_selected["review_status"] == "currentness-unverified"
+        assert "4096" in too_many_selected["detail"]
 
     conflict = call(request=report("rejected", 1))
     assert conflict["verification"]["manual_review"]["recording_status"] == "conflict"
@@ -218,6 +261,20 @@ def test_manual_review_keeps_non_manual_policy_and_reports_missing_checkout(tmp_
         return consume("json", shared_core_binary, native_cli, {**context, **extra})
 
     assert "manual_review" not in call()["verification"]
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    original = manifest.read_text()
+    manifest.write_text(original.replace("[protocols.check]\n", '[protocols.check]\nindependent_required=true\nreview_owner="independent-maintainer"\n'))
+    independent = call()
+    assert "manual_review" not in independent["verification"]
+    assert any(row["code"] == "protocol-review-required:check" for row in independent["decision_packet"]["blockers"])
+    manifest.write_text(
+        original + '\n[assurance.requirements.external_check]\n'
+        'level="medium"\nforce="required-before-closeout"\n'
+        'blocking_claims=["claim-work-complete"]\napplies_to_paths=["docs/**"]\n'
+        'review_owner="repo-maintainer"\n'
+    )
+    assert "manual_review" not in call()["verification"]
+    manifest.write_text(original)
     (tmp_path / ".agentic-workspace/config.local.toml").write_text("[safety]\nrequires_human_verification_on_pr=true\n")
     request = call()["verification"]["manual_review"]["request"]
     request["arguments"]["pull_request"] = "https://example.invalid/owner/repo/pull/17"

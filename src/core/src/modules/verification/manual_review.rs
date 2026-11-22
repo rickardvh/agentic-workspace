@@ -67,14 +67,7 @@ fn has_uncommitted_inputs(
     if changed.is_empty() {
         return Ok(false);
     }
-    let mut paths = crate::native_source_reconciliation::scope_files(root, changed)?;
-    // A selector-shaped name can also be an actual file, such as [id].tsx.
-    paths.extend(
-        changed
-            .iter()
-            .filter(|path| root.symlink_metadata(path).is_ok_and(|meta| meta.is_file()))
-            .cloned(),
-    );
+    let paths = crate::native_source_reconciliation::selected_scope_files(root, changed)?;
     let mut present = BTreeSet::new();
     for path in &paths {
         match root.symlink_metadata(path) {
@@ -95,7 +88,7 @@ fn has_uncommitted_inputs(
     let roots: BTreeSet<_> = changed
         .iter()
         .map(|selector| {
-            let prefix = selector.split(['*', '?', '[']).next().unwrap();
+            let prefix = crate::instruction_applicability::literal_prefix(selector);
             if prefix == selector {
                 prefix
             } else {
@@ -136,9 +129,13 @@ fn has_uncommitted_inputs(
     let (status, entries) = native_verification::bounded_git_output_with_limit(
         &mut command,
         Duration::from_secs(3),
-        64 * 1024,
+        8 * 1024 * 1024,
     )
-    .map_err(err)?;
+    .map_err(|reason| {
+        err(format!(
+            "Git could not compare selected inputs ({reason}). Narrow the changed paths or restore checkout observation."
+        ))
+    })?;
     if !status.success() {
         return Err(err(
             "Git could not compare the selected source paths with the index",
@@ -427,16 +424,12 @@ pub(crate) fn view(
         .into_iter()
         .flatten();
     let manual_protocols: Vec<_> = protocols
-        .filter(|(_, row)| row["manual_required"] == true)
+        .filter(|(_, row)| {
+            row["manual_required"] == true
+                || (row["review_owner"].is_string() && row["independent_required"] != true)
+        })
         .collect();
-    if !local && manual_protocols.is_empty() {
-        return if request.is_none() {
-            Ok(None)
-        } else {
-            Err(err("Current policy does not select manual PR review"))
-        };
-    }
-    let mut reviewers = std::collections::BTreeSet::new();
+    let mut reviewers = BTreeSet::new();
     for row in verification["assurance_applicability"]["requirements"]
         .as_array()
         .into_iter()
@@ -447,11 +440,17 @@ pub(crate) fn view(
                 row["force"].as_str(),
                 Some("required-before-closeout" | "blocking")
             )
+            && let Some(role) = row["source_requirement"]["review_owner"].as_str()
         {
-            if let Some(role) = row["source_requirement"]["review_owner"].as_str() {
-                reviewers.insert(role);
-            }
+            reviewers.insert(role);
         }
+    }
+    if !local && manual_protocols.is_empty() && reviewers.is_empty() {
+        return if request.is_none() {
+            Ok(None)
+        } else {
+            Err(err("Current policy does not select manual PR review"))
+        };
     }
     for (_, row) in &manual_protocols {
         if let Some(role) = row["review_owner"].as_str() {
@@ -484,7 +483,7 @@ pub(crate) fn view(
         "task_identity":work,"arguments":{"pull_request":"<repository-qualified PR reference>"}});
     let mut view = json!({"kind":RESULT,"reviewers":reviewers,"evidence_refs":evidence,
         "manual_protocols":manual_protocols.iter().map(|(id,_)| id.as_str()).collect::<Vec<_>>(),
-        "manual_only_protocols":manual_protocols.iter().filter(|(_, row)| row["independent_required"] != true)
+        "manual_only_protocols":manual_protocols.iter().filter(|(_, row)| row["manual_required"] == true && row["independent_required"] != true)
             .map(|(id,_)| id.as_str()).collect::<Vec<_>>(),
         "review_status":"pending","recording_status":"subject-required","reviewer_provenance":"unverified",
         "approval_authority":"repository","completion_authority":false,"request":template});
