@@ -2528,7 +2528,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
                     .map(move |id| (owner, capability, id))
             })
             .filter(|(_, _, id)| {
-                id.as_str() != native_plugin_exposure::OP
+                !matches!(id.as_str(), native_plugin_exposure::OP | manual_review::OP)
                     || available_actions
                         .iter()
                         .any(|action| action.action.operation_id == id.as_str())

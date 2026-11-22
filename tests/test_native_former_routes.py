@@ -400,6 +400,29 @@ def test_former_selection_requires_exact_current_agent_request(
     assert len(inspect_requests) == 1
     inspect_schema_bytes = len(json.dumps(inspect_requests[0]))
     assert inspect_schema_bytes < 600, inspect_schema_bytes
+    # Manual PR review adds a typed request, a local write and its protection
+    # to full introspection. Keep that exact allowance out of the baseline.
+    review_kind = "verification/manual-pr-review/v1"
+    review_operation = "verification.record-manual-pr-review"
+    review_effect = "manual-review-record"
+    protected_review_effect = f"effect:{review_effect}"
+    without_pr_review = copy.deepcopy(non_resource_contract)
+    review_owner = next(owner for owner in without_pr_review["owners"] if owner["owner"] == "verification")
+    review_requests = [row for row in review_owner["requests"] if row["kind"] == review_kind]
+    review_operations = [row for row in review_owner["operations"] if row["id"] == review_operation]
+    review_effects = [row for row in review_owner["effects"] if row["id"] == review_effect]
+    assert len(review_requests) == len(review_operations) == len(review_effects) == 1
+    assert review_operations[0]["effects"] == [review_effect]
+    protections = [row for row in without_pr_review["restriction_authorities"] if protected_review_effect in row["affects"]]
+    assert sorted(row["owner"] for row in protections) == ["configuration", "scoped-instructions", "startup-adapter"]
+    review_owner["requests"].remove(review_requests[0])
+    review_owner["operations"].remove(review_operations[0])
+    review_owner["effects"].remove(review_effects[0])
+    for authority in protections:
+        assert authority["affects"].count(protected_review_effect) == 1
+        authority["affects"].remove(protected_review_effect)
+    pr_review_bytes = len(json.dumps(non_resource_contract)) - len(json.dumps(without_pr_review))
+    assert 0 < pr_review_bytes < 1_600, pr_review_bytes
     schema_extensions = (
         retention_bytes
         + discovery_bytes
@@ -419,6 +442,7 @@ def test_former_selection_requires_exact_current_agent_request(
         + advisory_revision_bytes
         + candidate_continuation_bytes
         + inspect_schema_bytes
+        + pr_review_bytes
     )
     assert len(json.dumps(non_resource_contract)) - schema_extensions < 81_000
     assert len(json.dumps(contract)) - schema_extensions - resource_schema_bytes < 86_000
@@ -431,6 +455,8 @@ def test_former_selection_requires_exact_current_agent_request(
     assert terminal_retention["status"] == "quiet" and terminal_retention["requests"] == []
     assert len(json.dumps({key: value for key, value in terminal_retention.items() if key != "discovery_request"})) < 500
     assert "current_evidence" not in first["verification"]
+    assert "manual_review" not in first["verification"]
+    assert review_operation not in first["decision_packet"]["operation_revisions"]
     assert "plugin_exposure_request" not in first["configuration_write"]
     assert "configuration.plugin-exposure" not in first["decision_packet"]["operation_revisions"]
     evidence_revisions = {
@@ -518,6 +544,7 @@ def test_former_selection_requires_exact_current_agent_request(
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
     assert len(json.dumps(compact)) < 6_000
     assert inspect_kind not in json.dumps(compact)
+    assert "manual_review" not in compact
     assert "planning_retention" not in compact
     assert len(json.dumps(candidate)) < 8_000
     request = candidate["selection_request"]
